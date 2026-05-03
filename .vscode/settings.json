@@ -1,0 +1,47 @@
+{
+  // タブサイズを2スペースに設定 (TS/JS/JSONの標準)
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  // 保存時に自動でフォーマットを実行
+  "editor.formatOnSave": true,
+  // Linux/macOS/Git 標準の改行コード (LF) に統一
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  // Biome拡張機能をデフォルトのフォーマッターとして設定
+  "editor.defaultFormatter": "biomejs.biome",
+
+  // 保存時に自動でBiomeのリンティングによる修正（fixAll）を実行
+  // Next.jsのJSX/TSX、CDK/MastraのTSファイルなどで一貫した修正が行われます。
+  "editor.codeActionsOnSave": {
+    "source.organizeImports.biome": "explicit",
+    "source.fixAll.biome": "explicit"
+  },
+
+  // Biomeを特定のファイルタイプに対して適用 (明示的な設定)
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascriptreact]": {
+    // Next.jsの.jsx/.tsxに対応
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    // AWS CDK, Mastra, pnpmモノレポのコードに対応
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    // Next.jsの.tsxに対応
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    // AWS CDKのcdk.json、tsconfig.jsonなどに対応
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[jsonc]": {
+    // VS Codeの設定ファイル、tsconfig.jsonなどに対応
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  // pnpmモノレポを使用している場合、プロジェクトルートのnode_modulesにある
+  // TypeScriptのバージョンを使用するようにVS Codeに指示 (推奨)
+  "typescript.tsdk": "node_modules/typescript/lib"
+}
