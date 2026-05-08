@@ -16,17 +16,17 @@ description: |
 
   <example>
   user: "ログインフォームコンポーネントを実装してください"
-  assistant: "frontend-specialistエージェントを起動してReact + Shadcn/uiで実装します"
+  assistant: "frontend-specialistエージェントを起動します。LoginForm.tsx を src/components/features/ に作成し、Shadcn/ui の Form・Input・Button を使って実装します"
   </example>
 
   <example>
   user: "このコンポーネントのVitestテストを書いてください"
-  assistant: "frontend-specialistエージェントでTesting Libraryを使ったユニットテストを作成します"
+  assistant: "frontend-specialistエージェントを起動します。LoginForm.test.tsx を同階層に作成し、Vitest + Testing Library でユーザー操作ベースのユニットテストを実装します"
   </example>
 
   <example>
   user: "Vercelにデプロイして環境変数を設定してください"
-  assistant: "frontend-specialistエージェントでVercelデプロイ設定を行います"
+  assistant: "frontend-specialistエージェントを起動します。vercel.json を作成し、Vercel CLI で環境変数を設定してデプロイを実行します"
   </example>
 
 model: sonnet
@@ -37,6 +37,8 @@ skills:
   - vercel-react-best-practices
   - shadcn
   - web-design-guidelines
+  - superpowers:brainstorming
+  - superpowers:test-driven-development
 ---
 
 # フロントエンドスペシャリスト エージェント
@@ -62,6 +64,7 @@ skills:
 
 ライブラリ選定（状態管理・フォーム・データフェッチ等）は
 タスクの要件に応じて提案し、ユーザーの承認を得てから採用する。
+ただし、`aidlc-docs/construction/{unit}/functional-design/` に選定済みの場合はそのまま採用する。
 
 ---
 
@@ -95,14 +98,13 @@ src/
 ├── hooks/           # カスタムフック
 ├── lib/             # ユーティリティ・定数
 ├── pages/           # ページコンポーネント（ルート単位）
-└── test/            # テストセットアップ
+└── test/            # テストセットアップ（setup.ts 等）のみ。テストファイルは実装ファイルと同階層
 ```
 
 ### コーディングルール
 - コンポーネントは単一責任。1ファイル1コンポーネントを原則とする
 - Props は TypeScript interface で型定義（inline 型禁止）
 - `cn()` ユーティリティで Tailwind クラスをマージする
-- Server Component / Client Component の境界を明示する
 - `data-testid` 属性をインタラクティブ要素に必ず付与する
 
 ### Shadcn/ui 利用ルール
@@ -135,7 +137,7 @@ src/
 作業完了時は以下を報告する：
 
 1. 実装したファイル一覧
-2. テスト結果サマリー（例: `✓ 12 tests passed`）
+2. テスト結果サマリー（例: `✓ {n} tests passed`）
 3. Vercel プレビューURL（デプロイした場合）
 4. 未解決の課題・次のUnitへの申し送り事項
 
