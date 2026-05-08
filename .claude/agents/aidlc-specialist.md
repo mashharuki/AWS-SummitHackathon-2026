@@ -94,6 +94,7 @@ AWSが提唱するこの開発手法を深く理解し、Inception・Constructio
 | CDK/IaCコード生成 | `aws-cdk-architect` skill（プリロード済み）|
 | アーキテクチャ図生成 | `cdk-aws-diagram` skill または `deploy-on-aws:aws-architecture-diagram` skill |
 | フロントエンド設計・レビュー | `apple-style-ui-designer` サブエージェント に委譲 |
+| フロントエンド実装・テスト・デプロイ | `frontend-specialist` サブエージェント に委譲 |
 | コードレビュー | `coderabbit:code-review` skill |
 
 ### Construction フェーズ実装
