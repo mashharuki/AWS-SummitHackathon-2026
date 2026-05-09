@@ -168,7 +168,7 @@ MVP でやらないこと:
 ### FR-02: タスク候補の承認 / 編集 / 削除フロー
 
 **優先度**: MUST  
-**根拠**: Q3=E（モック準拠・3ボタン構成）、mockups/01-task-list.png
+**根拠**: Q3=E（モック準拠・3ボタン構成）、`mockups/01-task-list.png`（旧）／`ui/saborou_v2_02-tasklist.png`（最新UI・Pencilで起こした実装基準モック）
 
 | 項目 | 詳細 |
 |------|------|
@@ -188,7 +188,7 @@ MVP でやらないこと:
 ### FR-03: 文脈読解・サボり提案の生成
 
 **優先度**: MUST  
-**根拠**: Q7=A（おっとり口調）、Q8=E（1行サマリ）、mockups/02-task-detail-chat.png、00-business-brief.md §4
+**根拠**: Q7=A（おっとり口調）、Q8=E（1行サマリ）、`mockups/02-task-detail-chat.png`（旧）／`ui/saborou_v2_03-detail.png`（最新UI）、`00-business-brief.md` §4
 
 | 項目 | 詳細 |
 |------|------|
@@ -199,7 +199,7 @@ MVP でやらないこと:
 | **出力3** | おっとりサボローのチャットメッセージ（口調: 語尾「〜だよ」「〜かもぉ」・絵文字あり）|
 | **人格（Persona）** | `saboru_ottori`（おっとりサボロー）固定。将来の複数人格化に備えて persona をデータとして外出し |
 
-**表示仕様**（mockups/02-task-detail-chat.png 参照）:
+**表示仕様**（`ui/saborou_v2_03-detail.png` 最新UI / `mockups/02-task-detail-chat.png` 旧モック 参照）:
 - 左ペイン「タスクの前提」ボックス: 締切・やること・依頼者を表示
 - 左ペイン「現在のサボり判定」ボックス（淡黄色強調）: 1行判定文
 - 左ペイン「判断材料」: 根拠の箇条書き
@@ -235,7 +235,7 @@ MVP でやらないこと:
 ### FR-05: 本音データ収集
 
 **優先度**: MUST  
-**根拠**: Q6=C（クイック返信4種 + 自由入力）、mockups/02-task-detail-chat.png、00-business-brief.md §6
+**根拠**: Q6=C（クイック返信4種 + 自由入力）、`mockups/02-task-detail-chat.png`（旧）／`ui/saborou_v2_03-detail.png`（最新UI）、`00-business-brief.md` §6
 
 | 項目 | 詳細 |
 |------|------|
@@ -254,7 +254,7 @@ MVP でやらないこと:
 ### FR-06: タスク一覧の1行サボり判定サマリ表示
 
 **優先度**: MUST  
-**根拠**: Q8=E（1行テキストサマリ）、mockups/01-task-list.png、00-business-brief.md §5
+**根拠**: Q8=E（1行テキストサマリ）、`mockups/01-task-list.png`（旧）／`ui/saborou_v2_02-tasklist.png`（最新UI）、`00-business-brief.md` §5
 
 | 項目 | 詳細 |
 |------|------|
@@ -272,7 +272,7 @@ MVP でやらないこと:
 ### FR-07: 認証・外部サービス連携管理
 
 **優先度**: MUST  
-**根拠**: Q22=A（Cognito Google ログインのみ）、Q21=C（MVP は VPC なし）、03-aws-architecture-policy.md §3
+**根拠**: Q22=A（Cognito Google ログインのみ）、Q21=C（MVP は VPC なし）、`03-aws-architecture-policy.md` §3、`ui/saborou_v2_01-login.png`（ログイン画面）／`ui/saborou_v2_04-settings.png`（連携設定画面）
 
 | 項目 | 詳細 |
 |------|------|
@@ -294,7 +294,7 @@ MVP でやらないこと:
 ### FR-08: 手動タスク追加
 
 **優先度**: SHOULD  
-**根拠**: mockups/01-task-list.png（フローティング + ボタン）
+**根拠**: `mockups/01-task-list.png`（旧・フローティング + ボタン）／`ui/saborou_v2_02-tasklist.png`（最新UI）
 
 | 項目 | 詳細 |
 |------|------|
@@ -696,13 +696,13 @@ AWS-SummitHackathon-2026/
 | 要件ID | 要件名 | 根拠Q番号 | 根拠資料 |
 |--------|-------|----------|---------|
 | FR-01 | 外部サービス連携・タスク自動抽出 | Q1, Q2, Q4 | 00-business-brief.md §3, 01-tech-stack.md §5.1 |
-| FR-02 | タスク候補の承認/編集/削除フロー | Q3 | 00-business-brief.md §5, mockups/01-task-list.png |
-| FR-03 | 文脈読解・サボり提案の生成 | Q7, Q8 | 00-business-brief.md §4, mockups/02-task-detail-chat.png |
+| FR-02 | タスク候補の承認/編集/削除フロー | Q3 | 00-business-brief.md §5, mockups/01-task-list.png, ui/saborou_v2_02-tasklist.png |
+| FR-03 | 文脈読解・サボり提案の生成 | Q7, Q8 | 00-business-brief.md §4, mockups/02-task-detail-chat.png, ui/saborou_v2_03-detail.png |
 | FR-04 | サボり提案のリアルタイム更新 | Q5 | 00-business-brief.md §4 |
-| FR-05 | 本音データ収集 | Q6, Q12 | 00-business-brief.md §6, mockups/02-task-detail-chat.png |
-| FR-06 | タスク一覧の1行サボり判定サマリ | Q8 | mockups/01-task-list.png |
-| FR-07 | 認証・外部サービス連携管理 | Q21, Q22 | 03-aws-architecture-policy.md §3 |
-| FR-08 | 手動タスク追加 | — | mockups/01-task-list.png（+ ボタン）|
+| FR-05 | 本音データ収集 | Q6, Q12 | 00-business-brief.md §6, mockups/02-task-detail-chat.png, ui/saborou_v2_03-detail.png |
+| FR-06 | タスク一覧の1行サボり判定サマリ | Q8 | mockups/01-task-list.png, ui/saborou_v2_02-tasklist.png |
+| FR-07 | 認証・外部サービス連携管理 | Q21, Q22 | 03-aws-architecture-policy.md §3, ui/saborou_v2_01-login.png, ui/saborou_v2_04-settings.png |
+| FR-08 | 手動タスク追加 | — | mockups/01-task-list.png（+ ボタン）, ui/saborou_v2_02-tasklist.png |
 | NFR-01 | タスク抽出レイテンシ（10秒以内）| Q10 | 01-tech-stack.md §5.2 |
 | NFR-02 | サボり提案レイテンシ（10〜20秒）| Q11 | 01-tech-stack.md §5.2 |
 | NFR-03 | 同時ユーザー数（1〜5人）| Q9 | — |
