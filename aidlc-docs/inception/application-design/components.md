@@ -233,14 +233,20 @@
 **責務**:
 - Slack Events API からの Webhook を受信・検証する
 - Slack の URL Verification チャレンジに応答する
-- Webhook イベントを EventBridge に転送してバックグラウンド処理に引き渡す
+- Vercel Chat SDK を用いてイベントを正規化し、EventBridge に転送してバックグラウンド処理に引き渡す
 
 **インタフェース**:
 - `POST /webhooks/slack` → `{ challenge?: string }`（Slack URL Verification 対応）
 
 **依存サービス**:
+- Vercel Chat SDK（`chat` npm package） - Slack アダプター
 - Amazon EventBridge（イベント転送）
 - AWS Secrets Manager（Slack Signing Secret 検証）
+
+**技術実装詳細**:
+- Vercel Chat SDK の Slack アダプターを使用し、Webhook 受信と署名検証を標準化する
+- SDK 側で URL Verification チャレンジとイベント正規化を処理する
+- 正規化後のイベントを EventBridge に PutEvents して非同期処理へ受け渡す
 
 ---
 
