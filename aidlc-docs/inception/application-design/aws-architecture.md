@@ -9,7 +9,190 @@
 
 ## 1. AWS全体アーキテクチャ図
 
-![aws-architecture.drawio](./aws-architecture.drawio.png)
+### 1.1 Mermaid 全体アーキテクチャ図（サービス間連携）
+
+```mermaid
+graph TD
+    subgraph External["外部サービス（インターネット）"]
+        Slack["🔵 Slack API\n(Events API / REST)"]
+        Gmail["📧 Gmail API\n(OAuth 2.0)"]
+        GCal["📅 Google Calendar API\n(OAuth 2.0)"]
+        GoogleIdP["🔐 Google Identity Provider\n(OpenID Connect)"]
+        User["👤 ユーザー（ブラウザ）"]
+    end
+
+    subgraph Edge["エッジ層"]
+        CF["☁️ Amazon CloudFront\n(CDN / HTTPS終端)"]
+        S3["🗄️ Amazon S3\n(React ビルド成果物)"]
+    end
+
+    subgraph Auth["認証層"]
+        Cognito["🔒 Amazon Cognito\n(User Pools + Google IdP)"]
+    end
+
+    subgraph API["API 層"]
+        APIGW["🚪 API Gateway\n(HTTP API + Cognito Authorizer)"]
+        HonoLambda["⚡ AWS Lambda\n(Hono REST API)"]
+        WebhookLambda["⚡ AWS Lambda\n(Webhook Handler\n+ Vercel Chat SDK)"]
+    end
+
+    subgraph Agent["AI エージェント層"]
+        TaskExtractor["🤖 AWS Lambda\n(TaskExtractorAgent)"]
+        SaboriProposer["🤖 AWS Lambda\n(SaboriProposerAgent\n+ PersonaRenderer)"]
+        Bedrock["🧠 Amazon Bedrock\n(Claude Sonnet 3.5\n+ AgentCore)"]
+    end
+
+    subgraph Data["データ層"]
+        DDB["🗃️ Amazon DynamoDB\n(On-Demand / 7テーブル)"]
+        SM["🔑 AWS Secrets Manager\n(OAuth tokens)"]
+    end
+
+    subgraph Orchestration["オーケストレーション層"]
+        EB["📡 Amazon EventBridge\n(Webhook Events)"]
+        EBScheduler["⏰ EventBridge Scheduler\n(定期再評価)"]
+    end
+
+    subgraph Monitoring["モニタリング層"]
+        CW["📊 Amazon CloudWatch\n(Logs / Metrics / Alarms)"]
+        XRay["🔍 AWS X-Ray\n(分散トレーシング)"]
+    end
+
+    subgraph IaC["IaC"]
+        CDK["🏗️ AWS CDK (TypeScript)\n(6 Stacks)"]
+    end
+
+    %% ユーザー → エッジ
+    User -->|"HTTPS"| CF
+    CF -->|"Origin Access Control"| S3
+    CF -->|"API リクエスト"| APIGW
+
+    %% 認証フロー
+    User -->|"Google OAuth / OIDC"| GoogleIdP
+    GoogleIdP -->|"Authorization Code"| Cognito
+    Cognito -->|"JWT 発行"| User
+    APIGW -->|"Cognito Authorizer\nJWT 検証"| HonoLambda
+
+    %% API → Agent・DB
+    HonoLambda -->|"サボり提案生成"| SaboriProposer
+    HonoLambda <-->|"CRUD"| DDB
+    HonoLambda -->|"OAuth token 取得"| SM
+
+    %% Webhook フロー
+    Slack -->|"POST /webhooks/slack\nSigning Secret 検証"| WebhookLambda
+    WebhookLambda -->|"PutEvents"| EB
+    EB -->|"Lambda 起動"| TaskExtractor
+
+    %% Agent → Bedrock / DB
+    TaskExtractor -->|"InvokeAgent\nタスク抽出"| Bedrock
+    TaskExtractor <-->|"PutItem\n(TaskCandidates)"| DDB
+    SaboriProposer -->|"InvokeAgent\nサボり判定"| Bedrock
+    SaboriProposer -->|"外部 API コール"| Slack
+    SaboriProposer -->|"外部 API コール"| Gmail
+    SaboriProposer -->|"外部 API コール"| GCal
+    SaboriProposer -->|"OAuth token 取得"| SM
+    SaboriProposer <-->|"PutItem / GetItem\n(Proposals)"| DDB
+
+    %% バックグラウンド更新
+    EBScheduler -->|"定期実行（毎時）"| SaboriProposer
+
+    %% モニタリング
+    HonoLambda -.->|"ログ / メトリクス"| CW
+    TaskExtractor -.->|"ログ / メトリクス"| CW
+    SaboriProposer -.->|"ログ / メトリクス"| CW
+    APIGW -.->|"トレース"| XRay
+
+    %% IaC（スタック管理）
+    CDK -.->|"CognitoStack"| Cognito
+    CDK -.->|"DataStack"| DDB
+    CDK -.->|"ApiStack"| APIGW
+    CDK -.->|"AgentStack"| TaskExtractor
+    CDK -.->|"WebhookStack"| EB
+    CDK -.->|"FrontendStack"| CF
+
+    %% スタイリング
+    style External fill:#ECEFF1,stroke:#455A64
+    style Edge fill:#E3F2FD,stroke:#1565C0
+    style Auth fill:#F3E5F5,stroke:#6A1B9A
+    style API fill:#E8F5E9,stroke:#2E7D32
+    style Agent fill:#FFF8E1,stroke:#F57F17
+    style Data fill:#FBE9E7,stroke:#BF360C
+    style Orchestration fill:#F0F4C3,stroke:#827717
+    style Monitoring fill:#E0F2F1,stroke:#00695C
+    style IaC fill:#FCE4EC,stroke:#880E4F
+```
+
+### 1.2 CDK スタック構成図（デプロイ依存関係）
+
+```mermaid
+graph LR
+    C1["CognitoStack\n(Cognito User Pools\nGoogle IdP)"]
+    C2["DataStack\n(DynamoDB 7テーブル\nSecrets Manager)"]
+    C3["ApiStack\n(API Gateway\nHono Lambda)"]
+    C4["AgentStack\n(TaskExtractor Lambda\nSaboriProposer Lambda\nBedrock 統合)"]
+    C5["WebhookStack\n(Webhook Lambda\nEventBridge Rules\nEventBridge Scheduler)"]
+    C6["FrontendStack\n(CloudFront\nS3 Bucket)"]
+
+    C1 --> C3
+    C2 --> C3
+    C2 --> C4
+    C2 --> C5
+    C4 --> C5
+    C3 --> C6
+
+    style C1 fill:#F3E5F5,stroke:#6A1B9A
+    style C2 fill:#FBE9E7,stroke:#BF360C
+    style C3 fill:#E8F5E9,stroke:#2E7D32
+    style C4 fill:#FFF8E1,stroke:#F57F17
+    style C5 fill:#F0F4C3,stroke:#827717
+    style C6 fill:#E3F2FD,stroke:#1565C0
+```
+
+### 1.3 セキュリティ境界図（テキスト表現）
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ パブリックゾーン（インターネット）                              │
+│  - ユーザー（ブラウザ）                                        │
+│  - Slack / Gmail / Google Calendar（外部 SaaS）               │
+│  - Google Identity Provider（OpenID Connect）                  │
+└────────────────────────┬─────────────────────────────────────┘
+                         │ HTTPS（TLS 1.2以上）
+         ┌───────────────┴────────────────┐
+         │ Amazon CloudFront（エッジ）     │
+         │ - HTTPS 強制                   │
+         │ - Origin Access Control        │
+         │ - WAF（オプション）             │
+         └───────────────┬────────────────┘
+                         │
+         ┌───────────────┴────────────────┐
+         │ Amazon Cognito User Pools       │
+         │ - JWT Bearer Token 発行         │
+         │ - Google OAuth 2.0 統合         │
+         │ - ID Token / Access Token       │
+         └───────────────┬────────────────┘
+                         │ JWT 検証（Cognito Authorizer）
+         ┌───────────────┴────────────────┐
+         │ API Gateway HTTP API            │
+         │ - Cognito Authorizer            │
+         │ - CORS 設定                     │
+         │ - スロットリング                 │
+         └───────────────┬────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────────┐
+│ Lambda 実行環境（マネージドサンドボックス）                    │
+│  - IAM ロール最小権限                                          │
+│  - 環境変数（KMS 暗号化）                                      │
+│  - Secrets Manager 統合（OAuth トークン管理）                  │
+│  - VPC 不要（サーバーレス・ゼロ常時起動）                      │
+└─────────────────────────────────────────────────────────────┘
+                         │
+         ┌───────────────┴────────────────┐
+         │ DynamoDB / Secrets Manager      │
+         │ - 保存時暗号化（AWS 管理 KMS）   │
+         │ - VPC エンドポイント不要         │
+         │ - IAM ポリシーで細粒度アクセス制御│
+         └────────────────────────────────┘
+```
 
 ---
 

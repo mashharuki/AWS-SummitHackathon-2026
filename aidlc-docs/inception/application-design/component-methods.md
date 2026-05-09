@@ -1,9 +1,45 @@
-# コンポーネントメソッド定義 — SABOROU
+# コンポーネントメソッド定義 — SABOROU（インデックス）
 
 **プロジェクト名**: SABOROU（サボロー）
-**作成日**: 2026-05-09
-**バージョン**: 1.0.0
-**注意**: 詳細なビジネスロジックは Construction フェーズの Functional Design で定義する
+**作成日**: 2026-05-09 / **最終更新**: 2026-05-10（コンポーネント別ファイルに分割）  
+**注意**: このファイルはインデックスです。各コンポーネントの詳細は下記リンク先を参照してください。
+
+---
+
+## コンポーネントメソッド詳細（個別ファイル）
+
+詳細ナビゲーション: [component-methods/README.md](./component-methods/README.md)
+
+### バックエンド API（apps/api）
+
+| コンポーネント | ファイル | 概要 |
+|---|---|---|
+| BE-01 AuthHandler | [BE-01-auth-handler.md](./component-methods/BE-01-auth-handler.md) | JWT 検証 / Cognito トークン交換 |
+| BE-02 TaskHandler | [BE-02-task-handler.md](./component-methods/BE-02-task-handler.md) | タスク CRUD / 候補承認 |
+| BE-03 ProposalHandler | [BE-03-proposal-handler.md](./component-methods/BE-03-proposal-handler.md) | サボり提案取得 / SSE ストリーミング |
+| BE-04 HonneHandler | [BE-04-honne-handler.md](./component-methods/BE-04-honne-handler.md) | 本音データ記録 |
+| BE-05 ConnectionHandler | [BE-05-connection-handler.md](./component-methods/BE-05-connection-handler.md) | 外部サービス連携管理 |
+| BE-06 WebhookHandler | [BE-06-webhook-handler.md](./component-methods/BE-06-webhook-handler.md) | Slack Webhook 受信（Vercel Chat SDK） |
+
+### エージェント（packages/agent）
+
+| コンポーネント | ファイル | 概要 |
+|---|---|---|
+| AG-01 TaskExtractorAgent | [AG-01-task-extractor-agent.md](./component-methods/AG-01-task-extractor-agent.md) | Slack/Gmail/Calendar からタスク自動抽出 |
+| AG-02 SaboriProposerAgent | [AG-02-sabori-proposer-agent.md](./component-methods/AG-02-sabori-proposer-agent.md) | サボり判定（5理論 × LLM + Bedrock Tool Use） |
+| AG-03 PersonaRenderer | [AG-03-persona-renderer.md](./component-methods/AG-03-persona-renderer.md) | サボロー口調変換（Claude Haiku） |
+| AG-04 ContextCollector | [AG-04-context-collector.md](./component-methods/AG-04-context-collector.md) | 外部サービスコンテキスト収集 |
+
+### 共有・インフラ
+
+| コンポーネント | ファイル | 概要 |
+|---|---|---|
+| packages/shared | [shared-utils.md](./component-methods/shared-utils.md) | 日時ユーティリティ / トークン管理 / AppError |
+| infra/ (CDK) | [infra-components.md](./component-methods/infra-components.md) | 6 CDK スタック定義 |
+
+---
+
+> ⚠️ 以下の旧コンテンツは参考用として残しています。最新の正本は上記個別ファイルを参照してください。
 
 ---
 

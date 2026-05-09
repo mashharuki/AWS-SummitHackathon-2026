@@ -43,6 +43,34 @@ SABOROU は、AI 時代に増え続けるタスクに対して「今どうサボ
 | **危機管理能力** | リマインドがなくても「そろそろ危ない」を察知できる | サボローの警告待ちになり、締切直前まで気づきにくくなる |
 | **締切感覚** | 「あと2日」という時間感覚を体感で把握 | 「まだ大丈夫」の根拠を外部判断に依存し、内在化された時間感覚が弱まる |
 
+### 1.1.2 サボり判定の科学的根拠（社会心理学・動機づけ理論）
+
+SABOROU の「なぜ今サボれるか」という判定は、5つの確立された学術理論を設計基盤としている。
+これにより、AIの恣意的な判断ではなく、人間行動の科学的メカニズムに基づく合理的提案であることを担保する。
+
+| # | 理論 | 出典（査読済み） | 判定への活用 |
+|---|------|----------------|-------------|
+| 1 | **Collective Effort Model (CEM)** | Karau & Williams (1993). *Journal of Personality and Social Psychology, 65*(4), 681–706. | 「自分の貢献が価値ある結果につながる」と信じられないとき努力は合理的に低下する。締切が不明瞭・依頼者が認識していないタスクでは、今努力する価値が乏しいと判定 |
+| 2 | **Identifiability（識別可能性）** | Williams, Harkins & Latané (1981). *Journal of Personality and Social Psychology, 40*(2), 303–311. | 個人の貢献が依頼者から「識別可能」な状態では社会的手抜きが消える。依頼者が offline / away でリマインドがない＝識別不能＝サボれる根拠 |
+| 3 | **Sucker Effect（カモ効果）** | Kerr (1983). *Journal of Personality and Social Psychology, 45*(4), 819–828. | 依頼者自身が動いていないとき、「自分だけ先に動いて損をする」のを避ける心理が合理的に働く。依頼者の Slack ステータスや返信速度を参照 |
+| 4 | **Self-Determination Theory (SDT)** | Ryan & Deci (2000). *American Psychologist, 55*(1), 68–78. | 外発的動機（締切プレッシャー・リマインド）がないとき、先延ばしが自律的に最適な戦略になる。リマインド回数・緊急度ラベルを定量化してLLMへ入力 |
+| 5 | **Expectancy Theory** | Vroom (1964). *Work and Motivation.* Wiley. | 動機づけ＝期待（努力→成果）× 道具性（成果→報酬）× 誘意性。締切が遠い・フィードバックがないタスクは「今努力しても報われない」期待を生み、先延ばしが最適戦略となる |
+
+**サボれる条件の論理式（5理論の統合）**:
+```
+[サボれる条件] = Identifiability が低い（依頼者が見ていない）
+              ∧ Sucker Effect が発動（依頼者も動いていない）
+              ∧ Expectancy が高い（締切まで余裕がある）
+              ∧ SDT 外発的プレッシャーが低い（リマインドなし）
+              → CEM によると集合的努力への動機が低下 = サボりが最適解
+```
+
+この科学的根拠に基づき、Claude Sonnet（Amazon Bedrock）がSlack・Gmail・Google Calendarから収集した文脈を評価し、「今サボれる理由」を人間が共感できる言語で説明する。
+
+> 詳細な実装マッピングは [`application-design/component-methods.md`](../application-design/component-methods.md) §2「AG-02: SaboriProposerAgent」を参照。
+
+
+
 ### 1.2 ターゲットユーザーペルソナ
 
 **プライマリペルソナ: 副業・フリーランサー**（Q16=B）
