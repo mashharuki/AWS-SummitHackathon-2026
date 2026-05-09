@@ -1,3 +1,9 @@
 # AWS-SummitHackathon-2026
 
-AWS Summit Hackathon 2026用のGitHubリポジトリです。https://pages.awscloud.com/summit-japan-2026-hackathon-reg.html
+## 概要
+
+![](./docs/imgs/0.jpg)
+
+## MVP仕様書
+
+![](./docs/imgs/1.jpg)
