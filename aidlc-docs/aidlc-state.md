@@ -46,7 +46,7 @@
 
 - **実行計画書**: `aidlc-docs/inception/plans/execution-plan.md`（完了）
 - **総合リスクレベル**: Medium-High（外部API 3連携 / Bedrock AgentCore 新興性 / 時間制約）
-- **推奨実装順序**: shared → infra → agent → api → web
+- **推奨実装順序**: shared → infra → task-extractor → sabori-proposer → api → web
 - **実行ステージ数**: Inception 残り2 + Construction 6 × Unit数 = 合計 8〜14 ステージ
 - **スキップステージ**: Reverse Engineering（Greenfield のため）/ Operations（プレースホルダー）/ Security Baseline Extension（無効）/ Property-Based Testing Extension（無効）
 - **マイルストーン**:
@@ -81,9 +81,9 @@
 - **unit-of-work.md**: `aidlc-docs/inception/units/unit-of-work.md`（完了）
 - **unit-dependencies.md**: `aidlc-docs/inception/units/unit-dependencies.md`（完了）
 - **unit-story-map.md**: `aidlc-docs/inception/units/unit-story-map.md`（完了）
-- **Unit 数**: 5（U-01: shared / U-02: infra / U-03: agent / U-04: api / U-05: web）
-- **実装順序**: shared → infra → agent → api → web
-- **規模**: S（U-01）/ M（U-02）/ L（U-03）/ L（U-04）/ M（U-05）
+- **Unit 数**: 6（U-01: shared / U-02: infra / U-03a: task-extractor / U-03b: sabori-proposer / U-04: api / U-05: web）
+- **実装順序**: shared → infra → task-extractor → sabori-proposer → api → web
+- **規模**: S（U-01）/ M（U-02）/ M（U-03a）/ M（U-03b）/ L（U-04）/ M（U-05）
 - **次ステージ**: CONSTRUCTION フェーズ — U-01: shared から開始
 - **INCEPTION フェーズ完了**: 2026-05-09T15:00:00Z
 
@@ -97,7 +97,7 @@
 - **DynamoDB テーブル数**: 6（Users / ServiceConnections / TaskCandidates / Tasks / Proposals / HonneData / Personas = 7テーブル）
 - **API エンドポイント数**: 14
 - **シーケンス図数**: 4（タスク自動抽出 / サボり提案生成 / 本音データ記録 / バックグラウンド再評価）
-- **想定 Unit 数**: 5（shared → infra → agent → api → web）
+- **想定 Unit 数**: 6（shared → infra → task-extractor → sabori-proposer → api → web）
 
 ## 書類審査レビュー
 - **レビュー実施日時**: 2026-05-09T16:30:00Z
