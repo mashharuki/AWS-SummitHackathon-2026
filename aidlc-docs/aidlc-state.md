@@ -99,6 +99,31 @@
 - **シーケンス図数**: 4（タスク自動抽出 / サボり提案生成 / 本音データ記録 / バックグラウンド再評価）
 - **想定 Unit 数**: 5（shared → infra → agent → api → web）
 
+## 書類審査レビュー
+- **レビュー実施日時**: 2026-05-09T16:30:00Z
+- **レビュアー**: AI-DLC Specialist（aws-summit-hackathon-reviewer skill使用）
+- **レビュー深度**: 包括的（Comprehensive）
+- **総合評価**: B+ (3.69/5.0)
+- **提出準備状況**: 要修正（3つの重大な欠陥 + 5つの改善推奨事項あり）
+- **競争力評価**: 150チーム中 上位30%圏内（現状）→ 修正後は上位10%圏内を狙える
+- **レビューレポート**: `aidlc-docs/review-report-20260509.md`
+- **重大な欠陥**:
+  1. 🔴 技術スタック変更（Vercel Chat SDK）が主要ドキュメントに未反映
+  2. 🔴 AWS全体アーキテクチャ図が欠如
+  3. 🟠 シーケンス図が不完全（認証・外部連携・エラーハンドリングなし）
+- **最優先修正項目（24時間以内）**:
+  1. Vercel Chat SDK を requirements.md / application-design.md / unit-of-work.md に反映
+  2. ✅ AWS全体アーキテクチャ図（Mermaid）を生成（完了: 2026-05-09T17:30:00Z）
+  3. README.md にプロジェクト概要を記載
+- **シーケンス図更新**: 4 → 7 に増加（認証・外部連携・エラーハンドリング追加完了）
+- **次回レビュー**: 予選直前（2026-05-28）— Construction成果物の品質チェック
+
+## AWS全体アーキテクチャ図
+- **ファイル**: `aidlc-docs/inception/application-design/aws-architecture.md`（作成完了: 2026-05-09T17:30:00Z）
+- **形式**: Mermaid
+- **内容**: CloudFront / S3 / API Gateway / Lambda / DynamoDB / Cognito / Bedrock / Secrets Manager / EventBridge / CloudWatch の配置と関係性
+- **追加情報**: 6つのCDKスタック構成・セキュリティ境界・データフロー・コスト見積り（月額$30.94）
+
 ## 特記事項
 - ハッカソン書類審査締切: 2026年5月10日
 - テーマ: 「人をダメにするサービス」
