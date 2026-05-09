@@ -25,6 +25,7 @@
 | 言語 | **TypeScript** | strict mode 有効 |
 | ビルドツール | **Vite** | 高速 HMR・ESM ネイティブ |
 | UI コンポーネント | **shadcn/ui** | プロジェクト内に既存スキルあり（`.claude/skills/shadcn/`） |
+| チャット系ツールとの連携 | **Vercel Chat SDK** | https://chat-sdk.dev を利用する。プロジェクト内に既存スキルあり（`.claude/skills/chat-sdk/`） |
 | スタイリング | **Tailwind CSS** | shadcn/ui と統合 |
 | デザイン → コード変換 | **Pencil.dev（MCP）** | ローカル MCP サーバー経由でClaude Codeが`.pen`ファイルから正確に React コンポーネント生成。**全画面を Pencil で起こす方針**。リポジトリに `.pen` ファイルを同居させデザインとコードを一元管理。 |
 
@@ -174,7 +175,7 @@ PMF 後の拡張方向。**MVP では明示的にスコープ外**：
 | 候補 | メリット | 検討ポイント |
 |---|---|---|
 | **Bedrock AgentCore** | マネージド・セッション/メモリ管理付き・複数エージェント協調機能あり | 2エージェント構成と相性良好。最新サービスで知見蓄積中 |
-| **Strands Agent SDK** | 軽量・ツール定義が直感的・Python/TS 両対応 | バックエンドがTSなので統一感あり |
+| **Strands Agent SDK + Hono** | 軽量・ツール定義が直感的・Python/TS 両対応 | バックエンドがTSなので統一感あり |
 | **自前実装（Hono + Bedrock SDK）** | 最大の柔軟性・依存最小 | エージェントの抽象化を自前で書く負担 |
 
 → Application Design / NFR Requirements で確定する。

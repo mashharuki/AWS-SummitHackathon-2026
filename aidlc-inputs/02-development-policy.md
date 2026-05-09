@@ -142,7 +142,7 @@
 ### 6.1 構成原則
 
 - **`apps/`**：デプロイ単位（web / api / agent）
-- **`packages/`**：再利用ライブラリ（shared 型定義・共通ユーティリティ）
+- **`packages/`**：再利用ライブラリ（shared 型定義・共通ユーティリティ(ヘルパー関数・定数)）
 - **`infra/`**：AWS CDK スタック
 - パッケージ間依存は workspace protocol（`workspace:*`）で記述
 
