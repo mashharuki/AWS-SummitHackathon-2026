@@ -1,24 +1,289 @@
-# SABOROU（サボロー）- サボりの最適解
+# SABOROU（サボロー） - サボりの最適解
 
-AWS Summit Japan 2026 ハッカソン応募作品
+![AWS Summit 2026](https://img.shields.io/badge/AWS%20Summit%20Japan-2026-orange)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
+![Amazon Bedrock](https://img.shields.io/badge/AI-Amazon%20Bedrock-232f3e)
 
-「今どうサボれば一番うまく逃げ切れるか」を、外部ツール文脈を読んだAIエージェントが提案するサービスです。
+AWS Summit Japan 2026 ハッカソン応募作品  
 
-## コンセプト
+> 「タスクを片付けるより、うまく逃げる。」  
 
-- 表向きの価値: タスクに追われる人の心に余白を作る
-- 裏設定（人をダメにする）: タスク整理能力・優先順位判断・危機管理能力・締切感覚をAIに委ね、判断力を徐々に退化させる
+---
 
-## プロダクト概要
+## サービスコンセプト (Service Concept)
 
-- プロダクト正式名: SABOROU
-- タグライン: サボりの最適解
-- 主要機能:
-	- Slack / Gmail / Google Calendar からのタスク候補自動抽出
-	- 文脈読解によるサボり判定（can_saboru / caution / danger）
-	- おっとりサボロー人格での提案メッセージ生成
+**「今どうサボれば一番うまく逃げ切れるか」**
 
-## 技術スタック
+外部ツール文脈をもとに 心理学のノウハウを組み込んだ AI Agent が根拠付きで提案するプロダクトです。
+
+| 観点 | 従来のタスク管理 | SABOROU |
+|---|---|---|
+| 基本発想 | やることを増やして管理する | やらなくていいことを見極める |
+| 判断主体 | ユーザーの主観と経験 | 外部文脈 + AI の根拠提示 |
+| 心理的負荷 | 常に「本当に後回しでいいか」で消耗 | 「今は寝かせてOK」の許可で余白を作る |
+| 裏設定（人をダメにする） | 自力で判断し続ける | 判断を AI に委ね、整理力・優先順位判断・危機管理感覚が徐々に退化 |
+
+---
+
+## インフォグラフィック (Infographic)
+
+![](./docs/imgs/0.jpg)
+
+## 全画面モックアップスクリーンショット (Full Screens)
+
+<table>
+  <tr>
+	<td align="center">
+	  <img width="280" src="aidlc-inputs/ui/saborou_v2_02-tasklist.png" alt="タスク一覧画面" />
+	  <br />
+	  タスク一覧（1行サボり判定サマリ）
+	</td>
+	<td align="center">
+	  <img width="280" src="aidlc-inputs/ui/saborou_v2_03-detail.png" alt="タスク詳細・チャット画面" />
+	  <br />
+	  タスク詳細（判断材料 + サボローチャット）
+	</td>
+	<td align="center">
+	  <img width="280" src="aidlc-inputs/ui/saborou_v2_04-settings.png" alt="連携設定画面" />
+	  <br />
+	  設定（Slack / Gmail / Calendar 連携）
+	</td>
+  </tr>
+</table>
+
+補足モック:
+- `aidlc-inputs/mockups/01-task-list.png`
+- `aidlc-inputs/mockups/02-task-detail-chat.png`
+
+---
+
+## ターゲットユーザー (Target User)
+
+**プライマリペルソナ: 田中 ユカ（34歳 / フリーランスデザイナー）**
+
+| 項目 | 内容 |
+|---|---|
+| 稼働状況 | 常時 3〜5 社と並行、1日 10〜20 件のタスク |
+| 使用ツール | Slack（常時）、Gmail（1日3〜4回）、Google Calendar（朝昼確認） |
+| 根本課題 | 「今サボっていいのか」の判断基準がなく、判断疲れが蓄積 |
+| 欲しい価値 | 「後回しにしていい」ことを、根拠付きで許可してほしい |
+
+1日の典型:
+- 07:30 通知確認でため息
+- 10:00 優先順位の判断で手が止まる
+- 15:30 「後でいいか」の確信が持てず消耗
+- 22:00 仕事後も Slack を確認してしまう
+
+> 「『このタスク、今日中じゃなくていいよ』って誰かに言ってほしかっただけなんだよね。それを、ちゃんと理由と一緒に。」
+
+---
+
+## コアロジック (Core Logic)
+
+SABOROU の中核は、**サボり判定エンジン**です。
+
+### 1) 3フェーズ判定フロー
+
+```mermaid
+graph TD
+	P1[Phase 1: ContextCollector<br/>Slack/Gmail/Calendar文脈収集] --> P2[Phase 2: Bedrock Tool Use<br/>sabori_judgment構造化出力]
+	P2 --> P3[Phase 3: PersonaRenderer<br/>おっとり口調へ変換]
+	P3 --> OUT[Proposal出力<br/>verdict + reasoning + chatMessage]
+```
+
+### 2) 心理学研究の組み込み（サボり判定への応用）
+
+SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判定に入力します。
+
+| 理論 | 主著 | シグナル対応 | 判定への使い方 |
+|---|---|---|---|
+| Collective Effort Model | Karau & Williams (1993) | `contextCoverage` | 文脈欠損や貢献可視性の低さを評価 |
+| Identifiability | Williams et al. (1981) | `requesterActiveStatus`, `hasReminder` | 依頼者に見られている度合いを評価 |
+| Sucker Effect | Kerr (1983) | `requesterActiveStatus` | 「自分だけ損する」状況を評価 |
+| Self-Determination Theory | Ryan & Deci (2000) | `reminderCount`, `urgencyLevel` | 外発的プレッシャー強度を評価 |
+| Expectancy Theory | Vroom (1964) | `deadlineMinutes`, `contextCoverage` | 今努力する期待値を評価 |
+
+### 3) AIにどう出力させているか
+
+- Bedrock `converse` + Tool Use で `sabori_judgment` スキーマを強制
+- LLM は `verdict` / `reasoning` / `summaryText` / `nextCheckOffsetMinutes` を構造化で返却
+- 最後に PersonaRenderer が `rawChatMessage` を「サボロー口調」に変換
+
+これにより、**科学的根拠 × 説明可能性 × キャラクター体験**を同時に成立させています。
+
+<details>
+<summary>心理学理論の詳細（DOI付き）</summary>
+
+| # | フレームワーク | 出典 |
+|---|---|---|
+| 1 | CEM | Karau & Williams, 1993, https://doi.org/10.1037/0022-3514.65.4.681 |
+| 2 | Identifiability | Williams et al., 1981, https://doi.org/10.1037/0022-3514.40.2.303 |
+| 3 | Sucker Effect | Kerr, 1983, https://doi.org/10.1037/0022-3514.45.4.819 |
+| 4 | SDT | Ryan & Deci, 2000, https://doi.org/10.1037/0003-066X.55.1.68 |
+| 5 | Expectancy Theory | Vroom, 1964, *Work and Motivation* |
+
+</details>
+
+---
+
+## 機能一覧 (Feature List)
+
+| 要件ID | 機能 | 優先度 | 連携/依存 | デモ対象 |
+|---|---|---|---|---|
+| FR-01 | 外部サービス連携・タスク自動抽出 | MUST | Slack / Gmail / Google Calendar / EventBridge | Yes |
+| FR-02 | タスク候補の承認・編集・削除 | MUST | DynamoDB TaskCandidates/Tasks | Yes |
+| FR-03 | 文脈読解・サボり提案生成 | MUST | Bedrock AgentCore / PersonaRenderer | Yes |
+| FR-04 | サボり提案のリアルタイム更新 | MUST | On-demand + EventBridge Scheduler | Yes |
+| FR-05 | 本音データ収集 | MUST | DynamoDB HonneData | Yes |
+| FR-06 | タスク一覧の1行サマリ表示 | MUST | Proposal summaryText | Yes |
+| FR-07 | 認証・外部連携管理 | MUST | Cognito + Google OAuth + Secrets Manager | Yes |
+| FR-08 | 手動タスク追加 | SHOULD | Hono API + DynamoDB | Optional |
+
+---
+
+## ユーザーストーリー処理シーケンス図 (Story Processing Sequence)
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant FE as Web Frontend
+	participant API as Hono API
+	participant WH as WebhookHandler
+	participant TE as TaskExtractorAgent
+	participant DB as DynamoDB
+	participant SP as SaboriProposerAgent
+	participant BR as Amazon Bedrock
+
+	WH->>TE: Slack/Gmail/Calendar イベント転送
+	TE->>BR: タスク候補抽出
+	BR-->>TE: TaskCandidate
+	TE->>DB: TaskCandidates 保存
+
+	U->>FE: タスク候補を承認
+	FE->>API: POST /api/tasks/candidates/:id/approve
+	API->>DB: Tasks 保存
+
+	U->>FE: タスク詳細を開く
+	FE->>API: GET /api/tasks/:id/proposal?stream=true
+	API->>SP: proposeStream(taskId)
+	SP->>BR: 文脈読解 + 判定
+	BR-->>SP: verdict/reasoning/summary
+	SP->>DB: Proposals 保存
+	API-->>FE: SSE delta 配信
+	FE-->>U: サボロー提案表示
+
+	U->>FE: 本音を返信
+	FE->>API: POST /api/tasks/:id/honne
+	API->>DB: HonneData 保存
+```
+
+---
+
+## 使用AWSサービス一覧 (AWS Services)
+
+| カテゴリ | サービス | 用途 | 選定理由 |
+|---|---|---|---|
+| フロント配信 | CloudFront | HTTPS終端 + CDN配信 | 低遅延・グローバル配信 |
+| フロント配信 | S3 | 静的アセットホスティング | シンプル・低コスト |
+| 認証 | Cognito User Pools | ユーザー認証 / Google IdP連携 | OAuth実装をマネージド化 |
+| API | API Gateway HTTP API | REST入口 + Authorizer | Lambda統合が容易 |
+| コンピュート | Lambda | Hono API / Agent実行 | サーバーレスでコスト最適 |
+| オーケストレーション | EventBridge | イベント中継 | 疎結合・拡張容易 |
+| スケジューリング | EventBridge Scheduler | 再評価ジョブ定期実行 | 運用負荷が低い |
+| AI | Amazon Bedrock | タスク抽出 / サボり判定 | モデル利用とガバナンスの両立 |
+| データ | DynamoDB | タスク・提案・本音データ保存 | On-Demandでハッカソン向き |
+| シークレット | Secrets Manager | OAuthトークン・署名鍵保管 | 秘密情報の安全管理 |
+| 監視 | CloudWatch | ログ・メトリクス・アラート | AWS標準の監視基盤 |
+
+---
+
+## アーキテクチャ図 (Architecture)
+
+### 全体アーキテクチャ
+
+```mermaid
+graph TD
+	subgraph External[外部サービス]
+		Slack[Slack API]
+		Gmail[Gmail API]
+		GCal[Google Calendar API]
+		User[ユーザー]
+	end
+
+	subgraph Edge[エッジ層]
+		CF[CloudFront]
+		S3[S3]
+	end
+
+	subgraph Auth[認証]
+		Cognito[Cognito]
+	end
+
+	subgraph API[API層]
+		APIGW[API Gateway]
+		HonoLambda[Lambda: Hono API]
+		WebhookLambda[Lambda: Webhook]
+	end
+
+	subgraph Agent[AIエージェント]
+		TaskExtractor[TaskExtractorAgent]
+		SaboriProposer[SaboriProposerAgent]
+		Bedrock[Amazon Bedrock]
+	end
+
+	subgraph Data[データ層]
+		DDB[DynamoDB]
+		SM[Secrets Manager]
+	end
+
+	subgraph Orchestration[オーケストレーション]
+		EB[EventBridge]
+		EBScheduler[EventBridge Scheduler]
+	end
+
+	User --> CF
+	CF --> S3
+	CF --> APIGW
+	APIGW --> HonoLambda
+	HonoLambda --> SaboriProposer
+	SaboriProposer --> Bedrock
+	HonoLambda <--> DDB
+	HonoLambda --> SM
+
+	Slack --> WebhookLambda
+	WebhookLambda --> EB
+	EB --> TaskExtractor
+	TaskExtractor --> Bedrock
+	TaskExtractor --> DDB
+
+	EBScheduler --> SaboriProposer
+	Gmail --> SaboriProposer
+	GCal --> SaboriProposer
+	Cognito --> APIGW
+```
+
+### CDKスタック依存関係
+
+```mermaid
+graph LR
+	C1[CognitoStack]
+	C2[DataStack]
+	C3[ApiStack]
+	C4[AgentStack]
+	C5[WebhookStack]
+	C6[FrontendStack]
+
+	C1 --> C3
+	C2 --> C3
+	C2 --> C4
+	C2 --> C5
+	C4 --> C5
+	C3 --> C6
+```
+
+---
+
+## 技術スタック (Tech Stack)
 
 - フロントエンド: React, TypeScript, Vite, shadcn/ui, Tailwind CSS
 - バックエンド: Hono on AWS Lambda, API Gateway HTTP API
@@ -29,43 +294,3 @@ AWS Summit Japan 2026 ハッカソン応募作品
 - シークレット管理: AWS Secrets Manager
 - インフラ: AWS CDK v2（TypeScript）
 - リージョン: ap-northeast-1（東京）
-
-## アーキテクチャ
-
-- フロント配信: CloudFront + S3
-- API層: API Gateway + Lambda（Hono）
-- エージェント層: TaskExtractorAgent / SaboriProposerAgent
-- 非同期連携: EventBridge
-- 監視: CloudWatch
-
-詳細図は以下を参照:
-- aidlc-docs/inception/application-design/aws-architecture.md
-
-## AI-DLC成果物
-
-一次審査提出ドキュメントは以下に整理しています。
-
-- 要件定義: aidlc-docs/inception/requirements/requirements.md
-- ユーザーストーリー: aidlc-docs/inception/user-stories/stories.md
-- 実行計画: aidlc-docs/inception/plans/execution-plan.md
-- アプリケーション設計: aidlc-docs/inception/application-design/application-design.md
-- Unit分解: aidlc-docs/inception/units/unit-of-work.md
-- 監査ログ: aidlc-docs/audit.md
-- ワークフロー状態: aidlc-docs/aidlc-state.md
-
-## UIモック
-
-- docs/imgs/0.jpg
-- docs/imgs/1.jpg
-- aidlc-inputs/mockups/
-
-## 開発方針
-
-- TypeScript統一（フロント / バックエンド / IaC）
-- サーバーレスファースト（Lambda / API Gateway / DynamoDB）
-- 最小権限IAMとシークレット分離（Secrets Manager）
-- AI-DLCワークフローに沿った設計・監査記録
-
-## ライセンス
-
-ハッカソン検証用途（PoC）
