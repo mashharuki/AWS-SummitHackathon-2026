@@ -96,7 +96,7 @@
 - **services.md**: `aidlc-docs/inception/application-design/services.md`（完了）
 - **component-dependency.md**: `aidlc-docs/inception/application-design/component-dependency.md`（完了）
 - **コンポーネント総数**: 25（フロントエンド: 8 / バックエンド: 6 / エージェント: 5★AG-05追加 / インフラ: 6）
-- **DynamoDB テーブル数**: 7（Users / ServiceConnections / TaskCandidates / Tasks / TaskOrganization★新規 / Proposals / HonneData / Personas = 8テーブル）
+- **DynamoDB テーブル数**: 8（Users / ServiceConnections / TaskCandidates / Tasks / TaskOrganization★新規 / Proposals / HonneData / Personas）
 - **API エンドポイント数**: 14
 - **シーケンス図数**: 7（タスク自動抽出 / サボり提案生成 / 本音データ記録 / バックグラウンド再評価 / 認証 / 外部サービス連携 / エラーハンドリング）
 - **想定 Unit 数**: 7（shared → infra → task-extractor → task-organizer★新規 → sabori-proposer → api → web）

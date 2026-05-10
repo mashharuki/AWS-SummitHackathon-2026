@@ -258,7 +258,7 @@ graph TD
 | バックエンド | BE-03 | ProposalHandler | サボり提案取得・ストリーミング |
 | バックエンド | BE-04 | HonneHandler | 本音データ記録 |
 | バックエンド | BE-05 | ConnectionHandler | OAuth トークン管理 |
-| バックエンド | BE-06 | WebhookHandler | Slack Webhook 受信（Vercel Chat SDK 使用） |
+| バックエンド | BE-06 | WebhookHandler | Slack Webhook 受信（@slack/bolt 使用）|
 | エージェント | AG-01 | TaskExtractorAgent | 外部メッセージ → タスク候補変換 |
 | エージェント | AG-05 | TaskOrganizerAgent★ | タスク依存関係・手順最適化・サボり余地スコア計算 |
 | エージェント | AG-02 | SaboriProposerAgent | 文脈統合 → サボり提案生成（人格A/B対応）|
