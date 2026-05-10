@@ -485,6 +485,8 @@ data: Proposal
 
 ### 7.1 タスク自動抽出フロー（FR-01）
 
+> **バージョン注記**: 実線は v1.0.0（M2 MVP）で実装済み。`[v1.1.0]` 注釈は M3 決勝実装予定（非同期・ユーザー応答をブロックしない）。
+
 ```mermaid
 sequenceDiagram
     participant Slack as Slack API
@@ -492,6 +494,8 @@ sequenceDiagram
     participant EB as EventBridge
     participant TA as TaskExtractorAgent
     participant BR as Bedrock AgentCore
+    participant TO as TaskOrganizerAgent
+    participant BR2 as Bedrock AgentCore (Organizer)
     participant DB as DynamoDB
     participant UI as フロントエンド
 
@@ -506,9 +510,18 @@ sequenceDiagram
     DB-->>TA: 書き込み完了
     TA->>TA: 生メッセージ本文を即削除（NFR-07）
     UI->>UI: ポーリング or WebSocket で承認待ちタスク更新
+    Note over TA,DB: v1.1.0 以降: TaskOrganizerAgent を非同期起動
+    TA->>EB: PutEvents (task.extracted.completed) [v1.1.0]
+    EB-->>TO: Lambda 起動（TaskOrganizerAgent）[v1.1.0]
+    TO->>DB: QueryItems (TaskCandidates - 同一ユーザー)
+    TO->>BR2: InvokeAgent (依存関係分析・サボり余地スコア計算)
+    BR2-->>TO: OrganizedTaskPlan (依存グラフ / スコア)
+    TO->>DB: PutItem (TaskOrganization テーブル)
 ```
 
 ### 7.2 サボり提案生成フロー（FR-03）
+
+> **バージョン注記**: 実線は v1.0.0（M2 MVP）で実装済み。`[v1.1.0]` 注釈は M3 決勝実装予定。v1.0.0 では `organizedPlan = null` として通過する設計。
 
 ```mermaid
 sequenceDiagram
@@ -527,7 +540,9 @@ sequenceDiagram
     API->>PH: getOrCreateProposal(taskId)
     PH->>DB: GetItem (Proposals テーブル - 最新提案確認)
     DB-->>PH: 提案なし or 陳腐化
-    PH->>SP: propose(taskId, context)
+    PH->>DB: GetItem (TaskOrganization テーブル - v1.1.0)
+    DB-->>PH: OrganizedTaskPlan (依存グラフ / サボり余地スコア) [v1.1.0 / 未存在時は null]
+    PH->>SP: propose(taskId, context, organizedPlan)
     SP->>CC: collectSlackContext(taskId)
     CC->>SM: GetSecretValue (Slack token)
     SM-->>CC: OAuth token

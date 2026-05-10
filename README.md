@@ -307,7 +307,8 @@ graph TD
 
 - フロントエンド: React, TypeScript, Vite, shadcn/ui, Tailwind CSS
 - バックエンド: Hono on AWS Lambda, API Gateway HTTP API
-- チャット連携: Vercel Chat SDK（chat）
+- Slack連携: @slack/bolt（Webhook受信・署名検証）
+- チャットUI: Vercel AI SDK / useChat フック（サボローチャット ストリーミング表示）
 - AI: Amazon Bedrock（Claude Sonnet）, Bedrock AgentCore
 - データ: DynamoDB（On-Demand）
 - 認証: Amazon Cognito（Google OAuth）
