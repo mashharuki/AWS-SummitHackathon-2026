@@ -1,0 +1,221 @@
+# Unit 間依存関係定義書 — SABOROU
+
+**プロジェクト名**: SABOROU（サボロー）
+**作成日**: 2026-05-09
+**バージョン**: 1.0.0
+
+---
+
+## 1. 依存関係マトリクス
+
+行 = 依存元 Unit / 列 = 依存先 Unit / ○ = 依存あり / - = 依存なし
+
+| 依存元 \ 依存先 | U-01 shared | U-02 infra | U-03a task-extractor | U-03b sabori-proposer | U-04 api | U-05 web |
+|--------------|:-----------:|:----------:|:---------------------:|:---------------------:|:--------:|:--------:|
+| U-01 shared  | -           | -          | -                     | -                     | -        | -        |
+| U-02 infra   | ○（型参照）  | -          | -                     | -                     | -        | -        |
+| U-03a task-extractor | ○（型・ユーティリティ）| ○（環境変数・ARN）| - | - | - | - |
+| U-03b sabori-proposer | ○（型・ユーティリティ）| ○（環境変数・ARN）| ○（Bedrock wrapper再利用） | - | - | - |
+| U-04 api     | ○（型・インタフェース）| ○（環境変数・ARN）| ○（TaskExtractor invoke）| ○（SaboriProposer invoke） | - | - |
+| U-05 web     | ○（型定義）  | -          | -                     | -                     | ○（HTTP契約）| -    |
+
+---
+
+## 2. 依存関係の詳細
+
+### U-02 → U-01（型参照）
+
+| 依存内容 | 用途 |
+|---------|------|
+| `Task` / `Proposal` / `HonneData` 型 | CDK コード内でのLambda環境変数型安全性確認 |
+
+**結合度**: 低（CDK コード自体は型に強く依存しない）
+**変更影響**: U-01 の型変更は U-02 CDK コードへの影響は軽微
+
+---
+
+### U-03a → U-01（型・ユーティリティ）
+
+| 依存内容 | 用途 |
+|---------|------|
+| `Task` / `TaskCandidate` / `Proposal` / `Verdict` 型 | エージェントの入出力型 |
+| `guardTokenLimit()` | Bedrock プロンプトトリム |
+| `pseudonymize()` | 依頼者名の仮名化 |
+| `BedrockTimeoutError` / `DynamoWriteFailedError` | エラースロー |
+| `MAX_TOKEN_LIMIT` 定数 | トークン上限チェック |
+
+**結合度**: 高（型が変わると agent の実装変更が必要）
+**変更影響**: U-01 の型変更 → U-03a への波及あり（型検査で早期検知可能）
+
+---
+
+### U-03a → U-02（環境変数・ARN）
+
+| 依存内容 | 渡し方 |
+|---------|--------|
+| Bedrock AgentCore エンドポイント | Lambda 環境変数 `BEDROCK_AGENT_ID` |
+| DynamoDB テーブル名 | Lambda 環境変数 `DYNAMODB_TABLE_TASKS` 等 |
+| Secrets Manager ARN | Lambda 環境変数 `SECRETS_ARN_SLACK` 等 |
+| Lambda 実行ロール ARN | CDK で Lambda に直接付与 |
+
+**結合度**: 低（実行時の環境変数依存のみ。コード自体は独立）
+**変更影響**: U-02 でリソース名変更 → 環境変数の再定義が必要
+
+---
+
+### U-03b → U-01（型・ユーティリティ）
+
+| 依存内容 | 用途 |
+|---------|------|
+| `Task` / `Proposal` / `Verdict` 型 | 提案ロジックの入出力型 |
+| `guardTokenLimit()` | Bedrock プロンプトトリム |
+| `pseudonymize()` | 依頼者名の仮名化 |
+
+**結合度**: 高（型・ユーティリティが変わると proposer の実装変更が必要）
+
+---
+
+### U-03b → U-02（環境変数・ARN）
+
+| 依存内容 | 渡し方 |
+|---------|--------|
+| Bedrock AgentCore エンドポイント | Lambda 環境変数 `BEDROCK_AGENT_ID` |
+| DynamoDB テーブル名 | Lambda 環境変数 `DYNAMODB_TABLE_TASKS` 等 |
+| Secrets Manager ARN | Lambda 環境変数 `SECRETS_ARN_SLACK` 等 |
+
+**結合度**: 低（実行時の環境変数依存のみ）
+
+---
+
+### U-03b → U-03a（Bedrock wrapper再利用）
+
+| 依存内容 | 用途 |
+|---------|------|
+| `src/bedrock/client.ts` | AgentCore / InvokeModel フォールバッククライアントの共通利用 |
+
+**結合度**: 中（インタフェースが変わると U-03b の修正が必要）
+
+---
+
+### U-04 → U-01（型・インタフェース）
+
+| 依存内容 | 用途 |
+|---------|------|
+| `ITaskRepository` / `IProposalRepository` 等 | Repository パターンの契約（実装は U-04 が持つ）|
+| Zod スキーマ | HTTPリクエストの入力バリデーション |
+| 全エンティティ型 | ハンドラの型安全性 |
+| `TokenExpiredError` / `DynamoWriteFailedError` 等 | エラーハンドリングミドルウェアでの補足 |
+
+**結合度**: 高（U-01 はAPIの型契約の中心）
+**変更影響**: U-01 の型変更 → U-04 への波及あり（型検査で早期検知可能）
+
+---
+
+### U-04 → U-02（環境変数・ARN）
+
+| 依存内容 | 渡し方 |
+|---------|--------|
+| DynamoDB テーブル名 | Lambda 環境変数 |
+| Secrets Manager ARN | Lambda 環境変数 |
+| CORS 許可オリジン（CloudFront URL）| Lambda 環境変数 `ALLOWED_ORIGIN` |
+
+**結合度**: 低（実行時依存のみ）
+
+---
+
+### U-04 → U-03a / U-03b（Lambda invoke）
+
+| 依存内容 | 渡し方 |
+|---------|--------|
+| TaskExtractorAgent Lambda ARN | 環境変数 `TASK_EXTRACTOR_LAMBDA_ARN` |
+| SaboriProposerAgent Lambda ARN | 環境変数 `SABORI_PROPOSER_LAMBDA_ARN` |
+
+**呼び出し方法**: AWS SDK `LambdaClient.send(new InvokeCommand({...}))` または EventBridge 経由
+**結合度**: 中（ARN が変わると環境変数の更新が必要だが、インタフェースは Lambda ペイロード契約のみ）
+
+---
+
+### U-05 → U-01（型定義）
+
+| 依存内容 | 用途 |
+|---------|------|
+| `Task` / `Proposal` / `HonneData` / `Verdict` 型 | コンポーネントの Props 型安全性 |
+
+**結合度**: 低〜中（フロントエンドは API レスポンスの型を使用するため、型の不一致はコンパイルで検知可能）
+
+---
+
+### U-05 → U-04（HTTP契約）
+
+| 依存内容 | 渡し方 |
+|---------|--------|
+| API ベース URL | 環境変数 `VITE_API_BASE_URL` |
+| エンドポイント 14本の URL / メソッド / ペイロード | APIClient に直書き（OpenAPI 契約は将来対応）|
+
+**結合度**: 中（エンドポイントの変更は APIClient の修正が必要）
+**注意**: U-04 の実装が固まる前に U-05 のモック開発は可能（固定レスポンス JSON でモック）
+
+---
+
+## 3. 実装順序の根拠
+
+### クリティカルパス
+
+```
+U-01 → U-02 → U-03a → U-03b → U-04 → U-05
+```
+
+**U-01 が最優先の理由**:
+- 型が確定しないと U-03a / U-03b / U-04 のコードが書けない
+- 工数が最小（S）なので先行完了が容易
+
+**U-02 が2番目の理由**:
+- インフラが立ち上がらないと U-03a / U-03b / U-04 のローカル開発環境が整わない
+- Lambda 環境変数（テーブル名・ARN）が確定しないと実装が完成しない
+- ただし、U-01 完了後は U-02 と U-03a の設計を並行して始められる
+
+**U-03a / U-03b が U-04 より先の理由**:
+- U-04 が U-03a / U-03b の Lambda ARN に依存するため
+- ただし U-03a 完了後は U-04 の設計を先行可能
+
+**U-05 が最後の理由**:
+- U-04 の HTTP エンドポイントが確定しないと APIClient が実装できない
+- ただし、モックデータを使えば UI コンポーネントは先行実装可能
+
+### 並行開発の余地
+
+```
+フェーズ A: U-01 完全実装（2〜3時間）
+↓
+フェーズ B（並行）:
+  - B1: U-02 CDK 実装（4〜6時間）
+  - B2: U-03a タスク抽出ロジック実装（設計・プロンプト設計）
+↓
+フェーズ C（並行）:
+  - C1: U-03b 提案ロジック実装（U-03a 完了後）
+  - C2: U-04 API 実装（U-02 と U-03a の完了後）
+  - C3: U-05 UI コンポーネント実装（モックデータ使用）
+↓
+フェーズ D: U-04 / U-05 統合テスト・E2E 確認
+```
+
+---
+
+## 4. 循環依存チェック
+
+循環依存チェックリスト（全ての Unit ペアで確認済み）:
+
+| チェック対象 | 結果 |
+|------------|------|
+| U-01 → U-02 → ... → U-01 | なし |
+| U-02 → U-03a → ... → U-02 | なし |
+| U-03a → U-03b → ... → U-03a | なし |
+| U-03b → U-04 → ... → U-03b | なし |
+| U-04 → U-05 → ... → U-04 | なし |
+| U-05 → U-01 → ... → U-05 | なし |
+
+すべての依存関係は DAG（有向非循環グラフ）として成立している。
+
+---
+
+*本文書は Units Generation ステージの補助成果物です。*

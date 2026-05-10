@@ -24,6 +24,8 @@ AI-DLC ワークフローを実行するとき、AI（Claude Code）はこのデ
 | [`01-tech-stack-decisions.md`](./01-tech-stack-decisions.md) | 技術スタック決定事項（フロント・バック・AWS・AI） | 確定 |
 | [`02-development-policy.md`](./02-development-policy.md) | 開発方針（AI-DLC・Spec駆動・TDD・CI/CD・モノレポ） | 確定 |
 | [`03-aws-architecture-policy.md`](./03-aws-architecture-policy.md) | AWS アーキテクチャ方針（サーバーレス優先・IaC=CDK） | 確定 |
+| [`mockups/`](./mockups/) | ビジネス側から提供された UI モック（タスク一覧・タスク詳細＋チャット） | 確定 |
+| [`ui/`](./ui/) | Pencil MCPを使って作成した全画面分のUIデザイン | 編集前 |
 
 ## 使い方（AI-DLC 開始時）
 
