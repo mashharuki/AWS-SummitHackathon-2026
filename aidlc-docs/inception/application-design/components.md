@@ -2,7 +2,8 @@
 
 **プロジェクト名**: SABOROU（サボロー）
 **作成日**: 2026-05-09
-**バージョン**: 1.0.0
+**バージョン**: 1.1.0
+**更新日**: 2026-05-10（AG-05: TaskOrganizerAgent 追加 / PersonaRenderer に人格A/B定義追加）
 **対応ステージ**: Application Design（Comprehensive 深度）
 
 ---
@@ -269,21 +270,62 @@
 
 ---
 
+### AG-05: TaskOrganizerAgent（タスク整理エージェント）★新規追加（v1.1.0）
+
+**Unit**: U-03c: task-organizer
+
+**責務**:
+- TaskExtractorAgent（AG-01）が収集した生タスクリストを受け取り、依存関係・手順・優先順位を整理・構造化する
+- Bedrock AgentCore を使用してタスク間の論理的依存関係を分析する（「タスクAが完了しないとタスクBが開始できない」等）
+- 「どの順番でタスクを処理すれば最も長くサボれるか」を計算する最適化ロジックを提供する
+- 各タスクに「サボり余地スコア（0〜100）」を付与し、SaboriProposerAgent に構造化データとして引き渡す
+- 整理結果を DynamoDB TaskOrganization テーブルに書き込む
+
+**インタフェース**:
+- `organizeTask(taskCandidates: TaskCandidate[]): Promise<OrganizedTaskPlan>`
+- `ITaskOrganizerAgent` インタフェースを実装（将来の差し替えに備え抽象化）
+
+**OrganizedTaskPlan の構造**:
+```typescript
+interface OrganizedTaskPlan {
+  taskId: string;
+  dependsOn: string[];        // 依存タスクIDリスト
+  recommendedOrder: number;   // 実行推奨順序（1が最優先）
+  saboruMarginScore: number;  // サボり余地スコア（0: 即着手必須 / 100: 完全に寝かせてOK）
+  parallelTasks: string[];    // 並行実行可能なタスクIDリスト
+  reasoningForOrder: string;  // 順序付けの根拠（Bedrock が生成）
+}
+```
+
+**依存サービス**:
+- Amazon Bedrock AgentCore（Claude Sonnet）— 依存関係分析・最適化計算
+- DynamoDB（TaskCandidates テーブル — 参照）
+- DynamoDB（TaskOrganization テーブル — 書き込み）
+
+**パイプライン上の位置**:
+```
+TaskExtractorAgent（AG-01）→ TaskOrganizerAgent（AG-05）→ SaboriProposerAgent（AG-02）
+```
+
+---
+
 ### AG-02: SaboriProposerAgent（サボり提案エージェント）
 
 **責務**:
-- 承認済みタスクと周辺文脈（Slack温度感・Gmail・Google Calendar）を統合してサボり判定（3状態）を生成する
+- TaskOrganizerAgent（AG-05）が整理した構造化タスクプランと周辺文脈（Slack温度感・Gmail・Google Calendar）を統合してサボり判定（3状態）を生成する
 - `can_saboru` / `caution` / `danger` の verdict を決定する
-- PersonaRenderer を呼び出しておっとりサボローの口調で提案文を生成する
+- TaskOrganizer のサボり余地スコアを参考情報として入力プロンプトに含める（判定精度向上）
+- PersonaRenderer を呼び出し、選択された人格（人格A: おっとり / 人格B: 熱血）の口調で提案文を生成する
 - 次回再評価タイミング（next_check_at）を計算する
 
 **インタフェース**:
-- `propose(taskId: string, context: TaskContext): Promise<Proposal>`
+- `propose(taskId: string, context: TaskContext, organizedPlan: OrganizedTaskPlan): Promise<Proposal>`
 - `ISaboriProposerAgent` インタフェースを実装
 
 **依存コンポーネント**:
+- TaskOrganizerAgent（AG-05）— 整理済みタスクプラン受け取り
 - ContextCollector（AG-04）
-- PersonaRenderer（AG-03）
+- PersonaRenderer（AG-03）— 人格A/B 対応
 - Amazon Bedrock AgentCore（Claude Sonnet）
 - DynamoDB（Proposals テーブル）
 
@@ -294,13 +336,20 @@
 **責務**:
 - サボり判定結果（verdict / reasoning）をペルソナテンプレートに従って口調変換する
 - DynamoDB Personas テーブルからペルソナ定義（prompt_template / tone / emojis）を取得する
-- MVP では `saboru_ottori`（おっとりサボロー）固定。将来の複数人格化に対応した設計
+- MVP では `saboru_ottori`（人格A: おっとりサボロー）固定。将来展望では `saboru_nekkyou`（人格B: 熱血サボロー）との A/B テストに対応
+
+**サポートする人格**:
+
+| persona_id | 人格名 | コンセプト | MVP適用 |
+|-----------|--------|-----------|---------|
+| `saboru_ottori` | おっとりサボロー（人格A） | 「心の余白・良化を求める存在」。穏やかで共感的。メンタルウェルネスの観点からサボりを正当化 | MVP固定 |
+| `saboru_nekkyou` | 熱血サボロー（人格B） | 「搾取されないぞ！と奮い立たせる存在」。情熱的・反骨精神。怒りを引き出してサボりを正当化 | 将来展望（A/Bテスト） |
 
 **インタフェース**:
 - `render(verdict: Verdict, reasoning: string[], personaId: string): Promise<string>`
 
 **依存サービス**:
-- DynamoDB（Personas テーブル）
+- DynamoDB（Personas テーブル）— 人格A・人格B の両定義を格納
 
 ---
 

@@ -63,10 +63,11 @@
 - **Story 数**: 17（US-01〜US-17）
 
 ## Requirements Analysis 成果物
-- **requirements.md**: `aidlc-docs/inception/requirements/requirements.md`（完了）
+- **requirements.md**: `aidlc-docs/inception/requirements/requirements.md`（完了・v1.1.0 更新: 2026-05-10T09:00:00Z）
 - **requirement-verification-questions.md**: `aidlc-docs/inception/requirements/requirement-verification-questions.md`（完了・24問全回答）
-- **FR 件数**: 8件（FR-01〜FR-08）
+- **FR 件数**: 9件（FR-01 / FR-01b★新規 / FR-02〜FR-08）
 - **NFR 件数**: 11件（NFR-01〜NFR-11）
+- **将来展望**: 追加済み（§9: ABテスト人格 / 1対Nプラットフォーム）
 
 ## 入力資料
 以下のファイルが aidlc-inputs/ に配置済み:
@@ -78,26 +79,27 @@
 - `mockups/01-task-list.png` / `02-task-detail-chat.png` / `README.md` - ビジネス側提供のUIモック
 
 ## Units Generation 成果物
-- **unit-of-work.md**: `aidlc-docs/inception/units/unit-of-work.md`（完了）
+- **unit-of-work.md**: `aidlc-docs/inception/units/unit-of-work.md`（完了・v1.1.0 更新: 2026-05-10T09:00:00Z）
 - **unit-dependencies.md**: `aidlc-docs/inception/units/unit-dependencies.md`（完了）
 - **unit-story-map.md**: `aidlc-docs/inception/units/unit-story-map.md`（完了）
-- **Unit 数**: 6（U-01: shared / U-02: infra / U-03a: task-extractor / U-03b: sabori-proposer / U-04: api / U-05: web）
-- **実装順序**: shared → infra → task-extractor → sabori-proposer → api → web
-- **規模**: S（U-01）/ M（U-02）/ M（U-03a）/ M（U-03b）/ L（U-04）/ M（U-05）
+- **Unit 数**: 7（U-01: shared / U-02: infra / U-03a: task-extractor / U-03c: task-organizer★新規 / U-03b: sabori-proposer / U-04: api / U-05: web）
+- **実装順序**: shared → infra → task-extractor → task-organizer → sabori-proposer → api → web
+- **規模**: S（U-01）/ M（U-02）/ M（U-03a）/ M（U-03c）/ M（U-03b）/ L（U-04）/ M（U-05）
 - **次ステージ**: CONSTRUCTION フェーズ — U-01: shared から開始
 - **INCEPTION フェーズ完了**: 2026-05-09T15:00:00Z
+- **INCEPTION 文書更新（チーム追加要件）**: 2026-05-10T09:00:00Z
 
 ## Application Design 成果物
-- **application-design.md**: `aidlc-docs/inception/application-design/application-design.md`（完了）
-- **components.md**: `aidlc-docs/inception/application-design/components.md`（完了）
+- **application-design.md**: `aidlc-docs/inception/application-design/application-design.md`（完了・v1.1.0 更新: 2026-05-10T09:00:00Z）
+- **components.md**: `aidlc-docs/inception/application-design/components.md`（完了・v1.1.0 更新: AG-05追加 / PersonaRenderer人格A/B追加）
 - **component-methods.md**: `aidlc-docs/inception/application-design/component-methods.md`（完了）
 - **services.md**: `aidlc-docs/inception/application-design/services.md`（完了）
 - **component-dependency.md**: `aidlc-docs/inception/application-design/component-dependency.md`（完了）
-- **コンポーネント総数**: 24（フロントエンド: 8 / バックエンド: 6 / エージェント: 4 / インフラ: 6）
-- **DynamoDB テーブル数**: 6（Users / ServiceConnections / TaskCandidates / Tasks / Proposals / HonneData / Personas = 7テーブル）
+- **コンポーネント総数**: 25（フロントエンド: 8 / バックエンド: 6 / エージェント: 5★AG-05追加 / インフラ: 6）
+- **DynamoDB テーブル数**: 7（Users / ServiceConnections / TaskCandidates / Tasks / TaskOrganization★新規 / Proposals / HonneData / Personas = 8テーブル）
 - **API エンドポイント数**: 14
-- **シーケンス図数**: 4（タスク自動抽出 / サボり提案生成 / 本音データ記録 / バックグラウンド再評価）
-- **想定 Unit 数**: 6（shared → infra → task-extractor → sabori-proposer → api → web）
+- **シーケンス図数**: 7（タスク自動抽出 / サボり提案生成 / 本音データ記録 / バックグラウンド再評価 / 認証 / 外部サービス連携 / エラーハンドリング）
+- **想定 Unit 数**: 7（shared → infra → task-extractor → task-organizer★新規 → sabori-proposer → api → web）
 
 ## 書類審査レビュー
 - **レビュー実施日時**: 2026-05-09T16:30:00Z
