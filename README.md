@@ -31,8 +31,6 @@ AWS Summit Japan 2026 ハッカソン応募作品
 
 ## インフォグラフィック
 
-![](./docs/imgs/0.jpg)
-
 ## 画面モックアップ
 
 <table>
