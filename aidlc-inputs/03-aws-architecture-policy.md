@@ -8,7 +8,7 @@
 
 ## 1. 基本方針
 
-### 1.1 サーバーレス・マネージド優先
+### 1.1 サーバーレス・マネージドサービスの優先
 
 - **常時稼働インスタンス（EC2 / RDS の常時稼働）は原則使わない**
 - コンピュートは Lambda を第一選択。長時間処理が必要な場合のみ ECS/Fargate
@@ -62,7 +62,7 @@
 | **キャッシュ** | DynamoDB DAX / ElastiCache（Serverless）/ Lambda メモリ内 | レイテンシ要件次第。MVP では未導入想定 |
 | **検索** | OpenSearch Serverless / 不要 | 文脈検索が必要になったら検討 |
 | **キュー / イベント** | SQS / EventBridge / SNS | イベントの種類と配信保証要件で決定 |
-| **WebSocket** | API Gateway WebSocket API / AppSync | リアルタイム提案更新を MVP に含めるか次第 |
+| **WebSocket** | （MVP では原則不採用） | UI モックではチャット形式だが、実態は同期 API + ボタン応答で実装可能。詳細ペインを開いた時のオンデマンド再評価で十分と想定。WebSocket 採用は要件精査後に判断 |
 
 ### 2.4 採用しない（明示的にスコープ外）
 
@@ -187,13 +187,14 @@
 
 ## 9. 未確定事項（AI-DLC で決定する）
 
-- WebSocket リアルタイム更新の有無（Requirements Analysis で確定）
 - Bedrock の具体モデル ID とパラメータ（NFR Requirements で確定）
 - VPC を作るか作らないか（Lambda が外部 API を叩く頻度・帯域次第）
 - マルチアカウント運用（dev/prod 分離）するか（時間制約次第）
 - エージェント基盤（Strands Agent SDK / Bedrock AgentCore / 自前実装）の選択（Application Design で確定）
 
 **※** DynamoDB / Lambda は第一選択として確定済み。明確な必要性が出た場合のみ Aurora / ECS を Application Design で再検討
+
+**※** WebSocket は MVP では原則不採用方針。UI モック（[`mockups/`](../aidlc-inputs/mockups/)）で「チャット形式 = WebSocket 必須」ではないことを確認済み（同期 API + ボタン応答 + 詳細ペイン展開時のオンデマンド再評価で実装可能）
 
 ---
 

@@ -1,0 +1,149 @@
+{
+  "skill_name": "hono-inertia",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Bun + Hono + Inertia.js + React のフルスタックアプリをゼロから作りたいです。タスク管理アプリを想定しています。プロジェクトの初期セットアップ手順と最低限必要なファイル構成を教えてください。",
+      "expected_output": "bun init, パッケージインストール（hono, @hono/inertia, @inertiajs/react, vite, etc.）、ディレクトリ構成（server/, client/, shared/）、vite.config.ts、server/index.ts、client/main.tsx の最小実装を示す",
+      "assertions": [
+        {
+          "name": "bun_install_command_shown",
+          "description": "bun add コマンドで hono と @hono/inertia が含まれているか"
+        },
+        {
+          "name": "directory_structure_shown",
+          "description": "server/, client/, shared/ のディレクトリ構成が示されているか"
+        },
+        {
+          "name": "vite_config_shown",
+          "description": "vite.config.ts の設定例が含まれているか"
+        },
+        {
+          "name": "inertia_app_setup_shown",
+          "description": "createInertiaApp を使った client/main.tsx の例が含まれているか"
+        },
+        {
+          "name": "c_render_shown",
+          "description": "c.render() を使ったサーバー側のルート例が含まれているか"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Hono × Inertia.js でブログ記事のCRUD機能を実装したいです。記事のタイトルと本文をZodでバリデーションし、DrizzleでSQLiteに保存するコードを書いてください。サーバー側のルートとReactのフォームページ両方お願いします。",
+      "expected_output": "Zod スキーマ（shared/schemas/post.ts）、Drizzle スキーマ（server/db/schema.ts）、Hono ルート（GET/POST/PATCH/DELETE with zValidator）、React useForm を使ったフォームコンポーネント（New.tsx, Edit.tsx）、PRGパターンの使用",
+      "assertions": [
+        {
+          "name": "zod_schema_defined",
+          "description": "Zod でタイトル・本文のバリデーションスキーマが定義されているか"
+        },
+        {
+          "name": "drizzle_schema_defined",
+          "description": "Drizzle の sqliteTable でテーブルスキーマが定義されているか"
+        },
+        {
+          "name": "zvalidator_used",
+          "description": "zValidator ミドルウェアが使われているか"
+        },
+        {
+          "name": "prg_pattern_used",
+          "description": "POST成功後に c.redirect() でPRGパターンが実装されているか"
+        },
+        {
+          "name": "use_form_used",
+          "description": "React側で useForm フックが使われているか"
+        },
+        {
+          "name": "error_display_shown",
+          "description": "form.errors でバリデーションエラーが表示されているか"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "既存のHono + Inertia.jsアプリに認証機能を追加したいです。メールアドレスとパスワードでのログイン、HttpOnly Cookieを使ったセッション管理、認証が必要なルートの保護をお願いします。Better Authを使う方法と、自前実装する方法の両方教えてください。",
+      "expected_output": "Better Auth のセットアップ（betterAuth(), DrizzleAdapter）、Hono ミドルウェアとの統合、DIY実装（createSession, getSession, destroySession using sqlite）、requireAuth ミドルウェア、ログイン/ログアウトルート、React ログインフォーム",
+      "assertions": [
+        {
+          "name": "httponly_cookie_mentioned",
+          "description": "HttpOnly Cookie を使うことが言及されているか"
+        },
+        {
+          "name": "better_auth_setup_shown",
+          "description": "Better Auth のセットアップコードが示されているか"
+        },
+        {
+          "name": "auth_middleware_shown",
+          "description": "認証ミドルウェア（requireAuth）のコードが示されているか"
+        },
+        {
+          "name": "shared_props_for_auth",
+          "description": "Inertia 共有 props でユーザー情報を全ページに渡す方法が示されているか"
+        },
+        {
+          "name": "memory_store_warning",
+          "description": "メモリセッションストアを使わないよう警告または KV/DB を推奨しているか"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Hono + Inertia.jsで作った社内ツールをCloudflare Workersにデプロイしたいです。現在Bunで動かしています。必要な設定変更と注意点を教えてください。",
+      "expected_output": "wrangler.toml の設定、D1をDBとして使う設定、KVをセッションストアに使う方法、Node.jsネイティブモジュール使用不可の警告、バンドルサイズ制限の言及、wrangler deploy コマンド",
+      "assertions": [
+        {
+          "name": "wrangler_toml_shown",
+          "description": "wrangler.toml の設定が示されているか"
+        },
+        {
+          "name": "d1_database_config",
+          "description": "D1データベースのバインディング設定が示されているか"
+        },
+        {
+          "name": "kv_session_store",
+          "description": "セッションストアに KV を使うことが言及されているか"
+        },
+        {
+          "name": "node_modules_warning",
+          "description": "Node.js ネイティブモジュールが使えないことの警告があるか"
+        },
+        {
+          "name": "bundle_size_limit",
+          "description": "バンドルサイズ上限（1MB）への言及があるか"
+        }
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "チームメンバーが書いたHono + Inertia.jsのコードをレビューしてほしいです。以下のコードに問題があれば指摘してください。\n\n```typescript\n// server/routes/posts.ts\napp.post('/posts', async (c) => {\n  const body = await c.req.json()\n  await db.insert(posts).values(body)\n  return c.json({ success: true })\n})\n```\n\n```tsx\n// client/pages/Posts/New.tsx\nimport { useState, useEffect } from 'react'\n\nexport default function New() {\n  const [title, setTitle] = useState('')\n  const [posts, setPosts] = useState([])\n  \n  useEffect(() => {\n    fetch('/api/posts').then(r => r.json()).then(setPosts)\n  }, [])\n  \n  async function submit() {\n    await fetch('/posts', {\n      method: 'POST',\n      body: JSON.stringify({ title })\n    })\n  }\n  ...\n}\n```",
+      "expected_output": "問題点の指摘: 1) バリデーションなし（zValidator/Zod未使用）、2) PRGパターン未使用（c.json返却）、3) useEffect+fetchはInertia規約違反（c.renderでprops渡すべき）、4) useForm未使用、5) Inertia.jsの useForm/Link の利点を活かせていない",
+      "assertions": [
+        {
+          "name": "no_validation_issue",
+          "description": "バリデーションが実装されていない問題を指摘しているか"
+        },
+        {
+          "name": "prg_pattern_missing",
+          "description": "c.json()ではなくc.redirect()を使うべき（PRGパターン）を指摘しているか"
+        },
+        {
+          "name": "use_effect_fetch_issue",
+          "description": "useEffect + fetch がInertia規約に反していることを指摘しているか"
+        },
+        {
+          "name": "use_form_recommendation",
+          "description": "Inertia の useForm を使うよう推奨しているか"
+        },
+        {
+          "name": "c_render_recommendation",
+          "description": "データは c.render() の props として渡すよう推奨しているか"
+        }
+      ],
+      "files": []
+    }
+  ]
+}
