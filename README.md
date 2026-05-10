@@ -354,7 +354,7 @@ graph TD
 | 状態管理 | ワークフロー状態 / 監査ログ / レビューレポート | [`aidlc-state.md`](./aidlc-docs/aidlc-state.md) / [`audit.md`](./aidlc-docs/audit.md) / [`review-report-20260510-final.md`](./aidlc-docs/review-report-20260510-final.md) |
 
 
-## 7. 将来的な展望への追加
+## 将来的な展望への追加
 
 MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新、外部文脈に基づく提案、取扱説明書生成、外部AI連携、サボり提案のA/Bテスト、**1対1から1対Nのサボり文化共有**、ゲーミフィケーションなどへ広げる。
 
