@@ -33,7 +33,7 @@ graph TD
     subgraph API["API 層"]
         APIGW["🚪 API Gateway\n(HTTP API + Cognito Authorizer)"]
         HonoLambda["⚡ AWS Lambda\n(Hono REST API)"]
-        WebhookLambda["⚡ AWS Lambda\n(Webhook Handler\n+ Vercel Chat SDK)"]
+        WebhookLambda["⚡ AWS Lambda\n(Webhook Handler\n+ @slack/bolt)"]
     end
 
     subgraph Agent["AI エージェント層"]
@@ -43,7 +43,7 @@ graph TD
     end
 
     subgraph Data["データ層"]
-        DDB["🗃️ Amazon DynamoDB\n(On-Demand / 7テーブル)"]
+        DDB["🗃️ Amazon DynamoDB\n(On-Demand / 8テーブル)"]
         SM["🔑 AWS Secrets Manager\n(OAuth tokens)"]
     end
 
@@ -126,7 +126,7 @@ graph TD
 ```mermaid
 graph LR
     C1["CognitoStack\n(Cognito User Pools\nGoogle IdP)"]
-    C2["DataStack\n(DynamoDB 7テーブル\nSecrets Manager)"]
+    C2["DataStack\n(DynamoDB 8テーブル\nSecrets Manager)"]
     C3["ApiStack\n(API Gateway\nHono Lambda)"]
     C4["AgentStack\n(TaskExtractor Lambda\nSaboriProposer Lambda\nBedrock 統合)"]
     C5["WebhookStack\n(Webhook Lambda\nEventBridge Rules\nEventBridge Scheduler)"]
@@ -203,7 +203,7 @@ graph LR
 | スタック名 | 主要リソース | 依存関係 |
 |-----------|------------|---------|
 | **CognitoStack** | Cognito User Pools / Google IdP / JWT設定 | なし |
-| **DataStack** | DynamoDB 7テーブル / Secrets Manager | なし |
+| **DataStack** | DynamoDB 8テーブル / Secrets Manager | なし |
 | **ApiStack** | API Gateway HTTP API / Hono Lambda / Cognito Authorizer | CognitoStack, DataStack |
 | **AgentStack** | TaskExtractor Lambda / SaboriProposer Lambda / Bedrock統合 | DataStack |
 | **WebhookStack** | Webhook Lambda / EventBridge Rules / EventBridge Scheduler | DataStack, AgentStack |
@@ -399,5 +399,42 @@ Proposals Table更新
 
 ---
 
+## 11. AWS Well-Architected Framework 準拠
+
+SABOROU のアーキテクチャは AWS Well-Architected Framework の5本柱すべてに準拠する設計を採用している。
+
+### 11.1 5本柱への対応マッピング
+
+| 柱 | 設計方針 | 具体的な実装 |
+|----|---------|------------|
+| **運用上の優秀性** | 可観測性の組み込みと自動復旧 | CloudWatch Logs / Metrics / Alarms（Lambda実行時間・DynamoDB容量・Bedrock Token使用量を常時監視）/ CloudWatch Alarm による自動アラート / エラーハンドリングフローでのフォールバック自動実行 |
+| **セキュリティ** | 最小権限原則と機密情報の完全分離 | IAM ロールを Lambda 単位で最小権限設定（PutItemのみ等）/ OAuth トークンは全て Secrets Manager に暗号化保存（環境変数・DynamoDB 保存禁止）/ Cognito Authorizer による全エンドポイントの JWT 検証 / Slack Signing Secret による Webhook 署名検証 / PII（個人情報）は Lambda メモリ上で即時削除 |
+| **信頼性** | マネージドサービスによる高可用性 | DynamoDB On-Demand（マルチAZ自動レプリケーション）/ Lambda マルチAZ自動実行 / 外部API失敗時の部分的コンテキストでの推論継続 / DynamoDB 書き込みエラー時の Exponential Backoff リトライ（3回）/ Bedrock AgentCore タイムアウト時の InvokeModel 直接呼び出しフォールバック |
+| **パフォーマンス効率** | ストリーミングと並列処理による体感速度向上 | Bedrock ストリーミングレスポンス（InvokeModelWithResponseStream）による first chunk を20秒以内に表示 / ContextCollector の外部API並列呼び出し（Promise.allSettled）/ EventBridge 非同期処理による TaskOrganizerAgent のノンブロッキング起動 / Proposals テーブル GSI-TaskLatest による O(1) 最新提案取得 |
+| **コスト最適化** | サーバーレス・従量課金によるゼロ常時コスト | Lambda / API Gateway / DynamoDB On-Demand でスケールゼロ可能（ユーザーゼロ時のコスト最小化）/ Bedrock プロンプトを最大8,000トークンでガード（NFR-06）/ CloudWatch Budgets アラート（$50/月）でコスト超過を自動検知 / 月額見積り $30.94（NFR-06 の $50/月制約を達成）|
+
+### 11.2 Well-Architected Review チェックリスト
+
+| チェック項目 | 対応状況 |
+|------------|---------|
+| IAMロールは最小権限か | ✅ Lambda単位で個別に定義 |
+| シークレットはコードにハードコードされていないか | ✅ Secrets Manager / 環境変数のみ使用 |
+| データは暗号化されているか | ✅ DynamoDB KMS暗号化 / S3 SSL必須 |
+| 障害発生時に自動復旧するか | ✅ フォールバック戦略・リトライ設計済み |
+| 監視・アラームが設定されているか | ✅ CloudWatch Alarm 7項目定義済み |
+| コストが追跡・管理されているか | ✅ AWS Budgets アラート + 月次見積り $30.94 |
+| スケールアップ計画があるか | ✅ §9 拡張性・スケーラビリティで定義済み |
+
+---
+
+## 12. 参考リンク
+
+- [application-design.md](./application-design.md) - コンポーネント詳細設計
+- [unit-of-work.md](../units/unit-of-work.md) - Unit分解とCDKスタック実装順序
+- [requirements.md](../requirements/requirements.md) - NFR-01〜NFR-11（パフォーマンス・セキュリティ・コスト要件）
+- [03-aws-architecture-policy.md](../../../aidlc-inputs/03-aws-architecture-policy.md) - AWSアーキテクチャ方針
+
+---
+
 **作成者**: AI-DLC Specialist（aidlc-specialist mode）
-**最終更新**: 2026-05-09T17:00:00Z
+**最終更新**: 2026-05-10T10:00:00Z（Well-Architected Framework 準拠表追加）
