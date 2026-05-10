@@ -1,4 +1,4 @@
-# SABOROU（サボロー） - サボりの最適解
+# SABOROU（サボロー） - 何んだって先延ばしにできるサービス
 
 ![AWS Summit 2026](https://img.shields.io/badge/AWS%20Summit%20Japan-2026-orange)
 
