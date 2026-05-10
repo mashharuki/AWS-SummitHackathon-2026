@@ -1,128 +1,345 @@
+# =============================================================================
 # CodeRabbit Configuration
-# レビュー言語設定
+# プロジェクト: SABOROU（サボロー）
+# イベント: AWS Summit Japan 2026 ハッカソン
+# テーマ: 「人をダメにするサービス」
+# 最終更新: 2026-05-10（Serena MCP でプロジェクト全体を解析して生成）
+# =============================================================================
+
 language: ja
 
+# ---------------------------------------------------------------------------
 # レビュー設定
+# ---------------------------------------------------------------------------
 reviews:
-  # 自動レビューを有効化
   auto_review:
     enabled: true
-    # ドラフトPRでもレビュー実施
-    drafts: true
+    drafts: true                    # ドラフト PR もレビュー（開発速度重視）
 
-  # レビューの詳細度
-  profile: chill
-
-  # リクエスト変更の閾値（高い値 = より寛容）
-  request_changes_workflow: false
-
-  # 高レベルの要約を含める
-  high_level_summary: true
-
-  # 各ファイルの要約を含める
-  poem: true
-
-  # レビュー範囲の設定
+  profile: assertive                # ハッカソン品質基準 → 厳格モード
+  request_changes_workflow: true    # セキュリティ・破壊的変更には変更要求
+  high_level_summary: true          # PR 全体サマリを必ず生成
+  poem: true                        # サボローの世界観に合わせて詩的サマリも
   review_status: true
+  collapse_walkthrough: false       # ウォークスルーを折りたたまない
 
-  # コード提案の形式
-  collapse_walkthrough: false
-
-  # セキュリティに関する問題を優先
+  # モノレポ構成: apps/ packages/ infra/ を網羅
   path_filters:
-    - "**/*.js"
-    - "**/*.md"
-    - "**/*.yaml"
-    - "**/*.yml"
-    - "**/*.json"
-    - ".kiro/**/*"
+    - "apps/**/*.{ts,tsx,js,jsx}"
+    - "packages/**/*.{ts,tsx}"
+    - "infra/**/*.ts"
+    - "**/*.{md,yaml,yml,json}"
+    - ".github/**/*"
     - ".claude/**/*"
+    - "aidlc-docs/**/*"
+    - "aidlc-inputs/**/*"
 
-  # 特定のディレクトリ・ファイルを除外
   path_ignore:
-    - "node_modules/**"
+    - "**/node_modules/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/cdk.out/**"
+    - "**/.turbo/**"
+    - "**/coverage/**"
     - "**/*.log"
-    - ".git/**"
-    - "sample-*/**/data/*.json"
+    - "**/.DS_Store"
+    - "**/Thumbs.db"
 
-# チャット機能の設定
+# ---------------------------------------------------------------------------
+# チャット
+# ---------------------------------------------------------------------------
 chat:
-  # AI とのチャット機能を有効化
   auto_reply: true
 
-# プロジェクト固有の知識ベース
+# ---------------------------------------------------------------------------
+# プロジェクト固有ナレッジベース
+# Serena MCP でリポジトリ全体（aidlc-docs/ / aidlc-inputs/ / .claude/ など）を解析して記述
+# ---------------------------------------------------------------------------
 knowledge_base:
-  # プロジェクトの技術スタック
-  - "このプロジェクトはClaude Code学習用のサンプルリポジトリです"
-  - "Kiro風Spec駆動開発（cc-sdd）を採用しています"
-  - "htmx + Express.jsによるサーバーサイドレンダリングアプローチを使用"
-  - "セキュリティ: XSS対策としてHTMLエスケープを必須とします"
-  - ".kiro/steering/ にはプロジェクト全体のコンテキストが格納されています"
-  - ".kiro/specs/ には機能仕様が格納されています"
-  - "sample-*/ ディレクトリは自己完結したサンプルアプリケーションです"
-  - "htmxはCDN経由で使用し、JavaScript最小限のアプローチを取ります"
 
-  # レビュー時の重点ポイント
-  - "セキュリティ: XSS、インジェクション攻撃への対策を確認"
-  - "Spec駆動開発: requirements.md、design.md、tasks.mdとの整合性を確認"
-  - "コード品質: シンプルさと学習用途への適合性を重視"
-  - "ドキュメント: 日本語での明確な説明を確認"
-  - "htmxパターン: ハイパーメディア駆動アプローチの適切な使用を確認"
+  # === プロダクト概要 ===
+  - "プロダクト名: SABOROU（サボロー）/ タグライン: '- サボりの最適解 -' / アイコン: 🛏️"
+  - "外部ツール（Slack/Gmail/Notion/Google Calendar）の文脈を読み取り、「今どうサボれば一番うまく逃げ切れるか」をリアルタイムで提案するAIエージェント"
+  - "サボり提案は時間経過・締切・関係者の進捗変化に応じてリアルタイム更新される"
+  - "MVP 画面数: 2（タスク一覧画面 / タスク詳細＋チャット画面）。デスクトップ向け2ペイン構成"
+  - "カラーパレット: オレンジ（主CTA）/ オフホワイト（背景）/ 淡黄（強調ボックス）/ 白（カード）/ 赤（破壊的アクション）"
 
-# レビュー時の追加チェック項目
+  # === ハッカソン情報 ===
+  - "AWS Summit Japan 2026 ハッカソン / テーマ: 人をダメにするサービス / 書類審査締切: 2026-05-10"
+  - "審査観点: テーマ整合性・技術的チャレンジ・実装品質・AI-DLC実践の証拠（audit.md / aidlc-state.md）"
+  - "GitHub リポジトリは public であること（書類審査の必須条件）"
+
+  # === モノレポ構成 ===
+  - "モノレポ構成: apps/web（React+Vite FE）/ apps/api（Hono on Lambda BE）/ packages/shared（型定義・ユーティリティ）/ packages/agent（Bedrock AgentCore）/ infra（AWS CDK）"
+  - "パッケージマネージャ: pnpm / モノレポ: pnpm workspaces + Turborepo（候補）"
+  - "パッケージ間依存は必ず workspace:* プロトコルで記述する"
+  - "ルート package.json には開発ツールのみ。各 app/package は独立した package.json を持つ"
+
+  # === フロントエンド技術スタック ===
+  - "FE: React（関数コンポーネント+Hooks）+ TypeScript（strict mode）+ Vite（HMR/ESM）"
+  - "UI: shadcn/ui + Tailwind CSS（統合済み）"
+  - "3D: @react-three/fiber（R3F）+ @react-three/drei + @react-three/postprocessing + @react-three/uikit"
+  - "アニメーション: Framer Motion（2D カードUI/モーダル）+ Lottie（サボローキャラクター表情/ローディング）"
+  - "チャット連携: Vercel Chat SDK（https://chat-sdk.dev）"
+  - "デザイン→コード: Pencil.dev（ローカル MCP）/ .pen ファイルをリポジトリに同居。CodeRabbit は .pen ファイルをレビュー対象外とすること"
+  - "フロントのホスティング: S3 + CloudFront（Vercel ではない）"
+
+  # === バックエンド技術スタック ===
+  - "BE フレームワーク: Hono（TypeScript）/ 実行環境: AWS Lambda / API: API Gateway HTTP API"
+  - "Hono の Context 型は必ず明示的に定義する（例: c: Context<{ Bindings: Env }>）"
+  - "認証ミドルウェアは app.use() で登録し、各ルートハンドラに認証ロジックを混入しない"
+  - "バリデーション: Zod（候補）/ DynamoDB アクセス: AWS SDK v3 DocumentClient"
+
+  # === AI エージェント設計（Dual-Agent + Bedrock AgentCore）===
+  - "エージェント基盤: Bedrock AgentCore（マネージド / マルチエージェント協調ネイティブサポート）"
+  - "AG-01 TaskExtractorAgent: 外部メッセージ → 構造化タスク候補。EventBridge トリガー / Lambda 実行"
+  - "AG-02 SaboriProposerAgent: タスク + 周辺文脈 → サボり提案生成。Bedrock コスト最大の発生源"
+  - "AG-03 PersonaRenderer: 判断結果に persona テンプレを注入して口調・表現を整形"
+  - "AG-04 ContextCollector: Slack/Gmail/Calendar からの文脈データ収集ツール群"
+  - "LLM: Amazon Bedrock / モデル: Claude Sonnet 系（コンテキスト読解・自然な日本語応答）"
+  - "Persona は DynamoDB に外出し。MVP は saboru_ottori（おっとりサボロー）単一 persona"
+  - "判断ロジック（verdict/reasoning）と表現（口調・語尾）を分離すること"
+
+  # === データベース設計 ===
+  - "DynamoDB On-Demand 課金（BillingMode.PAY_PER_REQUEST）を必ず使用。PROVISIONED は禁止"
+  - "テーブル: タスク候補 / 承認済みタスク / 提案ログ / persona 定義"
+  - "scan 操作は原則禁止。query + GSI でアクセスパターンを設計する"
+  - "外部ツール由来の生データは最小サマリのみ保存（プライバシー・コスト最適化）"
+
+  # === 認証・OAuth ===
+  - "認証: Amazon Cognito（Google/Slack ソーシャルログイン対応）"
+  - "外部サービス OAuth トークン（Slack/Gmail/Notion/Calendar）は Secrets Manager に保管"
+  - "API Gateway に Cognito Authorizer を設定し JWT 検証を行う"
+  - "Lambda 内で Cognito Claim ベースの認可を実装する"
+
+  # === AWS インフラ ===
+  - "IaC: AWS CDK（TypeScript）/ スタック分割: CognitoStack / DataStack / ApiStack / AgentStack / FrontendStack"
+  - "リージョン: ap-northeast-1（東京）のみ / Bedrock の一部モデルはクロスリージョン推論が必要な場合あり"
+  - "Lambda メモリは 256MB 以上を基準（コールドスタート対策）"
+  - "CloudWatch Logs 保持期間: 14日（コスト最適化）"
+  - "禁止: EC2 常時稼働 / RDS（非Serverless）/ ECS/Fargate（MVP）/ EKS / マルチリージョン"
+  - "CDK RemovalPolicy.DESTROY を設定し不要リソースを即削除できる構成にする"
+  - "CDK の L1（CFN）コンストラクト直接利用は避け L2/L3 を優先する"
+  - "シークレット管理: 重要情報は Secrets Manager / 設定値は SSM Parameter Store"
+  - "OIDC 認証で GitHub Actions から cdk deploy。長期 AWS アクセスキーは使わない"
+  - "AWS Budgets で月額アラート設定（$50 警告 / $100 停止検討）"
+
+  # === 品質・開発規約 ===
+  - "Linter/Formatter: Biome（ESLint + Prettier の代替）/ .eslintrc や .prettierrc は使わない"
+  - "TypeScript strict mode 必須 / any 型は原則禁止（unknown を使うこと）"
+  - "テスト: Vitest（ユニット・統合）+ Playwright（E2E 候補）"
+  - "コミットメッセージ: Conventional Commits（feat: / fix: / docs: / infra: など）"
+  - "TDD: テストを先に書き、テストを通すコードを書く"
+  - "マジックナンバー禁止・定数化必須 / 関数は単一責務"
+  - "変数名・関数名・ファイル名は英語 / AI-DLC 成果物（aidlc-docs/）は日本語で記述"
+
+  # === CI/CD ===
+  - "CI: GitHub Actions / ジョブ: lint-and-format（Biome）/ typecheck / test / build / cdk-synth"
+  - "PR は squash merge 推奨 / 全ジョブ緑でないとマージ不可"
+  - "PR テンプレート: .github/pull_request_template.md を必ず使う"
+
+  # === AI-DLC ワークフロー ===
+  - "AI-DLC: Inception → Construction → Operations（プレースホルダー）"
+  - "audit.md は APPEND ONLY / ユーザーの生入力を要約せず記録 / ISO 8601 タイムスタンプ必須"
+  - "aidlc-state.md でワークフロー進捗を管理 / ステージ完了と同時にチェックボックスを更新"
+  - "コード: workspace ルートに配置 / ドキュメント: aidlc-docs/ のみ"
+
+# ---------------------------------------------------------------------------
+# ツール設定
+# ---------------------------------------------------------------------------
 tools:
-  # セキュリティスキャン
   security:
     enabled: true
-    # XSS、SQLインジェクション、コマンドインジェクションをチェック
     vulnerability_detection: true
-
-  # パフォーマンス分析
   performance:
     enabled: true
-
-  # ベストプラクティスチェック
   best_practices:
     enabled: true
 
-# 早期レビュー（small PRでも詳細レビュー）
 early_access: true
 
-# カスタムルール
+# ---------------------------------------------------------------------------
+# カスタムルール（Serena MCP でプロジェクト固有ルールを把握して定義）
+# ---------------------------------------------------------------------------
 rules:
-  # JavaScript/Node.js関連
-  - id: nodejs-security
-    pattern: "eval\\(|new Function\\(|setTimeout\\(.*\\)|setInterval\\(.*\\)"
-    message: "eval()や動的コード実行は避けてください。セキュリティリスクがあります。"
+
+  # ---- セキュリティ: AWS 認証情報 ----
+  - id: aws-hardcoded-access-key
+    pattern: "AKIA[0-9A-Z]{16}"
+    message: "AWS アクセスキーが直接コードに含まれています。直ちに削除し、Secrets Manager または OIDC 認証を使用してください。"
     severity: error
 
-  - id: xss-prevention
-    pattern: "innerHTML|outerHTML"
-    message: "innerHTML/outerHTMLの使用は慎重に。XSS対策としてtextContentやエスケープ処理を検討してください。"
+  - id: aws-hardcoded-secret
+    pattern: "(aws_secret_access_key|AWS_SECRET_ACCESS_KEY)\\s*[=:]\\s*['\"][^'\"]{20,}"
+    message: "AWS シークレットキーのハードコードを検出しました。Secrets Manager または SSM Parameter Store を使用してください。"
+    severity: error
+
+  - id: external-oauth-token-hardcode
+    pattern: "(xoxb-|xoxp-|slack_token|gmail_token|notion_token)"
+    message: "外部サービスの OAuth トークンをハードコードしないでください。Secrets Manager に保管してください。"
+    severity: error
+
+  # ---- セキュリティ: IAM 設計 ----
+  - id: iam-wildcard-action
+    pattern: "actions:\\s*\\[.*\"\\*\""
+    message: "IAM アクションにワイルドカード(*) を使用しています。最小権限原則に従い、必要なアクションのみを許可してください。"
     severity: warning
 
-  - id: console-log
-    pattern: "console\\.log\\("
-    message: "デバッグ用のconsole.log()が残っています。本番環境では削除を検討してください。"
+  - id: iam-wildcard-resource
+    pattern: "resources:\\s*\\[.*\"\\*\""
+    message: "IAM リソースにワイルドカード(*) を使用しています。特定リソース ARN に絞ることを検討してください。"
+    severity: warning
+
+  # ---- AWS: リージョン・禁止サービス ----
+  - id: aws-wrong-region
+    pattern: "(us-east-1|us-west-2|eu-west-1|ap-southeast-1)"
+    message: "使用リージョンは ap-northeast-1（東京）のみです。Bedrock のクロスリージョン推論は例外として許容されます。"
+    severity: warning
+
+  - id: aws-banned-services-ec2
+    pattern: "new ec2\\.Instance|new ec2\\.CfnInstance"
+    message: "EC2 常時稼働インスタンスは採用しません。Lambda を使用してください。"
+    severity: error
+
+  - id: aws-banned-services-rds
+    pattern: "new rds\\.DatabaseInstance|new rds\\.CfnDBInstance"
+    message: "RDS 常時稼働インスタンスは採用しません。DynamoDB（第一選択）または Aurora Serverless v2 を使用してください。"
+    severity: error
+
+  # ---- AWS CDK: L1 コンストラクト直接利用 ----
+  - id: cdk-l1-construct
+    pattern: "new \\w+\\.Cfn[A-Z]"
+    message: "L1（CFN）コンストラクトの直接利用を避けてください。L2/L3 コンストラクトを優先してください。"
+    severity: warning
+
+  - id: cdk-removal-policy-retain
+    pattern: "removalPolicy:\\s*RemovalPolicy\\.RETAIN"
+    message: "ハッカソン環境では RemovalPolicy.DESTROY を推奨します。意図的に RETAIN にする場合はコメントで理由を明記してください。"
     severity: info
 
-  # Spec駆動開発関連
-  - id: spec-alignment
-    pattern: "\\.kiro/specs/.*/tasks\\.md"
-    message: "タスクの実装状況を確認してください。requirements.mdとdesign.mdとの整合性を確認しましょう。"
+  # ---- Lambda 最適化 ----
+  - id: lambda-memory-too-small
+    pattern: "memorySize:\\s*12[0-9]\\b"
+    message: "Lambda メモリが 128MB です。コールドスタート対策として 256MB 以上を推奨します。"
     severity: info
 
-  # ドキュメント品質
-  - id: documentation-completeness
-    pattern: "TODO|FIXME|XXX|HACK"
-    message: "TODO/FIXMEコメントがあります。対応予定や課題として追跡しましょう。"
+  - id: lambda-timeout-too-long
+    pattern: "timeout:\\s*Duration\\.minutes\\([2-9]|Duration\\.minutes\\(1[0-5]"
+    message: "Lambda タイムアウトが長すぎます。コスト最適化のため最低限の値に設定してください。Bedrock 呼び出しは 30〜60 秒程度が目安です。"
+    severity: warning
+
+  # ---- DynamoDB 設計 ----
+  - id: dynamodb-scan
+    pattern: "\\.scan\\("
+    message: "DynamoDB の scan 操作はコスト・パフォーマンス共に問題があります。query + GSI を使用してください。"
+    severity: warning
+
+  - id: dynamodb-provisioned-billing
+    pattern: "billingMode:\\s*BillingMode\\.PROVISIONED"
+    message: "DynamoDB は On-Demand 課金（BillingMode.PAY_PER_REQUEST）を使用してください。ハッカソン規模では PROVISIONED は不要です。"
+    severity: error
+
+  # ---- TypeScript 品質 ----
+  - id: typescript-any-type
+    pattern: ":\\s*any\\b"
+    message: "any 型は禁止です。unknown 型または適切な型定義を使用してください（開発方針: TypeScript strict mode）。"
+    severity: warning
+
+  - id: typescript-non-null-assertion
+    pattern: "[^!]![^=]"
+    message: "非nullアサーション(!) の使用は慎重に。null チェックを明示することを推奨します。"
     severity: info
 
-# レビュー対象外のファイルパターン
+  # ---- React / フロントエンド ----
+  - id: react-useeffect-empty-deps
+    pattern: "useEffect\\([^,]+,\\s*\\[\\]\\)"
+    message: "useEffect の空依存配列を確認してください。依存する値が全て含まれていますか？"
+    severity: info
+
+  - id: react-missing-key-prop
+    pattern: "\\.map\\(.*=>.*<[A-Z][a-zA-Z]+(?![^>]*key=)"
+    message: "map でレンダリングするコンポーネントに key prop が必要です。"
+    severity: warning
+
+  # ---- Hono バックエンド ----
+  - id: hono-untyped-context
+    pattern: "app\\.(get|post|put|delete|patch)\\([^,]+,\\s*\\(c\\)\\s*=>"
+    message: "Hono の Context 型を明示してください。(c: Context<{ Bindings: Env }>) のように型を指定することを推奨します。"
+    severity: info
+
+  - id: hono-auth-in-handler
+    pattern: "c\\.req\\.header\\('Authorization'\\)"
+    message: "認証ロジックをルートハンドラに直接書かないでください。Hono の app.use() ミドルウェアに切り出してください。"
+    severity: warning
+
+  # ---- Biome（ESLint/Prettier は不使用）----
+  - id: eslint-config-exists
+    pattern: "\\.eslintrc|\\.eslintignore|eslint\\.config"
+    message: "このプロジェクトは Biome を使用しています。ESLint 設定ファイルは不要です。Biome に統一してください。"
+    severity: warning
+
+  - id: prettier-config-exists
+    pattern: "\\.prettierrc|\\.prettierignore|prettier\\.config"
+    message: "このプロジェクトは Biome を使用しています。Prettier 設定ファイルは不要です。Biome に統一してください。"
+    severity: warning
+
+  # ---- pnpm モノレポ ----
+  - id: npm-or-yarn-lockfile
+    pattern: "package-lock\\.json|yarn\\.lock"
+    message: "このプロジェクトは pnpm を使用しています。npm/yarn のロックファイルを削除し、pnpm install を実行してください。"
+    severity: error
+
+  - id: cross-package-relative-import
+    pattern: "from ['\"]\\.\\.\\/(\\.\\.\\/)+(apps|packages|infra)/"
+    message: "パッケージ間の相対インポートは使わないでください。workspace:* プロトコルで依存を宣言してください。"
+    severity: warning
+
+  # ---- セキュリティ全般 ----
+  - id: eval-dynamic-code
+    pattern: "eval\\(|new Function\\("
+    message: "eval() / new Function() は使用禁止です。セキュリティリスク（コードインジェクション）があります。"
+    severity: error
+
+  - id: console-log-in-production
+    pattern: "console\\.(log|debug|info)\\("
+    message: "console.log() を本番コードに残さないでください。ログは CloudWatch Logs（Lambda ランタイムが自動収集）を使用してください。"
+    severity: info
+
+  # ---- AI-DLC ワークフロー ----
+  - id: aidlc-audit-append-only
+    pattern: "aidlc-docs/audit\\.md"
+    message: "audit.md を変更する場合は APPEND ONLY です。既存ログを削除・上書きしないでください。ユーザー入力は要約せず生テキストで記録します。"
+    severity: info
+
+  - id: aidlc-state-checkbox-update
+    pattern: "aidlc-docs/aidlc-state\\.md"
+    message: "aidlc-state.md を更新する場合は、完了済みステージのチェックボックス（[ ] → [x]）が正しく更新されているか確認してください。"
+    severity: info
+
+  - id: app-code-in-aidlc-docs
+    pattern: "aidlc-docs/(apps|src|components|api|infra)/"
+    message: "アプリケーションコードを aidlc-docs/ 配下に配置しないでください。aidlc-docs/ はドキュメント専用です。"
+    severity: error
+
+  # ---- コスト管理 ----
+  - id: cloudwatch-logs-long-retention
+    pattern: "retention:\\s*RetentionDays\\.(ONE_YEAR|FIVE_YEARS|TEN_YEARS|INFINITE)"
+    message: "CloudWatch Logs の保持期間が長すぎます。ハッカソン規模では TWO_WEEKS（14日）を推奨します。"
+    severity: warning
+
+# ---------------------------------------------------------------------------
+# レビュー対象外
+# ---------------------------------------------------------------------------
 exclude:
   - "**/*.min.js"
   - "**/*.bundle.js"
   - "**/dist/**"
   - "**/build/**"
+  - "**/cdk.out/**"
+  - "**/.turbo/**"
+  - "**/coverage/**"
   - "**/.DS_Store"
   - "**/Thumbs.db"
+  - "**/node_modules/**"
+  - "**/*.pen"             # Pencil.dev デザインファイル（バイナリ相当、暗号化済み）
+  - "pnpm-lock.yaml"       # ロックファイルはレビュー不要

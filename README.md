@@ -1,8 +1,6 @@
 # SABOROU（サボロー） - サボりの最適解
 
 ![AWS Summit 2026](https://img.shields.io/badge/AWS%20Summit%20Japan-2026-orange)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)
-![Amazon Bedrock](https://img.shields.io/badge/AI-Amazon%20Bedrock-232f3e)
 
 AWS Summit Japan 2026 ハッカソン応募作品  
 
@@ -24,8 +22,10 @@ AWS Summit Japan 2026 ハッカソン応募作品
 | 裏設定（人をダメにする） | 自力で判断し続ける | 判断を AI に委ね、整理力・優先順位判断・危機管理感覚が徐々に退化 |
 
 📖 **詳細資料**:
-- [`aidlc-docs/inception/requirements/requirements.md`](./aidlc-docs/inception/requirements/requirements.md) §1.1〜1.1.1（プロダクト本質・ダメになる4能力の具体例）
-- [`aidlc-inputs/00-business-brief.md`](./aidlc-inputs/00-business-brief.md)（事業仕様・コンセプト原典）
+- [`aidlc-docs/inception/requirements/requirements.md`](./aidlc-docs/inception/requirements/requirements.md)
+	- プロダクト本質・ダメになる4能力の具体例
+- [`aidlc-inputs/00-business-brief.md`](./aidlc-inputs/00-business-brief.md)
+	- 事業仕様・コンセプト原典
 
 ---
 
