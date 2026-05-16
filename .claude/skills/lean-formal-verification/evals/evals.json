@@ -1,0 +1,105 @@
+{
+  "skill_name": "lean-formal-verification",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Lean 4 で以下の関数の正しさを形式的に証明してください。\n\n```lean\n-- 配列の先頭要素を取り出す関数（空のとき None を返す）\ndef safeHead (xs : List α) : Option α :=\n  match xs with\n  | [] => none\n  | x :: _ => some x\n```\n\n次の性質を証明してください：\n1. `safeHead` が `some x` を返すならば、`x` はリストの先頭要素\n2. `safeHead` が `none` を返す ⟺ リストが空\n3. `safeHead` が `some x` を返す ⟺ リストが空でない",
+      "expected_output": "safeHead に関する3つの補題を Lean 4 で証明した .lean ファイル。各補題はコンパイルエラーなく証明が完成していること（sorry なし）。",
+      "files": [],
+      "expectations": [
+        "sorry を使わずに証明が完成している",
+        "3つの補題すべてが lake build でコンパイルされる",
+        "適切なタクティク（cases, simp, exact, omega 等）が使われている",
+        "証明が論理的に正しい"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "以下のバイナリサーチ木の不変条件を Lean 4 で形式的に定義し、挿入操作がその不変条件を保存することを証明してください。\n\n```\n-- 二分探索木: 左の子はすべて自身より小さく、右の子はすべて自身より大きい\n```\n\n以下を実装・証明してください：\n1. `BST` 型の定義（帰納型）\n2. BST の不変条件（`IsBST` 述語）\n3. `insert` 関数の実装\n4. `insert` が不変条件を保存することの証明",
+      "expected_output": "BST の型定義、不変条件、insert 関数、および insert が不変条件を保存することの証明を含む Lean 4 ファイル。",
+      "files": [],
+      "expectations": [
+        "BST の帰納型が正しく定義されている",
+        "IsBST 述語が BST 不変条件を正確に表現している",
+        "insert 関数が正しく実装されている",
+        "insert_preserves_bst 定理が sorry なしで証明されている",
+        "lake build でコンパイルが通る"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "フィボナッチ数列の2つの実装（再帰版と末尾再帰版）が等価であることを Lean 4 で証明してください。\n\n```lean\n-- 素直な再帰実装\ndef fib : Nat → Nat\n  | 0 => 0\n  | 1 => 1\n  | n + 2 => fib n + fib (n + 1)\n\n-- 末尾再帰実装（高速版）\ndef fibFast (n : Nat) : Nat :=\n  let rec go : Nat → Nat → Nat → Nat\n    | 0, a, _ => a\n    | n + 1, a, b => go n b (a + b)\n  go n 0 1\n```\n\n`∀ n, fib n = fibFast n` を証明してください。",
+      "expected_output": "fib と fibFast が等価であることを示す証明。帰納法を使って補題を立てながら証明が完成していること。",
+      "files": [],
+      "expectations": [
+        "fib と fibFast の等価性が証明されている",
+        "帰納法 (induction) を適切に使っている",
+        "補題を使って証明を分割している",
+        "sorry なしで証明が完成している",
+        "lake build でコンパイルが通る"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Lean 4 で以下のマージソートアルゴリズムの正確性を証明してください。\n\n```lean\ndef mergeSort (xs : List Nat) : List Nat := xs.mergeSort\n```\n\nMathlib を活用して次の性質を証明してください：\n1. ソート結果は整列されている: `(mergeSort xs).Sorted (· ≤ ·)`\n2. ソート前後で要素の多重集合が等しい（順列関係）: `mergeSort xs ~ xs`\n3. ソート結果の長さは元のリストと等しい: `(mergeSort xs).length = xs.length`",
+      "expected_output": "mergeSort の3つの性質を Mathlib の補題を活用して証明した Lean 4 ファイル。",
+      "files": [],
+      "expectations": [
+        "import Mathlib または適切なモジュールが import されている",
+        "3つの定理すべてが sorry なしで証明されている",
+        "List.sorted_mergeSort, List.mergeSort_perm などの Mathlib 補題が活用されている",
+        "lake build でコンパイルが通る"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Lean 4 で以下のスタック（Stack）データ構造を実装し、不変条件を型レベルで保証してください。\n\n要件：\n1. `size` フィールドが常に内部リストの長さと等しいことを型レベルの不変条件として保持する\n2. `push` 操作が不変条件を保存することを Lean の型チェックで自動証明\n3. `pop` 操作（空のスタックへの `pop` は型エラーにする）",
+      "expected_output": "size 不変条件を構造体の inv フィールドで保持する Stack 型の実装。push と pop が型チェックを通ること。",
+      "files": [],
+      "expectations": [
+        "Stack 構造体に inv : size = items.length の不変条件が含まれている",
+        "push が不変条件を保存する証明が by simp または by omega で完結している",
+        "pop が空スタックへのアクセスを型で防いでいる",
+        "lake build でコンパイルが通る"
+      ]
+    }
+  ]
+}
+      "prompt": "Lean 4 で以下の関数の正しさを形式的に証明してください。\n\n```lean\n-- 配列の先頭要素を取り出す関数（空のとき None を返す）\ndef safeHead (xs : List α) : Option α :=\n  match xs with\n  | [] => none\n  | x :: _ => some x\n```\n\n次の性質を証明してください：\n1. `safeHead` が `some x` を返すならば、`x` はリストの先頭要素\n2. `safeHead` が `none` を返す ⟺ リストが空\n3. `safeHead` が `some x` を返す ⟺ リストが空でない",
+      "expected_output": "safeHead に関する3つの補題を Lean 4 で証明した .lean ファイル。各補題はコンパイルエラーなく証明が完成していること（sorry なし）。",
+      "files": [],
+      "expectations": [
+        "sorry を使わずに証明が完成している",
+        "3つの補題すべてが lake build でコンパイルされる",
+        "適切なタクティク（cases, simp, exact, omega 等）が使われている",
+        "証明が論理的に正しい"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "以下のバイナリサーチ木の不変条件を Lean 4 で形式的に定義し、挿入操作がその不変条件を保存することを証明してください。\n\n```\n-- 二分探索木: 左の子はすべて自身より小さく、右の子はすべて自身より大きい\n```\n\n以下を実装・証明してください：\n1. `BST` 型の定義（帰納型）\n2. BST の不変条件（`IsBST` 述語）\n3. `insert` 関数の実装\n4. `insert` が不変条件を保存することの証明",
+      "expected_output": "BST の型定義、不変条件、insert 関数、および insert が不変条件を保存することの証明を含む Lean 4 ファイル。",
+      "files": [],
+      "expectations": [
+        "BST の帰納型が正しく定義されている",
+        "IsBST 述語が BST 不変条件を正確に表現している",
+        "insert 関数が正しく実装されている",
+        "insert_preserves_bst 定理が sorry なしで証明されている",
+        "lake build でコンパイルが通る"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "フィボナッチ数列の2つの実装（再帰版と末尾再帰版）が等価であることを Lean 4 で証明してください。\n\n```lean\n-- 素直な再帰実装\ndef fib : Nat → Nat\n  | 0 => 0\n  | 1 => 1\n  | n + 2 => fib n + fib (n + 1)\n\n-- 末尾再帰実装（高速版）\ndef fibFast (n : Nat) : Nat :=\n  let rec go : Nat → Nat → Nat → Nat\n    | 0, a, _ => a\n    | n + 1, a, b => go n b (a + b)\n  go n 0 1\n```\n\n`∀ n, fib n = fibFast n` を証明してください。",
+      "expected_output": "fib と fibFast が等価であることを示す証明。帰納法を使って補題を立てながら証明が完成していること。",
+      "files": [],
+      "expectations": [
+        "fib と fibFast の等価性が証明されている",
+        "帰納法 (induction) を適切に使っている",
+        "補題を使って証明を分割している",
+        "sorry なしで証明が完成している",
+        "lake build でコンパイルが通る"
+      ]
+    }
+  ]
+}

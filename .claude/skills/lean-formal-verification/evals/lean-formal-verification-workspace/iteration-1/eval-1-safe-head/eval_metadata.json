@@ -1,0 +1,11 @@
+{
+  "eval_id": 1,
+  "eval_name": "safe-head",
+  "prompt": "Lean 4 で以下の関数の正しさを形式的に証明してください。\n\n```lean\n-- 配列の先頭要素を取り出す関数（空のとき None を返す）\ndef safeHead (xs : List α) : Option α :=\n  match xs with\n  | [] => none\n  | x :: _ => some x\n```\n\n次の性質を証明してください：\n1. `safeHead` が `some x` を返すならば、`x` はリストの先頭要素\n2. `safeHead` が `none` を返す ⟺ リストが空\n3. `safeHead` が `some x` を返す ⟺ リストが空でない",
+  "assertions": [
+    {"name": "no-sorry", "description": "sorry を使わずに証明が完成している"},
+    {"name": "three-lemmas", "description": "3つの補題すべてが定義されている"},
+    {"name": "uses-tactics", "description": "cases, simp, exact などのタクティクが使われている"},
+    {"name": "lean-syntax", "description": "有効な Lean 4 の構文で書かれている"}
+  ]
+}
