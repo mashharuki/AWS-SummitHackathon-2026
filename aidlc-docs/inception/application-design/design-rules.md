@@ -104,16 +104,16 @@ tone:
 | シナリオ | 対応 |
 |---------|------|
 | Slack API タイムアウト（30秒超）| Slack コンテキストなしで提案生成。ログに警告記録 |
-| Gmail API 失敗 | Gmail コンテキストなしで提案生成 |
-| Google Calendar API 失敗 | Calendar コンテキストなしで提案生成 |
+| Gmail API 失敗（v1.1.0 以降）| Gmail コンテキストなしで提案生成 |
+| Google Calendar API 失敗（v1.1.0 以降）| Calendar コンテキストなしで提案生成 |
 | OAuth トークン失効 | `TokenExpiredError` をスロー → フロントに「再連携が必要」バナーを表示 |
 
 ### 9.2 Bedrock タイムアウト / エラー
 
 | シナリオ | 対応 |
 |---------|------|
-| AgentCore タイムアウト（20秒超）| Bedrock InvokeModel（直接呼び出し）にフォールバック |
-| InvokeModel タイムアウト | `BedrockTimeoutError` → フロントに「提案の生成に時間がかかっています」表示 |
+| converse API タイムアウト（20秒超）| `BedrockTimeoutError` → フロントに「提案の生成に時間がかかっています」表示（v1.2.0 で AgentCore 廃止、converse API 直接実装のためフォールバック不要）|
+| converse API エラー（5xx）| 3回リトライ（exponential backoff）後 `BedrockTimeoutError` をスロー |
 | コスト制限超過（$50/月）| Budgets アラート + `BedrockCostExceededError` → 提案生成を一時停止 |
 | トークン制限超過（8,000）| `guardTokenLimit()` でプロンプトをトリム。超過分は警告ログ |
 
@@ -156,7 +156,7 @@ tone:
 
 ### 10.3 PII（個人情報）保護
 
-- Slack/Gmail のメッセージ本文は抽出後に Lambda メモリ上から削除（AWS サービスへの永続化なし）
+- Slack のメッセージ本文は抽出後に Lambda メモリ上から削除（AWS サービスへの永続化なし）
 - 依頼者名はイニシャル化または仮名化（「T.クライアント」等）して保存
 - DynamoDB のデータは AWS 管理 KMS で暗号化（デフォルト設定）
 - S3 バケットは `BlockPublicAccess: BLOCK_ALL` + SSL 必須
@@ -190,7 +190,7 @@ tone:
 
 ### 11.3 レイテンシ最適化
 
-- ContextCollector: Slack / Gmail / Calendar API を `Promise.allSettled` で並列呼び出し（直列呼び出し禁止）
+- ContextCollector: Slack API を呼び出し（v1.1.0 以降: Gmail / Calendar も `Promise.allSettled` で並列呼び出し）
 - Proposals テーブル: `GSI-TaskLatest` を使って最新提案を O(1) で取得
 - フロントエンドキャッシュ: タスク一覧は5秒間キャッシュ（React Query staleTime）
 

@@ -2,9 +2,10 @@
 
 **プロジェクト名**: SABOROU（サボロー）
 **作成日**: 2026-05-09
-**バージョン**: 1.0.0
-**ステータス**: レビュー中
-**対象イベント**: AWS Summit Japan 2026 ハッカソン（書類審査: 2026-05-10）
+**バージョン**: 2.0.0
+**更新日**: 2026-05-16（予選向け全面改訂: 14日計画 / AgentCore廃止 / デプロイ計画追加 / Well-Architected評価 / Lean Verification）
+**ステータス**: 確定（予選向け実行版）
+**対象イベント**: AWS Summit Japan 2026 ハッカソン（予選: 2026-05-30）
 
 ---
 
@@ -28,8 +29,8 @@
 
 | リスク要因 | レベル | 詳細 |
 |-----------|-------|------|
-| **外部API 3サービス同時連携** | High | Slack OAuth / Google OAuth（Gmail + Calendar スコープ） / Bedrock AgentCore と3系統の認証・API連携が必須。1つでも失敗するとコア機能が動作しない |
-| **Bedrock AgentCore の新興性** | High | 2024〜2025年リリースの新しいマネージドエージェント基盤。ドキュメント・サンプルが限定的 |
+| **外部API 連携** | Medium | Slack OAuth / Bedrock converse API の認証・API連携が必須。v1.0.0 は Slack + Bedrock の2系統のみ。1つでも失敗するとコア機能が動作しない |
+| **Bedrock converse API レイテンシ** | Medium | ap-northeast-1 での converse API レスポンスタイム。10秒SLO（NFR-01）を超えた場合の UI フォールバック設計が必要 |
 | **マルチエージェント協調** | Medium | エージェント①→②のデータフロー設計・エラーハンドリングが複雑。DynamoDB を介した非同期連携の整合性確保が必要 |
 | **ハッカソン時間制約** | High | 書類審査 2026-05-10（翌日）/ MVP デモ 2026-05-30（21日後）/ 決勝 2026-06-26（48日後）の3段階締切 |
 | **Bedrock コスト超過** | Medium | 1リクエスト最大 8,000 トークン制限あり。トークン管理ロジックの実装が必須（NFR-06） |
@@ -175,81 +176,135 @@ OPERATIONS フェーズ:
 
 ```
 AWS-SummitHackathon-2026/
-├── apps/
-│   ├── web/              # フロントエンド（React + Vite + shadcn/ui）
-│   └── api/              # バックエンド（Hono on Lambda）
-├── packages/
-│   ├── shared/           # 型定義・共通ユーティリティ（全モジュールが依存）
-│   └── agent/            # エージェント実装（Bedrock AgentCore）
-└── infra/                # AWS CDK スタック
+├── pkgs/
+│   ├── shared/           # 型定義・共通ユーティリティ（Construction フェーズで作成）
+│   ├── agent/            # エージェント実装（Bedrock converse API + Tool Use）（Construction フェーズで作成）
+│   ├── backend/          # バックエンド（Hono on Lambda）（ベース実装済み）
+│   ├── frontend/         # フロントエンド（React + Vite + shadcn/ui）（ベース実装済み）
+│   └── cdk/              # AWS CDK スタック（ベース実装済み）
+├── pnpm-workspace.yaml   # pnpm workspaces ルート（pnpm@10.33.0）
+└── package.json          # ルート設定
 ```
 
 **依存関係の方向**:
 
 ```
-infra/ → （全リソース定義）
-shared/ ← api/, agent/, web/ （全モジュールが依存）
-agent/ ← api/ （API からエージェントを呼び出す）
-api/ ← web/ （フロントエンドが API を呼び出す）
+pkgs/cdk/ → （全リソース定義）
+pkgs/shared/ ← pkgs/backend/, pkgs/agent/, pkgs/frontend/ （全モジュールが依存）
+pkgs/agent/ ← pkgs/backend/ （API からエージェントを呼び出す）
+pkgs/backend/ ← pkgs/frontend/ （フロントエンドが API を呼び出す）
 ```
 
 ### 4.2 推奨実装順序
 
 | 順序 | モジュール | 理由 |
 |------|-----------|------|
-| 1 | `packages/shared` | 型定義・共通インタフェースを先に確定。全モジュールがここに依存 |
-| 2 | `infra/` | AWS リソース（DynamoDB / Cognito / Secrets Manager / API Gateway / S3 / CloudFront）を先にプロビジョニング。ローカル開発でモック代替も可 |
-| 3 | `packages/agent` | Bedrock AgentCore エージェント①②の実装。shared の型に依存 |
-| 4 | `apps/api` | Hono ハンドラ・Webhook エンドポイント。shared + agent に依存 |
-| 5 | `apps/web` | React フロントエンド。API エンドポイントが確定してから結合 |
+| 1 | `pkgs/shared`（新規作成） | 型定義・共通インタフェースを先に確定。全モジュールがここに依存 |
+| 2 | `pkgs/cdk/`（拡張） | AWS リソース（DynamoDB / Cognito / Secrets Manager / API Gateway / S3 / CloudFront）をプロビジョニング。ベーススケルトン実装済みのため 6 スタックを追加する |
+| 3 | `pkgs/agent`（新規作成） | Bedrock converse API + Tool Use によるエージェント①②の実装。shared の型に依存 |
+| 4 | `pkgs/backend`（拡張） | Hono ハンドラ・Webhook エンドポイント。shared + agent に依存。ベース（/health のみ）実装済み |
+| 5 | `pkgs/frontend`（拡張） | React フロントエンド。API エンドポイントが確定してから結合。ベース（App.tsx のみ）実装済み |
 
 **更新アプローチ**: Sequential（順次更新）
-**クリティカルパス**: shared → infra → agent → api → web
+**クリティカルパス**: pkgs/shared → pkgs/cdk → pkgs/agent → pkgs/backend → pkgs/frontend
 **テストチェックポイント**:
-1. `infra/` デプロイ後: AWS コンソールでリソース確認
-2. `agent/` 完成後: Bedrock API 疎通テスト（モックデータ）
-3. `api/` 完成後: Postman / curl での API 単体テスト
-4. `web/` 完成後: E2E デモシナリオ通し確認
+1. `pkgs/cdk/` デプロイ後: AWS コンソールでリソース確認
+2. `pkgs/agent/` 完成後: Bedrock API 疎通テスト（モックデータ）
+3. `pkgs/backend/` 完成後: Postman / curl での API 単体テスト
+4. `pkgs/frontend/` 完成後: E2E デモシナリオ通し確認
 
 ---
 
-## 5. Estimated Timeline（推定スケジュール）
+## 5. 14日実行タイムライン（v2.0.0 — 2026-05-16〜5/30）
+
+> **前提**: 1人開発。AI-DLC Construction ステージの粒度を予選向けに軽量化（1ステージあたり最大2時間）。
 
 ### マイルストーン構成
 
 | マイルストーン | 日程 | 目標 |
 |-------------|------|------|
-| **M1: 書類審査提出** | 2026-05-10（翌日） | Inception フェーズ 4成果物（requirements.md / user-stories.md / execution-plan.md / application-design.md）を最上品質で提出 |
-| **M2: MVP デモ** | 2026-05-30（21日後） | 動作する MVP + プレゼン（デモ完走・外部API連携・Dual-Agent 動作確認） |
-| **M3: 決勝** | 2026-06-26（48日後） | AWS デプロイ済み完成品 + 本番品質のデモ |
+| **M1: 書類審査提出** | 2026-05-10 | 完了済み（書類審査通過）|
+| **M2: MVP デモ（予選）** | 2026-05-30 | 動作する MVP + プレゼン（Slack連携・Dual-Agent動作・Three.js演出） |
+| **M3: 決勝** | 2026-06-26 | AWS デプロイ済み完成品 + 本番品質デモ |
 
-### フェーズ別タイムライン（推定）
+### 14日詳細スケジュール（1人開発・予選向け最速計画）
 
 ```
-2026-05-09〜05-10（書類審査まで）:
-  [完了] Workspace Detection
-  [完了] Requirements Analysis
-  [完了] User Stories
-  [実行中] Workflow Planning
-  [次]   Application Design（本日中に完了目標）
-  [次]   Units Generation（本日中に完了目標）
+[Day 1-2: 5/16-17] Inception文書確定 + U-01 shared 実装
+  - ✅ Inception ドキュメント全面更新（v1.2.0）
+  - U-01 shared: TypeScript 型定義 / Zod スキーマ / エラークラス / ユーティリティ
+  - > **注意**: `pkgs/shared/` ディレクトリは未作成。Construction フェーズ開始時に `pnpm init` で新規作成する。
+  - 目標: pkgs/shared/ が tsc --noEmit で通る状態
 
-2026-05-10〜05-22（書類審査後〜実装前半）:
-  Functional Design（全 Unit）
-  NFR Requirements + NFR Design（全 Unit）
-  Infrastructure Design → CDK スタック実装
-  Code Generation: shared / infra / agent
+[Day 3-5: 5/18-20] U-02 infra CDK 実装・ローカル検証・デプロイ
+  - > **注意**: `pkgs/cdk/` は実装済み（スケルトン）。`lib/cdk-stack.ts` は空のため、Construction で 6 スタック（Cognito / Data / Api / Agent / Frontend / Webhook）を追加する。
+  - CDK スタック（Cognito / DynamoDB / Lambda / API Gateway / S3 / CloudFront / Secrets Manager）
+  - **Floci ローカル検証ステップ**（本番 AWS デプロイ前に必ず実施）:
+    - Day 3: docker compose up -d でFloci起動 / npx cdk synth で全スタック検証
+    - Day 4: AWS_ENDPOINT_URL=http://localhost:4566 npx cdk deploy DataStack でDynamoDB検証
+    - Day 4: AWS_ENDPOINT_URL=http://localhost:4566 npx cdk deploy ApiStack AgentStack WebhookStack でLambda/API GW検証
+    - Day 5: Floci上でスモークテスト実施（テーブル作成・Lambda invoke疎通確認）
+    - Day 5: docker compose down → npx cdk deploy --all で本番AWSへデプロイ
+  - Slack アプリ設定（App 作成 / Event Subscriptions URL 登録）
+  - 目標: Flociローカル検証パス / AWS コンソールでリソース確認 / Slack Webhook URL 疎通
 
-2026-05-22〜05-30（実装後半〜MVP デモ）:
-  Code Generation: api / web
-  Build and Test（全 Unit 統合）
-  デモシナリオ通し確認・修正
-  MVP デプロイ（CloudFront + S3 / API Gateway + Lambda）
+[Day 6-8: 5/21-23] U-03a task-extractor 実装
+  - IBedrockClient インタフェース + ConverseBedrockClient 実装
+  - AG-01: converse API + Tool Use で Slack メッセージ → TaskCandidate 変換
+  - DynamoDB TaskCandidates テーブルへの書き込み確認
+  - **Floci ローカル統合テスト**: docker compose up → Floci上のDynamoDB（localhost:4566）に接続してTaskCandidate書き込み検証
+  - 目標: モックSlackイベントで TaskCandidate が生成される（Floci DynamoDB に書き込み確認）
 
-2026-05-30〜06-26（予選後〜決勝）:
-  フィードバック反映
-  本番品質への仕上げ
-  完成品デプロイ・ドキュメント整備
+[Day 9-11: 5/24-26] U-03b sabori-proposer 実装
+  - AG-02: converse API + Tool Use で サボり判定3状態
+  - Lambda Response Streaming（Function URL）でSSE配信
+  - AG-03: PersonaRenderer（おっとりサボロー口調変換）
+  - **Floci ローカル統合テスト**: Proposals / HonneData テーブルへの書き込みを Floci DynamoDB で検証
+  - 目標: curl で SSE ストリームが返る（Floci Lambda + Floci DynamoDB で疎通確認）
+
+[Day 12-13: 5/27-28] U-04 api + U-05 web MVP 実装
+  - U-04: Hono on Lambda コアエンドポイント（認証・タスク・提案）
+  - > **注意**: `pkgs/backend/` は実装済み（Hono ベース）。`src/index.ts` と `src/handler.ts` が存在するが、ルートは `/health` のみ。Construction でルート・ミドルウェア・リポジトリを追加する。
+  - **Floci ローカル統合テスト**: Hono ハンドラが Floci DynamoDB / Floci Lambda に接続した状態で全エンドポイント疎通確認
+  - U-05: React 画面（TaskList / TaskDetail / Login）
+  - > **注意**: `pkgs/frontend/` は実装済み（React + Vite ベース）。`src/App.tsx` のみ。Construction でページ・コンポーネントを追加する。
+  - Three.js サボローキャラクター3D表示（基本形）
+  - 目標: ブラウザでログイン→タスク承認→提案表示が動く（Floci バックエンドで動作確認後、本番AWSへ切替）
+
+[Day 14: 5/29-30] デプロイ・デモリハーサル
+  - AWS dev 環境への全スタックデプロイ
+  - CloudFront URL でデモシナリオ通し確認
+  - 5分デモリハーサル（バックアップ動画撮影）
+  - 目標: デモが完走する
+```
+
+### カットライン（意思決定基準）
+
+lean formal verification によるクリティカルパス検証に基づくカットライン定義:
+
+| 判断日 | 状況 | カットライン（意思決定） |
+|--------|------|----------------------|
+| **5/21（Day 6）** | U-02 infra が未デプロイ | CDK デプロイを後回しにして SAM Local でローカル開発を続行。デプロイは Day 10 に延期 |
+| **5/25（Day 10）** | U-03a が未完成 | converse API のレスポンスをハードコードしたスタブに差し替えてパイプライン疎通を優先 |
+| **5/25（Day 10）** | U-03b が未着手 | SSEストリーミングを廃止してポーリング（5秒間隔）で代替 |
+| **5/27（Day 12）** | U-04 api が未完成 | デモ用シードデータを DynamoDB に直接投入し、フロントエンドだけで動作する静的デモに切り替え |
+| **5/28（Day 13）** | Three.js 未実装 | Three.js を M3 決勝スコープに延期。Lottie アニメーション（2D）で代替 |
+
+### クリティカルパス検証（lean formal verification 適用）
+
+```
+依存チェーン: U-01(2-3h) → U-02(6-10h) → U-03a(4-6h) → U-03b(5-7h) → U-04(8-12h) → U-05(8-12h)
+
+最楽観ケース:  2+6+4+5+8+8  = 33時間（約4.1日 @ 8h/day）
+現実的ケース:  3+8+6+7+10+10 = 44時間（約5.5日 @ 8h/day）
+最悲観ケース:  3+10+6+7+12+12 = 50時間（約6.3日 @ 8h/day）
+
+14日間（8h/day = 112時間）は十分なバッファを持つ。
+ただし設計・デバッグ・テスト・デプロイ作業が加わるため、
+実質の実装時間は 50〜60時間 と見積もる。
+
+判定: 14日計画は1人開発で実現可能（リスク: Medium）。
+カットライン基準を守れば最悪ケースでも5/29には基本動作が完成する。
 ```
 
 ---
@@ -300,43 +355,144 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 
 ---
 
-## 7. Risk Mitigation Plan（リスク対応策）
+## 7. リスク対応策（v2.0.0 — 予選向け更新）
 
-### 7.1 外部API 依存リスク
+### リスク分類と対応状況
 
-**リスク**: Slack / Gmail / Google Calendar OAuth の設定・承認が遅延する
+| リスクID | リスク内容 | 深刻度 | 対応状況 |
+|---------|----------|--------|---------|
+| R-01 | Lambda Cold Start + Bedrock 推論でレイテンシ目標超過 | 高 | 対応済み（NFR-01a 現実化・デモ前ウォームアップ） |
+| R-02 | SSE ストリーミングが Lambda + API Gateway で動作しない | 高 | 対応済み（Lambda Response Streaming + Function URL に設計変更） |
+| R-03 | Bedrock コスト上振れ | 中 | 監視中（guardTokenLimit + AWS Budgets） |
+| R-04 | DynamoDB アクセスパターン設計漏れ | 中 | 対応済み（unit-of-work.md §8 に GSI 設計追加） |
+| R-05 | Three.js バンドルサイズ増大 | 中 | 受容（動的インポート + カットライン5/28設定） |
+| R-06 | Slack Event Subscriptions URL 検証の手順 | 中 | 監視中（Day 3-5 で優先対応） |
+
+### 7.1 Slack Webhook 連携リスク
+
+**リスク**: Slack Event Subscriptions の URL 検証が CDK デプロイ後まで進められない
 
 **対応策**:
-- MVP デモ前にシードデータをあらかじめ DynamoDB に投入しておき、Webhook トリガーなしでもデモが成立するようにする（フォールバック）
-- OAuth フローを先に疎通確認してから他の機能開発に入る
-- 書類審査では動作確認は不要なため、Inception フェーズは OAuth 設計のみで進む
+- Day 3-5 で CDK デプロイを最優先。API Gateway URL 取得後すぐに Slack アプリ設定を実施
+- Slack からの URL 検証リクエスト（challenge パラメータ）に応答するエンドポイントを U-04 の先行実装として切り出す
+- デモ用シードデータを DynamoDB に事前投入し、Webhook なしでもデモが成立するフォールバックを用意
 
-### 7.2 Bedrock AgentCore 新興性リスク
+### 7.2 Bedrock converse API + Tool Use 実装リスク
 
-**リスク**: Bedrock AgentCore の API 仕様が公式ドキュメント不足・SDK 非対応
+**リスク**: converse API + Tool Use の Tool 呼び出し仕様・JSON スキーマ定義でハマる
 
 **対応策**:
-- AgentCore の代替として Bedrock InvokeModel 直接呼び出しを設計段階から用意しておく
-- インタフェースを抽象化し、エージェント実装を差し替え可能な設計にする（Interface Segregation）
-- Application Design で `ITaskExtractAgent` / `ISuggestAgent` インタフェースを定義し、実装を後回しにできる構造にする
+- `IBedrockClient` インタフェースで実装を抽象化し、モックに差し替え可能にする
+- ローカル開発・Vitest 時は Bedrock を完全モック化（vitest + モック実装）
+- カットライン 5/25: converse が動かない場合はハードコードスタブに差し替え
 
 ### 7.3 Bedrock コストリスク
 
 **リスク**: 開発・テスト中のトークン消費で $50/月 を超過する
 
 **対応策**:
-- ローカル開発・ユニットテスト時は Bedrock を完全モック化（vitest + モック実装）
+- ローカル開発・ユニットテスト時は Bedrock を完全モック化
 - AWS Budgets で $30（警告）/ $50（通知）のアラートを設定
-- プロンプトを Application Design フェーズで最適化し、トークン上限を事前にガード
+- `guardTokenLimit()` でプロンプトトリム（8,000 トークン上限）
 
-### 7.4 ハッカソン時間制約リスク
+### 7.4 Lambda Cold Start + Bedrock レイテンシリスク
 
-**リスク**: 書類審査（翌日）までに application-design.md が間に合わない
+**リスク**: 合算レイテンシが NFR-01a 目標（15秒）を超過する
 
 **対応策**:
-- **本日（2026-05-09）のうちに**: Workflow Planning → Application Design → Units Generation を完了させる
-- application-design.md は Comprehensive 品質で生成するが、コンポーネント設計・API 定義の詳細レベルを MVP スコープ（FR-01〜FR-08）に絞る
-- 審査員が最も重視するのはコンセプト訴求力（要件・ユーザーストーリー）のため、application-design.md はユーザーストーリーほど完璧でなくても審査を通過できる可能性が高い（ただし最上品質を目指す）
+- デモ前に Lambda ウォームアップスクリプトを実行（最低1回 invoke してコンテナを温める）
+- Provisioned Concurrency は決勝（M3）で検討（ハッカソン期間は不要）
+- UX 対策: Webhook 受信後すぐに「処理中バナー」を表示してユーザーの体感待ち時間を軽減
+
+### 7.5 Three.js バンドルサイズリスク
+
+**リスク**: Three.js 追加でバンドルサイズが肥大化し初期ロードが遅くなる
+
+**対応策**:
+- React.lazy + dynamic import で Three.js コンポーネントを遅延ロード
+- vite build で manual chunks 設定
+- カットライン 5/28: 未実装の場合は Lottie（2D）で代替
+
+---
+
+## 7.6 AWSデプロイ計画
+
+### デプロイ事前準備チェックリスト
+
+```
+□ AWSアカウント確認:
+  - AWS コンソールにログインできる状態であること
+  - ap-northeast-1 リージョンでの IAM ユーザー or IAM Identity Center ユーザー
+  - 必要なサービスの利用可能状態を確認（Bedrock モデルアクセス申請）
+
+□ Bedrock モデルアクセス権限:
+  - Amazon Bedrock コンソール → モデルアクセス → Claude Sonnet 系を有効化
+  - ap-northeast-1 でのモデル利用可能状況を確認（クロスリージョン推論の要否確認）
+  - 推奨モデル: claude-3-5-sonnet-20241022（ap-northeast-1 対応を確認）
+
+□ CDK ブートストラップ:
+  npx cdk bootstrap aws://ACCOUNT_ID/ap-northeast-1
+
+□ Slack アプリ設定:
+  - api.slack.com でアプリを新規作成
+  - Bot Token Scopes: chat:write, channels:history, channels:read
+  - Event Subscriptions: message.channels を購読
+  - Signing Secret を Secrets Manager に保存
+
+□ デモ用 URL 確保:
+  - CloudFront Distribution URL: d[xxxxxxxx].cloudfront.net
+  - API Gateway URL: https://[api-id].execute-api.ap-northeast-1.amazonaws.com
+  - （オプション）Route 53 + ACM でカスタムドメイン設定
+```
+
+### デプロイコマンド手順
+
+```bash
+# 1. 依存関係インストール
+pnpm install
+
+# 2. 全パッケージのビルド確認
+pnpm build
+
+# 3. CDK デプロイ（全スタック）
+cd pkgs/cdk
+pnpm synth    # テンプレート確認（package.json の scripts に定義済み）
+pnpm diff     # 変更内容確認
+pnpm deploy   # または pnpm exec cdk deploy --all --require-approval never
+cd ../..
+
+# 4. フロントエンドのビルド＆S3アップロード
+cd pkgs/frontend
+VITE_API_BASE_URL=https://[api-id].execute-api.ap-northeast-1.amazonaws.com pnpm build
+aws s3 sync dist/ s3://saborou-frontend-[env]/
+
+# 5. CloudFront キャッシュ無効化
+aws cloudfront create-invalidation --distribution-id [dist-id] --paths "/*"
+
+# 6. Lambda ウォームアップ（デモ前必須）
+aws lambda invoke --function-name saborou-task-extractor-dev --payload '{}' /dev/null
+aws lambda invoke --function-name saborou-sabori-proposer-dev --payload '{}' /dev/null
+```
+
+### GitHub Actions CI/CD（任意・決勝向け）
+
+```yaml
+# .github/workflows/deploy.yml
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-1
+          role-to-assume: arn:aws:iam::ACCOUNT_ID:role/github-actions-role
+      - run: pnpm install && pnpm build
+      - run: cd infra && npx cdk deploy --all --require-approval never
+```
 
 ---
 
@@ -360,17 +516,20 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 ### 8.2 MVP デモまで（2026-05-30）の実装スコープ
 
 **MUST 実装（デモ成立の最低条件）**:
-- FR-01: Slack からのタスク自動抽出（エージェント①稼働）
+- FR-01: Slack Webhook からのタスク自動抽出（converse API + Tool Use エージェント①稼働）
 - FR-02: タスク候補の承認・編集・削除
-- FR-03: サボり提案の生成（エージェント②稼働・おっとりサボロー口調）
+- FR-03: サボり提案の生成（converse API + Tool Use エージェント②稼働・おっとりサボロー口調）
 - FR-05: 本音データ収集（クイック返信 4種 + 自由入力）
 - FR-06: タスク一覧の1行サボり判定サマリ
-- FR-07: 認証（Google ログイン + Slack 連携）
+- FR-07: 認証（Cognito Google ログイン + Slack OAuth 連携）
+- **Three.js によるサボローキャラクター3D演出（ラスベガス差別化要素）**
 
 **SHOULD 実装（余裕があれば）**:
 - FR-04: サボり提案のリアルタイム更新（EventBridge バックグラウンド更新）
 - FR-08: 手動タスク追加
-- Gmail / Google Calendar 連携（FR-01 の Gmail・Calendar 部分）
+
+**スコープ外（v1.1.0 以降）**:
+- Gmail / Google Calendar 連携
 
 ### 8.3 決勝まで（2026-06-26）の完成スコープ
 
@@ -384,7 +543,70 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 
 ---
 
-## 9. Extension Configuration（拡張設定）
+## 9. AWS Well-Architected 評価サマリ（aws-well-architected スキル適用）
+
+詳細は `aidlc-docs/inception/application-design/well-architected-review.md` を参照。
+
+| 柱 | スコア | 主な改善アクション |
+|----|--------|-----------------|
+| 運用上の優秀性 | B+ | CloudWatch Dashboard CDK自動生成 / X-Ray 有効化 / デモ前チェックリスト |
+| セキュリティ | A- | cdk-nag 実行 / IAM最小権限 / Secrets Manager |
+| 信頼性 | B | Bedrock フォールバックメッセージ / DynamoDB リトライロジック |
+| パフォーマンス効率 | B | Lambda Function URL でSSE / デモ前ウォームアップスクリプト |
+| コスト最適化 | A | サーバーレス完全採用 / 月額 $22〜$32 見積り / guardTokenLimit |
+| 持続可能性 | A- | サーバーレス + 東京 / TTL設定 / Bedrock結果キャッシュ |
+
+---
+
+## 10. Lean Formal Verification — 計画の形式的検証
+
+### 10.1 クリティカルパス検証
+
+```
+依存チェーン: U-01 → U-02 → U-03a → U-03b → U-04 → U-05
+推定工数:
+  U-01 shared:         2-3h（実装容易）
+  U-02 infra CDK:      6-10h（リスク: Slack URL検証待ち）
+  U-03a task-extractor: 4-6h（リスク: converse API 仕様習熟）
+  U-03b sabori-proposer: 5-7h（リスク: Lambda Streaming）
+  U-04 api:            8-12h（リスク: Hono + 全エンドポイント実装）
+  U-05 web:            8-12h（リスク: Three.js バンドル）
+
+現実的合計: 33〜50時間の純実装時間
+14日 × 8h = 112時間（バッファ: 62〜79時間）
+
+命題1: 14日計画は1人開発で実現可能
+証明: 現実的ケース44時間 < 112時間 ← 成立（余裕あり）
+ただし: 設計・デバッグ・デプロイ・テスト・ドキュメント作業を加算すると
+        実質コーディング時間は 60〜70時間程度（それでも112時間内に収まる）
+
+判定: TRUE（計画は実現可能。カットライン遵守が条件）
+```
+
+### 10.2 カットライン定義（意思決定基準）
+
+| Day | 状況 | カットライン（即断基準） |
+|-----|------|---------------------|
+| Day 6（5/21）| U-02 CDK デプロイ未完了 | SAM Local でローカル開発を続行。デプロイは Day 10 に延期 |
+| Day 10（5/25）| U-03a converse API 未完成 | スタブ（ハードコードタスク候補）に差し替えてパイプライン疎通優先 |
+| Day 10（5/25）| U-03b 未着手 | SSEストリーミングを廃止してポーリング（5秒間隔）に切り替え |
+| Day 12（5/27）| U-04 api 未完成 | DynamoDB シードデータ + 静的デモに切り替え |
+| Day 13（5/28）| Three.js 未実装 | Lottie（2Dアニメーション）で代替。Three.js は M3 に延期 |
+
+### 10.3 リスク分類
+
+| リスク | 分類 | 根拠 |
+|--------|------|------|
+| Bedrock converse API + Tool Use 実装 | **監視中** | 公式SDKサポートあり。カットライン5/25設定済み |
+| Lambda Response Streaming 設定 | **監視中** | AWS公式ドキュメントあり。設定が複雑だが手順明確 |
+| Three.js バンドルサイズ | **受容** | カットライン5/28でLottie代替可能 |
+| Slack Event Subscriptions URL検証 | **対応済み** | Day 3-5 で CDK デプロイ後すぐに設定する計画 |
+| Cold Start + Bedrock レイテンシ | **対応済み** | NFR-01a 現実化 + デモ前ウォームアップ |
+| DynamoDB アクセスパターン不足 | **対応済み** | unit-of-work.md §8 に GSI 設計追加 |
+
+---
+
+## 11. Extension Configuration（拡張設定）（旧§9）
 
 | Extension | 設定 | 理由 |
 |-----------|------|------|
@@ -393,7 +615,7 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 
 ---
 
-## 10. 参照文書
+## 12. 参照文書（旧§10）
 
 | 文書 | パス |
 |------|------|
@@ -405,6 +627,9 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 | 状態管理 | `aidlc-docs/aidlc-state.md` |
 | 監査ログ | `aidlc-docs/audit.md` |
 | AWSアーキテクチャ方針 | `.claude/rules/aws-constraints.md` |
+| Well-Architectedレビュー | `aidlc-docs/inception/application-design/well-architected-review.md` |
+| Unit of Work（v1.2.0）| `aidlc-docs/inception/units/unit-of-work.md` |
+| 要件定義書（v1.2.0）| `aidlc-docs/inception/requirements/requirements.md` |
 
 ---
 

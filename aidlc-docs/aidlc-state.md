@@ -4,7 +4,8 @@
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
 - **プロジェクトタイプ**: Greenfield（新規）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: INCEPTION フェーズ 完了（Units Generation 完了 — Construction 承認待ち）
+- **現在のステージ**: INCEPTION フェーズ 完了（v1.3.0 — モノレポベース実装完了・Inception ドキュメント更新済み）
+- **ドキュメントバージョン**: v1.3.0（2026-05-16 更新）
 
 ## ワークスペース状態
 - **既存コード**: なし
@@ -36,23 +37,88 @@
 - [ ] Build and Test（EXECUTE — 全Unit完了後・必須）
 
 ### OPERATIONS フェーズ
-- [ ] Operations（プレースホルダー）
+- [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
+- [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）
+- [x] フロントエンド操作ガイド（aidlc-docs/operations/frontend-operations.md）
 
 ## Extension 設定
 - **Security Baseline**: 無効（Q23=B — PoC・プロトタイプ扱い。基本セキュリティは実装する）
 - **Property-Based Testing**: 無効（Q24=C — シンプルな CRUD・統合レイヤーが主）
 
-## Execution Plan Summary（Workflow Planning 完了）
+## 適用済みスキル
+- **aws-well-architected**: 2026-05-16 適用 → `aidlc-docs/inception/application-design/well-architected-review.md` 生成
+- **lean-formal-verification**: 2026-05-16 適用 → `execution-plan.md` §10 にクリティカルパス検証・カットライン定義を追記
+- **hackathon-strategist**: 2026-05-16 参照 → 14日計画・カットラインの戦略的フレームワーク
 
-- **実行計画書**: `aidlc-docs/inception/plans/execution-plan.md`（完了）
-- **総合リスクレベル**: Medium-High（外部API 3連携 / Bedrock AgentCore 新興性 / 時間制約）
+## Execution Plan Summary（v2.0.0 — 2026-05-16 予選向け全面改訂）
+
+- **実行計画書**: `aidlc-docs/inception/plans/execution-plan.md`（v2.0.0）
+- **総合リスクレベル**: Medium（Slack単独化・converse API直接実装で新興性リスクを解消）
 - **推奨実装順序**: shared → infra → task-extractor → sabori-proposer → api → web
-- **実行ステージ数**: Inception 残り2 + Construction 6 × Unit数 = 合計 8〜14 ステージ
-- **スキップステージ**: Reverse Engineering（Greenfield のため）/ Operations（プレースホルダー）/ Security Baseline Extension（無効）/ Property-Based Testing Extension（無効）
+- **実行ステージ数**: Construction 5 ステージ × 6 Unit（U-03c は v1.1.0 除外）
+- **スキップステージ**: Reverse Engineering（Greenfield）/ U-03c task-organizer（予選スコープ外）/ Operations（プレースホルダー）
 - **マイルストーン**:
-  - M1: 書類審査（2026-05-10）— 4成果物提出
-  - M2: MVP デモ（2026-05-30）— 動作する MVP
+  - M1: 書類審査（2026-05-10）— **完了（通過済み）**
+  - M2: MVP デモ（2026-05-30）— 動作する MVP（Slack+Dual-Agent+Three.js）
   - M3: 決勝（2026-06-26）— AWS デプロイ済み完成品
+
+## v1.3.0 モノレポ実装反映（2026-05-16）
+
+**変更内容**: モノレポベース実装完了に伴う Inception ドキュメント全面更新
+
+| 変更点 | 旧（設計書） | 新（実装） |
+|--------|------------|----------|
+| ワークスペースルート | `packages/`, `apps/`, `infra/` | `pkgs/` |
+| フロントエンド | `apps/web/` | `pkgs/frontend/`（ベース実装済み） |
+| バックエンド | `apps/api/` | `pkgs/backend/`（ベース実装済み） |
+| インフラ | `infra/` | `pkgs/cdk/`（ベース実装済み） |
+| 共有パッケージ | `packages/shared/` | `pkgs/shared/`（Construction で作成） |
+| エージェント | `packages/agent/` | `pkgs/agent/`（Construction で作成） |
+| パッケージマネージャー | npm workspaces | pnpm@10.33.0 workspaces |
+| React | React 18 | React 19.2.6 |
+| コード品質 | ESLint / Prettier | Biome 1.9.4 |
+| Node.js | 未記載 | v23（.nvmrc） |
+
+**更新ファイル**:
+- `inception/units/unit-of-work.md`: 全ユニットのディレクトリパス・モノレポ構成ツリー更新
+- `operations/README.md`: モノレポ構成・技術スタックテーブル更新
+- `inception/plans/execution-plan.md`: ディレクトリ参照・実装済みパッケージ注記追加
+- `inception/application-design/application-design.md`: ディレクトリ参照更新
+- `operations/cdk-operations.md` / `backend-operations.md` / `frontend-operations.md`: パス・コマンド更新
+
+---
+
+## v1.2.1 追加クリーンアップ（2026-05-16 第3次）
+
+コンテキスト復元後のグレップ検証で発見した残存参照を修正:
+- `AG-02-sabori-proposer-agent.md`: TaskContext から gmailContext/calendarContext を削除
+- `component-methods/README.md`: AG-04 依存関係図を Slack API のみに更新
+- `shared-utils.md`: EXTERNAL_API_FAILED コメントを Slack のみに
+- `infra-components.md`: IN-05 WebhookStack を Slack のみに
+- `BE-02-task-handler.md`: FR-01 記述を Slack のみに
+- `components.md`: ServiceType 型 / FE-04 責務 / INF-06 EventBridge ルールを Slack のみに
+- `design-rules.md`: Gmail/Calendar エラーハンドリング / PII 保護 / レイテンシ設計を v1.0 実態に合わせ更新
+- `application-design.md`: ServiceConnections SK / sourceType を v1.0 Slack のみに
+- `sequence-diagrams.md`: Gmail/Calendar シーケンス全ステップを `[v1.1.0]` Mermaid コメントに変換。InvokeAgent/InvokeModel → converse API に修正
+- `services.md`: exchangeGoogleToken Gmail/Calendar スコープ記述を v1.1.0 scope に移動
+- `component-methods.md`: v1.2.0 廃止通知ヘッダーを追加（旧統合ファイル・実装時参照禁止）
+
+**検証結果**: `application-design/` 配下で非意図的な Gmail/Calendar/AgentCore 参照ゼロ確認済み。
+
+---
+
+## v1.2.0 主要変更サマリ（2026-05-16）
+
+| 変更 | 変更前 | 変更後 |
+|------|--------|--------|
+| 外部連携 | Slack / Gmail / Google Calendar | Slack のみ（他は v1.1.0）|
+| エージェント実装 | Bedrock AgentCore | converse API + Tool Use（IBedrockClient インタフェース維持）|
+| Three.js | README 記載のみ | M2 MVP スコープに明示（U-05 工数 6-8h → 8-12h）|
+| U-03c 優先度 | 高 | 低（v1.1.0）— 予選スコープ外に移動 |
+| NFR-01a レイテンシ | 10秒以内 | ウォームアップ時10秒 / コールドスタート時15秒 |
+| SSE実装方式 | API Gateway | Lambda Response Streaming + Function URL |
+| タイムライン | 旧（崩壊済み）| 14日詳細計画（5/16〜5/30）+ カットライン定義 |
+| デプロイ計画 | 未定義 | AWSデプロイ手順・Slack設定・URL確保 追加 |
 
 ## User Stories 成果物
 - **personas.md**: `aidlc-docs/inception/user-stories/personas.md`（完了）— プライマリペルソナ1名（34歳・フリーランスデザイナー）の詳細定義

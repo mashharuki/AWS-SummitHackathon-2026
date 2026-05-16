@@ -1,15 +1,24 @@
 // Best-practice CloudWatch alarm patterns for CDK
 
 import {
-  Alarm, CompositeAlarm, AlarmRule, AlarmState,
-  ComparisonOperator, MathExpression, TreatMissingData,
-  Dashboard, AlarmWidget, GraphWidget, TextWidget, PeriodOverride,
-} from 'aws-cdk-lib/aws-cloudwatch';
-import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
-import { Duration } from 'aws-cdk-lib';
-import { IFunction } from 'aws-cdk-lib/aws-lambda';
-import { ITopic } from 'aws-cdk-lib/aws-sns';
-import { Construct } from 'constructs';
+  Alarm,
+  CompositeAlarm,
+  AlarmRule,
+  AlarmState,
+  ComparisonOperator,
+  MathExpression,
+  TreatMissingData,
+  Dashboard,
+  AlarmWidget,
+  GraphWidget,
+  TextWidget,
+  PeriodOverride,
+} from "aws-cdk-lib/aws-cloudwatch";
+import { SnsAction } from "aws-cdk-lib/aws-cloudwatch-actions";
+import { Duration } from "aws-cdk-lib";
+import { IFunction } from "aws-cdk-lib/aws-lambda";
+import { ITopic } from "aws-cdk-lib/aws-sns";
+import { Construct } from "constructs";
 
 /**
  * Create Lambda monitoring with best-practice defaults.
@@ -27,7 +36,7 @@ export function createLambdaMonitoring(
   fn: IFunction,
   snsTopic: ITopic,
   options?: {
-    errorRateThreshold?: number;  // default: 5 (percent)
+    errorRateThreshold?: number; // default: 5 (percent)
     durationThresholdMs?: number; // default: 3000 (ms)
   },
 ) {
@@ -35,9 +44,9 @@ export function createLambdaMonitoring(
   const durationThreshold = options?.durationThresholdMs ?? 3000;
 
   // Error rate alarm (percentage via math expression)
-  const errorRateAlarm = new Alarm(scope, 'ErrorRateAlarm', {
+  const errorRateAlarm = new Alarm(scope, "ErrorRateAlarm", {
     metric: new MathExpression({
-      expression: 'IF(invocations > 0, errors * 100 / invocations, 0)',
+      expression: "IF(invocations > 0, errors * 100 / invocations, 0)",
       usingMetrics: {
         errors: fn.metricErrors({ period: Duration.minutes(1) }),
         invocations: fn.metricInvocations({ period: Duration.minutes(1) }),
@@ -51,9 +60,9 @@ export function createLambdaMonitoring(
   });
 
   // Duration alarm (p99, not average)
-  const durationAlarm = new Alarm(scope, 'DurationP99Alarm', {
+  const durationAlarm = new Alarm(scope, "DurationP99Alarm", {
     metric: fn.metricDuration({
-      statistic: 'p99',
+      statistic: "p99",
       period: Duration.minutes(1),
     }),
     threshold: durationThreshold,
@@ -64,7 +73,7 @@ export function createLambdaMonitoring(
   });
 
   // Throttle alarm
-  const throttleAlarm = new Alarm(scope, 'ThrottleAlarm', {
+  const throttleAlarm = new Alarm(scope, "ThrottleAlarm", {
     metric: fn.metricThrottles({ period: Duration.minutes(1) }),
     threshold: 1,
     evaluationPeriods: 3,
@@ -74,7 +83,7 @@ export function createLambdaMonitoring(
   });
 
   // Composite alarm — only page when service is unhealthy
-  const serviceHealthAlarm = new CompositeAlarm(scope, 'ServiceHealthAlarm', {
+  const serviceHealthAlarm = new CompositeAlarm(scope, "ServiceHealthAlarm", {
     alarmRule: AlarmRule.anyOf(
       AlarmRule.fromAlarm(errorRateAlarm, AlarmState.ALARM),
       AlarmRule.fromAlarm(durationAlarm, AlarmState.ALARM),
@@ -84,22 +93,44 @@ export function createLambdaMonitoring(
   serviceHealthAlarm.addAlarmAction(new SnsAction(snsTopic));
 
   // Dashboard
-  const dashboard = new Dashboard(scope, 'ServiceDashboard', {
-    start: '-PT8H',
+  const dashboard = new Dashboard(scope, "ServiceDashboard", {
+    start: "-PT8H",
     periodOverride: PeriodOverride.INHERIT,
   });
   dashboard.addWidgets(
-    new TextWidget({ width: 24, height: 1, markdown: '# Service Health' }),
-    new AlarmWidget({ width: 8, height: 6, title: 'Error Rate', alarm: errorRateAlarm }),
-    new AlarmWidget({ width: 8, height: 6, title: 'Duration P99', alarm: durationAlarm }),
-    new AlarmWidget({ width: 8, height: 6, title: 'Throttles', alarm: throttleAlarm }),
+    new TextWidget({ width: 24, height: 1, markdown: "# Service Health" }),
+    new AlarmWidget({
+      width: 8,
+      height: 6,
+      title: "Error Rate",
+      alarm: errorRateAlarm,
+    }),
+    new AlarmWidget({
+      width: 8,
+      height: 6,
+      title: "Duration P99",
+      alarm: durationAlarm,
+    }),
+    new AlarmWidget({
+      width: 8,
+      height: 6,
+      title: "Throttles",
+      alarm: throttleAlarm,
+    }),
     new GraphWidget({
-      width: 24, height: 6,
-      title: 'Invocations & Errors',
+      width: 24,
+      height: 6,
+      title: "Invocations & Errors",
       left: [fn.metricInvocations({ period: Duration.minutes(1) })],
       right: [fn.metricErrors({ period: Duration.minutes(1) })],
     }),
   );
 
-  return { errorRateAlarm, durationAlarm, throttleAlarm, serviceHealthAlarm, dashboard };
+  return {
+    errorRateAlarm,
+    durationAlarm,
+    throttleAlarm,
+    serviceHealthAlarm,
+    dashboard,
+  };
 }

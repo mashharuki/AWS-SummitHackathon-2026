@@ -14,7 +14,7 @@
 |--------------|:---------------:|:--------:|:--------------:|:------:|:----------:|
 | apps/web | 型定義 | REST API | - | - | Cognito（認証）|
 | apps/api | 型定義 | - | AG-01〜AG-04 | - | DynamoDB / Cognito / EventBridge / Secrets Manager |
-| packages/agent | 型定義 | - | AG-03→AG-04 | - | Bedrock / Secrets Manager / Slack / Gmail / Calendar |
+| packages/agent | 型定義 | - | AG-03→AG-04 | - | Bedrock converse API / Secrets Manager / Slack |
 | infra/ | - | Lambda（デプロイ対象）| Lambda（デプロイ対象）| - | AWS（全サービス）|
 
 ---
@@ -72,17 +72,17 @@ apps/api（Hono アプリ）
 packages/agent
   ├── TaskExtractorAgent（AG-01）
   │   ├── ITaskExtractorAgent（インタフェース）
-  │   ├── Bedrock AgentCore / Bedrock InvokeModel（フォールバック）
+  │   ├── Bedrock converse API + Tool Use（IBedrockClient 経由）
   │   └── packages/shared（型定義・トークンガード）
   │
   └── SaboriProposerAgent（AG-02）
       ├── ISaboriProposerAgent（インタフェース）
-      ├── ContextCollector（AG-04）← 文脈収集
+      ├── ContextCollector（AG-04）← 文脈収集（v1.0.0: Slack のみ）
       │   └── Secrets Manager（OAuth トークン）
-      │       └── Slack API / Gmail API / Google Calendar API
+      │       └── Slack API
       ├── PersonaRenderer（AG-03）← 口調変換
       │   └── DynamoDB（Personas テーブル）
-      ├── Bedrock AgentCore / Bedrock InvokeModel（フォールバック）
+      ├── Bedrock converse API + Tool Use（IBedrockClient 経由）
       └── packages/shared（型定義・トークンガード）
 ```
 
@@ -136,11 +136,8 @@ infra/
 
 | 外部サービス | 呼び出しコンポーネント | 認証方式 | 障害時の影響 |
 |------------|---------------------|---------|------------|
-| Amazon Bedrock | AgentService（SVC-06）経由で全エージェント | IAM ロール | サボり提案・タスク抽出が停止 |
-| Bedrock AgentCore | AG-01 / AG-02 | IAM ロール | 直接 InvokeModel にフォールバック |
-| Slack API | AG-04（ContextCollector） | OAuth Bearer Token | Slack 文脈が欠落（他文脈のみで提案生成） |
-| Gmail API | AG-04（ContextCollector） | OAuth Bearer Token | Gmail 文脈が欠落 |
-| Google Calendar API | AG-04（ContextCollector） | OAuth Bearer Token | Calendar 文脈が欠落 |
+| Amazon Bedrock（converse API） | AgentService（SVC-06）経由で全エージェント | IAM ロール | サボり提案・タスク抽出が停止 |
+| Slack API | AG-04（ContextCollector） | OAuth Bearer Token | Slack 文脈が欠落（タスクタイトルのみで提案生成）|
 | Cognito | BE-01（AuthHandler）/ FE-06（AuthProvider） | Cognito SDK | 認証不能（全機能利用不可） |
 | DynamoDB | SVC-05（DataService）経由で全サービス | IAM ロール | データ読み書き不能（全機能停止）|
 | Secrets Manager | SVC-04（ConnectionService）/ AG-04 | IAM ロール | OAuth トークン取得不可（外部API停止）|

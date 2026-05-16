@@ -1,0 +1,3 @@
+.claude/agent-memory/**
+.DS_Store
+node_modules/

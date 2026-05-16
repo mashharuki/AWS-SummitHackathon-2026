@@ -14,8 +14,8 @@
 | IN-01 CognitoStack | `CognitoStack extends cdk.Stack` | User Pool, User Pool Client, Google IdP, Domain |
 | IN-02 DataStack | `DataStack extends cdk.Stack` | DynamoDB テーブル 7 本（On-Demand） |
 | IN-03 ApiStack | `ApiStack extends cdk.Stack` | API Gateway HTTP API, Hono Lambda, オーソライザー |
-| IN-04 AgentStack | `AgentStack extends cdk.Stack` | Bedrock AgentCore, TaskExtractor Lambda, EventBridge |
-| IN-05 WebhookStack | `WebhookStack extends cdk.Stack` | Slack/Gmail Webhook Lambda |
+| IN-04 AgentStack | `AgentStack extends cdk.Stack` | TaskExtractor Lambda, SaboriProposer Lambda, BackgroundRefresh Lambda, IAM ロール, Lambda DLQ |
+| IN-05 WebhookStack | `WebhookStack extends cdk.Stack` | Slack Webhook Lambda |
 | IN-06 FrontendStack | `FrontendStack extends cdk.Stack` | S3 バケット, CloudFront ディストリビューション |
 
 ---

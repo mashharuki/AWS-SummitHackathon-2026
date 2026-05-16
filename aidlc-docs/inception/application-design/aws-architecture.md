@@ -15,8 +15,6 @@
 graph TD
     subgraph External["外部サービス（インターネット）"]
         Slack["🔵 Slack API\n(Events API / REST)"]
-        Gmail["📧 Gmail API\n(OAuth 2.0)"]
-        GCal["📅 Google Calendar API\n(OAuth 2.0)"]
         GoogleIdP["🔐 Google Identity Provider\n(OpenID Connect)"]
         User["👤 ユーザー（ブラウザ）"]
     end
@@ -39,7 +37,7 @@ graph TD
     subgraph Agent["AI エージェント層"]
         TaskExtractor["🤖 AWS Lambda\n(TaskExtractorAgent)"]
         SaboriProposer["🤖 AWS Lambda\n(SaboriProposerAgent\n+ PersonaRenderer)"]
-        Bedrock["🧠 Amazon Bedrock\n(Claude Sonnet 3.5\n+ AgentCore)"]
+        Bedrock["🧠 Amazon Bedrock\nconverse API\n(Claude Sonnet 3.5)"]
     end
 
     subgraph Data["データ層"]
@@ -83,12 +81,10 @@ graph TD
     EB -->|"Lambda 起動"| TaskExtractor
 
     %% Agent → Bedrock / DB
-    TaskExtractor -->|"InvokeAgent\nタスク抽出"| Bedrock
+    TaskExtractor -->|"converse API\nタスク抽出"| Bedrock
     TaskExtractor <-->|"PutItem\n(TaskCandidates)"| DDB
-    SaboriProposer -->|"InvokeAgent\nサボり判定"| Bedrock
+    SaboriProposer -->|"converse API\nサボり判定"| Bedrock
     SaboriProposer -->|"外部 API コール"| Slack
-    SaboriProposer -->|"外部 API コール"| Gmail
-    SaboriProposer -->|"外部 API コール"| GCal
     SaboriProposer -->|"OAuth token 取得"| SM
     SaboriProposer <-->|"PutItem / GetItem\n(Proposals)"| DDB
 
@@ -153,7 +149,7 @@ graph LR
 ┌──────────────────────────────────────────────────────────────┐
 │ パブリックゾーン（インターネット）                              │
 │  - ユーザー（ブラウザ）                                        │
-│  - Slack / Gmail / Google Calendar（外部 SaaS）               │
+│  - Slack（外部 SaaS）                                          │
 │  - Google Identity Provider（OpenID Connect）                  │
 └────────────────────────┬─────────────────────────────────────┘
                          │ HTTPS（TLS 1.2以上）
@@ -239,7 +235,7 @@ graph LR
 ```
 ┌─────────────────────────────────────────────────────┐
 │ 外部（インターネット）                                │
-│ - Slack / Gmail / Calendar（OAuth 2.0）              │
+│ - Slack（OAuth 2.0）                                  │
 │ - Google Identity Provider（OpenID Connect）          │
 └────────────────────┬────────────────────────────────┘
                      │
@@ -297,7 +293,7 @@ TaskCandidates Table（DynamoDB）
   ↓
 Secrets Manager（OAuth tokens取得）
   ↓
-外部API並列呼び出し（Slack / Gmail / Calendar）
+外部API呼び出し（Slack）
   ↓
 Bedrock（サボり判定推論）
   ↓
@@ -409,7 +405,7 @@ SABOROU のアーキテクチャは AWS Well-Architected Framework の5本柱す
 |----|---------|------------|
 | **運用上の優秀性** | 可観測性の組み込みと自動復旧 | CloudWatch Logs / Metrics / Alarms（Lambda実行時間・DynamoDB容量・Bedrock Token使用量を常時監視）/ CloudWatch Alarm による自動アラート / エラーハンドリングフローでのフォールバック自動実行 |
 | **セキュリティ** | 最小権限原則と機密情報の完全分離 | IAM ロールを Lambda 単位で最小権限設定（PutItemのみ等）/ OAuth トークンは全て Secrets Manager に暗号化保存（環境変数・DynamoDB 保存禁止）/ Cognito Authorizer による全エンドポイントの JWT 検証 / Slack Signing Secret による Webhook 署名検証 / PII（個人情報）は Lambda メモリ上で即時削除 |
-| **信頼性** | マネージドサービスによる高可用性 | DynamoDB On-Demand（マルチAZ自動レプリケーション）/ Lambda マルチAZ自動実行 / 外部API失敗時の部分的コンテキストでの推論継続 / DynamoDB 書き込みエラー時の Exponential Backoff リトライ（3回）/ Bedrock AgentCore タイムアウト時の InvokeModel 直接呼び出しフォールバック |
+| **信頼性** | マネージドサービスによる高可用性 | DynamoDB On-Demand（マルチAZ自動レプリケーション）/ Lambda マルチAZ自動実行 / 外部API失敗時の部分的コンテキストでの推論継続 / DynamoDB 書き込みエラー時の Exponential Backoff リトライ（3回）/ Bedrock converse API タイムアウト時の exponential backoff リトライ（v1.2.0: AgentCore フォールバック廃止・IBedrockClient インタフェースで将来移行に対応）|
 | **パフォーマンス効率** | ストリーミングと並列処理による体感速度向上 | Bedrock ストリーミングレスポンス（InvokeModelWithResponseStream）による first chunk を20秒以内に表示 / ContextCollector の外部API並列呼び出し（Promise.allSettled）/ EventBridge 非同期処理による TaskOrganizerAgent のノンブロッキング起動 / Proposals テーブル GSI-TaskLatest による O(1) 最新提案取得 |
 | **コスト最適化** | サーバーレス・従量課金によるゼロ常時コスト | Lambda / API Gateway / DynamoDB On-Demand でスケールゼロ可能（ユーザーゼロ時のコスト最小化）/ Bedrock プロンプトを最大8,000トークンでガード（NFR-06）/ CloudWatch Budgets アラート（$50/月）でコスト超過を自動検知 / 月額見積り $30.94（NFR-06 の $50/月制約を達成）|
 

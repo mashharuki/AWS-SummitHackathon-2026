@@ -66,7 +66,7 @@
 ### FE-04: SettingsPage（連携設定ページ）
 
 **責務**:
-- Slack / Gmail / Google Calendar の連携状態（連携済み / 未連携）を表示する
+- Slack の連携状態（連携済み / 未連携）を表示する（v1.1.0 以降: Gmail / Google Calendar 追加予定）
 - 各サービスの OAuth 接続フローを開始する
 - OAuth トークン再連携を促すバナーを表示する（トークン期限切れ時）
 
@@ -212,16 +212,17 @@
 ### BE-05: ConnectionHandler（外部サービス連携ハンドラ）
 
 **責務**:
-- 外部サービス（Slack / Gmail / Google Calendar）の OAuth トークンを管理する
+- 外部サービス（Slack）の OAuth トークンを管理する（v1.0.0 は Slack のみ）
 - Slack OAuth コールバック処理・トークン保存を行う
-- Google OAuth スコープ拡張フローを処理する
 - 連携状態一覧を返す
+
+> v1.1.0 以降で Google OAuth（Gmail / Calendar スコープ）を追加予定。
+> `POST /api/connections/google/callback` は v1.1.0 実装対象。
 
 **インタフェース**:
 - `GET /api/connections` → `ServiceConnection[]`
 - `POST /api/connections/slack/callback` → `ServiceConnection`
-- `POST /api/connections/google/callback` → `ServiceConnection`
-- `DELETE /api/connections/:service` → `void`
+- `DELETE /api/connections/:service` → `{ disconnected: true }`
 
 **依存サービス**:
 - AWS Secrets Manager（OAuth トークン保管）
@@ -257,27 +258,31 @@
 ### AG-01: TaskExtractorAgent（タスク抽出エージェント）
 
 **責務**:
-- 外部メッセージ（Slack / Gmail / Google Calendar イベント）を受け取り、構造化タスク候補に変換する
-- Bedrock AgentCore を使用して自然言語からタスク属性（名前・締切・依頼者・作業内容）を抽出する
+- 外部メッセージ（Slack イベント）を受け取り、構造化タスク候補に変換する
+- Amazon Bedrock（converse API + Tool Use）を使用して自然言語からタスク属性（名前・締切・依頼者・作業内容）を抽出する
 - 抽出結果を DynamoDB TaskCandidates テーブルに書き込む
+
+> v1.1.0 以降で Gmail / Google Calendar イベントの対応を追加予定。
 
 **インタフェース**:
 - `extractTask(input: ExternalEvent): Promise<TaskCandidate>`
 - `ITaskExtractorAgent` インタフェースを実装（将来の差し替えに備え抽象化）
 
 **依存サービス**:
-- Amazon Bedrock AgentCore（Claude Sonnet）
+- Amazon Bedrock（converse API + Tool Use）（Claude Sonnet）
 - DynamoDB（TaskCandidates テーブル）
 
 ---
 
 ### AG-05: TaskOrganizerAgent（タスク整理エージェント）★新規追加（v1.1.0）
 
+> **★ v1.1.0 scope — MVP（v1.0.0）では実行されない**。予選スコープ外。決勝（M3: 2026-06-26）向け実装対象。
+
 **Unit**: U-03c: task-organizer
 
 **責務**:
 - TaskExtractorAgent（AG-01）が収集した生タスクリストを受け取り、依存関係・手順・優先順位を整理・構造化する
-- Bedrock AgentCore を使用してタスク間の論理的依存関係を分析する（「タスクAが完了しないとタスクBが開始できない」等）
+- Bedrock converse API + Tool Use を使用してタスク間の論理的依存関係を分析する（「タスクAが完了しないとタスクBが開始できない」等）
 - 「どの順番でタスクを処理すれば最も長くサボれるか」を計算する最適化ロジックを提供する
 - 各タスクに「サボり余地スコア（0〜100）」を付与し、SaboriProposerAgent に構造化データとして引き渡す
 - 整理結果を DynamoDB TaskOrganization テーブルに書き込む
@@ -299,7 +304,7 @@ interface OrganizedTaskPlan {
 ```
 
 **依存サービス**:
-- Amazon Bedrock AgentCore（Claude Sonnet）— 依存関係分析・最適化計算
+- Amazon Bedrock（converse API + Tool Use）（Claude Sonnet）— 依存関係分析・最適化計算
 - DynamoDB（TaskCandidates テーブル — 参照）
 - DynamoDB（TaskOrganization テーブル — 書き込み）
 
@@ -313,22 +318,23 @@ TaskExtractorAgent（AG-01）→ TaskOrganizerAgent（AG-05）→ SaboriProposer
 ### AG-02: SaboriProposerAgent（サボり提案エージェント）
 
 **責務**:
-- TaskOrganizerAgent（AG-05）が整理した構造化タスクプランと周辺文脈（Slack温度感・Gmail・Google Calendar）を統合してサボり判定（3状態）を生成する
+- 承認済みタスクと Slack 文脈（ContextCollector）を統合してサボり判定（3状態）を生成する
 - `can_saboru` / `caution` / `danger` の verdict を決定する
-- TaskOrganizer のサボり余地スコアを参考情報として入力プロンプトに含める（判定精度向上）
+- v1.1.0 以降では TaskOrganizerAgent（AG-05）のサボり余地スコアを参考情報として入力プロンプトに含める（判定精度向上）
 - PersonaRenderer を呼び出し、選択された人格（人格A: おっとり / 人格B: 熱血）の口調で提案文を生成する
 - 次回再評価タイミング（next_check_at）を計算する
 
 **インタフェース**:
-- `propose(taskId: string, context: TaskContext, organizedPlan: OrganizedTaskPlan): Promise<Proposal>`
+- `propose(taskId: string, context: TaskContext, organizedPlan?: OrganizedTaskPlan): Promise<Proposal>`
 - `ISaboriProposerAgent` インタフェースを実装
 
 **依存コンポーネント**:
-- TaskOrganizerAgent（AG-05）— 整理済みタスクプラン受け取り
 - ContextCollector（AG-04）
 - PersonaRenderer（AG-03）— 人格A/B 対応
-- Amazon Bedrock AgentCore（Claude Sonnet）
+- Amazon Bedrock（converse API + Tool Use）（Claude Sonnet）
 - DynamoDB（Proposals テーブル）
+
+> v1.1.0 以降で TaskOrganizerAgent（AG-05）との連携を追加予定（`organizedPlan` は任意入力）。
 
 ---
 
@@ -357,20 +363,18 @@ TaskExtractorAgent（AG-01）→ TaskOrganizerAgent（AG-05）→ SaboriProposer
 ### AG-04: ContextCollector（文脈収集ツール）
 
 **責務**:
-- 指定タスクに関連する外部ツールの文脈情報を収集する
-- Slack: 関連スレッドのリマインド有無・依頼者のオンライン状態・温度感を取得する
-- Gmail: 関連メールの本文要約・「急ぎ」フラグを取得する
-- Google Calendar: 関連会議の日時・次の締切イベントを取得する
+- 指定タスクに関連する Slack の文脈情報を収集する
+- Slack: 関連スレッドのリマインド有無・依頼者のオンライン状態・温度感・緊急キーワードを取得する
 - 取得した生データは処理後即削除（NFR-07 準拠）
 
+> v1.1.0 以降で Gmail / Google Calendar コンテキスト収集を追加予定。
+
 **インタフェース**:
-- `collectSlackContext(taskId: string): Promise<SlackContext>`
-- `collectGmailContext(taskId: string): Promise<GmailContext>`
-- `collectCalendarContext(taskId: string): Promise<CalendarContext>`
+- `collectSlackContext(params: CollectSlackParams): Promise<SlackContext>`
 
 **依存サービス**:
-- AWS Secrets Manager（OAuth トークン取得）
-- Slack API / Gmail API / Google Calendar API
+- AWS Secrets Manager（Slack OAuth トークン取得）
+- Slack Web API
 
 ---
 
@@ -386,7 +390,7 @@ TaskExtractorAgent（AG-01）→ TaskOrganizerAgent（AG-05）→ SaboriProposer
 - `TaskStatus`: `'pending' | 'approved' | 'deleted'`
 - `Verdict`: `'can_saboru' | 'caution' | 'danger'`
 - `QuickReplyType`: `'keep_sleeping' | 'do_it_early' | 'do_15min' | 'full_ignore'`
-- `ServiceType`: `'slack' | 'gmail' | 'google_calendar'`
+- `ServiceType`: `'slack'`  // v1.1.0 以降: `'gmail' | 'google_calendar'` 追加予定
 
 ---
 
@@ -418,9 +422,9 @@ TaskExtractorAgent（AG-01）→ TaskOrganizerAgent（AG-05）→ SaboriProposer
 
 ### INF-04: AgentStack
 
-- Bedrock AgentCore 設定
-- Lambda（TaskExtractorAgent / SaboriProposerAgent）IAM ロール設定
-- Bedrock モデル呼び出し権限
+- TaskExtractor Lambda + SaboriProposer Lambda + BackgroundRefresh Lambda の IAM ロール設定
+- Bedrock converse API 呼び出し権限（claude-3-5-sonnet-20241022 モデル）付与
+- Lambda DLQ（EventBridge 失敗時の Dead Letter Queue）設定
 
 ### INF-05: FrontendStack
 
@@ -432,4 +436,4 @@ TaskExtractorAgent（AG-01）→ TaskOrganizerAgent（AG-05）→ SaboriProposer
 
 - Webhook 受信用 Lambda（独立エンドポイント）
 - EventBridge Custom Event Bus
-- EventBridge ルール（Slack / Gmail / Calendar イベント振り分け）
+- EventBridge ルール（Slack イベント振り分け。v1.1.0 以降: Gmail / Calendar 追加予定）

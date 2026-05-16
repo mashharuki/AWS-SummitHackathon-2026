@@ -60,7 +60,7 @@ type ErrorCode =
   | 'TASK_NOT_FOUND'        // 404: タスクが存在しない
   | 'UNAUTHORIZED'           // 401: JWT 未認証
   | 'TOKEN_EXPIRED'          // 401: JWT 有効期限切れ
-  | 'EXTERNAL_API_FAILED'   // 502: Slack/Gmail/Calendar API エラー
+  | 'EXTERNAL_API_FAILED'   // 502: Slack API エラー
   | 'BEDROCK_TIMEOUT'       // 504: Bedrock レスポンスタイムアウト（5秒）
   | 'BEDROCK_COST_EXCEEDED' // 429: Bedrock コスト上限ガード
   | 'DYNAMO_WRITE_FAILED'   // 500: DynamoDB 書き込みエラー

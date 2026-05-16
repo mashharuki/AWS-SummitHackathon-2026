@@ -44,7 +44,7 @@ Response: Task  // status: 'approved'
 
 ## 関連要件
 
-- FR-01: Slack/Gmail/Calendar からのタスク自動抽出
+- FR-01: Slack からのタスク自動抽出
 - FR-02: タスク候補の承認フロー
 - FR-06: タスク手動追加・編集
 

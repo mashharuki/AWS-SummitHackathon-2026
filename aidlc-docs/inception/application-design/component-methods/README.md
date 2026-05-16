@@ -28,7 +28,7 @@
 | [AG-01-task-extractor-agent.md](./AG-01-task-extractor-agent.md) | TaskExtractorAgent | 外部イベントからタスク候補を抽出 |
 | [AG-02-sabori-proposer-agent.md](./AG-02-sabori-proposer-agent.md) | SaboriProposerAgent | サボり判定（心理学フレームワーク + LLM）/ SSE 出力 |
 | [AG-03-persona-renderer.md](./AG-03-persona-renderer.md) | PersonaRenderer | おっとりサボロー口調への変換 |
-| [AG-04-context-collector.md](./AG-04-context-collector.md) | ContextCollector | Slack / Gmail / Calendar からコンテキスト収集 |
+| [AG-04-context-collector.md](./AG-04-context-collector.md) | ContextCollector | Slack からコンテキスト収集（v1.1.0 以降: Gmail / Calendar） |
 
 ### 共通・インフラ
 
@@ -67,8 +67,8 @@
 [AG-03] PersonaRenderer ──→ Bedrock Claude Haiku（口調変換）
                          └──→ DynamoDB Personas
 
-[AG-04] ContextCollector ──→ Slack API / Gmail API / Google Calendar API
-                          └──→ Secrets Manager（API token）
+[AG-04] ContextCollector ──→ Slack API
+                          └──→ Secrets Manager（Slack Bot Token）
 ```
 
 ---
