@@ -4,6 +4,9 @@
 **インデックス**: [component-methods/README.md](./README.md)  
 **関連コンポーネント定義**: [components.md](../components.md) § BE-05
 
+> **v1.0.0 スコープ**: 外部サービス連携は Slack のみ。
+> v1.1.0 以降で Google OAuth（Gmail / Calendar スコープ）を追加予定。
+
 ---
 
 ## メソッド定義
@@ -18,11 +21,6 @@ POST /api/connections/slack/callback
 Request:  { code: string, state: string }
 Response: ServiceConnection
 
-// Google OAuth コールバック処理（Gmail + Calendar スコープ）
-POST /api/connections/google/callback
-Request:  { code: string, state: string, scopes: string[] }
-Response: ServiceConnection
-
 // 連携解除
 DELETE /api/connections/:service
 Response: { disconnected: true }
@@ -33,10 +31,9 @@ Response: { disconnected: true }
 ```typescript
 interface ServiceConnection {
   userId: string
-  service: 'slack' | 'gmail' | 'calendar'
+  service: 'slack'  // v1.0.0 は Slack のみ
   status: 'connected' | 'disconnected' | 'error'
   connectedAt?: string
-  scopes?: string[]
 }
 ```
 
@@ -45,11 +42,13 @@ interface ServiceConnection {
 - **DynamoDB ServiceConnections テーブル** — 連携状態の管理
 - **AWS Secrets Manager** — OAuth アクセストークン・リフレッシュトークンの安全な保管
 - **Slack OAuth 2.0 API** — Slack 連携フロー
-- **Google OAuth 2.0 API** — Gmail / Google Calendar 連携フロー
+
+> **将来拡張（v1.1.0 以降）**: Google OAuth 2.0 API（Gmail / Google Calendar スコープ）を追加予定。
+> `POST /api/connections/google/callback` エンドポイントは v1.1.0 で実装する。
 
 ## 関連要件
 
-- FR-07: 外部サービス連携設定（Slack / Gmail / Google Calendar）
+- FR-07: 外部サービス連携設定（Slack — v1.0.0 MVP）
 - NFR-03: セキュリティ（OAuth token をコードに直接保存しない）
 
 ## シーケンス参照

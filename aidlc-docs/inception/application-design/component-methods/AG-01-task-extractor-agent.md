@@ -14,11 +14,10 @@ interface ITaskExtractorAgent {
   extractTask(input: ExternalEvent): Promise<TaskCandidate>
 }
 
-// ExternalEvent の種別
+// ExternalEvent の種別（v1.0.0: Slack のみ）
+// v1.1.0 以降で Gmail / Google Calendar イベントを追加予定
 type ExternalEvent =
   | { source: 'slack'; message: SlackMessage }
-  | { source: 'gmail'; email: GmailMessage }
-  | { source: 'calendar'; event: CalendarEvent }
 
 // 抽出結果
 interface TaskCandidate {
@@ -26,7 +25,7 @@ interface TaskCandidate {
   deadline?: string
   requester?: string
   description?: string
-  sourceType: 'slack' | 'gmail' | 'calendar'
+  sourceType: 'slack' | 'manual'
   sourceRef: string  // 元メッセージの参照ID（生データは保存しない）
 }
 ```
@@ -46,7 +45,7 @@ interface TaskCandidate {
 
 ## 関連要件
 
-- FR-01: Slack/Gmail/Calendar からのタスク自動抽出
+- FR-01: Slack からのタスク自動抽出（v1.0.0）
 - NFR-07: プライバシー保護（生データ非保存）
 
 ## シーケンス参照

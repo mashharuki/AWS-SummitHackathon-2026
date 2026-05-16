@@ -44,7 +44,7 @@ SABOROU のサボり判定は以下の 5 つの社会心理学・動機づけ理
 
 ```
 [Phase 1: コンテキストアセンブリ + 判定プロンプト構築]
-  ContextCollector が収集した SlackContext / GmailContext / CalendarContext を
+  ContextCollector が収集した SlackContext を
   自然言語ナラティブ形式に変換し、LLM への入力コンテキストを組み立てる
 
         ↓
@@ -77,8 +77,7 @@ interface ISaboriProposerAgent {
 interface TaskContext {
   task: Task
   slackContext?: SlackContext
-  gmailContext?: GmailContext
-  calendarContext?: CalendarContext
+  // v1.1.0 以降: gmailContext / calendarContext 追加予定
 }
 
 // 提案結果（最終出力）
@@ -332,7 +331,7 @@ async propose(taskId: string, context: TaskContext): Promise<Proposal> {
 
 ## 依存コンポーネント
 
-- **[AG-04] ContextCollector** — Slack / Gmail / Calendar からコンテキスト収集
+- **[AG-04] ContextCollector** — Slack からコンテキスト収集（v1.1.0 以降: Gmail / Calendar 追加予定）
 - **Amazon Bedrock（Claude Sonnet 3.5）** — フル判定・Structured Output（Phase 2）
 - **[AG-03] PersonaRenderer** — 口調変換（Phase 3）
 - **DynamoDB Proposals テーブル** — 提案キャッシュ保存

@@ -55,7 +55,7 @@
 
 | 依存内容 | 渡し方 |
 |---------|--------|
-| Bedrock AgentCore エンドポイント | Lambda 環境変数 `BEDROCK_AGENT_ID` |
+| Bedrock モデル ID | Lambda 環境変数 `BEDROCK_MODEL_ID`（例: `anthropic.claude-3-5-sonnet-20241022-v2:0`）|
 | DynamoDB テーブル名 | Lambda 環境変数 `DYNAMODB_TABLE_TASKS` 等 |
 | Secrets Manager ARN | Lambda 環境変数 `SECRETS_ARN_SLACK` 等 |
 | Lambda 実行ロール ARN | CDK で Lambda に直接付与 |
@@ -81,7 +81,7 @@
 
 | 依存内容 | 渡し方 |
 |---------|--------|
-| Bedrock AgentCore エンドポイント | Lambda 環境変数 `BEDROCK_AGENT_ID` |
+| Bedrock モデル ID | Lambda 環境変数 `BEDROCK_MODEL_ID`（例: `anthropic.claude-3-5-sonnet-20241022-v2:0`）|
 | DynamoDB テーブル名 | Lambda 環境変数 `DYNAMODB_TABLE_TASKS` 等 |
 | Secrets Manager ARN | Lambda 環境変数 `SECRETS_ARN_SLACK` 等 |
 
@@ -93,7 +93,7 @@
 
 | 依存内容 | 用途 |
 |---------|------|
-| `src/bedrock/client.ts` | AgentCore / InvokeModel フォールバッククライアントの共通利用 |
+| `src/bedrock/client.ts` | ConverseBedrockClient（IBedrockClient 実装）の共通利用 |
 
 **結合度**: 中（インタフェースが変わると U-03b の修正が必要）
 
@@ -116,7 +116,7 @@
 
 | 依存内容 | 渡し方 |
 |---------|--------|
-| Bedrock AgentCore エンドポイント | Lambda 環境変数 `BEDROCK_AGENT_ID_ORGANIZER` |
+| Bedrock モデル ID | Lambda 環境変数 `BEDROCK_MODEL_ID`（converse API 直接呼び出し）|
 | DynamoDB テーブル名（TaskOrganization テーブル） | Lambda 環境変数 `DYNAMODB_TABLE_ORGANIZATION` |
 
 **結合度**: 低（実行時の環境変数依存のみ）

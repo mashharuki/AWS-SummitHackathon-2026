@@ -102,7 +102,7 @@ exchangeSlackToken(code: string, userId: string) → ServiceConnection
 
 exchangeGoogleToken(code: string, scopes: string[], userId: string) → ServiceConnection
   - Google OAuth code → access_token + refresh_token 交換
-  - Gmail / Calendar の両スコープを含む
+  - v1.1.0 以降: Gmail / Calendar スコープ追加予定（v1.0 では Cognito Google ログインのみ）
 
 getValidToken(userId: string, service: ServiceType) → string
   - Secrets Manager からトークンを取得する
@@ -145,9 +145,10 @@ renderPersonaReply(verdict: Verdict, reasoning: string[], personaId: string) →
   - PersonaRenderer を呼び出す
 ```
 
-**Bedrock AgentCore 統合パターン**:
+**Bedrock converse API 統合パターン**:
 - `ITaskExtractorAgent` / `ISaboriProposerAgent` インタフェース経由で呼び出す
-- AgentCore 利用不可時は `BedrockInvokeModelFallback` に自動切り替え（差し替え可能設計）
+- `IBedrockClient` インタフェース（`ConverseBedrockClient` 実装）で Bedrock converse API + Tool Use を呼び出す
+- 将来の AgentCore 移行は `IBedrockClient` 実装を差し替えるだけで対応可能（v1.2.0: AgentCore フォールバック廃止）
 
 ---
 

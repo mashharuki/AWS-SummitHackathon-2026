@@ -29,8 +29,8 @@
 
 | リスク要因 | レベル | 詳細 |
 |-----------|-------|------|
-| **外部API 3サービス同時連携** | High | Slack OAuth / Google OAuth（Gmail + Calendar スコープ） / Bedrock AgentCore と3系統の認証・API連携が必須。1つでも失敗するとコア機能が動作しない |
-| **Bedrock AgentCore の新興性** | High | 2024〜2025年リリースの新しいマネージドエージェント基盤。ドキュメント・サンプルが限定的 |
+| **外部API 連携** | Medium | Slack OAuth / Bedrock converse API の認証・API連携が必須。v1.0.0 は Slack + Bedrock の2系統のみ。1つでも失敗するとコア機能が動作しない |
+| **Bedrock converse API レイテンシ** | Medium | ap-northeast-1 での converse API レスポンスタイム。10秒SLO（NFR-01）を超えた場合の UI フォールバック設計が必要 |
 | **マルチエージェント協調** | Medium | エージェント①→②のデータフロー設計・エラーハンドリングが複雑。DynamoDB を介した非同期連携の整合性確保が必要 |
 | **ハッカソン時間制約** | High | 書類審査 2026-05-10（翌日）/ MVP デモ 2026-05-30（21日後）/ 決勝 2026-06-26（48日後）の3段階締切 |
 | **Bedrock コスト超過** | Medium | 1リクエスト最大 8,000 トークン制限あり。トークン管理ロジックの実装が必須（NFR-06） |
@@ -181,7 +181,7 @@ AWS-SummitHackathon-2026/
 │   └── api/              # バックエンド（Hono on Lambda）
 ├── packages/
 │   ├── shared/           # 型定義・共通ユーティリティ（全モジュールが依存）
-│   └── agent/            # エージェント実装（Bedrock AgentCore）
+│   └── agent/            # エージェント実装（Bedrock converse API + Tool Use）
 └── infra/                # AWS CDK スタック
 ```
 
@@ -200,7 +200,7 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 |------|-----------|------|
 | 1 | `packages/shared` | 型定義・共通インタフェースを先に確定。全モジュールがここに依存 |
 | 2 | `infra/` | AWS リソース（DynamoDB / Cognito / Secrets Manager / API Gateway / S3 / CloudFront）を先にプロビジョニング。ローカル開発でモック代替も可 |
-| 3 | `packages/agent` | Bedrock AgentCore エージェント①②の実装。shared の型に依存 |
+| 3 | `packages/agent` | Bedrock converse API + Tool Use によるエージェント①②の実装。shared の型に依存 |
 | 4 | `apps/api` | Hono ハンドラ・Webhook エンドポイント。shared + agent に依存 |
 | 5 | `apps/web` | React フロントエンド。API エンドポイントが確定してから結合 |
 

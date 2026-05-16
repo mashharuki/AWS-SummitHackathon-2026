@@ -210,7 +210,7 @@ MVP でやらないこと（v1.1.0 以降）:
 
 | 項目 | 詳細 |
 |------|------|
-| **エージェント** | エージェント①b（タスク整理エージェント）: U-03c: task-organizer / Lambda + Bedrock AgentCore |
+| **エージェント** | エージェント①b（タスク整理エージェント）: U-03c: task-organizer / Lambda + Bedrock converse API + Tool Use |
 | **入力** | TaskExtractorAgent（U-03a）が収集した生タスクリスト（複数タスク）|
 | **処理** | タスク間の依存関係分析・実行手順の最適化・優先順位付け・「最もサボれる順序」の計算 |
 | **出力** | 構造化されたタスクプラン（依存関係グラフ・推奨実行順序・サボり余地スコア）|
@@ -257,8 +257,8 @@ MVP でやらないこと（v1.1.0 以降）:
 
 | 項目 | 詳細 |
 |------|------|
-| **エージェント** | エージェント②（サボり提案エージェント）: Lambda + Bedrock AgentCore |
-| **入力** | 承認済みタスク + 整理済みタスク構造（U-03c出力）+ 周辺文脈（Slack温度感・Gmail・Googleカレンダー）|
+| **エージェント** | エージェント②（サボり提案エージェント）: Lambda + Bedrock converse API + Tool Use |
+| **入力** | 承認済みタスク + 整理済みタスク構造（U-03c出力、v1.0.0 では null）+ 周辺文脈（Slack 温度感）|
 | **出力1** | 「現在のサボり判定」（1行の簡潔な判定文）|
 | **出力2** | 「判断材料」（箇条書きの根拠リスト）|
 | **出力3** | 選択人格によるチャットメッセージ（人格A: おっとり共感系 / 人格B: 熱血反骨系）|
@@ -729,7 +729,7 @@ AWS-SummitHackathon-2026/
 │   └── api/              # バックエンド（Hono on Lambda）
 ├── packages/
 │   ├── shared/           # 型定義・共通ユーティリティ
-│   └── agent/            # エージェント実装（Bedrock AgentCore）
+│   └── agent/            # エージェント実装（Bedrock converse API + Tool Use）
 ├── infra/                # AWS CDK スタック
 ├── aidlc-inputs/         # AI-DLC 入力資料
 ├── aidlc-docs/           # AI-DLC 成果物
@@ -903,6 +903,6 @@ AWS-SummitHackathon-2026/
 | **承認済みタスク** | ユーザーが「承認する」を押したタスク。サボり提案の対象になる |
 | **Webhook 駆動** | 外部サービス（Slack 等）のイベント発生時に即座に処理を開始する方式 |
 | **判断材料** | サボり判定の根拠として表示される箇条書きリスト（リマインド有無・メール温度感・会議日程等）|
-| **Bedrock AgentCore** | AWS のマネージドエージェント基盤。セッション管理・複数エージェント協調機能あり |
+| **Bedrock converse API** | AWS のマネージドAI推論API。Tool Use（関数呼び出し）機能を活用してエージェントロジックを実装する。v1.0.0 の採用方式 |
 | **AWS Summit Hackathon** | 本プロダクトを開発するハッカソン（テーマ:「人をダメにするサービス」）。書類審査: 2026-05-10 |
 | **AI-DLC** | AI Development Lifecycle。本プロジェクトの開発方法論 |

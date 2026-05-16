@@ -60,6 +60,25 @@
   - M2: MVP デモ（2026-05-30）— 動作する MVP（Slack+Dual-Agent+Three.js）
   - M3: 決勝（2026-06-26）— AWS デプロイ済み完成品
 
+## v1.2.1 追加クリーンアップ（2026-05-16 第3次）
+
+コンテキスト復元後のグレップ検証で発見した残存参照を修正:
+- `AG-02-sabori-proposer-agent.md`: TaskContext から gmailContext/calendarContext を削除
+- `component-methods/README.md`: AG-04 依存関係図を Slack API のみに更新
+- `shared-utils.md`: EXTERNAL_API_FAILED コメントを Slack のみに
+- `infra-components.md`: IN-05 WebhookStack を Slack のみに
+- `BE-02-task-handler.md`: FR-01 記述を Slack のみに
+- `components.md`: ServiceType 型 / FE-04 責務 / INF-06 EventBridge ルールを Slack のみに
+- `design-rules.md`: Gmail/Calendar エラーハンドリング / PII 保護 / レイテンシ設計を v1.0 実態に合わせ更新
+- `application-design.md`: ServiceConnections SK / sourceType を v1.0 Slack のみに
+- `sequence-diagrams.md`: Gmail/Calendar シーケンス全ステップを `[v1.1.0]` Mermaid コメントに変換。InvokeAgent/InvokeModel → converse API に修正
+- `services.md`: exchangeGoogleToken Gmail/Calendar スコープ記述を v1.1.0 scope に移動
+- `component-methods.md`: v1.2.0 廃止通知ヘッダーを追加（旧統合ファイル・実装時参照禁止）
+
+**検証結果**: `application-design/` 配下で非意図的な Gmail/Calendar/AgentCore 参照ゼロ確認済み。
+
+---
+
 ## v1.2.0 主要変更サマリ（2026-05-16）
 
 | 変更 | 変更前 | 変更後 |
