@@ -376,6 +376,12 @@ MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新�
 	pnpm i
 	```
 
+- フォーマッター
+
+	```bash
+	pnpm run biome:format
+	```
+
 ### CDK
 
 - ビルド
