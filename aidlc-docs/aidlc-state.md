@@ -4,8 +4,8 @@
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
 - **プロジェクトタイプ**: Greenfield（新規）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: INCEPTION フェーズ 完了（予選向け全面見直し完了 v1.2.0 — Construction 着手待ち）
-- **ドキュメントバージョン**: v1.2.0（2026-05-16 更新）
+- **現在のステージ**: INCEPTION フェーズ 完了（v1.3.0 — モノレポベース実装完了・Inception ドキュメント更新済み）
+- **ドキュメントバージョン**: v1.3.0（2026-05-16 更新）
 
 ## ワークスペース状態
 - **既存コード**: なし
@@ -61,6 +61,32 @@
   - M1: 書類審査（2026-05-10）— **完了（通過済み）**
   - M2: MVP デモ（2026-05-30）— 動作する MVP（Slack+Dual-Agent+Three.js）
   - M3: 決勝（2026-06-26）— AWS デプロイ済み完成品
+
+## v1.3.0 モノレポ実装反映（2026-05-16）
+
+**変更内容**: モノレポベース実装完了に伴う Inception ドキュメント全面更新
+
+| 変更点 | 旧（設計書） | 新（実装） |
+|--------|------------|----------|
+| ワークスペースルート | `packages/`, `apps/`, `infra/` | `pkgs/` |
+| フロントエンド | `apps/web/` | `pkgs/frontend/`（ベース実装済み） |
+| バックエンド | `apps/api/` | `pkgs/backend/`（ベース実装済み） |
+| インフラ | `infra/` | `pkgs/cdk/`（ベース実装済み） |
+| 共有パッケージ | `packages/shared/` | `pkgs/shared/`（Construction で作成） |
+| エージェント | `packages/agent/` | `pkgs/agent/`（Construction で作成） |
+| パッケージマネージャー | npm workspaces | pnpm@10.33.0 workspaces |
+| React | React 18 | React 19.2.6 |
+| コード品質 | ESLint / Prettier | Biome 1.9.4 |
+| Node.js | 未記載 | v23（.nvmrc） |
+
+**更新ファイル**:
+- `inception/units/unit-of-work.md`: 全ユニットのディレクトリパス・モノレポ構成ツリー更新
+- `operations/README.md`: モノレポ構成・技術スタックテーブル更新
+- `inception/plans/execution-plan.md`: ディレクトリ参照・実装済みパッケージ注記追加
+- `inception/application-design/application-design.md`: ディレクトリ参照更新
+- `operations/cdk-operations.md` / `backend-operations.md` / `frontend-operations.md`: パス・コマンド更新
+
+---
 
 ## v1.2.1 追加クリーンアップ（2026-05-16 第3次）
 

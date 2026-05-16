@@ -3,7 +3,7 @@
 **プロジェクト名**: SABOROU（サボロー）
 **バージョン**: v1.0.0
 **作成日**: 2026-05-16
-**対象**: U-03a（task-extractor）/ U-03b（sabori-proposer）/ U-04（api） / `packages/agent/` / `apps/api/`
+**対象**: U-03a（task-extractor）/ U-03b（sabori-proposer）/ U-04（api） / `pkgs/agent/` / `pkgs/backend/`
 
 ---
 
@@ -13,70 +13,71 @@
 
 ```
 AWS-SummitHackathon-2026/
-├── packages/
-│   ├── shared/     # 型定義・共通ユーティリティ（U-01）
-│   └── agent/      # Bedrock エージェント実装（U-03a / U-03b）
+├── pkgs/
+│   ├── shared/     # 型定義・共通ユーティリティ（U-01）（Construction フェーズで作成）
+│   ├── agent/      # Bedrock エージェント実装（U-03a / U-03b）（Construction フェーズで作成）
+│   │   ├── src/
+│   │   │   ├── agents/
+│   │   │   │   ├── task-extractor.ts     # AG-01: TaskExtractorAgent
+│   │   │   │   └── sabori-proposer.ts    # AG-02: SaboriProposerAgent
+│   │   │   ├── bedrock/
+│   │   │   │   └── client.ts             # IBedrockClient + ConverseBedrockClient
+│   │   │   ├── renderer/
+│   │   │   │   └── persona-renderer.ts   # AG-03: PersonaRenderer
+│   │   │   └── collector/
+│   │   │       └── context-collector.ts  # AG-04: ContextCollector
+│   │   └── handlers/
+│   │       ├── task-extractor.handler.ts
+│   │       ├── sabori-proposer.handler.ts
+│   │       └── background-refresh.handler.ts
+│   └── backend/    # Hono on Lambda（U-04）（ベース実装済み）
 │       ├── src/
-│       │   ├── agents/
-│       │   │   ├── task-extractor.ts     # AG-01: TaskExtractorAgent
-│       │   │   └── sabori-proposer.ts    # AG-02: SaboriProposerAgent
-│       │   ├── bedrock/
-│       │   │   └── client.ts             # IBedrockClient + ConverseBedrockClient
-│       │   ├── renderer/
-│       │   │   └── persona-renderer.ts   # AG-03: PersonaRenderer
-│       │   └── collector/
-│       │       └── context-collector.ts  # AG-04: ContextCollector
-│       └── handlers/
-│           ├── task-extractor.handler.ts
-│           ├── sabori-proposer.handler.ts
-│           └── background-refresh.handler.ts
-└── apps/
-    └── api/        # Hono on Lambda（U-04）
-        ├── src/
-        │   ├── app.ts               # Hono アプリ定義
-        │   ├── routes/
-        │   │   ├── tasks.ts         # BE-02: TaskHandler
-        │   │   ├── proposals.ts     # BE-03: ProposalHandler（SSE）
-        │   │   ├── honne.ts         # BE-04: HonneHandler
-        │   │   └── connections.ts   # BE-05: ConnectionHandler
-        │   ├── repositories/
-        │   │   ├── task.repository.ts
-        │   │   ├── proposal.repository.ts
-        │   │   └── honne.repository.ts
-        │   └── middleware/
-        │       ├── auth.ts          # BE-01: AuthHandler（JWT検証）
-        │       └── error.ts         # 統一エラーハンドリング
-        └── handler.ts               # Lambda エントリポイント
+│       │   ├── index.ts             # ローカル開発サーバー
+│       │   ├── handler.ts           # Lambda エントリポイント（実装済み）
+│       │   ├── config/
+│       │   │   └── openapi.ts       # OpenAPI 仕様定義
+│       │   └── routes/              # Construction で追加
+│       │       ├── tasks.ts         # BE-02: TaskHandler
+│       │       ├── proposals.ts     # BE-03: ProposalHandler（SSE）
+│       │       ├── honne.ts         # BE-04: HonneHandler
+│       │       └── connections.ts   # BE-05: ConnectionHandler
+│       ├── repositories/            # Construction で追加
+│       │   ├── task.repository.ts
+│       │   ├── proposal.repository.ts
+│       │   └── honne.repository.ts
+│       └── middleware/              # Construction で追加
+│           ├── auth.ts              # BE-01: AuthHandler（JWT検証）
+│           └── error.ts             # 統一エラーハンドリング
 ```
 
 ### 1.2 依存関係インストール
 
 ```bash
 # プロジェクトルートで実行（全パッケージ）
-npm install
+pnpm install
 
 # 特定パッケージのみ
-cd packages/agent && npm install
-cd apps/api && npm install
+cd pkgs/agent && pnpm install
+cd pkgs/backend && pnpm install
 ```
 
 ### 1.3 TypeScript ビルド確認
 
 ```bash
 # 全パッケージのビルド確認
-npm run build --workspaces
+pnpm -r build
 
 # 特定パッケージのみ
-cd packages/shared && npx tsc --noEmit
-cd packages/agent && npx tsc --noEmit
-cd apps/api && npx tsc --noEmit
+cd pkgs/shared && pnpm exec tsc --noEmit
+cd pkgs/agent && pnpm exec tsc --noEmit
+cd pkgs/backend && pnpm exec tsc --noEmit
 ```
 
 ---
 
 ## 2. .env.local 設定
 
-### 2.1 packages/agent/.env.local（Floci 接続設定）
+### 2.1 pkgs/agent/.env.local（Floci 接続設定）
 
 ```bash
 # Floci ローカル DynamoDB
@@ -97,7 +98,7 @@ HONNE_DATA_TABLE=saborou-honne-data-dev
 PERSONAS_TABLE=saborou-personas-dev
 ```
 
-### 2.2 apps/api/.env.local（Floci 接続設定）
+### 2.2 pkgs/backend/.env.local（Floci 接続設定）
 
 ```bash
 # Floci ローカル DynamoDB
@@ -142,9 +143,10 @@ SERVICE_CONNECTIONS_TABLE=saborou-service-connections-dev
 docker compose up -d
 
 # CDK で Lambda をFlociへデプロイ（AgentStack / ApiStack）
-cd infra
+cd pkgs/cdk
 AWS_ENDPOINT_URL=http://localhost:4566 \
-npx cdk deploy AgentStack ApiStack --require-approval never
+pnpm exec cdk deploy AgentStack ApiStack --require-approval never
+cd ../..  # プロジェクトルートに戻る
 
 # TaskExtractor Lambda を Floci 上で invoke
 aws --endpoint-url=http://localhost:4566 lambda invoke \
@@ -170,7 +172,7 @@ SAM Local は Lambda + API Gateway の統合エミュレーターとして使用
 brew install aws-sam-cli  # macOS
 
 # SAM Local でAPIサーバー起動（Flociの DynamoDB に向ける）
-cd apps/api
+cd pkgs/backend
 DYNAMO_ENDPOINT=http://localhost:4566 sam local start-api \
   --port 3001 \
   --env-vars .env.local
@@ -209,19 +211,19 @@ curl -X POST http://localhost:3001/webhooks/slack \
 
 ```bash
 # 全テスト実行（プロジェクトルートから）
-npm run test --workspaces
+pnpm -r test
 
-# packages/agent のみ
-cd packages/agent && npm run test
+# pkgs/agent のみ
+cd pkgs/agent && pnpm test
 
-# apps/api のみ
-cd apps/api && npm run test
+# pkgs/backend のみ
+cd pkgs/backend && pnpm test
 
 # カバレッジ付き
-cd packages/agent && npm run test -- --coverage
+cd pkgs/agent && pnpm test -- --coverage
 
 # 特定テストファイルのみ
-cd packages/agent && npx vitest run src/agents/task-extractor.test.ts
+cd pkgs/agent && pnpm exec vitest run src/agents/task-extractor.test.ts
 ```
 
 ---

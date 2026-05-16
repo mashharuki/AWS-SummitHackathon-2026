@@ -176,41 +176,42 @@ OPERATIONS フェーズ:
 
 ```
 AWS-SummitHackathon-2026/
-├── apps/
-│   ├── web/              # フロントエンド（React + Vite + shadcn/ui）
-│   └── api/              # バックエンド（Hono on Lambda）
-├── packages/
-│   ├── shared/           # 型定義・共通ユーティリティ（全モジュールが依存）
-│   └── agent/            # エージェント実装（Bedrock converse API + Tool Use）
-└── infra/                # AWS CDK スタック
+├── pkgs/
+│   ├── shared/           # 型定義・共通ユーティリティ（Construction フェーズで作成）
+│   ├── agent/            # エージェント実装（Bedrock converse API + Tool Use）（Construction フェーズで作成）
+│   ├── backend/          # バックエンド（Hono on Lambda）（ベース実装済み）
+│   ├── frontend/         # フロントエンド（React + Vite + shadcn/ui）（ベース実装済み）
+│   └── cdk/              # AWS CDK スタック（ベース実装済み）
+├── pnpm-workspace.yaml   # pnpm workspaces ルート（pnpm@10.33.0）
+└── package.json          # ルート設定
 ```
 
 **依存関係の方向**:
 
 ```
-infra/ → （全リソース定義）
-shared/ ← api/, agent/, web/ （全モジュールが依存）
-agent/ ← api/ （API からエージェントを呼び出す）
-api/ ← web/ （フロントエンドが API を呼び出す）
+pkgs/cdk/ → （全リソース定義）
+pkgs/shared/ ← pkgs/backend/, pkgs/agent/, pkgs/frontend/ （全モジュールが依存）
+pkgs/agent/ ← pkgs/backend/ （API からエージェントを呼び出す）
+pkgs/backend/ ← pkgs/frontend/ （フロントエンドが API を呼び出す）
 ```
 
 ### 4.2 推奨実装順序
 
 | 順序 | モジュール | 理由 |
 |------|-----------|------|
-| 1 | `packages/shared` | 型定義・共通インタフェースを先に確定。全モジュールがここに依存 |
-| 2 | `infra/` | AWS リソース（DynamoDB / Cognito / Secrets Manager / API Gateway / S3 / CloudFront）を先にプロビジョニング。ローカル開発でモック代替も可 |
-| 3 | `packages/agent` | Bedrock converse API + Tool Use によるエージェント①②の実装。shared の型に依存 |
-| 4 | `apps/api` | Hono ハンドラ・Webhook エンドポイント。shared + agent に依存 |
-| 5 | `apps/web` | React フロントエンド。API エンドポイントが確定してから結合 |
+| 1 | `pkgs/shared`（新規作成） | 型定義・共通インタフェースを先に確定。全モジュールがここに依存 |
+| 2 | `pkgs/cdk/`（拡張） | AWS リソース（DynamoDB / Cognito / Secrets Manager / API Gateway / S3 / CloudFront）をプロビジョニング。ベーススケルトン実装済みのため 6 スタックを追加する |
+| 3 | `pkgs/agent`（新規作成） | Bedrock converse API + Tool Use によるエージェント①②の実装。shared の型に依存 |
+| 4 | `pkgs/backend`（拡張） | Hono ハンドラ・Webhook エンドポイント。shared + agent に依存。ベース（/health のみ）実装済み |
+| 5 | `pkgs/frontend`（拡張） | React フロントエンド。API エンドポイントが確定してから結合。ベース（App.tsx のみ）実装済み |
 
 **更新アプローチ**: Sequential（順次更新）
-**クリティカルパス**: shared → infra → agent → api → web
+**クリティカルパス**: pkgs/shared → pkgs/cdk → pkgs/agent → pkgs/backend → pkgs/frontend
 **テストチェックポイント**:
-1. `infra/` デプロイ後: AWS コンソールでリソース確認
-2. `agent/` 完成後: Bedrock API 疎通テスト（モックデータ）
-3. `api/` 完成後: Postman / curl での API 単体テスト
-4. `web/` 完成後: E2E デモシナリオ通し確認
+1. `pkgs/cdk/` デプロイ後: AWS コンソールでリソース確認
+2. `pkgs/agent/` 完成後: Bedrock API 疎通テスト（モックデータ）
+3. `pkgs/backend/` 完成後: Postman / curl での API 単体テスト
+4. `pkgs/frontend/` 完成後: E2E デモシナリオ通し確認
 
 ---
 
@@ -232,9 +233,11 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 [Day 1-2: 5/16-17] Inception文書確定 + U-01 shared 実装
   - ✅ Inception ドキュメント全面更新（v1.2.0）
   - U-01 shared: TypeScript 型定義 / Zod スキーマ / エラークラス / ユーティリティ
-  - 目標: packages/shared/ が tsc --noEmit で通る状態
+  - > **注意**: `pkgs/shared/` ディレクトリは未作成。Construction フェーズ開始時に `pnpm init` で新規作成する。
+  - 目標: pkgs/shared/ が tsc --noEmit で通る状態
 
 [Day 3-5: 5/18-20] U-02 infra CDK 実装・ローカル検証・デプロイ
+  - > **注意**: `pkgs/cdk/` は実装済み（スケルトン）。`lib/cdk-stack.ts` は空のため、Construction で 6 スタック（Cognito / Data / Api / Agent / Frontend / Webhook）を追加する。
   - CDK スタック（Cognito / DynamoDB / Lambda / API Gateway / S3 / CloudFront / Secrets Manager）
   - **Floci ローカル検証ステップ**（本番 AWS デプロイ前に必ず実施）:
     - Day 3: docker compose up -d でFloci起動 / npx cdk synth で全スタック検証
@@ -261,8 +264,10 @@ api/ ← web/ （フロントエンドが API を呼び出す）
 
 [Day 12-13: 5/27-28] U-04 api + U-05 web MVP 実装
   - U-04: Hono on Lambda コアエンドポイント（認証・タスク・提案）
+  - > **注意**: `pkgs/backend/` は実装済み（Hono ベース）。`src/index.ts` と `src/handler.ts` が存在するが、ルートは `/health` のみ。Construction でルート・ミドルウェア・リポジトリを追加する。
   - **Floci ローカル統合テスト**: Hono ハンドラが Floci DynamoDB / Floci Lambda に接続した状態で全エンドポイント疎通確認
   - U-05: React 画面（TaskList / TaskDetail / Login）
+  - > **注意**: `pkgs/frontend/` は実装済み（React + Vite ベース）。`src/App.tsx` のみ。Construction でページ・コンポーネントを追加する。
   - Three.js サボローキャラクター3D表示（基本形）
   - 目標: ブラウザでログイン→タスク承認→提案表示が動く（Floci バックエンドで動作確認後、本番AWSへ切替）
 
@@ -450,13 +455,14 @@ pnpm install
 pnpm build
 
 # 3. CDK デプロイ（全スタック）
-cd infra
-npx cdk synth   # テンプレート確認
-npx cdk diff    # 変更内容確認
-npx cdk deploy --all --require-approval never
+cd pkgs/cdk
+pnpm synth    # テンプレート確認（package.json の scripts に定義済み）
+pnpm diff     # 変更内容確認
+pnpm deploy   # または pnpm exec cdk deploy --all --require-approval never
+cd ../..
 
 # 4. フロントエンドのビルド＆S3アップロード
-cd ../apps/web
+cd pkgs/frontend
 VITE_API_BASE_URL=https://[api-id].execute-api.ap-northeast-1.amazonaws.com pnpm build
 aws s3 sync dist/ s3://saborou-frontend-[env]/
 

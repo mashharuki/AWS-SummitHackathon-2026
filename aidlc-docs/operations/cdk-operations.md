@@ -3,7 +3,7 @@
 **プロジェクト名**: SABOROU（サボロー）
 **バージョン**: v1.0.0
 **作成日**: 2026-05-16
-**対象**: U-02（infra）/ `infra/` ディレクトリ
+**対象**: U-02（infra）/ `pkgs/cdk/` ディレクトリ
 
 ---
 
@@ -14,7 +14,7 @@
 | ツール | バージョン | インストール確認 |
 |--------|----------|--------------|
 | Node.js | 20.x 以上 | `node --version` |
-| AWS CDK CLI | v2 | `npm install -g aws-cdk && cdk --version` |
+| AWS CDK CLI | v2 | `npm install -g aws-cdk && cdk --version`（または `pnpm add -g aws-cdk`）|
 | AWS CLI | v2 | `aws --version` |
 | Docker Desktop | 最新安定版 | `docker --version` |
 | TypeScript | 5.x | プロジェクトに含まれる |
@@ -66,10 +66,10 @@ export SABOROU_ENV=dev
 **初回のみ実施**。CDK が使用する S3 バケット・IAM ロールを AWS アカウントに作成する。
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 # ブートストラップ（初回のみ）
-npx cdk bootstrap aws://$AWS_ACCOUNT_ID/ap-northeast-1
+pnpm exec cdk bootstrap aws://$AWS_ACCOUNT_ID/ap-northeast-1
 
 # ブートストラップ状態確認
 aws cloudformation describe-stacks --stack-name CDKToolkit --region ap-northeast-1
@@ -95,12 +95,12 @@ curl http://localhost:4566/_floci/health
 ### 4.2 DataStack（DynamoDB）のローカル検証
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 AWS_ENDPOINT_URL=http://localhost:4566 \
 AWS_ACCESS_KEY_ID=test \
 AWS_SECRET_ACCESS_KEY=test \
-npx cdk deploy DataStack --require-approval never
+pnpm exec cdk deploy DataStack --require-approval never
 
 # テーブル作成確認
 aws --endpoint-url=http://localhost:4566 dynamodb list-tables
@@ -109,12 +109,12 @@ aws --endpoint-url=http://localhost:4566 dynamodb list-tables
 ### 4.3 Lambda 系スタック（ApiStack / AgentStack / WebhookStack）のローカル検証
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 AWS_ENDPOINT_URL=http://localhost:4566 \
 AWS_ACCESS_KEY_ID=test \
 AWS_SECRET_ACCESS_KEY=test \
-npx cdk deploy ApiStack AgentStack WebhookStack --require-approval never
+pnpm exec cdk deploy ApiStack AgentStack WebhookStack --require-approval never
 
 # Lambda 関数一覧確認
 aws --endpoint-url=http://localhost:4566 lambda list-functions
@@ -134,19 +134,19 @@ docker compose down
 ## 5. CDK synth / diff
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 # CloudFormation テンプレート生成・構文検証（デプロイなし）
-npx cdk synth
+pnpm synth       # または pnpm exec cdk synth
 
 # 特定スタックのみ
-npx cdk synth DataStack
+pnpm exec cdk synth DataStack
 
 # 既存スタックとの差分確認
-npx cdk diff
+pnpm diff        # または pnpm exec cdk diff
 
 # 特定スタックのみ差分確認
-npx cdk diff ApiStack
+pnpm exec cdk diff ApiStack
 ```
 
 ---
@@ -156,25 +156,25 @@ npx cdk diff ApiStack
 依存関係を考慮した順序で個別デプロイする場合は以下の順序を守ること。
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 # ステップ 1: CognitoStack（他スタックが参照するユーザープール）
-npx cdk deploy CognitoStack
+pnpm exec cdk deploy CognitoStack
 
 # ステップ 2: DataStack（DynamoDB テーブル）
-npx cdk deploy DataStack
+pnpm exec cdk deploy DataStack
 
 # ステップ 3: ApiStack（API Gateway + Hono Lambda）
 # DataStack の Output を参照するため DataStack 完了後に実施
-npx cdk deploy ApiStack
+pnpm exec cdk deploy ApiStack
 
 # ステップ 4: AgentStack + WebhookStack（並列デプロイ可）
 # ApiStack の Output を参照するため ApiStack 完了後に実施
-npx cdk deploy AgentStack WebhookStack
+pnpm exec cdk deploy AgentStack WebhookStack
 
 # ステップ 5: FrontendStack（S3 + CloudFront）
 # すべてのバックエンドスタック完了後に実施
-npx cdk deploy FrontendStack
+pnpm exec cdk deploy FrontendStack
 ```
 
 ---
@@ -182,10 +182,10 @@ npx cdk deploy FrontendStack
 ## 7. 全スタック一括デプロイ
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 # 全スタック一括デプロイ（承認スキップ）
-npx cdk deploy --all --require-approval never
+pnpm deploy      # または pnpm exec cdk deploy --all --require-approval never
 
 # CDK が依存関係を自動解決して順序通りデプロイする
 ```
@@ -195,14 +195,14 @@ npx cdk deploy --all --require-approval never
 ## 8. スタック破棄
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 # 全スタック破棄（本番環境での実行は十分注意すること）
 # DynamoDB / S3 の RemovalPolicy が RETAIN の場合は手動削除が必要
-npx cdk destroy --all
+pnpm destroy     # または pnpm exec cdk destroy --all
 
 # 特定スタックのみ破棄
-npx cdk destroy FrontendStack
+pnpm exec cdk destroy FrontendStack
 
 # 注意事項:
 # - DataStack（DynamoDB）は RETAIN ポリシーのため、destroy 後もテーブルは残る
@@ -222,8 +222,9 @@ npx cdk destroy FrontendStack
 ```bash
 # 既存リソースをインポートするか、スタックを手動でクリーンアップ
 aws cloudformation describe-stack-resources --stack-name SaborouDataStack
-npx cdk destroy DataStack
-npx cdk deploy DataStack
+cd pkgs/cdk
+pnpm exec cdk destroy DataStack
+pnpm exec cdk deploy DataStack
 ```
 
 ### 9.2 IAM 権限不足エラー
@@ -241,7 +242,7 @@ npx cdk deploy DataStack
 **対処**:
 ```bash
 # Lambda タイムアウト設定確認（CDK コードで設定）
-# infra/lib/stacks/agent-stack.ts の timeout 設定を確認
+# pkgs/cdk/lib/stacks/agent-stack.ts の timeout 設定を確認
 # 推奨: TaskExtractor → 60秒 / SaboriProposer → 60秒
 
 # CloudWatch でログ確認

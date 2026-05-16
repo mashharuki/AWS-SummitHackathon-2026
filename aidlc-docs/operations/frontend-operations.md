@@ -3,7 +3,7 @@
 **プロジェクト名**: SABOROU（サボロー）
 **バージョン**: v1.0.0
 **作成日**: 2026-05-16
-**対象**: U-05（web） / `apps/web/`
+**対象**: U-05（web） / `pkgs/frontend/`
 
 ---
 
@@ -12,42 +12,44 @@
 ### 1.1 フロントエンド構成
 
 ```
-apps/web/
+pkgs/frontend/              ← ベース実装済み（React 19.2.6 + Vite 8.0.12）
 ├── src/
-│   ├── pages/
+│   ├── App.tsx              # 実装済み（ベースのみ）
+│   ├── main.tsx             # 実装済み
+│   ├── pages/               # Construction で追加
 │   │   ├── LoginPage.tsx          # FE-03: Google ログイン
 │   │   ├── TaskListPage.tsx       # FE-01: タスク一覧
 │   │   ├── TaskDetailPage.tsx     # FE-02: タスク詳細・チャット
 │   │   └── SettingsPage.tsx       # FE-04: 連携設定
-│   ├── components/
+│   ├── components/          # Construction で追加
 │   │   ├── AppShell.tsx           # FE-05: アプリシェル・ナビゲーション
 │   │   ├── TaskCard.tsx           # FE-08: タスクカード（判定3状態）
 │   │   └── SaborouCharacter3D.tsx # FE-09: Three.js 3Dキャラクター
-│   ├── providers/
+│   ├── providers/           # Construction で追加
 │   │   └── AuthProvider.tsx       # FE-06: Cognito JWT 管理
-│   └── lib/
+│   └── lib/                 # Construction で追加
 │       └── api-client.ts          # FE-07: REST API + SSE クライアント
 ├── public/
-├── vite.config.ts
-├── tailwind.config.ts
-├── components.json                # shadcn/ui 設定
-└── package.json
+├── vite.config.ts           # 実装済み
+├── tailwind.config.ts       # Construction で追加（shadcn/ui 設定時）
+├── components.json          # shadcn/ui 設定（Construction で追加）
+└── package.json             # 実装済み
 ```
 
 ### 1.2 依存関係インストール
 
 ```bash
-cd apps/web
-npm install
+cd pkgs/frontend
+pnpm install
 ```
 
 ### 1.3 ローカル開発サーバー起動
 
 ```bash
-cd apps/web
+cd pkgs/frontend
 
 # Vite dev サーバー起動（デフォルトポート: 5173）
-npm run dev
+pnpm dev
 
 # ブラウザで http://localhost:5173 を開く
 ```
@@ -56,7 +58,7 @@ npm run dev
 
 ## 2. .env.local 設定
 
-`apps/web/.env.local` を作成する（git には含めないこと）。
+`pkgs/frontend/.env.local` を作成する（git には含めないこと）。
 
 ```bash
 # API エンドポイント（ローカル開発時はFloci経由 or SAM Local）
@@ -141,11 +143,11 @@ Google OAuth のコールバック URL に localhost を追加する必要があ
 ### 4.3 バンドルサイズ確認
 
 ```bash
-cd apps/web
+cd pkgs/frontend
 
 # ビルド後のバンドルサイズ確認
-npm run build
-npx vite-bundle-visualizer
+pnpm build
+pnpm exec vite-bundle-visualizer
 
 # Three.js は動的インポートで遅延ロードされていることを確認
 # 初期バンドル（index.js）に Three.js が含まれていないこと
@@ -158,7 +160,7 @@ npx vite-bundle-visualizer
 ### 5.1 本番ビルド
 
 ```bash
-cd apps/web
+cd pkgs/frontend
 
 # 本番ビルド（dist/ フォルダに成果物が生成される）
 VITE_API_BASE_URL=https://xxxxxxxxxx.execute-api.ap-northeast-1.amazonaws.com \
@@ -166,7 +168,7 @@ VITE_COGNITO_REGION=ap-northeast-1 \
 VITE_COGNITO_USER_POOL_ID=ap-northeast-1_xxxxxxxxx \
 VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx \
 VITE_COGNITO_DOMAIN=saborou.auth.ap-northeast-1.amazoncognito.com \
-npm run build
+pnpm build
 
 # ビルド成果物確認
 ls -la dist/
@@ -177,7 +179,7 @@ du -sh dist/
 
 ```bash
 # S3 バケットに dist/ フォルダをアップロード
-aws s3 sync apps/web/dist/ s3://saborou-frontend-dev --delete \
+aws s3 sync pkgs/frontend/dist/ s3://saborou-frontend-dev --delete \
   --region ap-northeast-1
 
 # 確認
@@ -209,10 +211,10 @@ aws cloudfront get-invalidation \
 CDK の FrontendStack を使うと、S3 + CloudFront のデプロイが一括で完結する。
 
 ```bash
-cd infra
+cd pkgs/cdk
 
 # FrontendStack をデプロイ（ビルド成果物を S3 に自動アップロード + CloudFront 設定）
-npx cdk deploy FrontendStack --require-approval never
+pnpm exec cdk deploy FrontendStack --require-approval never
 
 # デプロイ後に CloudFront URL を確認
 aws cloudformation describe-stacks \
@@ -315,7 +317,7 @@ export default defineConfig({
 # console.log(canvas.getContext('webgl') !== null);
 
 # Three.js / @react-three/fiber バージョン確認
-cd apps/web && npm list three @react-three/fiber
+cd pkgs/frontend && pnpm list three @react-three/fiber
 ```
 
 ### 7.4 ビルドサイズが大きい

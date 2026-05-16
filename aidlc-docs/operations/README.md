@@ -29,10 +29,13 @@
 
 | レイヤー | 技術 |
 |---------|------|
-| IaC | AWS CDK v2 (TypeScript) — `infra/` |
-| バックエンド | Hono on Lambda — `apps/api/` |
-| エージェント | Bedrock converse API + Tool Use — `packages/agent/` |
-| フロントエンド | React + Vite + Tailwind CSS + shadcn/ui + Three.js — `apps/web/` |
+| IaC | AWS CDK v2 (TypeScript) 2.232.1 — `pkgs/cdk/` |
+| バックエンド | Hono on Lambda 4.12.19 — `pkgs/backend/` |
+| エージェント | Bedrock converse API + Tool Use — `pkgs/agent/`（Construction フェーズで作成）|
+| フロントエンド | React 19.2.6 + Vite 8.0.12 + shadcn/ui + Three.js — `pkgs/frontend/` |
+| パッケージマネージャー | pnpm 10.33.0 (workspaces) |
+| Node.js | v23（.nvmrc） |
+| コード品質 | Biome 1.9.4（フォーマッター + リンター）|
 | DB | DynamoDB On-Demand（7テーブル） |
 | AI | Claude Sonnet（anthropic.claude-3-5-sonnet-20241022-v2:0） |
 | 認証 | Amazon Cognito + Google ソーシャルログイン |
@@ -59,15 +62,15 @@
 
 ```
 AWS-SummitHackathon-2026/
-├── packages/
-│   ├── shared/           # 型定義・共通ユーティリティ
-│   └── agent/            # Bedrock エージェント実装
-├── apps/
-│   ├── api/              # Hono on Lambda
-│   └── web/              # React + Vite フロントエンド
-├── infra/                # AWS CDK スタック
+├── pkgs/
+│   ├── shared/           # 型定義・共通ユーティリティ（Construction フェーズで作成）
+│   ├── agent/            # Bedrock エージェント実装（Construction フェーズで作成）
+│   ├── backend/          # Hono on Lambda（ベース実装済み）
+│   ├── frontend/         # React + Vite フロントエンド（ベース実装済み）
+│   └── cdk/              # AWS CDK スタック（ベース実装済み）
 ├── docker-compose.yml    # Floci（ローカル AWS エミュレーター）
-└── package.json          # npm workspaces ルート
+├── pnpm-workspace.yaml   # pnpm workspaces ルート（pnpm@10.33.0）
+└── package.json          # ルート設定
 ```
 
 ---
