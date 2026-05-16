@@ -3,9 +3,15 @@
   "eval_name": "fib-equiv",
   "prompt": "フィボナッチ数列の2実装の等価性証明",
   "assertions": [
-    {"name": "both-fib-defined", "description": "fib と fibFast が定義されている"},
-    {"name": "equivalence-stated", "description": "等価性の定理が述べられている"},
-    {"name": "uses-induction", "description": "帰納法が使われている"},
-    {"name": "no-sorry", "description": "sorry なしで証明が完成している"}
+    {
+      "name": "both-fib-defined",
+      "description": "fib と fibFast が定義されている"
+    },
+    {
+      "name": "equivalence-stated",
+      "description": "等価性の定理が述べられている"
+    },
+    { "name": "uses-induction", "description": "帰納法が使われている" },
+    { "name": "no-sorry", "description": "sorry なしで証明が完成している" }
   ]
 }

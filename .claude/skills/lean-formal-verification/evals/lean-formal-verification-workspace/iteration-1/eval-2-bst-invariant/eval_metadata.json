@@ -3,10 +3,19 @@
   "eval_name": "bst-invariant",
   "prompt": "二分探索木の不変条件と insert 操作の証明",
   "assertions": [
-    {"name": "bst-type-defined", "description": "BST の帰納型が定義されている"},
-    {"name": "invariant-defined", "description": "IsBST 述語が定義されている"},
-    {"name": "insert-defined", "description": "insert 関数が実装されている"},
-    {"name": "preservation-proved", "description": "insert が不変条件を保存することが証明されている"},
-    {"name": "no-sorry", "description": "sorry なしで証明が完成している"}
+    {
+      "name": "bst-type-defined",
+      "description": "BST の帰納型が定義されている"
+    },
+    {
+      "name": "invariant-defined",
+      "description": "IsBST 述語が定義されている"
+    },
+    { "name": "insert-defined", "description": "insert 関数が実装されている" },
+    {
+      "name": "preservation-proved",
+      "description": "insert が不変条件を保存することが証明されている"
+    },
+    { "name": "no-sorry", "description": "sorry なしで証明が完成している" }
   ]
 }

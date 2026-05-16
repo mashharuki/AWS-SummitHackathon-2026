@@ -21,11 +21,11 @@
       "**/docs",
       "**/aidlc-docs",
       "**/aidlc-inputs",
-      "**/.claude/",
-      "**/.github/",
-      "**/.vscode/",
-      "**/.serena/",
-      "**/.aws-aidlc-rule-details/"
+      "**/.claude/**",
+      "**/.github/**",
+      "**/.vscode/**",
+      "**/.serena/**",
+      "**/.aws-aidlc-rule-details/**"
     ]
   },
   "formatter": {

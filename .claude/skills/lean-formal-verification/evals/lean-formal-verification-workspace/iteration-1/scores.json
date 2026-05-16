@@ -15,10 +15,19 @@
       "with_skill": {
         "file": "SafeHead.lean",
         "assertions": {
-          "no-sorry": {"pass": true, "notes": "sorry は使用されていない"},
-          "three-lemmas": {"pass": true, "notes": "safeHead_some_is_head, safeHead_none_iff_empty, safeHead_some_iff_nonempty の3補題が定義済み"},
-          "uses-tactics": {"pass": true, "notes": "cases, simp, exact, subst, absurd など多数のタクティクを使用"},
-          "lean-syntax": {"pass": true, "notes": "有効な Lean 4 構文。{α : Type _} を使用"}
+          "no-sorry": { "pass": true, "notes": "sorry は使用されていない" },
+          "three-lemmas": {
+            "pass": true,
+            "notes": "safeHead_some_is_head, safeHead_none_iff_empty, safeHead_some_iff_nonempty の3補題が定義済み"
+          },
+          "uses-tactics": {
+            "pass": true,
+            "notes": "cases, simp, exact, subst, absurd など多数のタクティクを使用"
+          },
+          "lean-syntax": {
+            "pass": true,
+            "notes": "有効な Lean 4 構文。{α : Type _} を使用"
+          }
         },
         "score": 1.0,
         "qualitative": "構造が明快で各補題に詳細なコメント付き。型変数を {α : Type _} で明示的に宣言。3性質すべてを sorry なしで証明。"
@@ -26,10 +35,19 @@
       "without_skill": {
         "file": "SafeHead.lean",
         "assertions": {
-          "no-sorry": {"pass": true, "notes": "sorry は使用されていない"},
-          "three-lemmas": {"pass": true, "notes": "safeHead_some_implies_head, safeHead_none_iff_empty, safeHead_some_iff_nonempty の3補題が定義済み"},
-          "uses-tactics": {"pass": true, "notes": "cases, simp, subst, exact などのタクティクを使用"},
-          "lean-syntax": {"pass": true, "notes": "有効な Lean 4 構文。{α : Type*} を使用"}
+          "no-sorry": { "pass": true, "notes": "sorry は使用されていない" },
+          "three-lemmas": {
+            "pass": true,
+            "notes": "safeHead_some_implies_head, safeHead_none_iff_empty, safeHead_some_iff_nonempty の3補題が定義済み"
+          },
+          "uses-tactics": {
+            "pass": true,
+            "notes": "cases, simp, subst, exact などのタクティクを使用"
+          },
+          "lean-syntax": {
+            "pass": true,
+            "notes": "有効な Lean 4 構文。{α : Type*} を使用"
+          }
         },
         "score": 1.0,
         "qualitative": "コンパクトな実装。Type* を使用（Lean 4 では Type _ と同等）。3性質すべてを sorry なしで証明。スキルなしでも十分機能している。"
@@ -43,11 +61,26 @@
       "with_skill": {
         "file": "BST.lean",
         "assertions": {
-          "bst-type-defined": {"pass": true, "notes": "BST 帰納型 (leaf, node) が正しく定義されている"},
-          "is-bst-predicate": {"pass": true, "notes": "IsBST 述語が BST 不変条件を正確に表現 (allBST + IsBST の組み合わせ)"},
-          "insert-function": {"pass": true, "notes": "insertBST が正しく実装されている (n<x 左, x<n 右, n=x 重複なし)"},
-          "insert-preserves-bst": {"pass": true, "notes": "insertBST_isBST 定理が allBST_insertBST 補題を使って sorry なしで証明"},
-          "compiles": {"pass": true, "notes": "有効な Lean 4 構文、Mathlib 不使用で標準ライブラリのみ"}
+          "bst-type-defined": {
+            "pass": true,
+            "notes": "BST 帰納型 (leaf, node) が正しく定義されている"
+          },
+          "is-bst-predicate": {
+            "pass": true,
+            "notes": "IsBST 述語が BST 不変条件を正確に表現 (allBST + IsBST の組み合わせ)"
+          },
+          "insert-function": {
+            "pass": true,
+            "notes": "insertBST が正しく実装されている (n<x 左, x<n 右, n=x 重複なし)"
+          },
+          "insert-preserves-bst": {
+            "pass": true,
+            "notes": "insertBST_isBST 定理が allBST_insertBST 補題を使って sorry なしで証明"
+          },
+          "compiles": {
+            "pass": true,
+            "notes": "有効な Lean 4 構文、Mathlib 不使用で標準ライブラリのみ"
+          }
         },
         "score": 1.0,
         "qualitative": "スキルの「パターン C: 不変条件の証明」に従い構造化されている。allBST 述語で再帰的に性質を表現し、補助補題を丁寧に証明している。"
@@ -55,11 +88,26 @@
       "without_skill": {
         "file": "BST.lean",
         "assertions": {
-          "bst-type-defined": {"pass": true, "notes": "BST 帰納型 (leaf, node) が定義されているが node のフィールド順が (left, val, right) で with_skill と逆"},
-          "is-bst-predicate": {"pass": true, "notes": "IsBST が帰納型として定義されている（with_skill は再帰的定義、without_skill は inductive Prop）"},
-          "insert-function": {"pass": true, "notes": "insert 関数が正しく実装されている"},
-          "insert-preserves-bst": {"pass": false, "notes": "主定理の証明が完結していない可能性。All 補題は証明されているが IsBST 保存の定理が truncated"},
-          "compiles": {"pass": false, "notes": "ファイルが途中で切れており、IsBST 不変条件の保存証明が完全かどうか不明"}
+          "bst-type-defined": {
+            "pass": true,
+            "notes": "BST 帰納型 (leaf, node) が定義されているが node のフィールド順が (left, val, right) で with_skill と逆"
+          },
+          "is-bst-predicate": {
+            "pass": true,
+            "notes": "IsBST が帰納型として定義されている（with_skill は再帰的定義、without_skill は inductive Prop）"
+          },
+          "insert-function": {
+            "pass": true,
+            "notes": "insert 関数が正しく実装されている"
+          },
+          "insert-preserves-bst": {
+            "pass": false,
+            "notes": "主定理の証明が完結していない可能性。All 補題は証明されているが IsBST 保存の定理が truncated"
+          },
+          "compiles": {
+            "pass": false,
+            "notes": "ファイルが途中で切れており、IsBST 不変条件の保存証明が完全かどうか不明"
+          }
         },
         "score": 0.6,
         "qualitative": "構造は良いが、主定理 insert_preserves_IsBST の証明が出力途中で切れている。inductive Prop として IsBST を定義するアプローチはスキルより高度だが、証明の完成度に問題あり。"
@@ -73,10 +121,22 @@
       "with_skill": {
         "file": "Fibonacci.lean",
         "assertions": {
-          "both-fib-defined": {"pass": true, "notes": "fib と fibFast（fibAux を使用）が定義されている"},
-          "equivalence-stated": {"pass": true, "notes": "fib_eq_fibFast 定理が明確に述べられている"},
-          "uses-induction": {"pass": true, "notes": "fibAux_spec で帰納法を使用、詳細なコメントで戦略が説明されている"},
-          "no-sorry": {"pass": true, "notes": "sorry なし。ring タクティクで代数的変形を完結"}
+          "both-fib-defined": {
+            "pass": true,
+            "notes": "fib と fibFast（fibAux を使用）が定義されている"
+          },
+          "equivalence-stated": {
+            "pass": true,
+            "notes": "fib_eq_fibFast 定理が明確に述べられている"
+          },
+          "uses-induction": {
+            "pass": true,
+            "notes": "fibAux_spec で帰納法を使用、詳細なコメントで戦略が説明されている"
+          },
+          "no-sorry": {
+            "pass": true,
+            "notes": "sorry なし。ring タクティクで代数的変形を完結"
+          }
         },
         "score": 1.0,
         "qualitative": "線形結合不変条件 `fibAux (n+1) a b = fib n * a + fib (n+1) * b` を補題として立て、帰納法で証明する戦略が明確。コメントが非常に丁寧で教育的。"
@@ -84,10 +144,22 @@
       "without_skill": {
         "file": "Fibonacci.lean",
         "assertions": {
-          "both-fib-defined": {"pass": true, "notes": "fib と fibFast が定義されている"},
-          "equivalence-stated": {"pass": true, "notes": "fib_eq_fibFast 定理が述べられている"},
-          "uses-induction": {"pass": false, "notes": "fib_go_spec が induction を使っているが、fibFast.go へのアクセス方法が不正確（let rec の内部 go には `fibFast.go` ではなくアクセス不可能）"},
-          "no-sorry": {"pass": false, "notes": "fibFast.go という参照が誤っており、実際にはコンパイルエラーになる可能性が高い"}
+          "both-fib-defined": {
+            "pass": true,
+            "notes": "fib と fibFast が定義されている"
+          },
+          "equivalence-stated": {
+            "pass": true,
+            "notes": "fib_eq_fibFast 定理が述べられている"
+          },
+          "uses-induction": {
+            "pass": false,
+            "notes": "fib_go_spec が induction を使っているが、fibFast.go へのアクセス方法が不正確（let rec の内部 go には `fibFast.go` ではなくアクセス不可能）"
+          },
+          "no-sorry": {
+            "pass": false,
+            "notes": "fibFast.go という参照が誤っており、実際にはコンパイルエラーになる可能性が高い"
+          }
         },
         "score": 0.5,
         "qualitative": "let rec で定義した内部関数 go は fibFast.go としてアクセスできないため、fib_go_spec の証明はコンパイルエラーになる。スキルのパターン（private def で補助関数を分離する）を知らないと陥りやすい罠。"
