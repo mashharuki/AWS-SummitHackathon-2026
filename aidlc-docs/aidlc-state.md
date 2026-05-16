@@ -4,7 +4,8 @@
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
 - **プロジェクトタイプ**: Greenfield（新規）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: INCEPTION フェーズ 完了（Units Generation 完了 — Construction 承認待ち）
+- **現在のステージ**: INCEPTION フェーズ 完了（予選向け全面見直し完了 v1.2.0 — Construction 着手待ち）
+- **ドキュメントバージョン**: v1.2.0（2026-05-16 更新）
 
 ## ワークスペース状態
 - **既存コード**: なし
@@ -42,17 +43,35 @@
 - **Security Baseline**: 無効（Q23=B — PoC・プロトタイプ扱い。基本セキュリティは実装する）
 - **Property-Based Testing**: 無効（Q24=C — シンプルな CRUD・統合レイヤーが主）
 
-## Execution Plan Summary（Workflow Planning 完了）
+## 適用済みスキル
+- **aws-well-architected**: 2026-05-16 適用 → `aidlc-docs/inception/application-design/well-architected-review.md` 生成
+- **lean-formal-verification**: 2026-05-16 適用 → `execution-plan.md` §10 にクリティカルパス検証・カットライン定義を追記
+- **hackathon-strategist**: 2026-05-16 参照 → 14日計画・カットラインの戦略的フレームワーク
 
-- **実行計画書**: `aidlc-docs/inception/plans/execution-plan.md`（完了）
-- **総合リスクレベル**: Medium-High（外部API 3連携 / Bedrock AgentCore 新興性 / 時間制約）
+## Execution Plan Summary（v2.0.0 — 2026-05-16 予選向け全面改訂）
+
+- **実行計画書**: `aidlc-docs/inception/plans/execution-plan.md`（v2.0.0）
+- **総合リスクレベル**: Medium（Slack単独化・converse API直接実装で新興性リスクを解消）
 - **推奨実装順序**: shared → infra → task-extractor → sabori-proposer → api → web
-- **実行ステージ数**: Inception 残り2 + Construction 6 × Unit数 = 合計 8〜14 ステージ
-- **スキップステージ**: Reverse Engineering（Greenfield のため）/ Operations（プレースホルダー）/ Security Baseline Extension（無効）/ Property-Based Testing Extension（無効）
+- **実行ステージ数**: Construction 5 ステージ × 6 Unit（U-03c は v1.1.0 除外）
+- **スキップステージ**: Reverse Engineering（Greenfield）/ U-03c task-organizer（予選スコープ外）/ Operations（プレースホルダー）
 - **マイルストーン**:
-  - M1: 書類審査（2026-05-10）— 4成果物提出
-  - M2: MVP デモ（2026-05-30）— 動作する MVP
+  - M1: 書類審査（2026-05-10）— **完了（通過済み）**
+  - M2: MVP デモ（2026-05-30）— 動作する MVP（Slack+Dual-Agent+Three.js）
   - M3: 決勝（2026-06-26）— AWS デプロイ済み完成品
+
+## v1.2.0 主要変更サマリ（2026-05-16）
+
+| 変更 | 変更前 | 変更後 |
+|------|--------|--------|
+| 外部連携 | Slack / Gmail / Google Calendar | Slack のみ（他は v1.1.0）|
+| エージェント実装 | Bedrock AgentCore | converse API + Tool Use（IBedrockClient インタフェース維持）|
+| Three.js | README 記載のみ | M2 MVP スコープに明示（U-05 工数 6-8h → 8-12h）|
+| U-03c 優先度 | 高 | 低（v1.1.0）— 予選スコープ外に移動 |
+| NFR-01a レイテンシ | 10秒以内 | ウォームアップ時10秒 / コールドスタート時15秒 |
+| SSE実装方式 | API Gateway | Lambda Response Streaming + Function URL |
+| タイムライン | 旧（崩壊済み）| 14日詳細計画（5/16〜5/30）+ カットライン定義 |
+| デプロイ計画 | 未定義 | AWSデプロイ手順・Slack設定・URL確保 追加 |
 
 ## User Stories 成果物
 - **personas.md**: `aidlc-docs/inception/user-stories/personas.md`（完了）— プライマリペルソナ1名（34歳・フリーランスデザイナー）の詳細定義
