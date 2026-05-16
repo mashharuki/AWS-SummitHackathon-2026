@@ -37,7 +37,9 @@
 - [ ] Build and Test（EXECUTE — 全Unit完了後・必須）
 
 ### OPERATIONS フェーズ
-- [ ] Operations（プレースホルダー）
+- [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
+- [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）
+- [x] フロントエンド操作ガイド（aidlc-docs/operations/frontend-operations.md）
 
 ## Extension 設定
 - **Security Baseline**: 無効（Q23=B — PoC・プロトタイプ扱い。基本セキュリティは実装する）

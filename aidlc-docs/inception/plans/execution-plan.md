@@ -234,29 +234,37 @@ api/ ← web/ （フロントエンドが API を呼び出す）
   - U-01 shared: TypeScript 型定義 / Zod スキーマ / エラークラス / ユーティリティ
   - 目標: packages/shared/ が tsc --noEmit で通る状態
 
-[Day 3-5: 5/18-20] U-02 infra CDK 実装・デプロイ
+[Day 3-5: 5/18-20] U-02 infra CDK 実装・ローカル検証・デプロイ
   - CDK スタック（Cognito / DynamoDB / Lambda / API Gateway / S3 / CloudFront / Secrets Manager）
-  - npx cdk deploy でdev環境デプロイ完了
+  - **Floci ローカル検証ステップ**（本番 AWS デプロイ前に必ず実施）:
+    - Day 3: docker compose up -d でFloci起動 / npx cdk synth で全スタック検証
+    - Day 4: AWS_ENDPOINT_URL=http://localhost:4566 npx cdk deploy DataStack でDynamoDB検証
+    - Day 4: AWS_ENDPOINT_URL=http://localhost:4566 npx cdk deploy ApiStack AgentStack WebhookStack でLambda/API GW検証
+    - Day 5: Floci上でスモークテスト実施（テーブル作成・Lambda invoke疎通確認）
+    - Day 5: docker compose down → npx cdk deploy --all で本番AWSへデプロイ
   - Slack アプリ設定（App 作成 / Event Subscriptions URL 登録）
-  - 目標: AWS コンソールでリソース確認 / Slack Webhook URL 疎通
+  - 目標: Flociローカル検証パス / AWS コンソールでリソース確認 / Slack Webhook URL 疎通
 
 [Day 6-8: 5/21-23] U-03a task-extractor 実装
   - IBedrockClient インタフェース + ConverseBedrockClient 実装
   - AG-01: converse API + Tool Use で Slack メッセージ → TaskCandidate 変換
   - DynamoDB TaskCandidates テーブルへの書き込み確認
-  - 目標: モックSlackイベントで TaskCandidate が生成される
+  - **Floci ローカル統合テスト**: docker compose up → Floci上のDynamoDB（localhost:4566）に接続してTaskCandidate書き込み検証
+  - 目標: モックSlackイベントで TaskCandidate が生成される（Floci DynamoDB に書き込み確認）
 
 [Day 9-11: 5/24-26] U-03b sabori-proposer 実装
   - AG-02: converse API + Tool Use で サボり判定3状態
   - Lambda Response Streaming（Function URL）でSSE配信
   - AG-03: PersonaRenderer（おっとりサボロー口調変換）
-  - 目標: curl で SSE ストリームが返る
+  - **Floci ローカル統合テスト**: Proposals / HonneData テーブルへの書き込みを Floci DynamoDB で検証
+  - 目標: curl で SSE ストリームが返る（Floci Lambda + Floci DynamoDB で疎通確認）
 
 [Day 12-13: 5/27-28] U-04 api + U-05 web MVP 実装
   - U-04: Hono on Lambda コアエンドポイント（認証・タスク・提案）
+  - **Floci ローカル統合テスト**: Hono ハンドラが Floci DynamoDB / Floci Lambda に接続した状態で全エンドポイント疎通確認
   - U-05: React 画面（TaskList / TaskDetail / Login）
   - Three.js サボローキャラクター3D表示（基本形）
-  - 目標: ブラウザでログイン→タスク承認→提案表示が動く
+  - 目標: ブラウザでログイン→タスク承認→提案表示が動く（Floci バックエンドで動作確認後、本番AWSへ切替）
 
 [Day 14: 5/29-30] デプロイ・デモリハーサル
   - AWS dev 環境への全スタックデプロイ

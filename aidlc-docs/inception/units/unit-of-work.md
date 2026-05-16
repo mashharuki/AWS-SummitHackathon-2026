@@ -246,6 +246,37 @@ Cognito / DynamoDB / Lambda / API Gateway HTTP API / S3 / CloudFront / EventBrid
 - [ ] `RemovalPolicy.DESTROY`（dev）/ `RemovalPolicy.RETAIN`（prod）を環境変数で切替
 - [ ] `cdk.context.json` が git にコミット済み
 
+#### Floci ローカル検証（推奨）
+
+> **Floci**: Java 25 + Quarkus 3.x 製のローカル AWS エミュレーター。ポート4566でリッスン。Docker Compose で起動。
+> 詳細ガイドは `aidlc-docs/inception/application-design/cdk-local-development.md` を参照。
+
+**ローカル検証ワークフロー**:
+
+```
+1. docker compose up -d                                           # Floci 起動
+2. AWS_ENDPOINT_URL=http://localhost:4566 npx cdk deploy DataStack ApiStack AgentStack WebhookStack
+   # Floci へローカルデプロイ（DynamoDB / Lambda / API Gateway / EventBridge / SQS）
+3. Vitest 統合テスト実行（Floci 上の DynamoDB / Lambda を使用）
+4. docker compose down                                            # Floci 停止
+5. npx cdk deploy --all                                          # 本番 AWS へデプロイ
+```
+
+**Floci サポート状況と注意事項**:
+
+| スタック | Floci サポート | 注意事項 |
+|---------|--------------|---------|
+| DataStack（DynamoDB） | 完全サポート | テーブル作成・GSI・TTL をローカルで検証可能 |
+| ApiStack（Lambda + API Gateway） | 完全サポート | エンドポイント疎通・Cognito モックで動作確認可能 |
+| AgentStack（Lambda + EventBridge + SQS） | 完全サポート | Lambda 呼び出し・EventBridge ルーティングをローカルで検証可能 |
+| WebhookStack（Lambda + EventBridge） | 完全サポート | Slack Webhook ハンドラのローカル疎通確認に使用 |
+| CognitoStack | 限定サポート | 認証テストは Cognito Local or 本番 User Pool を使用すること |
+| FrontendStack（S3 + CloudFront） | 部分サポート | S3 はサポート。CloudFront は本番 AWS のみ（Floci 非サポート） |
+
+**関連 Unit の Floci 活用**:
+- U-03a（task-extractor）/ U-03b（sabori-proposer）/ U-04（api）の Lambda 実装時も Floci 上でローカル統合テストが可能
+- 各 Unit の `.env.local` に `DYNAMO_ENDPOINT=http://localhost:4566` を設定して Floci 上の DynamoDB に接続する
+
 ---
 
 ### U-03a: task-extractor（タスク抽出エージェント）
