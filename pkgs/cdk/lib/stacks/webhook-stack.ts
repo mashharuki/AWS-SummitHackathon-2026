@@ -21,6 +21,7 @@ export interface WebhookStackProps extends cdk.StackProps {
 
 export interface WebhookStackExports {
   readonly eventBus: events.EventBus;
+  readonly webhookUrl: string;
 }
 
 export class SaborouWebhookStack extends cdk.Stack {
@@ -63,6 +64,31 @@ export class SaborouWebhookStack extends cdk.Stack {
 
     eventBus.grantPutEventsTo(webhookFn);
     props.data.secrets.slackSigningSecret.grantRead(webhookFn);
+
+    // --- Lambda Function URL (Slack Event API エンドポイント) ---
+    // Slack は HTTPS URL に POST するため Lambda Function URL を使用する。
+    // HMAC 署名検証はアプリ側で実装済み (NFR-S2) のため IAM 認証は不要。
+    const webhookUrl = webhookFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: ["https://hooks.slack.com"],
+        allowedMethods: [lambda.HttpMethod.POST],
+        allowedHeaders: [
+          "Content-Type",
+          "X-Slack-Signature",
+          "X-Slack-Request-Timestamp",
+        ],
+      },
+    });
+
+    NagSuppressions.addResourceSuppressions(webhookFn, [
+      {
+        id: "AwsSolutions-FAS3",
+        reason:
+          "Lambda Function URL with NONE auth is intentional; Slack signature verification (HMAC-SHA256) provides equivalent request authentication",
+        appliesTo: ["Resource::*"],
+      },
+    ]);
 
     // --- EventBridge ルール: Slack → TaskExtractor ---
     const ruleDlq = new sqs.Queue(this, "RuleDlq", {
@@ -132,6 +158,11 @@ export class SaborouWebhookStack extends cdk.Stack {
       description: "Webhook Lambda ARN (Slack events endpoint)",
     });
 
+    new cdk.CfnOutput(this, "WebhookUrl", {
+      value: webhookUrl.url,
+      description: "Lambda Function URL for Slack Event API — set this as the Slack Request URL",
+    });
+
     // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
@@ -161,6 +192,6 @@ export class SaborouWebhookStack extends cdk.Stack {
       },
     ]);
 
-    this.exports = { eventBus };
+    this.exports = { eventBus, webhookUrl: webhookUrl.url };
   }
 }

@@ -51,6 +51,12 @@ const ProposalLambdaEventSchema = z.object({
   slackMessageRef: z.string().optional(),
 });
 
+/** EventBridge Scheduler からのバックグラウンドリフレッシュイベント */
+const BackgroundRefreshEventSchema = z.object({
+  source: z.literal("scheduler"),
+  type: z.literal("background_refresh"),
+});
+
 type ProposalLambdaEvent = z.infer<typeof ProposalLambdaEventSchema>;
 
 interface LambdaResponse {
@@ -73,7 +79,23 @@ const agent = new SaboriProposerAgent(
 const contextCollector = new ContextCollector();
 
 export const handler = async (event: unknown): Promise<LambdaResponse> => {
-  // [1] Zod バリデーション
+  // [1a] スケジューラーからのバックグラウンドリフレッシュイベントを先に検出する
+  // (ProposalLambdaEventSchema とは互換性がないため事前に分岐)
+  const bgRefresh = BackgroundRefreshEventSchema.safeParse(event);
+  if (bgRefresh.success) {
+    logInfo({
+      action: "sabori_proposer_background_refresh_skipped",
+      message:
+        "Background refresh triggered by scheduler — full batch proposal not yet implemented (MVP stub)",
+    });
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ok: true, skipped: true }),
+    };
+  }
+
+  // [1b] Zod バリデーション (直接呼び出し / API Gateway)
   const parsed = ProposalLambdaEventSchema.safeParse(event);
   if (!parsed.success) {
     logError({
