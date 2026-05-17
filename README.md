@@ -442,7 +442,7 @@ MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新�
 	export AWS_SECRET_ACCESS_KEY=dummy \
 	export CDK_DEFAULT_ACCOUNT=000000000000 \
 	export CDK_DEFAULT_REGION=ap-northeast-1 \
-	pnpm cdk run destroy
+	cdk run destroy --force
 	```
 
 - AWSへデプロイ

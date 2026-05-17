@@ -3,6 +3,7 @@ import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import type * as lambda from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";
 
+// --- MonitoringConstructProps インターフェース ---
 export interface MonitoringConstructProps {
   readonly environment: string;
   readonly honoFn: lambda.Function;
@@ -12,11 +13,18 @@ export interface MonitoringConstructProps {
 
 /**
  * MonitoringConstruct: Saborou アプリケーションの CloudWatch アラームとダッシュボード。
- * インフラをシンプルに保つため別スタックにしず SaborouApiStack に組み込む。
+ * インフラをシンプルに保つため別スタックにせず SaborouApiStack に組み込む。
  */
 export class MonitoringConstruct extends Construct {
+  /** CloudWatch ダッシュボード */
   public readonly dashboard: cloudwatch.Dashboard;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props: MonitoringConstructProps) {
     super(scope, id);
 

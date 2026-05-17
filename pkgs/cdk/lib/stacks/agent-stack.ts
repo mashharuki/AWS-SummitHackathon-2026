@@ -16,9 +16,22 @@ export interface AgentStackExports {
   readonly saboriProposerFn: lambda.Function;
 }
 
+/**
+ * SaborouAgentStack: タスク抽出とサボり提案の Lambda をホストするスタック。
+ * これらは両方とも Bedrock を呼び出すため、同一スタックにまとめて共通 IAM ポリシーを適用する。
+ * また、MVP スコープではモニタリング要件がないため、CloudWatch アラームやダッシュボードは実装しない。
+ * 将来的には MonitoringConstruct を追加して SaborouApiStack に組み込む予定 (AG-06)。
+ */
 export class SaborouAgentStack extends cdk.Stack {
+  /** エクスポートされる Lambda 関数 */
   public readonly exports: AgentStackExports;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props: AgentStackProps) {
     super(scope, id, props);
 
@@ -55,6 +68,7 @@ export class SaborouAgentStack extends cdk.Stack {
       },
     );
 
+    // U-03a: タスク抽出は応答が比較的早い想定のため、Lambda タイムアウトは 60 秒に設定
     const taskExtractorFn = new lambda.Function(this, "TaskExtractorFn", {
       functionName: `saborou-task-extractor-${environment}`,
       runtime: lambda.Runtime.NODEJS_22_X,
