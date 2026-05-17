@@ -1,8 +1,8 @@
 /**
- * Health check route — GET /health
+ * ヘルスチェックルート — GET /health
  *
- * No authentication required. Used by API Gateway health checks
- * and uptime monitoring. Returns 200 with build info.
+ * 認証不要。API Gateway ヘルスチェックおよび
+ * 稼働監視に使用する。ビルド情報を含む 200 を返す。
  */
 
 import { Hono } from "hono";

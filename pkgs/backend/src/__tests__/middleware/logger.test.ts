@@ -1,9 +1,9 @@
 /**
- * Tests for request logger middleware
+ * リクエストロガーミドルウェアのテスト
  */
 
-import { describe, it, expect, vi } from "vitest";
 import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
 import { requestLogger } from "../../middleware/logger.js";
 
 describe("requestLogger", () => {

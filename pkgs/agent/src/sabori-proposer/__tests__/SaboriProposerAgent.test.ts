@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ConverseCommandInput,
   ConverseCommandOutput,
@@ -6,15 +5,16 @@ import type {
   ConverseStreamCommandOutput,
 } from "@aws-sdk/client-bedrock-runtime";
 import type { IProposalRepository, Proposal, Task } from "@saboru/shared";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { IBedrockClient } from "../../bedrock/IBedrockClient.js";
+import { PersonaRenderer } from "../PersonaRenderer.js";
+import { SaboriProposerAgent } from "../SaboriProposerAgent.js";
 import type {
   RenderInput,
   RenderOutput,
   SlackContext,
   TaskContext,
 } from "../types.js";
-import { PersonaRenderer } from "../PersonaRenderer.js";
-import { SaboriProposerAgent } from "../SaboriProposerAgent.js";
 
 // ─────────────────────────────────────────────
 // MockBedrockClient
@@ -34,7 +34,7 @@ class MockBedrockClient implements IBedrockClient {
   async converseStream(
     _input: ConverseStreamCommandInput,
   ): Promise<ConverseStreamCommandOutput> {
-    // Minimal stub — proposeStream tests use a different approach
+    // 最小スタブ — proposeStream テストは別アプローチを使用
     return {
       $metadata: {},
       stream: undefined as unknown as ConverseStreamCommandOutput["stream"],
@@ -77,7 +77,7 @@ class MockProposalRepository implements IProposalRepository {
 
 class MockPersonaRenderer extends PersonaRenderer {
   constructor() {
-    // Pass a mock bedrock client that won't be used
+    // 使用しないモック Bedrock クライアントを渡す
     super({
       async converse() {
         throw new Error("Should not call real bedrock in PersonaRenderer mock");
@@ -110,7 +110,7 @@ class MockPersonaRenderer extends PersonaRenderer {
 }
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────────────────────────
 
 function makeSaboriJudgmentResponse(
@@ -192,7 +192,7 @@ const TEST_TASK_CONTEXT: TaskContext = {
 };
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("SaboriProposerAgent", () => {
@@ -340,7 +340,7 @@ describe("SaboriProposerAgent", () => {
 
     it("sets personaId from PersonaRenderer output", async () => {
       const proposal = await agent.propose("task-001", TEST_TASK_CONTEXT);
-      // DEFAULT_PERSONA_ID should be set
+      // DEFAULT_PERSONA_ID が設定されているべき
       expect(typeof proposal.personaId).toBe("string");
       expect(proposal.personaId.length).toBeGreaterThan(0);
     });
@@ -348,7 +348,7 @@ describe("SaboriProposerAgent", () => {
 
   describe("proposeStream()", () => {
     it("yields verdict event", async () => {
-      // Mock converseStream to produce empty stream (falls back to sync judgment)
+      // 空ストリームを生成するよう converseStream をモック (同期判定にフォールバック)
       const mockBedrockWithStream: IBedrockClient = {
         async converse() {
           return makeSaboriJudgmentResponse();
@@ -357,7 +357,7 @@ describe("SaboriProposerAgent", () => {
           return {
             $metadata: {},
             stream: (async function* () {
-              // Empty stream — triggers JSON parse fallback to sync converse
+              // 空ストリーム — JSON パースフォールバックが同期 converse に切り替わる
             })() as unknown as ConverseStreamCommandOutput["stream"],
           };
         },
@@ -391,7 +391,7 @@ describe("SaboriProposerAgent", () => {
           return {
             $metadata: {},
             stream: (async function* () {
-              // Empty stream
+              // 空ストリーム
             })() as unknown as ConverseStreamCommandOutput["stream"],
           };
         },
@@ -424,7 +424,7 @@ describe("SaboriProposerAgent", () => {
           return {
             $metadata: {},
             stream: (async function* () {
-              // Empty stream
+              // 空ストリーム
             })() as unknown as ConverseStreamCommandOutput["stream"],
           };
         },
@@ -468,13 +468,13 @@ describe("SaboriProposerAgent", () => {
         mockRenderer,
       );
 
-      // Consume all deltas
+      // 全デルタを消費
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for await (const _delta of agentWithStream.proposeStream(
         "task-001",
         TEST_TASK_CONTEXT,
       )) {
-        // consume
+        // 消費
       }
 
       expect(mockRepo.saved).toHaveLength(1);
@@ -562,14 +562,14 @@ describe("SaboriProposerAgent", () => {
     });
 
     it("falls back to synchronous judgment when streamed JSON fails Zod validation", async () => {
-      // Stream produces invalid JSON (not valid LLMJudgment)
+      // ストリームが無効な JSON を生成 (有効な LLMJudgment ではない)
       const invalidJson = '{"verdict":"invalid_verdict","summaryText":"test"}';
       let chunkIndex = 0;
       const chunks = invalidJson.split("");
 
       const mockBedrockBadJson: IBedrockClient = {
         async converse() {
-          // Fallback sync call returns valid response
+          // フォールバック同期呼び出しが有効なレスポンスを返す
           return makeSaboriJudgmentResponse({ verdict: "borderline" });
         },
         async converseStream() {
@@ -603,14 +603,14 @@ describe("SaboriProposerAgent", () => {
         deltas.push(delta);
       }
 
-      // Should have fallen back to sync judgment and yielded verdict
+      // 同期判定にフォールバックして verdict を生成しているはず
       const verdictEvent = deltas.find((d) => d.type === "verdict");
       expect(verdictEvent).toBeDefined();
       expect(verdictEvent?.payload).toBe("borderline");
     });
 
     it("falls back to synchronous judgment when streamed JSON is unparseable", async () => {
-      // Stream produces invalid JSON that cannot be parsed at all
+      // ストリームが全くパースできない無効な JSON を生成
       const mockBedrockBadJson: IBedrockClient = {
         async converse() {
           return makeSaboriJudgmentResponse({ verdict: "must_do" });
@@ -649,7 +649,7 @@ describe("SaboriProposerAgent", () => {
     });
 
     it("yields chat_message_chunk events when stream has valid chunks", async () => {
-      // Build valid tool use JSON in chunks to test the streaming happy path
+      // ストリーミングのハッピーパスをテストするためチャンクで有効なツール使用 JSON を構築
       const validJudgment = {
         verdict: "can_saboru",
         summaryText: "まだ寝かせてOK",
@@ -698,11 +698,11 @@ describe("SaboriProposerAgent", () => {
         deltas.push(delta);
       }
 
-      // Should have chat_message_chunk events from the streaming phase
+      // ストリーミングフェーズからの chat_message_chunk イベントがあるはず
       const chunkEvents = deltas.filter((d) => d.type === "chat_message_chunk");
       expect(chunkEvents.length).toBeGreaterThan(0);
 
-      // And should complete normally
+      // 正常に完了するはず
       const completeEvent = deltas.find((d) => d.type === "complete");
       expect(completeEvent).toBeDefined();
     });

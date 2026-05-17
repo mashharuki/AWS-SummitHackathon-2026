@@ -3,7 +3,7 @@ import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import { NagSuppressions } from "cdk-nag";
-import { Construct } from "constructs";
+import type { Construct } from "constructs";
 
 export interface FrontendStackProps extends cdk.StackProps {
   readonly apiUrl: string;
@@ -22,7 +22,7 @@ export class SaborouFrontendStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
-    // --- S3 Bucket (private, OAC) ---
+    // --- S3 バケット (プライベート, OAC) ---
     const bucket = new s3.Bucket(this, "FrontendBucket", {
       bucketName: `saborou-frontend-${this.account}-${environment}`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -33,7 +33,7 @@ export class SaborouFrontendStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // --- CloudFront Distribution with OAC ---
+    // --- OAC 付き CloudFront ディストリビューション ---
     const distribution = new cloudfront.Distribution(this, "Distribution", {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
@@ -79,7 +79,7 @@ export class SaborouFrontendStack extends cdk.Stack {
       description: "CloudFront Distribution ID (for cache invalidation)",
     });
 
-    // --- cdk-nag suppressions ---
+    // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-S1",

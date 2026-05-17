@@ -1,22 +1,21 @@
 /**
- * Proposal routes — Sabori proposal generation with SSE streaming
+ * 提案ルート — SSE ストリーミングによるサボり提案生成
  *
- * GET /tasks/:taskId/proposal?stream=true  — SSE stream (US-09)
- * GET /tasks/:taskId/proposal              — Synchronous (cached or generate)
+ * GET /tasks/:taskId/proposal?stream=true  — SSE ストリーム (US-09)
+ * GET /tasks/:taskId/proposal              — 同期 (キャッシュまたは生成)
  *
- * NFR-P2: Lambda Response Streaming via streamSSE
- * Pattern 5 from NFR Design: streamSSE + SaboriProposerAgent async iterator
+ * NFR-P2: streamSSE による Lambda Response Streaming
+ * パターン 5 (NFR 設計): streamSSE + SaboriProposerAgent 非同期イテレータ
  */
 
+import type { SaboriProposerAgent, TaskContext } from "@saboru/agent";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import type { AppEnv } from "../types.js";
-import { authMiddleware } from "../middleware/auth.js";
 import { NotFoundError } from "../errors.js";
-import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
-import type { SaboriProposerAgent } from "@saboru/agent";
-import type { TaskContext } from "@saboru/agent";
+import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import type { AppEnv } from "../types.js";
 
 export function createProposalsRoute(
   taskRepository: DynamoTaskRepository,
@@ -30,23 +29,23 @@ export function createProposalsRoute(
   /**
    * GET /tasks/:taskId/proposal
    *
-   * Query params:
-   * - stream=true: Returns SSE stream (text/event-stream)
-   * - (default): Returns JSON synchronously
+   * クエリパラメータ:
+   * - stream=true: SSE ストリームを返す (text/event-stream)
+   * - (デフォルト): JSON を同期的に返す
    *
-   * Cache logic: if latest proposal.nextCheckAt > now, return cached.
-   * Otherwise generate via SaboriProposerAgent.
+   * キャッシュロジック: 最新の proposal.nextCheckAt > 現在時刻の場合、キャッシュを返す。
+   * それ以外は SaboriProposerAgent 経由で生成する。
    */
   proposals.get("/:taskId/proposal", async (c) => {
     const userId = c.get("userId");
     const taskId = c.req.param("taskId");
     const isStream = c.req.query("stream") === "true";
 
-    // Ownership verification
+    // 所有者確認
     const task = await taskRepository.findById(userId, taskId);
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
 
-    // Cache check
+    // キャッシュ確認
     const cached = await proposalRepository.findLatestByTaskId(taskId);
     const isCacheValid = cached && new Date(cached.nextCheckAt) > new Date();
 
@@ -54,7 +53,7 @@ export function createProposalsRoute(
       if (!isStream) {
         return c.json(cached);
       }
-      // Even for cached, deliver as SSE if stream=true
+      // キャッシュ有効時でも stream=true の場合は SSE で配信
       return streamSSE(c, async (stream) => {
         await stream.writeSSE({
           event: "verdict",
@@ -82,16 +81,16 @@ export function createProposalsRoute(
       });
     }
 
-    // Build TaskContext
+    // TaskContext を構築
     const context: TaskContext = { task };
 
     if (!isStream) {
-      // Synchronous generation
+      // 同期生成
       const proposal = await agent.propose(taskId, context);
       return c.json(proposal);
     }
 
-    // Streaming generation
+    // ストリーミング生成
     return streamSSE(c, async (stream) => {
       stream.onAbort(() => {
         console.warn("[SSE] Client disconnected before completion", { taskId });

@@ -1,12 +1,12 @@
 /**
- * Tests for DynamoTaskRepository
- * Uses mock DynamoDB client to avoid actual AWS calls.
+ * DynamoTaskRepository のテスト
+ * 実際の AWS 呼び出しを顧みるためモック DynamoDB クライアントを使用する。
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
 import type { Task } from "@saboru/shared";
+import { describe, expect, it, vi } from "vitest";
+import { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
 
 const TABLE = "tasks-test";
 

@@ -4,9 +4,9 @@
  * NFR-DESIGN-6: コード分割（独立chunk）+ Suspense
  */
 import { Canvas } from "@react-three/fiber";
+import type { Verdict } from "@saboru/shared";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import type { Verdict } from "@saboru/shared";
 import { SaborouCharacter } from "./SaborouCharacter";
 
 interface SaborouCanvasProps {
@@ -47,9 +47,9 @@ export function SaborouCanvas({
   return (
     <div className={`${className} bg-[#F5F4F0] rounded-2xl overflow-hidden`}>
       {/*
-       * ErrorBoundary catches synchronous throws from Canvas/createRenderer.
-       * Canvas v9 also accepts a `fallback` prop for WebGL-init failures,
-       * providing a second layer of isolation at the renderer level.
+       * ErrorBoundary は Canvas/createRenderer からの同期スローをキャッチする。
+       * Canvas v9 は WebGL 初期化エラー用の `fallback` プロップも受け付け、
+       * レンダラーレベルで 2 層目の障害分離を提供する。
        */}
       <ErrorBoundary fallback={<FallbackCloud />}>
         <Suspense fallback={<LoadingSpinner />}>

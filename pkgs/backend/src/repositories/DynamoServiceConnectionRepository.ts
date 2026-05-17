@@ -1,7 +1,7 @@
 /**
- * DynamoDB implementation of IServiceConnectionRepository
+ * IServiceConnectionRepository の DynamoDB 実装
  *
- * Access patterns:
+ * アクセスパターン:
  * - Query PK=USER#<userId> SK begins_with CONN# — findAllByUserId
  * - GetItem PK=USER#<userId> SK=CONN#<service> — findByUserAndService
  * - PutItem — save
@@ -9,7 +9,7 @@
  */
 
 import {
-  DynamoDBClient,
+  type DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
   QueryCommand,

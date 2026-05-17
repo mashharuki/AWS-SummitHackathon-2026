@@ -1,12 +1,12 @@
 /**
- * Secrets Manager module-scope cache
+ * Secrets Manager モジュールスコープキャッシュ
  *
- * NFR-S3 / NFR-P1: Secrets are fetched from AWS Secrets Manager once per
- * Lambda container lifecycle (cold start). Subsequent invocations reuse the
- * cached value, reducing both latency and Secrets Manager API call costs.
+ * NFR-S3 / NFR-P1: シークレットは Lambda コンテナライフサイクル (Cold Start) に一度
+ * AWS Secrets Manager から取得する。以降の呼び出しはキャッシュされた値を再利用し、
+ * レイテンシーと Secrets Manager API 呼び出しコストの両方を削減する。
  *
- * The cache is intentionally module-scoped (not request-scoped) to survive
- * across warm invocations.
+ * キャッシュは意図的にモジュールスコープ (リクエストスコープではない) にしており、
+ * ウォーム呼び出しを越えて持続する。
  */
 
 import {
@@ -30,8 +30,8 @@ async function fetchSecret(secretArn: string): Promise<string> {
 }
 
 /**
- * Get Slack signing secret (for Webhook HMAC verification)
- * Cached after first fetch.
+ * Slack 署名シークレットを取得する (Webhook HMAC 検証用)
+ * 初回取得後にキャッシュする。
  */
 export async function getSlackSigningSecret(
   secretArn: string,
@@ -42,8 +42,8 @@ export async function getSlackSigningSecret(
 }
 
 /**
- * Get Slack client secret (for OAuth token exchange)
- * Cached after first fetch.
+ * Slack クライアントシークレットを取得する (OAuth トークン交換用)
+ * 初回取得後にキャッシュする。
  */
 export async function getSlackClientSecret(secretArn: string): Promise<string> {
   if (slackClientSecretCache) return slackClientSecretCache;
@@ -51,7 +51,7 @@ export async function getSlackClientSecret(secretArn: string): Promise<string> {
   return slackClientSecretCache;
 }
 
-/** Reset caches — for use in tests only */
+/** キャッシュをリセットする — テスト専用 */
 export function _resetSecretsCache(): void {
   slackSigningSecretCache = undefined;
   slackClientSecretCache = undefined;

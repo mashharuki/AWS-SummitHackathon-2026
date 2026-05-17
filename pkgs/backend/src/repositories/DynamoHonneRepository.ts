@@ -1,19 +1,19 @@
 /**
- * DynamoDB implementation of IHonneRepository
+ * IHonneRepository の DynamoDB 実装
  *
- * Access patterns:
+ * アクセスパターン:
  * - PutItem PK=USER#<userId> SK=HONNE#<ISO8601> — save
- * - Query GSI-UserCreatedAt PK=USER#<userId> — findAllByUserId (future vision)
+ * - Query GSI-UserCreatedAt PK=USER#<userId> — findAllByUserId (将来構想)
  */
 
 import {
-  DynamoDBClient,
+  type DynamoDBClient,
   PutItemCommand,
   QueryCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
-import type { IHonneRepository, HonneData } from "@saboru/shared";
-import { toIsoString, DDB_PREFIX } from "@saboru/shared";
+import type { HonneData, IHonneRepository } from "@saboru/shared";
+import { DDB_PREFIX, toIsoString } from "@saboru/shared";
 
 export class DynamoHonneRepository implements IHonneRepository {
   constructor(

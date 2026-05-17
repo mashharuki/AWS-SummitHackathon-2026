@@ -1,16 +1,16 @@
 /**
- * DynamoDB implementation of ITaskRepository
+ * ITaskRepository の DynamoDB 実装
  *
- * Access patterns:
+ * アクセスパターン:
  * - Query GSI-UserStatus userId=USER#<userId> status=approved — findApprovedByUserId
  * - GetItem PK=USER#<userId> SK=TASK#<taskId> — findById
  * - PutItem — create
- * - UpdateItem — update, softDelete
- * - putFromTransaction — used by TaskCandidateRepository.approve()
+ * - UpdateItem — update、softDelete
+ * - putFromTransaction — TaskCandidateRepository.approve() から利用
  */
 
 import {
-  DynamoDBClient,
+  type DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
   QueryCommand,
@@ -19,11 +19,11 @@ import {
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { ITaskRepository, Task } from "@saboru/shared";
 import {
+  DDB_PREFIX,
+  SOURCE_TYPE,
+  TASK_STATUS,
   generateUlid,
   toIsoString,
-  DDB_PREFIX,
-  TASK_STATUS,
-  SOURCE_TYPE,
 } from "@saboru/shared";
 
 export class DynamoTaskRepository implements ITaskRepository {

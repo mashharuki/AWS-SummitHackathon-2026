@@ -1,16 +1,16 @@
 /**
- * Tests for POST /tasks/:taskId/honne
+ * POST /tasks/:taskId/honne のテスト
  */
 
-import { describe, it, expect, vi } from "vitest";
+import type { Proposal, Task } from "@saboru/shared";
 import { Hono } from "hono";
-import { createHonneRoute } from "../../routes/honne.js";
-import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
+import { describe, expect, it, vi } from "vitest";
+import { errorHandler } from "../../middleware/error-handler.js";
 import type { DynamoHonneRepository } from "../../repositories/DynamoHonneRepository.js";
 import type { DynamoProposalRepository } from "../../repositories/DynamoProposalRepository.js";
-import type { Task, Proposal } from "@saboru/shared";
+import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
+import { createHonneRoute } from "../../routes/honne.js";
 import type { AppEnv } from "../../types.js";
-import { errorHandler } from "../../middleware/error-handler.js";
 
 const MOCK_USER_ID = "user-honne-test";
 

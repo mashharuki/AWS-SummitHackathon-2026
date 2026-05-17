@@ -32,7 +32,7 @@ export function setRefreshToken(token: string) {
   try {
     localStorage.setItem("saboru_rt", token);
   } catch {
-    // ignore storage errors
+    // ストレージエラーを無視
   }
 }
 

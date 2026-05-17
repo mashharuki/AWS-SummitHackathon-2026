@@ -1,51 +1,51 @@
 import type { IProposalRepository, Proposal } from "@saboru/shared";
 import {
-  DEFAULT_PERSONA_ID,
   BedrockTimeoutError,
+  DEFAULT_PERSONA_ID,
   toIsoString,
 } from "@saboru/shared";
 import type { IBedrockClient } from "../bedrock/IBedrockClient.js";
 import { logError, logInfo } from "../utils/logger.js";
 import type { PersonaRenderer } from "./PersonaRenderer.js";
+import {
+  assembleContextNarrative,
+  calcNextCheckAt,
+  deriveContextSignals,
+} from "./contextUtils.js";
+import {
+  LLMJudgmentSchema,
+  SABORI_JUDGMENT_TOOL,
+  SABORI_JUDGMENT_TOOL_NAME,
+  SABORI_SYSTEM_PROMPT,
+} from "./saboriJudgmentTool.js";
 import type {
   ContextSignals,
   LLMJudgment,
   ProposalDelta,
   TaskContext,
 } from "./types.js";
-import {
-  SABORI_JUDGMENT_TOOL,
-  SABORI_JUDGMENT_TOOL_NAME,
-  SABORI_SYSTEM_PROMPT,
-  LLMJudgmentSchema,
-} from "./saboriJudgmentTool.js";
-import {
-  assembleContextNarrative,
-  calcNextCheckAt,
-  deriveContextSignals,
-} from "./contextUtils.js";
 
 /**
- * SaboriProposerAgent — Core 3-phase judgment engine (AG-02)
+ * SaboriProposerAgent — コア 3 フェーズ判定エンジン (AG-02)
  *
- * Phase 1: Context assembly
- *   - assembleContextNarrative(): natural language narrative from TaskContext
- *   - deriveContextSignals(): 5 psychological framework signal derivation
+ * フェーズ 1: コンテキスト組み立て
+ *   - assembleContextNarrative(): TaskContext から自然言語ナラティブを生成
+ *   - deriveContextSignals(): 5 つの心理学的フレームワークシグナルを導出
  *
- * Phase 2: Bedrock converse (sabori_judgment Tool Use)
- *   - Model: us.anthropic.claude-3-5-sonnet-20241022-v2:0 (Sonnet 3.5)
- *   - maxTokens: 1024, temperature: 0 (deterministic judgment)
- *   - Forced toolChoice for structured LLMJudgment output
+ * フェーズ 2: Bedrock converse (sabori_judgment Tool Use)
+ *   - モデル: us.anthropic.claude-3-5-sonnet-20241022-v2:0 (Sonnet 3.5)
+ *   - maxTokens: 1024, temperature: 0 (決定論的判定)
+ *   - 構造化 LLMJudgment 出力のため toolChoice を強制
  *
- * Phase 3: PersonaRenderer (tone conversion)
- *   - Model: anthropic.claude-haiku-3-5-20241022-v1:0 (Haiku)
- *   - maxTokens: 256, temperature: 0.3 (slight creativity)
- *   - Converts neutral rawChatMessage to Saboru ottori persona
+ * フェーズ 3: PersonaRenderer (口調変換)
+ *   - モデル: anthropic.claude-haiku-3-5-20241022-v1:0 (Haiku)
+ *   - maxTokens: 256, temperature: 0.3 (わずかな創造性)
+ *   - 中立的な rawChatMessage をサボロー口調に変換
  */
 
 /**
- * Model ID for cross-region inference (ap-northeast-1 → us-east-1 fallback)
- * IAM resource ARN uses base model ID without "us." prefix.
+ * クロスリージョン推論のモデル ID (ap-northeast-1 → us-east-1 フォールバック)
+ * IAM リソース ARN には "us." プレフィックスなしのベースモデル ID を使用する。
  */
 const SONNET_MODEL_ID = "us.anthropic.claude-3-5-sonnet-20241022-v2:0";
 
@@ -57,18 +57,18 @@ export class SaboriProposerAgent {
   ) {}
 
   /**
-   * propose() — Synchronous (non-streaming) sabori judgment
+   * propose() — 同期（非ストリーミング）サボリ判定
    *
-   * Executes 3 phases and persists the Proposal to DynamoDB.
+   * 3 フェーズを実行して DynamoDB に Proposal を永続化する。
    *
-   * @param taskId - Task ID for Proposal PK key
-   * @param context - TaskContext with task + optional slackContext
-   * @returns Persisted Proposal
+   * @param taskId - Proposal PK キー用のタスク ID
+   * @param context - task とオプションの slackContext を持つ TaskContext
+   * @returns 永続化済み Proposal
    */
   async propose(taskId: string, context: TaskContext): Promise<Proposal> {
     const startMs = Date.now();
 
-    // Phase 1: Context assembly
+    // フェーズ 1: コンテキスト組み立て
     const narrativeText = assembleContextNarrative(context);
     const contextSignals = deriveContextSignals(context);
 
@@ -79,10 +79,10 @@ export class SaboriProposerAgent {
       userId: context.task.userId,
     });
 
-    // Phase 2: Bedrock converse (Sonnet)
+    // フェーズ 2: Bedrock converse (Sonnet)
     const judgment = await this.runJudgmentPhase(narrativeText, contextSignals);
 
-    // Phase 3: PersonaRenderer (Haiku)
+    // フェーズ 3: PersonaRenderer (Haiku)
     const rendered = await this.personaRenderer.render({
       verdict: judgment.verdict,
       reasoning: judgment.reasoning,
@@ -106,12 +106,12 @@ export class SaboriProposerAgent {
       personaId: rendered.personaId,
       evaluatedAt,
       nextCheckAt,
-      tokenCount: 0, // will be set below via usage
+      tokenCount: 0, // 下記の使用量からリポジトリ保存後に設定
     };
 
-    // Note: tokenCount is set after repository save since we need usage from Phase 2+3
-    // For MVP, set approximate count from Phase 2 only
-    // (Phase 3 Haiku tokens are small and tracked separately in logs)
+    // tokenCount はフェーズ 2+3 の使用量が必要なためリポジトリ保存後に設定
+    // MVP ではフェーズ 2 のみのおよそのカウントを設定
+    // (フェーズ 3 Haiku のトークンは少量でログで個別追跡)
     const proposal = await this.proposalRepository.save(proposalInput);
 
     const totalMs = Date.now() - startMs;
@@ -126,13 +126,13 @@ export class SaboriProposerAgent {
   }
 
   /**
-   * proposeStream() — Streaming sabori judgment via AsyncIterator
+   * proposeStream() — AsyncIterator 経由のストリーミングサボリ判定
    *
-   * Yields ProposalDelta events as judgment progresses.
-   * PersonaRenderer runs after stream completes (non-streaming Haiku call).
+   * 判定の進行に合わせて ProposalDelta イベントを yield する。
+   * PersonaRenderer はストリーム完了後に実行 (非ストリーミング Haiku 呼び出し)。
    *
-   * Note: Uses converseStream from IBedrockClient for Phase 2.
-   * Phase 3 (PersonaRenderer) runs after stream completion.
+   * 注意: フェーズ 2 で IBedrockClient の converseStream を使用する。
+   * フェーズ 3 (PersonaRenderer) はストリーム完了後に実行する。
    */
   async *proposeStream(
     taskId: string,
@@ -140,7 +140,7 @@ export class SaboriProposerAgent {
   ): AsyncGenerator<ProposalDelta> {
     const startMs = Date.now();
 
-    // Phase 1: Context assembly
+    // フェーズ 1: コンテキスト組み立て
     const narrativeText = assembleContextNarrative(context);
     const contextSignals = deriveContextSignals(context);
 
@@ -150,7 +150,7 @@ export class SaboriProposerAgent {
       contextCoverage: contextSignals.contextCoverage,
     });
 
-    // Phase 2: Bedrock converseStream
+    // フェーズ 2: Bedrock converseStream
     let fullText = "";
     try {
       const streamResponse = await this.bedrock.converseStream({
@@ -194,7 +194,7 @@ export class SaboriProposerAgent {
       throw new BedrockTimeoutError("Streaming judgment failed");
     }
 
-    // Parse full accumulated JSON (tool use input)
+    // 完全に経結した JSON をパース (ツール使用入力)
     let judgment: LLMJudgment;
     try {
       const parsed = JSON.parse(fullText) as unknown;
@@ -225,7 +225,7 @@ export class SaboriProposerAgent {
       };
     }
 
-    // Phase 3: PersonaRenderer (non-streaming)
+    // フェーズ 3: PersonaRenderer (非ストリーミング)
     const rendered = await this.personaRenderer.render({
       verdict: judgment.verdict,
       reasoning: judgment.reasoning,

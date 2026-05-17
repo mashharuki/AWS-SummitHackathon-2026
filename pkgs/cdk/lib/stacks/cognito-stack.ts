@@ -3,7 +3,7 @@ import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
-import { Construct } from "constructs";
+import type { Construct } from "constructs";
 
 export interface CognitoStackExports {
   readonly userPool: cognito.UserPool;
@@ -19,7 +19,7 @@ export class SaborouCognitoStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
-    // --- UserPool ---
+    // --- ユーザープール ---
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: `saborou-user-pool-${environment}`,
       selfSignUpEnabled: false,
@@ -66,7 +66,7 @@ export class SaborouCognitoStack extends cdk.Stack {
       },
     );
 
-    // --- UserPoolClient ---
+    // --- ユーザープールクライアント ---
     const userPoolClient = new cognito.UserPoolClient(this, "UserPoolClient", {
       userPool,
       userPoolClientName: `saborou-client-${environment}`,
@@ -87,7 +87,7 @@ export class SaborouCognitoStack extends cdk.Stack {
     });
     userPoolClient.node.addDependency(googleIdP);
 
-    // --- Cognito Hosted UI Domain ---
+    // --- Cognito ホスト型 UI ドメイン ---
     const userPoolDomain = new cognito.UserPoolDomain(this, "UserPoolDomain", {
       userPool,
       cognitoDomain: {
@@ -113,7 +113,7 @@ export class SaborouCognitoStack extends cdk.Stack {
       description: "Cognito Hosted UI Domain URL",
     });
 
-    // --- cdk-nag suppressions ---
+    // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-COG1",

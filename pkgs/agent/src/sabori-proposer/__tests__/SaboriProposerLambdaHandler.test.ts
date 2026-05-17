@@ -1,15 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Proposal } from "@saboru/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * SaboriProposerLambdaHandler unit tests
+ * SaboriProposerLambdaHandler ユニットテスト
  *
- * Strategy: vi.mock the heavy dependencies (BedrockClientAdapter, DynamoProposalRepository,
- * ContextCollector, SaboriProposerAgent, PersonaRenderer) to isolate handler logic.
+ * 方針: vi.mock で重い依存関係（BedrockClientAdapter、DynamoProposalRepository、
+ * ContextCollector、SaboriProposerAgent、PersonaRenderer）をモック化しハンドラーロジックを別離する。
  */
 
 // ─────────────────────────────────────────────
-// Mock module-level dependencies
+// モジュールレベル依存関係のモック
 // ─────────────────────────────────────────────
 
 const mockPropose = vi.fn();
@@ -48,7 +48,7 @@ vi.mock("../../context-collector/ContextCollector.js", () => ({
 }));
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────────────────────────
 
 function makeValidEvent(overrides: Record<string, unknown> = {}): unknown {
@@ -92,7 +92,7 @@ function makeProposal(overrides: Partial<Proposal> = {}): Proposal {
 }
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("SaboriProposerLambdaHandler", () => {
@@ -165,9 +165,9 @@ describe("SaboriProposerLambdaHandler", () => {
 
     await handler(event);
 
-    // getSlackToken should NOT be called when no slackMessageRef
+    // slackMessageRef がない場合 getSlackToken は呼ばれないべき
     expect(mockGetSlackToken).not.toHaveBeenCalled();
-    // propose() called with no slackContext
+    // slackContext なしで propose() が呼ばれる
     const [, calledContext] = mockPropose.mock.calls[0] as [
       string,
       { slackContext?: unknown },
@@ -186,9 +186,9 @@ describe("SaboriProposerLambdaHandler", () => {
     const response = await handler(event);
 
     expect(response.statusCode).toBe(200);
-    // getSlackToken should be called
+    // getSlackToken が呼ばれるべき
     expect(mockGetSlackToken).toHaveBeenCalledOnce();
-    // propose() called with slackContext (minimal stub context)
+    // slackContext 付きで propose() が呼ばれる (最小スタブコンテキスト)
     const [, calledContext] = mockPropose.mock.calls[0] as [
       string,
       { slackContext?: unknown },
@@ -204,11 +204,11 @@ describe("SaboriProposerLambdaHandler", () => {
       slackMessageRef: "C123456/1234567890.123456",
     });
 
-    // Should not throw — continues without Slack context
+    // スローせず Slack コンテキストなしで継続する
     const response = await handler(event);
 
     expect(response.statusCode).toBe(200);
-    // propose() called with undefined slackContext (graceful degradation)
+    // undefined の slackContext で propose() が呼ばれる (グレースフルデグラデーション)
     const [, calledContext] = mockPropose.mock.calls[0] as [
       string,
       { slackContext?: unknown },
@@ -241,7 +241,7 @@ describe("SaboriProposerLambdaHandler", () => {
     const { handler } = await import("../SaboriProposerLambdaHandler.js");
     const event = makeValidEvent();
 
-    // Lambda errors propagate for retry/DLQ handling
+    // Lambda エラーはリトライ/DLQ 処理のため伝播する
     await expect(handler(event)).rejects.toThrow("DynamoDB connection failed");
   });
 });

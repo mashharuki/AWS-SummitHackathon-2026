@@ -2,10 +2,10 @@ import { minutesUntil } from "@saboru/shared";
 import type { ContextSignals, SlackContext, TaskContext } from "./types.js";
 
 /**
- * contextUtils — Phase 1 context assembly utilities
+ * contextUtils — フェーズ 1 コンテキスト組み立てユーティリティ
  *
- * Implements the 5 psychological framework signal derivation:
- * - CEM (Karau & Williams, 1993): contextCoverage / deadline presence
+ * 5 つの心理学的フレームワークのシグナル導出を実装:
+ * - CEM (Karau & Williams, 1993): contextCoverage / 締切の有無
  * - Identifiability (Williams et al., 1981): requesterStatus → taskIdentifiability
  * - Sucker Effect (Kerr, 1983): requesterStatus → perceivedPeerEffort
  * - SDT (Ryan & Deci, 2000): reminderCount + urgencyKeywords → externalPressureLevel
@@ -13,8 +13,8 @@ import type { ContextSignals, SlackContext, TaskContext } from "./types.js";
  */
 
 /**
- * Assemble natural language narrative from TaskContext for Bedrock prompt.
- * The narrative is passed as the user message in Phase 2.
+ * Bedrock プロンプト用に TaskContext から自然言語ナラティブを組み立てる。
+ * このナラティブはフェーズ 2 のユーザーメッセージとして渡される。
  */
 export function assembleContextNarrative(context: TaskContext): string {
   const lines: string[] = [];
@@ -70,12 +70,12 @@ export function assembleContextNarrative(context: TaskContext): string {
 }
 
 /**
- * Determine context coverage quality for CEM signal
+ * CEM シグナル用のコンテキストカバレッジ品質を判定する
  *
  * CEM (Karau & Williams, 1993):
- * - full: Slack + deadline both available → high context
- * - partial: one of them available
- * - minimal: no Slack, no deadline
+ * - full: Slack + 締切の両方が利用可能 → 高コンテキスト
+ * - partial: どちらか一方が利用可能
+ * - minimal: Slack なし、締切なし
  */
 export function determineContextCoverage(
   context: TaskContext,
@@ -89,11 +89,11 @@ export function determineContextCoverage(
 }
 
 /**
- * Derive psychological signals from TaskContext
+ * TaskContext から心理学的シグナルを導出する
  *
- * Maps 5 frameworks to discrete signal values:
+ * 5 つのフレームワークを離散的なシグナル値にマッピング:
  *
- * | Framework | Source | Signal |
+ * | フレームワーク | ソース | シグナル |
  * |-----------|--------|--------|
  * | Identifiability (Williams 1981) | requesterStatus | taskIdentifiability |
  * | Sucker Effect (Kerr 1983) | requesterStatus | perceivedPeerEffort |
@@ -105,9 +105,9 @@ export function derivePsychSignals(
 ): ContextSignals["psychSignals"] {
   const slack: SlackContext | undefined = context.slackContext;
 
-  // --- Identifiability (Williams et al., 1981) ---
-  // online = high identifiability (requester can notice you're slacking)
-  // away/offline = low identifiability (requester is not watching)
+  // --- 同一性 (Identifiability) (Williams et al., 1981) ---
+  // online = 同一性高 (依頼者にサボりを気づかれる可能性あり)
+  // away/offline = 同一性低 (依頼者は見ていない)
   let taskIdentifiability: "high" | "low" | "unknown" = "unknown";
   if (slack) {
     if (slack.requesterStatus === "online") {
@@ -120,9 +120,9 @@ export function derivePsychSignals(
     }
   }
 
-  // --- Sucker Effect (Kerr, 1983) ---
-  // If requester is away/offline, perceived peer effort is low
-  // → Sucker effect kicks in: "why should I work if they're not?"
+  // --- サッカー効果 (Kerr, 1983) ---
+  // 依頼者が away/offline の場合、知覚される仲間の努力は低い
+  // → サッカー効果が発動: 「相手が動いていないのになぜ自分が？」
   let perceivedPeerEffort: "high" | "low" | "unknown" = "unknown";
   if (slack) {
     if (slack.requesterStatus === "online") {
@@ -136,9 +136,9 @@ export function derivePsychSignals(
   }
 
   // --- SDT (Ryan & Deci, 2000) ---
-  // External pressure: reminders + urgency keywords
-  // high: reminderCount >= 2 OR (urgency keywords present)
-  // low: reminderCount === 0 AND no urgency keywords
+  // 外部圧力: リマインド + 緊急キーワード
+  // high: reminderCount >= 2 または緊急キーワードあり
+  // low: reminderCount === 0 かつ緊急キーワードなし
   let externalPressureLevel: "high" | "low" | "unknown" = "unknown";
   if (slack) {
     const hasUrgency = slack.urgencyKeywords.length > 0;
@@ -147,15 +147,15 @@ export function derivePsychSignals(
     } else if (slack.reminderCount === 0 && !hasUrgency) {
       externalPressureLevel = "low";
     } else {
-      // reminderCount === 1 and no urgency → low-medium
+      // reminderCount === 1 かつ緊急なし → low-medium
       externalPressureLevel = "low";
     }
   }
 
-  // --- Expectancy Theory (Vroom, 1964) ---
-  // Effort-outcome expectancy based on deadline proximity:
-  // deadline > 24h → high (effort will pay off, plenty of time)
-  // deadline < 4h → low (effort too late to matter)
+  // --- 期待理論 (Vroom, 1964) ---
+  // 締切の近さに基づく努力-成果期待:
+  // 締切まで > 24h → high (努力が報われる、時間十分)
+  // 締切まで < 4h → low (努力しても遅すぎる)
   // null → unknown
   let effortOutcomeExpectancy: "high" | "low" | "unknown" = "unknown";
   if (context.task.deadline) {

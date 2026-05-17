@@ -1,19 +1,19 @@
 /**
- * Tests for GET /auth/slack/callback success paths
+ * GET /auth/slack/callback 成功パスのテスト
  *
- * These tests cover the OAuth callback flow that requires mocking:
+ * 以下をモックする OAuth コールバックフローをテストする:
  * - Secrets Manager (getSlackClientSecret)
- * - Slack token exchange API (fetch)
+ * - Slack トークン交換 API (fetch)
  * - SecretsManagerClient (CreateSecretCommand / UpdateSecretCommand)
  * - DynamoServiceConnectionRepository.saveForUser
  *
- * All external calls are mocked — no AWS charges, no network calls.
+ * 全ての外部呼び出しはモック — AWS 課金なし、ネットワーク呼び出しなし。
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Hono } from "hono";
-import type { AppEnv } from "../../types.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
+import type { AppEnv } from "../../types.js";
 
 // Must use vi.hoisted to create mocks that can be referenced in vi.mock factories
 const { mockSend, mockGetSlackClientSecret, mockFetch } = vi.hoisted(() => ({

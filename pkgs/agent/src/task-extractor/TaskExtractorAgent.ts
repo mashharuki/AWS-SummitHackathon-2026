@@ -1,17 +1,17 @@
 import type { ITaskCandidateRepository, TaskCandidate } from "@saboru/shared";
 import {
+  DDB_PREFIX,
   SOURCE_TYPE,
   TASK_CANDIDATE_STATUS,
   TASK_CANDIDATE_TTL_DAYS,
   generateUlid,
   pseudonymize,
   toIsoString,
-  DDB_PREFIX,
 } from "@saboru/shared";
 import type { IBedrockClient } from "../bedrock/IBedrockClient.js";
 import { createTaskCandidateWithUserId } from "../repositories/DynamoTaskCandidateRepository.js";
-import { logError, logInfo } from "../utils/logger.js";
 import type { SlackEventPayload } from "../types/events.js";
+import { logError, logInfo } from "../utils/logger.js";
 import {
   EXTRACT_TASK_TOOL,
   EXTRACT_TASK_TOOL_NAME,
@@ -19,27 +19,27 @@ import {
 } from "./extractTaskTool.js";
 
 /**
- * Model ID for cross-region inference (ap-northeast-1 → us-east-1 fallback)
- * The IAM resource ARN uses the base model ID without the "us." prefix.
- * Infrastructure Design sec.4 documents this AWS-specific behavior.
+ * クロスリージョン推論のモデル ID (ap-northeast-1 → us-east-1 フォールバック)
+ * IAM リソース ARN には "us." プレフィックスなしのベースモデル ID を使用する。
+ * この AWS 固有の動作はインフラ設計 sec.4 に記載。
  */
 const MODEL_ID = "us.anthropic.claude-3-5-sonnet-20241022-v2:0";
 
-/** Result type for task extraction */
+/** タスク抽出の結果型 */
 export type ExtractionResult =
   | { skipped: true }
   | { skipped: false; candidate: TaskCandidate };
 
 /**
- * TaskExtractorAgent — Core agent for U-03a
+ * TaskExtractorAgent — U-03a のコアエージェント
  *
- * Responsibilities:
- * 1. Validate EventBridge payload (done in LambdaHandler before calling this)
- * 2. Call Bedrock converse API with toolChoice.tool forced (DP-02)
- * 3. Validate Bedrock output with Zod (DP-03)
- * 4. Discard raw message text; store only sourceRef (DP-04)
- * 5. Pseudonymize requester name (BR-05)
- * 6. Persist TaskCandidate via repository (DP-05 idempotency handled in repo)
+ * 責務:
+ * 1. EventBridge ペイロードのバリデーション (LambdaHandler で実施後に呼び出す)
+ * 2. toolChoice.tool 強制で Bedrock converse API を呼び出す (DP-02)
+ * 3. Zod で Bedrock 出力をバリデーション (DP-03)
+ * 4. 生メッセージテキストを破棄し sourceRef のみ保存 (DP-04)
+ * 5. 依頼者名の仏名化 (BR-05)
+ * 6. リポジトリ経由で TaskCandidate を永続化 (DP-05 円等性はリポジトリで処理)
  */
 export class TaskExtractorAgent {
   constructor(
@@ -53,7 +53,7 @@ export class TaskExtractorAgent {
 
     const startMs = Date.now();
 
-    // [1] Call Bedrock with toolChoice.tool forced (DP-02)
+    // [1] toolChoice.tool 強制で Bedrock を呼び出す (DP-02)
     const response = await this.bedrock.converse({
       modelId: MODEL_ID,
       messages: [
@@ -76,14 +76,14 @@ export class TaskExtractorAgent {
         },
       },
       inferenceConfig: {
-        maxTokens: 512, // DP-08: fixed to minimize cost
-        temperature: 0, // deterministic output
+        maxTokens: 512, // DP-08: コスト最小化のため固定
+        temperature: 0, // 決定論的出力
       },
     });
 
     const bedrockDurationMs = Date.now() - startMs;
 
-    // [2] Extract tool use block from response
+    // [2] レスポンスからツール使用ブロックを取り出す
     const toolUseBlock = response.output?.message?.content?.find(
       (block) => block.toolUse?.name === EXTRACT_TASK_TOOL_NAME,
     );
@@ -99,7 +99,7 @@ export class TaskExtractorAgent {
       );
     }
 
-    // [3] Zod validation of Bedrock output (DP-03: output-side)
+    // [3] Bedrock 出力の Zod バリデーション (DP-03: 出力側)
     const parseResult = ExtractedTaskSchema.safeParse(
       toolUseBlock.toolUse.input,
     );
@@ -113,7 +113,7 @@ export class TaskExtractorAgent {
 
     const extracted = parseResult.data;
 
-    // [4] Skip if not a task
+    // [4] タスクでない場合はスキップ
     if (!extracted.is_task) {
       logInfo({
         action: "skipped_not_task",

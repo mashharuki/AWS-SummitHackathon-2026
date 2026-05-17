@@ -7,11 +7,11 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import * as scheduler from "aws-cdk-lib/aws-scheduler";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { NagSuppressions } from "cdk-nag";
-import { Construct } from "constructs";
+import type { Construct } from "constructs";
 import { MonitoringConstruct } from "../constructs/monitoring-construct";
-import { AgentStackExports } from "./agent-stack";
-import { ApiStackExports } from "./api-stack";
-import { DataStackExports } from "./data-stack";
+import type { AgentStackExports } from "./agent-stack";
+import type { ApiStackExports } from "./api-stack";
+import type { DataStackExports } from "./data-stack";
 
 export interface WebhookStackProps extends cdk.StackProps {
   readonly data: DataStackExports;
@@ -31,7 +31,7 @@ export class SaborouWebhookStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
-    // --- EventBridge Custom Bus ---
+    // --- EventBridge カスタムバス ---
     const eventBus = new events.EventBus(this, "SaborouEventBus", {
       eventBusName: `saborou-event-bus-${environment}`,
     });
@@ -64,7 +64,7 @@ export class SaborouWebhookStack extends cdk.Stack {
     eventBus.grantPutEventsTo(webhookFn);
     props.data.secrets.slackSigningSecret.grantRead(webhookFn);
 
-    // --- EventBridge Rule: Slack → TaskExtractor ---
+    // --- EventBridge ルール: Slack → TaskExtractor ---
     const ruleDlq = new sqs.Queue(this, "RuleDlq", {
       queueName: `saborou-rule-dlq-${environment}`,
       retentionPeriod: cdk.Duration.days(1),
@@ -87,7 +87,7 @@ export class SaborouWebhookStack extends cdk.Stack {
       ],
     });
 
-    // --- EventBridge Scheduler: hourly background refresh ---
+    // --- EventBridge スケジューラー: 1時間ごとのバックグラウンドリフレッシュ ---
     const schedulerRole = new iam.Role(this, "SchedulerRole", {
       roleName: `saborou-scheduler-role-${environment}`,
       assumedBy: new iam.ServicePrincipal("scheduler.amazonaws.com"),
@@ -113,7 +113,7 @@ export class SaborouWebhookStack extends cdk.Stack {
       },
     });
 
-    // --- Monitoring (all Lambdas in scope) ---
+    // --- モニタリング (対象 Lambda 全て) ---
     new MonitoringConstruct(this, "Monitoring", {
       environment,
       honoFn: props.api.honoFn,
@@ -132,7 +132,7 @@ export class SaborouWebhookStack extends cdk.Stack {
       description: "Webhook Lambda ARN (Slack events endpoint)",
     });
 
-    // --- cdk-nag suppressions ---
+    // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-SQS3",

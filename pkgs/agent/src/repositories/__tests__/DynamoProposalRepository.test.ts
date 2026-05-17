@@ -1,16 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Proposal } from "@saboru/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DynamoProposalRepository } from "../DynamoProposalRepository.js";
 
 /**
- * DynamoProposalRepository unit tests
+ * DynamoProposalRepository ユニットテスト
  *
- * Strategy: vi.mock the AWS SDK modules to avoid real DynamoDB calls.
- * Tests verify PK/SK construction, idempotency behavior, and query patterns.
+ * 方針: 実障の DynamoDB 呼び出しを防ぐため vi.mock で AWS SDK モジュールをモック化する。
+ * PK/SK 構築、円等性動作、クエリパターンを検証する。
  */
 
 // ─────────────────────────────────────────────
-// Mock AWS SDK
+// AWS SDK モック
 // ─────────────────────────────────────────────
 
 const mockSend = vi.fn();
@@ -38,7 +38,7 @@ vi.mock("@aws-sdk/lib-dynamodb", () => ({
 }));
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────────────────────────
 
 function makeProposalInput(
@@ -60,7 +60,7 @@ function makeProposalInput(
 }
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("DynamoProposalRepository", () => {
@@ -119,7 +119,7 @@ describe("DynamoProposalRepository", () => {
     });
 
     it("handles ConditionalCheckFailedException as idempotent success", async () => {
-      // First call: ConditionalCheckFailedException
+      // 1 回目の呼び出し: ConditionalCheckFailedException
       const { ConditionalCheckFailedException } = await import(
         "@aws-sdk/client-dynamodb"
       );
@@ -128,7 +128,7 @@ describe("DynamoProposalRepository", () => {
       );
       mockSend.mockRejectedValueOnce(conditionalError);
 
-      // Second call (findByPkSk query): returns existing item
+      // 2 回目の呼び出し (findByPkSk クエリ): 既存アイテムを返す
       const existingItem: Proposal = {
         PK: "TASK#task-001",
         SK: "PROPOSAL#2026-05-17T10:00:00.000Z",
@@ -147,12 +147,12 @@ describe("DynamoProposalRepository", () => {
 
       const result = await repo.save(makeProposalInput());
 
-      // Should return the existing item (not throw)
+      // 既存アイテムを返す (例外をスローしない)
       expect(result.summaryText).toBe("既存の判定");
     });
 
     it("returns constructed item when ConditionalCheckFailed and findByPkSk returns null (empty Items)", async () => {
-      // First call: ConditionalCheckFailedException
+      // 1 回目の呼び出し: ConditionalCheckFailedException
       const { ConditionalCheckFailedException } = await import(
         "@aws-sdk/client-dynamodb"
       );
@@ -161,20 +161,20 @@ describe("DynamoProposalRepository", () => {
       );
       mockSend.mockRejectedValueOnce(conditionalError);
 
-      // Second call (findByPkSk query): returns no items (null case)
+      // 2 回目の呼び出し (findByPkSk クエリ): アイテムなし (null ケース)
       mockSend.mockResolvedValueOnce({ Items: [] });
 
       const input = makeProposalInput();
       const result = await repo.save(input);
 
-      // Should return the constructed item (not throw)
+      // 構築したアイテムを返す (例外をスローしない)
       expect(result.PK).toBe("TASK#task-001");
       expect(result.SK).toBe("PROPOSAL#2026-05-17T10:00:00.000Z");
       expect(result.summaryText).toBe(input.summaryText);
     });
 
     it("returns constructed item when ConditionalCheckFailed and findByPkSk returns undefined Items", async () => {
-      // First call: ConditionalCheckFailedException
+      // 1 回目の呼び出し: ConditionalCheckFailedException
       const { ConditionalCheckFailedException } = await import(
         "@aws-sdk/client-dynamodb"
       );
@@ -183,13 +183,13 @@ describe("DynamoProposalRepository", () => {
       );
       mockSend.mockRejectedValueOnce(conditionalError);
 
-      // Second call (findByPkSk query): returns undefined Items (null case via different path)
+      // 2 回目の呼び出し (findByPkSk クエリ): undefined Items (別パスの null ケース)
       mockSend.mockResolvedValueOnce({});
 
       const input = makeProposalInput();
       const result = await repo.save(input);
 
-      // Should return the constructed item (not throw)
+      // 構築したアイテムを返す (例外をスローしない)
       expect(result.PK).toBe("TASK#task-001");
       expect(result.SK).toBe("PROPOSAL#2026-05-17T10:00:00.000Z");
     });
@@ -249,7 +249,7 @@ describe("DynamoProposalRepository", () => {
       await repo.findLatestByTaskId("task-xyz");
 
       const callArgs = mockSend.mock.calls[0][0];
-      // Verify the QueryCommand input
+      // QueryCommand の入力を検証
       expect(callArgs.input.IndexName).toBe("GSI-TaskLatest");
       expect(callArgs.input.KeyConditionExpression).toContain("taskId");
       expect(callArgs.input.ScanIndexForward).toBe(false);

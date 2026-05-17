@@ -1,17 +1,17 @@
 import { z } from "zod";
 
 /**
- * Slack message payload forwarded via EventBridge custom bus
- * (DP-03: Zod double validation — input side)
+ * EventBridge カスタムバス経由で転送される Slack メッセージペイロード
+ * (DP-03: Zod 二重バリデーション — 入力側)
  *
- * EventBridge detail schema:
+ * EventBridge detail スキーマ:
  * {
  *   source: "slack",
- *   userId: "<cognitoSub>",   // Mapped by WebhookHandler from Slack user_id
+ *   userId: "<cognitoSub>",   // WebhookHandler が Slack user_id から変換
  *   message: { ... }
  * }
  *
- * Privacy: userId is the Cognito sub (internal), not the raw Slack user_id.
+ * プライバシー: userId は Cognito sub (内部識別子) であり、生の Slack user_id ではない。
  */
 export const SlackMessageSchema = z.object({
   text: z.string(),

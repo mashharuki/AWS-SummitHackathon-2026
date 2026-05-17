@@ -11,22 +11,22 @@ import type { IProposalRepository, Proposal } from "@saboru/shared";
 import { DynamoWriteFailedError } from "@saboru/shared";
 
 /**
- * DynamoDB implementation of IProposalRepository
+ * IProposalRepository の DynamoDB 実装
  *
- * Table design:
+ * テーブル設計:
  *   PK: TASK#<taskId>
  *   SK: PROPOSAL#<ISO8601 evaluatedAt>
  *
  * GSI (GSI-TaskLatest):
- *   Partition key: taskId
- *   Sort key: evaluatedAt (descending → latest first with ScanIndexForward=false)
+ *   パーティションキー: taskId
+ *   ソートキー: evaluatedAt (降順 → ScanIndexForward=false で最新が先頭)
  *
- * Idempotency:
- *   PutItem uses ConditionExpression "attribute_not_exists(SK)"
- *   Prevents duplicate writes for same evaluatedAt timestamp.
- *   ConditionalCheckFailedException is silently ignored (existing record wins).
+ * 円等性:
+ *   PutItem は ConditionExpression "attribute_not_exists(SK)" を使用し
+ *   同一 evaluatedAt タイムスタンプへの重複書き込みを防ぐ。
+ *   ConditionalCheckFailedException はサイレントに無視 (既存レコード儲入塀定).
  *
- * Access patterns:
+ * アクセスパターン:
  * - save(): PutItem PK=TASK#<taskId> SK=PROPOSAL#<evaluatedAt>
  * - findLatestByTaskId(): Query GSI-TaskLatest PK=taskId ScanIndexForward=false LIMIT=1
  */
@@ -46,13 +46,13 @@ export class DynamoProposalRepository implements IProposalRepository {
   }
 
   /**
-   * Save sabori proposal to DynamoDB
+   * サボリ提案を DynamoDB に保存する
    *
-   * Builds PK/SK from proposal fields and writes to Proposals table.
-   * ConditionExpression prevents duplicate writes (idempotent).
+   * プロポーザルフィールドから PK/SK を構築して Proposals テーブルに書き込む。
+   * ConditionExpression により重複書き込みを防ぐ (円等)。
    *
-   * @param proposal - Proposal data without PK/SK (built from taskId + evaluatedAt)
-   * @returns Persisted Proposal with PK and SK set
+   * @param proposal - PK/SK なしの提案データ (taskId + evaluatedAt から構築)
+   * @returns PK と SK が設定された永続化済み Proposal
    */
   async save(proposal: Omit<Proposal, "PK" | "SK">): Promise<Proposal> {
     const item: Proposal = {

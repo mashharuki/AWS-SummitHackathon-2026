@@ -1,13 +1,13 @@
 /**
- * DynamoDB implementation of IUserRepository
+ * IUserRepository の DynamoDB 実装
  *
- * Access patterns:
+ * アクセスパターン:
  * - GetItem PK=USER#<cognitoSub> SK=PROFILE — findById
  * - PutItem PK=USER#<cognitoSub> SK=PROFILE — upsert
  */
 
 import {
-  DynamoDBClient,
+  type DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
 } from "@aws-sdk/client-dynamodb";

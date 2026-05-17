@@ -25,17 +25,17 @@ import {
 } from "@saboru/shared";
 
 /**
- * DynamoDB implementation of ITaskCandidateRepository (DP-05)
+ * ITaskCandidateRepository の DynamoDB 実装 (DP-05)
  *
- * Table design:
+ * テーブル設計:
  *   PK: USER#<cognitoSub>
  *   SK: TASK_CAND#<ulid>
  *
- * Idempotency (DP-05):
- *   PutItem uses ConditionExpression "attribute_not_exists(SK)"
- *   to prevent duplicate writes for the same ULID.
- *   True at-most-once for the same messageTs requires caller-side dedup
- *   (or a GSI on sourceRef). MVP scope: DLQ monitoring covers duplicates.
+ * 円等性 (DP-05):
+ *   PutItem は ConditionExpression "attribute_not_exists(SK)" を使用し
+ *   同一 ULID への重複書き込みを防ぐ。
+ *   同一 messageTs の真の at-most-once は呼び出し元側での重複排除
+ *   (または sourceRef の GSI) が必要。MVP スコープ: DLQ 監視で重複を検知。
  */
 export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
   private readonly docClient: DynamoDBDocumentClient;

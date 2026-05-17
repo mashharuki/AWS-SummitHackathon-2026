@@ -1,20 +1,20 @@
 /**
- * Convert ISO 8601 datetime to natural Japanese expression (FR-03 display)
+ * ISO 8601 日時を自然な日本語表現に変換する (FR-03 表示)
  *
- * Conversion rules:
- * - Same day: "今日 HH:mm"
- * - Next day: "明日 HH:mm"
- * - 2+ days later: "M月D日 HH:mm"
+ * 変換ルール:
+ * - 当日: "今日 HH:mm"
+ * - 翌日: "明日 HH:mm"
+ * - 2日以降: "M月D日 HH:mm"
  * - null: "締切なし"
  *
- * All datetimes converted to JST (UTC+9)
+ * すべての日時を JST (UTC+9) に変換
  *
  * @example
- * formatDeadline('2026-05-18T14:00:00Z') // → '明日 23:00' (JST conversion)
+ * formatDeadline('2026-05-18T14:00:00Z') // → '明日 23:00' (JST 変換)
  * formatDeadline(null) // → '締切なし'
  *
- * @param isoDate ISO 8601 datetime string or null
- * @returns Japanese natural expression string
+ * @param isoDate ISO 8601 日時文字列または null
+ * @returns 日本語の自然表現文字列
  */
 export function formatDeadline(isoDate: string | null): string {
   if (!isoDate) return "締切なし";
@@ -25,7 +25,7 @@ export function formatDeadline(isoDate: string | null): string {
     timeZone: "Asia/Tokyo",
   });
 
-  // Get date-only in JST for day diff calculation
+  // 日付差分計算のため JST の日付部分のみ取得
   const jstFormatter = new Intl.DateTimeFormat("ja-JP", {
     timeZone: "Asia/Tokyo",
     year: "numeric",
@@ -58,30 +58,30 @@ export function formatDeadline(isoDate: string | null): string {
 }
 
 /**
- * Return remaining minutes from current time to specified datetime
+ * 現在時刻から指定日時までの残り分数を返す
  *
- * @param isoDate Target ISO 8601 datetime
- * @returns Positive: future (remaining minutes), Negative: past (overdue minutes)
+ * @param isoDate 対象の ISO 8601 日時
+ * @returns 正の値: 未来 (残り分数)、負の値: 過去 (超過分数)
  */
 export function minutesUntil(isoDate: string): number {
   return Math.floor((new Date(isoDate).getTime() - Date.now()) / (1000 * 60));
 }
 
 /**
- * Check if deadline has passed
+ * 締切が過ぎているか確認する
  *
- * @param isoDate Target ISO 8601 datetime
- * @returns true if overdue
+ * @param isoDate 対象の ISO 8601 日時
+ * @returns 期限超過の場合 true
  */
 export function isOverdue(isoDate: string): boolean {
   return minutesUntil(isoDate) < 0;
 }
 
 /**
- * Return current time as ISO 8601 string
+ * 現在時刻を ISO 8601 文字列として返す
  *
- * @param date Date object (default: current time)
- * @returns ISO 8601 datetime string
+ * @param date Date オブジェクト (デフォルト: 現在時刻)
+ * @returns ISO 8601 日時文字列
  */
 export function toIsoString(date: Date = new Date()): string {
   return date.toISOString();

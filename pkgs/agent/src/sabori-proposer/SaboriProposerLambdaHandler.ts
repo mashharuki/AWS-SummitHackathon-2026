@@ -1,35 +1,35 @@
 import { z } from "zod";
 import { BedrockClientAdapter } from "../bedrock/BedrockClientAdapter.js";
-import { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
 import { ContextCollector } from "../context-collector/ContextCollector.js";
+import { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
 import { logError, logInfo } from "../utils/logger.js";
 import { PersonaRenderer } from "./PersonaRenderer.js";
 import { SaboriProposerAgent } from "./SaboriProposerAgent.js";
 import type { SlackContext, TaskContext } from "./types.js";
 
 /**
- * Lambda handler for SaboriProposer (U-03b)
+ * SaboriProposer の Lambda ハンドラー (U-03b)
  *
- * Trigger: API Gateway POST /api/tasks/:taskId/propose
- *          (U-04 api will wire this as a direct Lambda invocation)
+ * トリガー: API Gateway POST /api/tasks/:taskId/propose
+ *           (U-04 api がこれを直接 Lambda 呼び出しとして接続する)
  *
- * Handler path in CDK: "sabori-proposer/SaboriProposerLambdaHandler.handler"
- * (tsup entry: "sabori-proposer/SaboriProposerLambdaHandler")
+ * CDK でのハンドラーパス: "sabori-proposer/SaboriProposerLambdaHandler.handler"
+ * (tsup エントリー: "sabori-proposer/SaboriProposerLambdaHandler")
  *
- * Request flow:
- * 1. Zod validation of Lambda event payload
- * 2. SlackContext collection (if slackMessageRef provided)
- * 3. SaboriProposerAgent.propose() — 3-phase judgment
- * 4. Return proposal as JSON response
+ * リクエストフロー:
+ * 1. Lambda イベントペイロードの Zod バリデーション
+ * 2. SlackContext 収集 (slackMessageRef が指定されている場合)
+ * 3. SaboriProposerAgent.propose() — 3 フェーズ判定
+ * 4. 提案を JSON レスポンスとして返す
  *
- * Error handling (NFR):
- * - Zod validation failure → 400 (logged, no DLQ — malformed requests)
- * - Bedrock/DynamoDB runtime errors → propagate → Lambda retry → DLQ
+ * エラーハンドリング (NFR):
+ * - Zod バリデーション失敗 → 400 (ログ記録、DLQ なし — 不正リクエスト)
+ * - Bedrock/DynamoDB ランタイムエラー → 伝播 → Lambda リトライ → DLQ
  */
 
 /**
- * Lambda event schema for SaboriProposer invocation
- * (API Gateway Proxy or direct Lambda invoke)
+ * SaboriProposer 呼び出し用 Lambda イベントスキーマ
+ * (API Gateway プロキシまたは直接 Lambda 呼び出し)
  */
 const ProposalLambdaEventSchema = z.object({
   taskId: z.string().min(1),
@@ -59,7 +59,7 @@ interface LambdaResponse {
   body: string;
 }
 
-// Module-level singletons (reused across warm invocations)
+// モジュールレベルシングルトン (ウォーム呼び出し間で再利用)
 const bedrockClient = new BedrockClientAdapter(
   process.env["BEDROCK_REGION"] ?? "ap-northeast-1",
 );
@@ -73,7 +73,7 @@ const agent = new SaboriProposerAgent(
 const contextCollector = new ContextCollector();
 
 export const handler = async (event: unknown): Promise<LambdaResponse> => {
-  // [1] Zod validation
+  // [1] Zod バリデーション
   const parsed = ProposalLambdaEventSchema.safeParse(event);
   if (!parsed.success) {
     logError({
@@ -92,19 +92,19 @@ export const handler = async (event: unknown): Promise<LambdaResponse> => {
 
   const payload: ProposalLambdaEvent = parsed.data;
 
-  // [2] Collect SlackContext (optional — only if slackMessageRef is provided)
+  // [2] SlackContext 収集 (省略可 — slackMessageRef が指定されている場合のみ)
   let slackContext: SlackContext | undefined;
   if (payload.slackMessageRef) {
     try {
       const token = await contextCollector.getSlackToken();
-      // SlackContext collection: build minimal context from available data
-      // Full Slack API integration is in U-04; for now, build basic context
+      // SlackContext 収集: 利用可能データから最小限のコンテキストを構築
+      // 完全な Slack API 連携は U-04 で実装; ここでは基本コンテキストを構築
       slackContext = await collectMinimalSlackContext(
         token,
         payload.slackMessageRef,
       );
     } catch (error) {
-      // Non-fatal: continue without Slack context (NFR: Slack timeout → null)
+      // 非致命的: Slack コンテキストなしで続行 (NFR: Slack タイムアウト → null)
       logError({
         action: "sabori_proposer_slack_context_failed",
         error: error instanceof Error ? error.message : String(error),
@@ -113,7 +113,7 @@ export const handler = async (event: unknown): Promise<LambdaResponse> => {
     }
   }
 
-  // [3] Build TaskContext and run propose()
+  // [3] TaskContext を構築して propose() を実行
   const taskContext: TaskContext = {
     task: payload.task as import("@saboru/shared").Task,
     slackContext,

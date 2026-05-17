@@ -1,29 +1,28 @@
 /**
- * Task routes
+ * タスクルート
  *
- * GET    /tasks                      — List approved tasks (US-07)
- * POST   /tasks                      — Manually create task (US-08)
- * GET    /tasks/candidates            — List pending candidates (US-07)
- * POST   /tasks/candidates/:id/approve — Approve candidate (US-07)
- * DELETE /tasks/candidates/:id        — Reject candidate
- * GET    /tasks/:id                   — Get single task
- * PATCH  /tasks/:id                   — Update task inline (US-08)
- * DELETE /tasks/:id                   — Soft delete task (US-08)
+ * GET    /tasks                      — 承認済みタスク一覧 (US-07)
+ * POST   /tasks                      — タスク手動作成 (US-08)
+ * GET    /tasks/candidates            — 保留中の候補一覧 (US-07)
+ * POST   /tasks/candidates/:id/approve — 候補を承認 (US-07)
+ * DELETE /tasks/candidates/:id        — 候補を却下
+ * GET    /tasks/:id                   — 単一タスク取得
+ * PATCH  /tasks/:id                   — タスクインライン編集 (US-08)
+ * DELETE /tasks/:id                   — タスク論理削除 (US-08)
  */
 
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { z } from "zod";
-import type { AppEnv } from "../types.js";
-import { authMiddleware } from "../middleware/auth.js";
-import { NotFoundError } from "../errors.js";
-import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
-import type { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
 import {
   CreateTaskSchema,
-  UpdateTaskSchema,
   SOURCE_TYPE,
+  UpdateTaskSchema,
 } from "@saboru/shared";
+import { Hono } from "hono";
+import { NotFoundError } from "../errors.js";
+import { authMiddleware } from "../middleware/auth.js";
+import type { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
+import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import type { AppEnv } from "../types.js";
 
 export function createTasksRoute(
   taskRepository: DynamoTaskRepository,
@@ -31,17 +30,17 @@ export function createTasksRoute(
 ): Hono<AppEnv> {
   const tasks = new Hono<AppEnv>();
 
-  // Apply auth to all task routes
+  // 全タスクルートに認証を適用
   tasks.use("*", authMiddleware);
 
-  /** GET /tasks — Approved task list */
+  /** GET /tasks — 承認済みタスク一覧 */
   tasks.get("/", async (c) => {
     const userId = c.get("userId");
     const items = await taskRepository.findApprovedByUserId(userId);
     return c.json({ tasks: items });
   });
 
-  /** POST /tasks — Manual task creation */
+  /** POST /tasks — タスク手動作成 */
   tasks.post(
     "/",
     zValidator("json", CreateTaskSchema, (result, c) => {

@@ -1,15 +1,14 @@
 /**
- * Tests for config/env.ts environment variable accessor
+ * config/env.ts 環境変数アクセサーのテスト
  *
- * env.ts uses JavaScript getters that read process.env at call time,
- * so we do NOT need resetModules. We simply set/delete process.env
- * keys and then access env.* to trigger the getter.
+ * env.ts は呼び出し時に process.env を読み取る JavaScript ゲッターを使用するため、
+ * resetModules は不要。process.env のキーを設定/削除し、env.* アクセス時にゲッターが起動する。
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { env } from "../../config/env.js";
 
-// Store originals so we can restore after tests
+// テスト後に復元できるよう元の値を保存
 const REQUIRED_VARS = [
   "COGNITO_USER_POOL_ID",
   "COGNITO_CLIENT_ID",
@@ -30,14 +29,14 @@ type RequiredVar = (typeof REQUIRED_VARS)[number];
 const savedEnv: Partial<Record<RequiredVar | "ENVIRONMENT", string>> = {};
 
 beforeAll(() => {
-  // Save current values
+  // 現在の値を保存
   for (const key of [...REQUIRED_VARS, "ENVIRONMENT" as const]) {
     savedEnv[key] = process.env[key];
   }
 });
 
 afterAll(() => {
-  // Restore all values
+  // 全ての値を復元
   for (const key of [...REQUIRED_VARS, "ENVIRONMENT" as const]) {
     if (savedEnv[key] === undefined) {
       delete process.env[key];

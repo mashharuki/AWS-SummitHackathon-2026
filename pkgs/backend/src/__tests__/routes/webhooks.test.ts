@@ -1,13 +1,13 @@
 /**
- * Tests for POST /webhooks/slack
+ * POST /webhooks/slack のテスト
  *
- * Tests HMAC verification, url_verification challenge, and EventBridge forwarding.
- * Uses vi.mock to stub Secrets Manager and EventBridge clients.
+ * HMAC 検証、url_verification チャレンジ、EventBridge 转送をテストする。
+ * Secrets Manager と EventBridge クライアントは vi.mock でスタブする。
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Hono } from "hono";
 import { createHmac } from "crypto";
+import { Hono } from "hono";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
 
 const SIGNING_SECRET = "test-webhook-signing-secret";
@@ -22,7 +22,7 @@ function nowTs(): string {
   return String(Math.floor(Date.now() / 1000));
 }
 
-// Mock modules before any imports that reference them
+// 参照元インポートより前にモジュールをモック
 vi.mock("../../config/secrets.js", () => ({
   getSlackSigningSecret: vi.fn().mockResolvedValue(SIGNING_SECRET),
   getSlackClientSecret: vi.fn().mockResolvedValue("{}"),

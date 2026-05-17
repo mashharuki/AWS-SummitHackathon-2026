@@ -1,23 +1,22 @@
 import { ulid } from "ulidx";
 
 /**
- * Generate ULID (Universally Unique Lexicographically Sortable Identifier)
- * Used as time-sortable unique ID for DynamoDB SK
+ * ULID (Universally Unique Lexicographically Sortable Identifier) を生成する
+ * DynamoDB の SK として使用する時刻順ソート可能な一意 ID
  *
- * Q4 answer: using ulidx npm package
- * Reason: compatible with both browser/Node.js environments,
- *         based on crypto.getRandomValues()
+ * Q4 回答: ulidx npm パッケージを使用
+ * 理由: ブラウザ/Node.js 両環境に対応、crypto.getRandomValues() ベース
  *
- * Usage:
- * - TaskCandidate creation: SK = TASK_CAND#<ulid>
- * - Task creation: SK = TASK#<ulid>
+ * 使用箇所:
+ * - TaskCandidate 作成時: SK = TASK_CAND#<ulid>
+ * - Task 作成時: SK = TASK#<ulid>
  *
- * Business rules:
- * - Always generate SK with generateUlid() when creating TaskCandidate
- * - When converting TaskCandidate to Task, generate a NEW ULID (BR-04)
- * - ULID is uppercase Crockford's Base32 format (26 characters)
+ * ビジネスルール:
+ * - TaskCandidate 作成時は必ず generateUlid() で SK を生成する
+ * - TaskCandidate を Task に変換する際は新しい ULID を生成する (BR-04)
+ * - ULID は大文字の Crockford Base32 形式 (26 文字)
  *
- * @returns ULID string (26 characters)
+ * @returns ULID 文字列 (26 文字)
  */
 export function generateUlid(): string {
   return ulid();

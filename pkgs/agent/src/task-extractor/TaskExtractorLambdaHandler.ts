@@ -5,46 +5,46 @@ import { logError, logInfo } from "../utils/logger.js";
 import { TaskExtractorAgent } from "./TaskExtractorAgent.js";
 
 /**
- * Lambda handler for TaskExtractor (U-03a)
+ * TaskExtractor の Lambda ハンドラー (U-03a)
  *
- * Trigger: EventBridge custom bus (saborou-event-bus-{env})
- *          via SlackMessageRule (detail-type: "SlackMessage")
+ * トリガー: EventBridge カスタムバス (saborou-event-bus-{env})
+ *           SlackMessageRule 経由 (detail-type: "SlackMessage")
  *
- * Handler path in CDK: "task-extractor/TaskExtractorLambdaHandler.handler"
- * (tsup entry: "task-extractor/TaskExtractorLambdaHandler")
+ * CDK でのハンドラーパス: "task-extractor/TaskExtractorLambdaHandler.handler"
+ * (tsup エントリー: "task-extractor/TaskExtractorLambdaHandler")
  *
- * NFR Design:
- * - DP-03: Zod validation of EventBridge payload on entry
- * - ValidationException is logged and swallowed (no DLQ for malformed events)
- *   Rationale: Retrying a malformed event wastes resources; DLQ is for transient failures.
- * - Runtime errors (Bedrock, DynamoDB) propagate → Lambda retries → DLQ after maxReceiveCount
+ * NFR 設計:
+ * - DP-03: エントリー時に EventBridge ペイロードの Zod バリデーション
+ * - ValidationException はログ記録後に飲み込む (不正イベントは DLQ なし)
+ *   理由: 不正イベントのリトライはリソースの無駄; DLQ は一時的な障害用。
+ * - ランタイムエラー (Bedrock, DynamoDB) → 伝播 → Lambda リトライ → maxReceiveCount 後に DLQ
  */
 
-// Module-level singletons (reused across warm invocations)
+// モジュールレベルシングルトン (ウォーム呼び出し間で再利用)
 const bedrockClient = new BedrockClientAdapter(
   process.env["BEDROCK_REGION"] ?? "ap-northeast-1",
 );
 const repository = new DynamoTaskCandidateRepository();
 
 export const handler = async (event: unknown): Promise<void> => {
-  // [1] Validate EventBridge payload (DP-03: input-side)
+  // [1] EventBridge ペイロードを検証 (DP-03: 入力側)
   const parsed = SlackEventPayloadSchema.safeParse(event);
   if (!parsed.success) {
     logError({
       action: "invalid_input",
       errors: parsed.error.issues,
     });
-    // Return without throwing — malformed events should NOT go to DLQ
+    // スローせずに返す — 不正イベントは DLQ に送らない
     return;
   }
 
   const payload = parsed.data;
 
-  // [2] Extract task
+  // [2] タスクを抽出
   const agent = new TaskExtractorAgent(bedrockClient, repository);
   const result = await agent.extractTask(payload);
 
-  // [3] Log outcome
+  // [3] 結果をログ
   if (result.skipped) {
     logInfo({
       action: "skipped",

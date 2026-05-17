@@ -1,38 +1,38 @@
+import { Hono } from "hono";
 /**
- * Webhook Lambda entry point
+ * Webhook Lambda エントリーポイント
  *
- * Separate Lambda function for Slack Webhook reception.
- * Handler name: webhook.handler (configured in CDK WebhookStack)
+ * Slack Webhook 受信用の別途 Lambda 関数。
+ * ハンドラー名: webhook.handler (CDK WebhookStack で設定)
  *
- * Isolation rationale:
- * - Needs SLACK_SIGNING_SECRET_ARN env var (not needed by main API)
- * - Separate execution role with minimal permissions
- * - EventBridge PutEvents permission only
+ * 分離の理由:
+ * - SLACK_SIGNING_SECRET_ARN 環境変数が必要 (メイン API では不要)
+ * - 最小権限の別途実行ロール
+ * - EventBridge PutEvents 権限のみ
  *
- * Environment variables:
- * - SLACK_SIGNING_SECRET_ARN: Secrets Manager ARN for Slack signing secret
- * - EVENT_BUS_NAME: EventBridge event bus name
+ * 環境変数:
+ * - SLACK_SIGNING_SECRET_ARN: Slack 署名シークレットの Secrets Manager ARN
+ * - EVENT_BUS_NAME: EventBridge イベントバス名
  *
- * Note: This file is a Lambda entrypoint adapter only.
- * All business logic resides in routes/webhooks.ts.
- * Coverage is excluded because it cannot be exercised outside the Lambda runtime.
+ * 注: このファイルは Lambda エントリーポイントアダプターのみ。
+ * 全ビジネスロジックは routes/webhooks.ts に存在する。
+ * Lambda ランタイム外では動作できないためカバレッジは除外する。
  */
 /* istanbul ignore file */
 import { handle } from "hono/aws-lambda";
-import { Hono } from "hono";
-import { requestLogger } from "./middleware/logger.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { requestLogger } from "./middleware/logger.js";
 import { webhooksRoute } from "./routes/webhooks.js";
 
 const webhookApp = new Hono();
 
-// Middleware
+// ミドルウェア
 webhookApp.use("*", requestLogger);
 
-// Only the webhook route
+// Webhook ルートのみ許可する
 webhookApp.route("/webhooks", webhooksRoute);
 
-// Error handler
+// エラーハンドラー
 webhookApp.onError(errorHandler);
 
 /* istanbul ignore next */

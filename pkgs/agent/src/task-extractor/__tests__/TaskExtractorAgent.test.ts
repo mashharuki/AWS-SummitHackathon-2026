@@ -1,14 +1,14 @@
 import type {
+  ConverseCommandInput,
+  ConverseCommandOutput,
+} from "@aws-sdk/client-bedrock-runtime";
+import type {
   ApprovedTask,
   ITaskCandidateRepository,
   TaskCandidate,
 } from "@saboru/shared";
 import { DDB_PREFIX, TASK_CANDIDATE_STATUS } from "@saboru/shared";
-import type {
-  ConverseCommandInput,
-  ConverseCommandOutput,
-} from "@aws-sdk/client-bedrock-runtime";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { IBedrockClient } from "../../bedrock/IBedrockClient.js";
 import type { SlackEventPayload } from "../../types/events.js";
 import { TaskExtractorAgent } from "../TaskExtractorAgent.js";
@@ -54,7 +54,7 @@ class MockTaskCandidateRepository implements ITaskCandidateRepository {
   async create(
     candidate: Omit<TaskCandidate, "PK" | "SK">,
   ): Promise<TaskCandidate> {
-    // Extract _userId from extended payload (internal convention)
+    // 拡張ペイロードから _userId を取り出す (内部規約)
     const extended = candidate as Omit<TaskCandidate, "PK" | "SK"> & {
       _userId?: string;
     };
@@ -80,7 +80,7 @@ class MockTaskCandidateRepository implements ITaskCandidateRepository {
 }
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────────────────────────
 
 function makeTaskBedrockResponse(
@@ -136,7 +136,7 @@ const testEvent: SlackEventPayload = {
 };
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("TaskExtractorAgent", () => {
@@ -145,7 +145,7 @@ describe("TaskExtractorAgent", () => {
   let agent: TaskExtractorAgent;
 
   beforeEach(() => {
-    // Set required env var for pseudonymize()
+    // pseudonymize() に必要な環境変数を設定
     process.env["PSEUDONYMIZE_SALT"] = "test-salt-12345";
 
     mockBedrock = new MockBedrockClient(makeTaskBedrockResponse());
@@ -171,7 +171,7 @@ describe("TaskExtractorAgent", () => {
       const result = await agent.extractTask(testEvent);
       if (result.skipped) throw new Error("type narrowing");
 
-      // Requester should be a SHA-256 hex (64 chars), not the raw "U12345"
+      // 依頼者は生の "U12345" ではなく SHA-256 ハッシュ (64 文字) であるべき
       expect(result.candidate.requester).not.toBe("U12345");
       expect(result.candidate.requester).toHaveLength(64);
       expect(result.candidate.requester).toMatch(/^[0-9a-f]{64}$/);

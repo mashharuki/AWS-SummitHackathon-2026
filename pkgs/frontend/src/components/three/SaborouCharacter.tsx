@@ -1,13 +1,13 @@
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 /**
  * サボローキャラクター 3D コンポーネント
  * NFR-DESIGN-7: prefers-reduced-motion 対応
  * Three.js オブジェクトを命令型で生成（型エラー回避）
  */
 import { useFrame, useThree } from "@react-three/fiber";
+import type { Verdict } from "@saboru/shared";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import type { Verdict } from "@saboru/shared";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface SaborouCharacterProps {
   verdict: Verdict | null;
@@ -46,11 +46,11 @@ export function SaborouCharacter({
       metalness: 0.1,
     });
 
-    // Body
+    // ボディ
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), mat);
     group.add(body);
 
-    // Head
+    // 頭
     const head = new THREE.Mesh(
       new THREE.SphereGeometry(0.35, 32, 32),
       mat.clone(),
@@ -58,7 +58,7 @@ export function SaborouCharacter({
     head.position.set(0, 0.8, 0);
     group.add(head);
 
-    // Eyes
+    // 目
     const whiteMat = new THREE.MeshStandardMaterial({ color: "#FFFFFF" });
     const darkMat = new THREE.MeshStandardMaterial({ color: "#1A1A1A" });
 
@@ -88,13 +88,13 @@ export function SaborouCharacter({
       group.add(pupil);
     }
 
-    // Smile
+    // 口 (笑顔)
     const mouthGeo = new THREE.TorusGeometry(0.08, 0.02, 8, 16, Math.PI);
     const mouthMesh = new THREE.Mesh(mouthGeo, darkMat.clone());
     mouthMesh.position.set(0, 0.72, 0.33);
     group.add(mouthMesh);
 
-    // Lights
+    // ライト
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     group.add(ambient);
     const dirLight = new THREE.DirectionalLight(0xffffff, 1);

@@ -1,17 +1,17 @@
 /**
- * DynamoDB implementation of ITaskCandidateRepository
+ * ITaskCandidateRepository の DynamoDB 実装
  *
- * Access patterns:
+ * アクセスパターン:
  * - Query PK=USER#<userId> SK begins_with TASK_CAND# — findAllByUserId
  * - GetItem — findById
  * - PutItem — create
- * - TransactWriteItems Delete+Put — approve (atomic migration to Tasks)
- * - DeleteItem — delete (rejection)
+ * - TransactWriteItems Delete+Put — approve (タスクへのアトミック移行)
+ * - DeleteItem — delete (却下)
  */
 
 import {
-  DynamoDBClient,
   DeleteItemCommand,
+  type DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
   QueryCommand,
@@ -19,20 +19,19 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type {
+  ApprovedTask,
   ITaskCandidateRepository,
-  TaskCandidate,
   Task,
+  TaskCandidate,
 } from "@saboru/shared";
 import {
-  generateUlid,
-  toIsoString,
+  DDB_PREFIX,
   DynamoWriteFailedError,
   TASK_CANDIDATE_TTL_DAYS,
-  DDB_PREFIX,
   TASK_STATUS,
-  SOURCE_TYPE,
+  generateUlid,
+  toIsoString,
 } from "@saboru/shared";
-import type { ApprovedTask } from "@saboru/shared";
 
 export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
   constructor(
@@ -50,7 +49,7 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
           ":pk": `${DDB_PREFIX.USER}${userId}`,
           ":prefix": DDB_PREFIX.TASK_CAND,
         }),
-        ScanIndexForward: false, // newest first
+        ScanIndexForward: false, // 新しい順に返す
       }),
     );
 

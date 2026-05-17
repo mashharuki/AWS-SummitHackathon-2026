@@ -1,8 +1,8 @@
 import { AppError } from "./AppError";
 
 /**
- * Bedrock converse API timeout (NFR-01: 5 second limit)
- * On timeout, user is shown "retry" toast notification
+ * Bedrock converse API タイムアウト (NFR-01: 5秒制限)
+ * タイムアウト時、ユーザーに "再試行" トースト通知を表示する
  */
 export class BedrockTimeoutError extends AppError {
   constructor(message = "Bedrock API response timed out (5s limit)") {
@@ -12,9 +12,9 @@ export class BedrockTimeoutError extends AppError {
 }
 
 /**
- * Bedrock token cost limit exceeded (NFR-06: $50/month limit)
- * Prevented in advance by guardTokenLimit() preflight check
- * On limit exceeded: graceful degradation (task displayed without proposal)
+ * Bedrock トークンコスト上限超過 (NFR-06: $50/月制限)
+ * guardTokenLimit() のプリフライトチェックで事前に防止する
+ * 上限超過時: グレースフルデグラデーション (提案なしでタスクを表示)
  */
 export class BedrockCostExceededError extends AppError {
   constructor(message = "Bedrock token cost limit exceeded") {
@@ -24,8 +24,8 @@ export class BedrockCostExceededError extends AppError {
 }
 
 /**
- * Cognito JWT expired
- * Frontend attempts auto-refresh on 401 reception
+ * Cognito JWT 期限切れ
+ * フロントエンドは 401 受信時に自動リフレッシュを試みる
  */
 export class TokenExpiredError extends AppError {
   constructor(message = "Cognito JWT token expired") {
@@ -35,8 +35,8 @@ export class TokenExpiredError extends AppError {
 }
 
 /**
- * DynamoDB write failure
- * Wraps TransactWriteItems ConditionalCheckFailedException etc.
+ * DynamoDB 書き込み失敗
+ * TransactWriteItems の ConditionalCheckFailedException 等をラップする
  */
 export class DynamoWriteFailedError extends AppError {
   constructor(message = "DynamoDB write operation failed", details?: unknown) {
@@ -46,7 +46,7 @@ export class DynamoWriteFailedError extends AppError {
 }
 
 /**
- * Type guard: narrows unknown type to AppError safely
+ * 型ガード: unknown 型を AppError に安全に絞り込む
  *
  * @example
  * try {
@@ -56,7 +56,7 @@ export class DynamoWriteFailedError extends AppError {
  *     logger.error({ code: e.code, details: e.details });
  *     return res.status(e.statusCode).json(e.serialize());
  *   }
- *   throw e; // Unknown errors propagate upward
+ *   throw e; // 未知のエラーは上位に伝播させる
  * }
  */
 export function isAppError(e: unknown): e is AppError {
@@ -64,5 +64,5 @@ export function isAppError(e: unknown): e is AppError {
 }
 
 // Re-exports
-export { AppError };
 export type { ErrorCode, SerializedError } from "./AppError";
+export { AppError };

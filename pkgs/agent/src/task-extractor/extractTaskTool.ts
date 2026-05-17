@@ -2,16 +2,16 @@ import type { Tool } from "@aws-sdk/client-bedrock-runtime";
 import { z } from "zod";
 
 /**
- * Bedrock Tool definition for task attribute extraction (DP-02)
+ * タスク属性抽出の Bedrock Tool 定義 (DP-02)
  *
- * Tool name: "extract_task_attributes"
- * Used with toolChoice: { tool: { name: "extract_task_attributes" } }
- * to FORCE exactly one tool invocation per Bedrock call.
+ * ツール名: "extract_task_attributes"
+ * toolChoice: { tool: { name: "extract_task_attributes" } } と併用して
+ * Bedrock 呼び出しごとにツール呼び出しを 1 回強制する。
  *
- * This eliminates the need to handle:
- * - Text responses (stopReason === "end_turn")
- * - Multiple tool calls
- * - No tool call
+ * これにより以下を処理する必要がなくなる:
+ * - テキストレスポンス (stopReason === "end_turn")
+ * - 複数のツール呼び出し
+ * - ツール呼び出しなし
  */
 export const EXTRACT_TASK_TOOL_NAME = "extract_task_attributes";
 

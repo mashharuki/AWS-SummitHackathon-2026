@@ -1,14 +1,14 @@
 /**
- * Tests for connection routes
+ * 接続ルートのテスト
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { Hono } from "hono";
-import { createConnectionsRoute } from "../../routes/connections.js";
-import type { DynamoServiceConnectionRepository } from "../../repositories/DynamoServiceConnectionRepository.js";
 import type { ServiceConnection } from "@saboru/shared";
-import type { AppEnv } from "../../types.js";
+import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
+import type { DynamoServiceConnectionRepository } from "../../repositories/DynamoServiceConnectionRepository.js";
+import { createConnectionsRoute } from "../../routes/connections.js";
+import type { AppEnv } from "../../types.js";
 
 const MOCK_USER_ID = "user-conn-test";
 

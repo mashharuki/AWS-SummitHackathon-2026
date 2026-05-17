@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 /**
- * Honne data recording request validation
- * Used for request body validation of POST /api/tasks/:id/honne
+ * 本音データ記録リクエストのバリデーション
+ * POST /api/tasks/:id/honne のリクエストボディバリデーションに使用
  *
- * Validation rules:
- * - quick_reply type: content must be one of 4 fixed QuickReplyType values (BR-10)
- * - free_text type: content must be 1-500 chars string
+ * バリデーションルール:
+ * - quick_reply タイプ: content は 4 種類の固定 QuickReplyType 値のいずれか (BR-10)
+ * - free_text タイプ: content は 1〜500 文字の文字列
  */
 export const CreateHonneSchema = z.discriminatedUnion("type", [
   z.object({

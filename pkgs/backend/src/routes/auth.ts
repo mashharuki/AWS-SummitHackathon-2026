@@ -1,31 +1,31 @@
 /**
- * Auth routes — Slack OAuth flow
+ * 認証ルート — Slack OAuth フロー
  *
- * GET /auth/slack          — Redirect to Slack OAuth authorization page
- * GET /auth/slack/callback — Handle OAuth callback, exchange code for token
+ * GET /auth/slack          — Slack OAuth 認証ページへリダイレクト
+ * GET /auth/slack/callback — OAuth コールバックを処理しトークンと交換
  *
- * FR-03 / US-11: Slack Workspace連携（OAuth 2.0）
+ * FR-03 / US-11: Slack ワークスペース連携（OAuth 2.0）
  *
- * OAuth flow:
- * 1. User clicks "Connect Slack" in UI
- * 2. Frontend calls GET /auth/slack → redirect to Slack OAuth
- * 3. Slack redirects to GET /auth/slack/callback?code=xxx
- * 4. Backend exchanges code for bot token via Slack API
- * 5. Token stored in Secrets Manager, ARN saved to ServiceConnections DynamoDB
+ * OAuth フロー:
+ * 1. ユーザーが UI で "Slack と連携" をクリック
+ * 2. フロントエンドが GET /auth/slack を呼び出し → Slack OAuth にリダイレクト
+ * 3. Slack が GET /auth/slack/callback?code=xxx にリダイレクト
+ * 4. バックエンドが Slack API 経由で code を bot トークンと交換
+ * 5. トークンを Secrets Manager に保存し、ARN を ServiceConnections DynamoDB に登録
  */
 
-import { Hono } from "hono";
-import type { AppEnv } from "../types.js";
-import { authMiddleware } from "../middleware/auth.js";
-import type { DynamoServiceConnectionRepository } from "../repositories/DynamoServiceConnectionRepository.js";
-import { getSlackClientSecret } from "../config/secrets.js";
-import { env } from "../config/env.js";
 import {
-  SecretsManagerClient,
   CreateSecretCommand,
+  SecretsManagerClient,
   UpdateSecretCommand,
 } from "@aws-sdk/client-secrets-manager";
 import { toIsoString } from "@saboru/shared";
+import { Hono } from "hono";
+import { env } from "../config/env.js";
+import { getSlackClientSecret } from "../config/secrets.js";
+import { authMiddleware } from "../middleware/auth.js";
+import type { DynamoServiceConnectionRepository } from "../repositories/DynamoServiceConnectionRepository.js";
+import type { AppEnv } from "../types.js";
 
 const SLACK_OAUTH_SCOPES = [
   "channels:history",
@@ -47,18 +47,18 @@ export function createAuthRoute(
 
   /**
    * GET /auth/slack
-   * Initiates Slack OAuth flow by redirecting to Slack's authorization page.
-   * Requires authentication (userId needed to associate the connection).
+   * Slack OAuth フローを開始するため、Slack の認証ページにリダイレクトする。
+   * 認証が必要 (userId を使って接続を関連付けるため)。
    */
   auth.get("/slack", authMiddleware, (c) => {
     const userId = c.get("userId");
-    const clientId = env.COGNITO_CLIENT_ID; // Slack client ID from env (reuse env accessor pattern)
-    // Note: In production, SLACK_CLIENT_ID should be its own env var.
-    // For this implementation we derive it from Secrets Manager at callback time.
+    const clientId = env.COGNITO_CLIENT_ID; // 環境変数から取得する Slack クライアント ID
+    // 注: 本番環境では SLACK_CLIENT_ID を専用の環境変数にするべき。
+    // この実装ではコールバック時に Secrets Manager から取得する。
 
     const redirectUri = `${c.req.url.replace("/auth/slack", "/auth/slack/callback")}`;
 
-    // State parameter encodes userId to recover it at callback
+    // state パラメータに userId をエンコードしてコールバック時に復元する
     const state = Buffer.from(JSON.stringify({ userId })).toString("base64url");
 
     const params = new URLSearchParams({
@@ -73,7 +73,7 @@ export function createAuthRoute(
 
   /**
    * GET /auth/slack/callback
-   * Exchanges the OAuth code for a bot token and persists the connection.
+   * OAuth コードを bot トークンと交換し、接続を永続化する。
    */
   auth.get("/slack/callback", async (c) => {
     const code = c.req.query("code");
@@ -104,7 +104,7 @@ export function createAuthRoute(
       );
     }
 
-    // Recover userId from state
+    // state から userId を復元
     let userId: string;
     try {
       const decoded = JSON.parse(

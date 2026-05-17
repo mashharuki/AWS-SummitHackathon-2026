@@ -1,11 +1,11 @@
 /**
- * Tests for honne-reply service
+ * honne-reply サービスのテスト
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  getQuickReplyMessage,
   getFreeTextReply,
+  getQuickReplyMessage,
 } from "../../services/honne-reply.js";
 
 describe("getQuickReplyMessage", () => {

@@ -1,16 +1,16 @@
 /**
- * Tests for auth routes (minimal - OAuth flow requires external Slack API)
+ * 認証ルートのテスト (最小限 — OAuth フローには外部 Slack API が必要)
  *
- * GET /auth/slack — redirect initiation
- * GET /auth/slack/callback — error cases (invalid state, missing params)
+ * GET /auth/slack — リダイレクト開始
+ * GET /auth/slack/callback — エラーケース (無効なステート、パラメーター不足)
  */
 
-import { describe, it, expect, vi } from "vitest";
 import { Hono } from "hono";
-import { createAuthRoute } from "../../routes/auth.js";
-import type { DynamoServiceConnectionRepository } from "../../repositories/DynamoServiceConnectionRepository.js";
-import type { AppEnv } from "../../types.js";
+import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
+import type { DynamoServiceConnectionRepository } from "../../repositories/DynamoServiceConnectionRepository.js";
+import { createAuthRoute } from "../../routes/auth.js";
+import type { AppEnv } from "../../types.js";
 
 vi.mock("../../config/env.js", () => ({
   env: {

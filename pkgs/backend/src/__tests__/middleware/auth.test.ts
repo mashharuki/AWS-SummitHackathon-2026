@@ -1,13 +1,13 @@
 /**
- * Tests for auth middleware
+ * 認証ミドルウェアのテスト
  *
- * Tests that:
- * - userId is extracted from JWT claims and set as Hono variable
- * - 401 is returned when claims are missing
+ * テスト内容:
+ * - JWT クレームから userId が抽出され Hono 変数として設定されること
+ * - クレームがない場合に 401 が返されること
  */
 
-import { describe, it, expect } from "vitest";
 import { Hono } from "hono";
+import { describe, expect, it } from "vitest";
 import { authMiddleware } from "../../middleware/auth.js";
 import { errorHandler } from "../../middleware/error-handler.js";
 import type { AppEnv } from "../../types.js";
@@ -16,7 +16,7 @@ function buildApp(injectClaims?: { sub?: string }) {
   const app = new Hono<AppEnv>();
 
   app.use("*", async (c, next) => {
-    // Simulate Lambda event injection via c.env
+    // c.env 経由で Lambda イベント注入をシミュレート
     if (injectClaims !== undefined) {
       (c as unknown as { env: unknown }).env = {
         requestContext: {
@@ -28,7 +28,7 @@ function buildApp(injectClaims?: { sub?: string }) {
         },
       };
     }
-    // When injectClaims is undefined, c.env stays as-is (no requestContext)
+    // injectClaims が undefined の場合、c.env はそのまま (requestContext なし)
     await next();
   });
 
@@ -39,7 +39,7 @@ function buildApp(injectClaims?: { sub?: string }) {
     return c.json({ userId });
   });
 
-  // Register error handler so thrown AppErrors become proper HTTP responses
+  // スローされた AppError を適切な HTTP レスポンスに変換するためエラーハンドラーを登録
   app.onError(errorHandler);
 
   return app;

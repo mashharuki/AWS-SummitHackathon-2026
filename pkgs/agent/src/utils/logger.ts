@@ -1,10 +1,10 @@
 /**
- * Structured JSON logger (DP-07)
+ * 構造化 JSON ロガー (DP-07)
  *
- * Purpose: Emit CloudWatch-queryable JSON logs without external dependencies.
- * PII Policy: Never log message text, requester name, or Slack user IDs.
+ * 目的: 外部依存なしに CloudWatch クエリ可能な JSON ログを出力する。
+ * PII ポリシー: メッセージ本文・依頼者名・ Slack ユーザー ID は絶対にログしない。
  *
- * CloudWatch Insights query example:
+ * CloudWatch Insights クエリ例:
  *   fields @timestamp, level, action, sourceRef
  *   | filter unit = "task-extractor" and level = "ERROR"
  *   | sort @timestamp desc

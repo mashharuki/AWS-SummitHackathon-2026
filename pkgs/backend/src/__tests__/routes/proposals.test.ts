@@ -1,16 +1,16 @@
 /**
- * Tests for GET /tasks/:taskId/proposal
+ * GET /tasks/:taskId/proposal のテスト
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { Hono } from "hono";
-import { createProposalsRoute } from "../../routes/proposals.js";
-import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
-import type { DynamoProposalRepository } from "../../repositories/DynamoProposalRepository.js";
-import type { Task, Proposal } from "@saboru/shared";
-import type { AppEnv } from "../../types.js";
 import type { SaboriProposerAgent } from "@saboru/agent";
+import type { Proposal, Task } from "@saboru/shared";
+import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
+import type { DynamoProposalRepository } from "../../repositories/DynamoProposalRepository.js";
+import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
+import { createProposalsRoute } from "../../routes/proposals.js";
+import type { AppEnv } from "../../types.js";
 
 const MOCK_USER_ID = "user-proposal-test";
 
@@ -139,7 +139,7 @@ describe("GET /tasks/:taskId/proposal (SSE stream=true)", () => {
     const app = buildTestApp(taskRepo, proposalRepo, agent);
 
     const res = await app.request("/tasks/T01/proposal?stream=true");
-    // SSE streaming returns 200 with text/event-stream content type
+    // SSE ストリーミングは 200 と text/event-stream content-type を返す
     expect(res.status).toBe(200);
     const contentType = res.headers.get("content-type") ?? "";
     expect(contentType).toContain("text/event-stream");
@@ -147,7 +147,7 @@ describe("GET /tasks/:taskId/proposal (SSE stream=true)", () => {
   });
 
   it("streams from agent when no cache and stream=true", async () => {
-    // proposeStream is an async generator that yields delta events
+    // proposeStream はデルタイベントを yield する非同期ジェネレーター
     async function* mockStream() {
       yield {
         type: "verdict" as const,
@@ -189,7 +189,7 @@ describe("GET /tasks/:taskId/proposal (SSE stream=true)", () => {
     const app = buildTestApp(taskRepo, proposalRepo, agent);
 
     const res = await app.request("/tasks/T01/proposal?stream=true");
-    // Stream starts OK even if generator throws mid-way
+    // ジェネレーターが途中でスローしてもストリームは正常に開始される
     expect(res.status).toBe(200);
   });
 
@@ -224,7 +224,7 @@ describe("GET /tasks/:taskId/proposal (SSE stream=true)", () => {
     const res = await app.request("/tasks/T01/proposal?stream=true");
     expect(res.status).toBe(200);
     const text = await res.text();
-    // SSE body should contain done event with cached:true
+    // SSE ボディに cached:true を含む done イベントが存在すること
     expect(text).toContain('"cached":true');
   });
 });

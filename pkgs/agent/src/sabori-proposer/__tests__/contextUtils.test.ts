@@ -1,5 +1,5 @@
+import type { Task } from "@saboru/shared";
 import { describe, expect, it } from "vitest";
-import type { TaskContext, SlackContext } from "../types.js";
 import {
   assembleContextNarrative,
   calcNextCheckAt,
@@ -7,10 +7,10 @@ import {
   derivePsychSignals,
   determineContextCoverage,
 } from "../contextUtils.js";
-import type { Task } from "@saboru/shared";
+import type { SlackContext, TaskContext } from "../types.js";
 
 // ─────────────────────────────────────────────
-// Test fixtures
+// テストフィクスチャー
 // ─────────────────────────────────────────────
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -42,11 +42,11 @@ function makeSlackContext(overrides: Partial<SlackContext> = {}): SlackContext {
   };
 }
 
-// Future deadline: ~30 hours from now
+// 未来の期限: 現在から約 30 時間後
 const futureDeadline = new Date(Date.now() + 30 * 60 * 60 * 1000).toISOString();
-// Near deadline: ~3 hours from now
+// 近い期限: 現在から約 3 時間後
 const nearDeadline = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
-// Past deadline
+// 過去の期限
 const pastDeadline = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
 // ─────────────────────────────────────────────
@@ -213,7 +213,7 @@ describe("derivePsychSignals", () => {
     });
 
     it("is 'low' when deadline is between 4 and 24 hours away (borderline zone)", () => {
-      // 12 hours from now — in the 4h-24h borderline zone
+      // 12 時間後 — 4h～24h のボーダーラインゾーン
       const borderlineDeadline = new Date(
         Date.now() + 12 * 60 * 60 * 1000,
       ).toISOString();
@@ -221,7 +221,7 @@ describe("derivePsychSignals", () => {
         task: makeTask({ deadline: borderlineDeadline }),
       };
       const signals = derivePsychSignals(context);
-      // 4h–24h: treated as 'low' per implementation
+      // 4h～24h: 実装により 'low' として扱われる
       expect(signals?.effortOutcomeExpectancy).toBe("low");
     });
 
@@ -242,7 +242,7 @@ describe("derivePsychSignals", () => {
         }),
       };
       const signals = derivePsychSignals(context);
-      // reminderCount===1 and no urgency → treated as low-medium → "low"
+      // reminderCount===1 かつ urgency キーワードなし → low-medium 扱い → "low"
       expect(signals?.externalPressureLevel).toBe("low");
     });
   });
@@ -284,7 +284,7 @@ describe("deriveContextSignals", () => {
     const signals = deriveContextSignals(context);
     expect(signals.deadlineMinutes).toBeDefined();
     expect(typeof signals.deadlineMinutes).toBe("number");
-    // ~30 hours * 60 = ~1800 minutes (allow ±5 min tolerance)
+    // 約 30 時間 * 60 = 約 1800 分 (許容誤差 ±5 分)
     expect(signals.deadlineMinutes!).toBeGreaterThan(1700);
     expect(signals.deadlineMinutes!).toBeLessThan(1900);
   });
@@ -376,7 +376,7 @@ describe("assembleContextNarrative", () => {
       task: makeTask({ description: undefined }),
     };
     const narrative = assembleContextNarrative(context);
-    // Task without description should not have '説明:' line
+    // description なしのタスクは '説明:' 行を持つべきでない
     expect(narrative).not.toContain("- 説明:");
   });
 });

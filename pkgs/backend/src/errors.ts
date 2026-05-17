@@ -1,8 +1,8 @@
 /**
- * Application error classes for U-04 API
+ * U-04 API 向けアプリケーションエラークラス
  *
- * Design: AppError carries statusCode + code for consistent JSON error responses.
- * The global error handler in middleware/error-handler.ts inspects instanceof AppError.
+ * 設計: AppError は一貫した JSON エラーレスポンスのため statusCode + code を保持する。
+ * middleware/error-handler.ts のグローバルエラーハンドラーが instanceof AppError をチェックする。
  */
 
 import type { StatusCode } from "hono/utils/http-status";

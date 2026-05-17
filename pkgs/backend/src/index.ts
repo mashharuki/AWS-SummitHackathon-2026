@@ -1,59 +1,59 @@
 /**
- * Hono app factory — U-04 API entrypoint
+ * Hono アプリファクトリー — U-04 API エントリーポイント
  *
- * Registers all routes and middleware on a single Hono instance.
- * This module is imported by:
- * - handler.ts (Lambda entrypoint via hono/aws-lambda)
- * - Local dev: direct execution with tsx
+ * 全ルートとミドルウェアを単一の Hono インスタンスに登録する。
+ * このモジュールのインポーター:
+ * - handler.ts (hono/aws-lambda 経由の Lambda エントリーポイント)
+ * - ローカル開発: tsx で直接実行
  *
- * Route layout:
- * GET    /health                         — no auth
- * GET    /auth/slack                     — Slack OAuth initiation (auth required)
- * GET    /auth/slack/callback            — Slack OAuth callback
- * GET    /tasks                          — Approved task list
- * POST   /tasks                          — Manual task create
- * GET    /tasks/candidates               — Pending candidates
- * POST   /tasks/candidates/:id/approve   — Approve candidate
- * DELETE /tasks/candidates/:id           — Reject candidate
- * GET    /tasks/:id                      — Single task
- * PATCH  /tasks/:id                      — Inline edit
- * DELETE /tasks/:id                      — Soft delete
- * GET    /tasks/:taskId/proposal         — Sabori proposal (SSE / sync)
- * POST   /tasks/:taskId/honne            — Honne recording
- * GET    /connections                    — Service connections
- * DELETE /connections/:service           — Disconnect service
+ * ルートレイアウト:
+ * GET    /health                         — 認証なし
+ * GET    /auth/slack                     — Slack OAuth 開始 (認証必要)
+ * GET    /auth/slack/callback            — Slack OAuth コールバック
+ * GET    /tasks                          — 承認済みタスク一覧
+ * POST   /tasks                          — タスク手動作成
+ * GET    /tasks/candidates               — 保留中の候補
+ * POST   /tasks/candidates/:id/approve   — 候補を承認
+ * DELETE /tasks/candidates/:id           — 候補を却下
+ * GET    /tasks/:id                      — 単一タスク
+ * PATCH  /tasks/:id                      — インライン編集
+ * DELETE /tasks/:id                      — 論理削除
+ * GET    /tasks/:taskId/proposal         — サボり提案 (SSE / 同期)
+ * POST   /tasks/:taskId/honne            — 本音記録
+ * GET    /connections                    — サービス接続
+ * DELETE /connections/:service           — サービスの接続解除
  */
 
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { serve } from "@hono/node-server";
 import { swaggerUI } from "@hono/swagger-ui";
-import { Hono } from "hono";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   BedrockClientAdapter,
-  SaboriProposerAgent,
   PersonaRenderer,
+  SaboriProposerAgent,
 } from "@saboru/agent";
-import { requestLogger } from "./middleware/logger.js";
+import { Hono } from "hono";
+import { env } from "./config/env.js";
+import { openApiDoc } from "./config/openapi.js";
 import { errorHandler } from "./middleware/error-handler.js";
-import { healthRoute } from "./routes/health.js";
-import { createAuthRoute } from "./routes/auth.js";
-import { createTasksRoute } from "./routes/tasks.js";
-import { createProposalsRoute } from "./routes/proposals.js";
-import { createHonneRoute } from "./routes/honne.js";
-import { createConnectionsRoute } from "./routes/connections.js";
-import { DynamoUserRepository } from "./repositories/DynamoUserRepository.js";
+import { requestLogger } from "./middleware/logger.js";
+import { DynamoHonneRepository } from "./repositories/DynamoHonneRepository.js";
+import { DynamoProposalRepository } from "./repositories/DynamoProposalRepository.js";
 import { DynamoServiceConnectionRepository } from "./repositories/DynamoServiceConnectionRepository.js";
 import { DynamoTaskCandidateRepository } from "./repositories/DynamoTaskCandidateRepository.js";
 import { DynamoTaskRepository } from "./repositories/DynamoTaskRepository.js";
-import { DynamoProposalRepository } from "./repositories/DynamoProposalRepository.js";
-import { DynamoHonneRepository } from "./repositories/DynamoHonneRepository.js";
-import { env } from "./config/env.js";
-import { openApiDoc } from "./config/openapi.js";
+import { DynamoUserRepository } from "./repositories/DynamoUserRepository.js";
+import { createAuthRoute } from "./routes/auth.js";
+import { createConnectionsRoute } from "./routes/connections.js";
+import { healthRoute } from "./routes/health.js";
+import { createHonneRoute } from "./routes/honne.js";
+import { createProposalsRoute } from "./routes/proposals.js";
+import { createTasksRoute } from "./routes/tasks.js";
 
-// Initialize DynamoDB client (shared across all repositories)
+// DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({ region: "ap-northeast-1" });
 
-// Initialize repositories
+// リポジトリを初期化
 const userRepository = new DynamoUserRepository(
   dynamoClient,
   env.DYNAMODB_TABLE_USERS,

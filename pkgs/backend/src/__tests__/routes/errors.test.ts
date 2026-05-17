@@ -1,14 +1,14 @@
 /**
- * Tests for application error classes
+ * アプリケーションエラークラスのテスト
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   AppError,
-  UnauthorizedError,
+  ConflictError,
   ForbiddenError,
   NotFoundError,
-  ConflictError,
+  UnauthorizedError,
   ValidationError,
 } from "../../errors.js";
 

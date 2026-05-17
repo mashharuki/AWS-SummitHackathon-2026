@@ -1,17 +1,17 @@
 /**
- * Tests for global error handler middleware
+ * グローバルエラーハンドラーミドルウェアのテスト
  */
 
-import { describe, it, expect } from "vitest";
 import { Hono } from "hono";
-import { errorHandler } from "../../middleware/error-handler.js";
+import { describe, expect, it } from "vitest";
 import {
   AppError,
-  NotFoundError,
-  ForbiddenError,
-  UnauthorizedError,
   ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
 } from "../../errors.js";
+import { errorHandler } from "../../middleware/error-handler.js";
 
 function buildApp(routeHandler: () => never | Response) {
   const app = new Hono();

@@ -1,17 +1,17 @@
 /**
- * Service connection routes
+ * サービス接続ルート
  *
- * GET    /connections          — List all service connections (US-12)
- * DELETE /connections/:service — Disconnect service (US-12)
+ * GET    /connections          — 全てのサービス接続一覧 (US-12)
+ * DELETE /connections/:service — サービスの接続解除 (US-12)
  */
 
-import { Hono } from "hono";
-import type { AppEnv } from "../types.js";
-import { authMiddleware } from "../middleware/auth.js";
-import { NotFoundError } from "../errors.js";
-import type { DynamoServiceConnectionRepository } from "../repositories/DynamoServiceConnectionRepository.js";
 import type { ServiceType } from "@saboru/shared";
 import { SERVICE_TYPE } from "@saboru/shared";
+import { Hono } from "hono";
+import { NotFoundError } from "../errors.js";
+import { authMiddleware } from "../middleware/auth.js";
+import type { DynamoServiceConnectionRepository } from "../repositories/DynamoServiceConnectionRepository.js";
+import type { AppEnv } from "../types.js";
 
 const VALID_SERVICES = Object.values(SERVICE_TYPE) as ServiceType[];
 
@@ -22,14 +22,14 @@ export function createConnectionsRoute(
 
   connections.use("*", authMiddleware);
 
-  /** GET /connections — All service connections for user */
+  /** GET /connections — ユーザーの全サービス接続 */
   connections.get("/", async (c) => {
     const userId = c.get("userId");
     const items = await connectionRepository.findAllByUserId(userId);
     return c.json({ connections: items });
   });
 
-  /** DELETE /connections/:service — Disconnect a service */
+  /** DELETE /connections/:service — サービスの接続を解除する */
   connections.delete("/:service", async (c) => {
     const userId = c.get("userId");
     const service = c.req.param("service") as ServiceType;

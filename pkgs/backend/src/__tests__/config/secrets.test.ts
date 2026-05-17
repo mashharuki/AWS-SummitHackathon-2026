@@ -1,29 +1,28 @@
 /**
- * Tests for Secrets Manager module-scope cache (config/secrets.ts)
+ * Secrets Manager モジュールスコープキャッシュ (config/secrets.ts) のテスト
  *
- * Tests cover:
- * - Cache MISS: first call fetches from Secrets Manager and caches
- * - Cache HIT: second call returns cached value without fetching again
- * - fetchSecret error: throws when SecretString is missing
- * - _resetSecretsCache: clears cache so next call fetches again
+ * テスト内容:
+ * - Cache MISS: 初回呼び出しは Secrets Manager から取得しキャッシュする
+ * - Cache HIT: 2 回目はキャッシュ値を返す（再取得なし）
+ * - fetchSecret エラー: SecretString がない場合は例外をスロー
+ * - _resetSecretsCache: キャッシュをクリアし次回呼び出しで再取得する
  *
- * Implementation note:
- * vi.mock() is hoisted by Vitest before any test code runs, so we cannot
- * reference test-local variables inside the factory. Instead we use
- * vi.hoisted() to create shared mutable mocks that both the factory and tests
- * can reference, and vi.resetModules() to reload the module between tests so
- * the module-level cache is fresh each time.
+ * 実装メモ:
+ * vi.mock() はテストコードより前に Vitest によってホイストされるため、ファクトリ内で
+ * テストローカル変数を参照できない。そのため vi.hoisted() でファクトリとテスト両方が
+ * 共有できる可変モックを作成し、vi.resetModules() でテスト間にモジュールを再ロードし
+ * モジュールレベルキャッシュを毎回リセットする。
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Create hoisted mutable mock so factory and test body share the same reference
+// ファクトリとテスト本体が同じ参照を共有するためホイストされた可変モックを作成
 const { sendMock } = vi.hoisted(() => ({
   sendMock: vi.fn(),
 }));
 
 vi.mock("@aws-sdk/client-secrets-manager", () => ({
-  // Must be a class (function constructor) so `new SecretsManagerClient()` works
+  // `new SecretsManagerClient()` が動作するようクラス (関数コンストラクタ) にする必要あり
   SecretsManagerClient: class {
     send = sendMock;
   },
@@ -56,7 +55,7 @@ describe("getSlackSigningSecret", () => {
     const { getSlackSigningSecret } = await import("../../config/secrets.js");
     await getSlackSigningSecret("arn:test:signing");
     await getSlackSigningSecret("arn:test:signing");
-    // Only fetched once despite two calls (cache HIT on second)
+    // 2 回呼んでも 1 回しかフェッチされない (2 回目はキャッシュ HIT)
     expect(sendMock).toHaveBeenCalledOnce();
   });
 

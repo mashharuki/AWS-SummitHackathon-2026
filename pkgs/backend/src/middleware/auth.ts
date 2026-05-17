@@ -1,20 +1,20 @@
 /**
- * Auth middleware — JWT claim extraction via API Gateway HTTP API v2 context
+ * 認証ミドルウェア — API Gateway HTTP API v2 コンテキストからの JWT クレーム抽出
  *
- * API Gateway HTTP API + JWT Authorizer injects validated claims into
- * event.requestContext.authorizer.jwt.claims before Lambda invocation.
- * hono/aws-lambda exposes the raw Lambda event as c.env (LambdaEvent type).
+ * API Gateway HTTP API + JWT オーソライザーは Lambda 呼び出し前に
+ * event.requestContext.authorizer.jwt.claims に検証済みクレームを注入する。
+ * hono/aws-lambda は生の Lambda イベントを c.env (LambdaEvent 型) として公開する。
  *
- * NFR-S1: userId is propagated as Hono Variable (type-safe, no direct env access in routes)
+ * NFR-S1: userId は Hono Variable として伝郎される (型安全、ルートで直接 env アクセスなし)
  */
 
 import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../types.js";
 import { UnauthorizedError } from "../errors.js";
+import type { AppEnv } from "../types.js";
 
 /**
- * Shape of the Lambda event as exposed by hono/aws-lambda via c.env
- * Only the fields relevant to JWT claims are typed here.
+ * hono/aws-lambda が c.env で公開する Lambda イベントの形式
+ * JWT クレームに関連するフィールドのみを型付けする。
  */
 type LambdaEvent = {
   requestContext?: {
@@ -31,10 +31,10 @@ type LambdaEvent = {
 /**
  * authMiddleware
  *
- * Extracts Cognito `sub` (userId) from the JWT authorizer context and sets it
- * as `c.Variables.userId` for downstream handlers.
+ * JWT オーソライザーコンテキストから Cognito `sub` (userId) を抽出し、
+ * 下流ハンドラー向けに `c.Variables.userId` として設定する。
  *
- * Throws UnauthorizedError (401) if the claim is absent.
+ * クレームがない場合は UnauthorizedError (401) をスローする。
  */
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const lambdaEvent = (c.env as unknown as LambdaEvent | undefined) ?? {};

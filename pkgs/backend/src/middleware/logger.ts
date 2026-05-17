@@ -1,8 +1,8 @@
 /**
- * Request logger middleware
+ * リクエストロガーミドルウェア
  *
- * Emits structured JSON logs compatible with CloudWatch Logs Insights queries.
- * Log format:
+ * CloudWatch Logs Insights クエリに対応した構造化 JSON ログを出力する。
+ * ログフォーマット:
  * { "level": "INFO", "action": "request", "method": "GET", "path": "/health", "status": 200, "durationMs": 5 }
  */
 

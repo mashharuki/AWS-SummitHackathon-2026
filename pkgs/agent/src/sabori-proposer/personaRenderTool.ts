@@ -2,14 +2,14 @@ import type { Tool } from "@aws-sdk/client-bedrock-runtime";
 import { z } from "zod";
 
 /**
- * persona_render Tool — Phase 3 Bedrock Tool Use schema (Claude Haiku)
+ * persona_render Tool — フェーズ 3 Bedrock Tool Use スキーマ (Claude Haiku)
  *
- * Converts rawChatMessage to Saboru persona tone.
- * Uses forced tool choice for structured output.
+ * rawChatMessage をサボロー口調に変換する。
+ * 構造化出力のため強制ツール呼び出しを使用する。
  *
- * Model: anthropic.claude-haiku-3-5-20241022-v1:0 (cost-optimized)
- * maxTokens: 256 (tone conversion is short)
- * temperature: 0.3 (slight creativity for natural tone)
+ * モデル: anthropic.claude-haiku-3-5-20241022-v1:0 (コスト最適化)
+ * maxTokens: 256 (口調変換は出力が短い)
+ * temperature: 0.3 (自然な口調のためわずかな創造性)
  */
 
 export const PERSONA_RENDER_TOOL_NAME = "persona_render";
@@ -42,7 +42,7 @@ export const PERSONA_RENDER_TOOL: Tool = {
 };
 
 /**
- * Zod schema for validating persona_render tool output
+ * persona_render ツール出力を検証する Zod スキーマ
  */
 export const RenderOutputSchema = z.object({
   summaryText: z.string().min(1).max(120),

@@ -2,12 +2,12 @@ import type { Tool } from "@aws-sdk/client-bedrock-runtime";
 import { z } from "zod";
 
 /**
- * sabori_judgment Tool — Phase 2 Bedrock Tool Use schema
+ * sabori_judgment Tool — フェーズ 2 Bedrock Tool Use スキーマ
  *
- * Forced tool choice (toolChoice.tool) ensures structured output
- * from Claude Sonnet 3.5 for sabori verdict judgment.
+ * toolChoice.tool による強制ツール呼び出しで、Claude Sonnet 3.5 からの
+ * サボり判定の構造化出力を保証する。
  *
- * Design: DP-02 (toolChoice.tool forced), DP-03 (Zod validation)
+ * 設計: DP-02 (toolChoice.tool 強制), DP-03 (Zod バリデーション)
  */
 
 export const SABORI_JUDGMENT_TOOL_NAME = "sabori_judgment";

@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 /**
- * Task manual creation request validation
- * Used for request body validation of POST /api/tasks
+ * タスク手動作成リクエストのバリデーション
+ * POST /api/tasks のリクエストボディバリデーションに使用
  */
 export const CreateTaskSchema = z.object({
   title: z
@@ -18,8 +18,8 @@ export const CreateTaskSchema = z.object({
 });
 
 /**
- * Task update request validation
- * Used for request body validation of PATCH /api/tasks/:id
+ * タスク更新リクエストのバリデーション
+ * PATCH /api/tasks/:id のリクエストボディバリデーションに使用
  */
 export const UpdateTaskSchema = CreateTaskSchema.partial();
 

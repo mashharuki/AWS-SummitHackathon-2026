@@ -1,15 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import { DDB_PREFIX, TASK_CANDIDATE_STATUS } from "@saboru/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * DynamoTaskCandidateRepository unit tests
+ * DynamoTaskCandidateRepository ユニットテスト
  *
- * Strategy: Mock @aws-sdk/lib-dynamodb and @aws-sdk/client-dynamodb
- * to avoid real DynamoDB calls.
+ * 方針: 実障の DynamoDB 呼び出しを防ぐため
+ * @aws-sdk/lib-dynamodb および @aws-sdk/client-dynamodb をモック化する。
  */
 
 // ─────────────────────────────────────────────
-// Module mocks
+// モジュールモック
 // ─────────────────────────────────────────────
 
 const mockSend = vi.fn();
@@ -36,7 +36,7 @@ vi.mock("@aws-sdk/lib-dynamodb", () => ({
 }));
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────name──────────────────
 // ─────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ function makeCandidate(
 }
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("DynamoTaskCandidateRepository", () => {
@@ -91,7 +91,7 @@ describe("DynamoTaskCandidateRepository", () => {
       const candidate = makeCandidate();
       const result = await repo.create({
         ...candidate,
-        // Internal convention: _userId
+        // 内部規約: _userId
         _userId: userId,
       } as Parameters<typeof repo.create>[0]);
 
@@ -112,11 +112,11 @@ describe("DynamoTaskCandidateRepository", () => {
         ...makeCandidate(),
       };
 
-      // First call: ConditionalCheckFailedException
+      // 1 回目の呼び出し: ConditionalCheckFailedException
       mockSend.mockRejectedValueOnce(
         new ConditionalCheckFailedException({ message: "Already exists" }),
       );
-      // Second call: GetCommand returns existing item
+      // 2 回目の呼び出し: GetCommand が既存アイテムを返す
       mockSend.mockResolvedValueOnce({ Item: existingItem });
 
       const { DynamoTaskCandidateRepository } = await import(
@@ -219,7 +219,7 @@ describe("DynamoTaskCandidateRepository", () => {
 
   describe("approve()", () => {
     it("throws DynamoWriteFailedError when candidate not found", async () => {
-      // findById returns null (item not found)
+      // findById が null を返す (アイテムが見つからない)
       mockSend.mockResolvedValueOnce({ Item: undefined });
 
       const { DynamoTaskCandidateRepository } = await import(
@@ -233,7 +233,7 @@ describe("DynamoTaskCandidateRepository", () => {
     });
 
     it("throws DynamoWriteFailedError when TransactWriteItems fails", async () => {
-      // findById returns item
+      // findById がアイテムを返す
       mockSend.mockResolvedValueOnce({
         Item: {
           PK: `${DDB_PREFIX.USER}${userId}`,
@@ -241,7 +241,7 @@ describe("DynamoTaskCandidateRepository", () => {
           ...makeCandidate(),
         },
       });
-      // TransactWriteItems fails
+      // TransactWriteItems が失敗する
       mockSend.mockRejectedValueOnce(new Error("TransactionCanceledException"));
 
       const { DynamoTaskCandidateRepository } = await import(

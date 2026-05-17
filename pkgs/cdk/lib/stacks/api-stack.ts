@@ -1,13 +1,13 @@
 import * as cdk from "aws-cdk-lib";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
-import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
+import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { NagSuppressions } from "cdk-nag";
-import { Construct } from "constructs";
-import { CognitoStackExports } from "./cognito-stack";
-import { DataStackExports } from "./data-stack";
+import type { Construct } from "constructs";
+import type { CognitoStackExports } from "./cognito-stack";
+import type { DataStackExports } from "./data-stack";
 
 export interface ApiStackProps extends cdk.StackProps {
   readonly cognito: CognitoStackExports;
@@ -27,7 +27,7 @@ export class SaborouApiStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
-    // --- Lambda: Hono Backend ---
+    // --- Lambda: Hono バックエンド ---
     const honoFnLogGroup = new logs.LogGroup(this, "HonoFnLogGroup", {
       logGroupName: `/aws/lambda/saborou-api-${environment}`,
       retention: logs.RetentionDays.TWO_WEEKS,
@@ -46,10 +46,10 @@ export class SaborouApiStack extends cdk.Stack {
       tracing: lambda.Tracing.ACTIVE,
       environment: {
         ENVIRONMENT: environment,
-        // --- Cognito (added: U-04 auth/slack callback needs these) ---
+        // --- Cognito (追加: U-04 認証/Slack コールバックで必要) ---
         COGNITO_USER_POOL_ID: props.cognito.userPool.userPoolId,
         COGNITO_CLIENT_ID: props.cognito.userPoolClient.userPoolClientId,
-        // --- DynamoDB tables ---
+        // --- DynamoDB テーブル ---
         DYNAMODB_TABLE_USERS: props.data.tables.users.tableName,
         DYNAMODB_TABLE_CONNECTIONS: props.data.tables.connections.tableName,
         DYNAMODB_TABLE_TASK_CANDIDATES:
@@ -58,26 +58,26 @@ export class SaborouApiStack extends cdk.Stack {
         DYNAMODB_TABLE_PROPOSALS: props.data.tables.proposals.tableName,
         DYNAMODB_TABLE_HONNE_DATA: props.data.tables.honneData.tableName,
         DYNAMODB_TABLE_PERSONAS: props.data.tables.personas.tableName,
-        // --- Secrets (added: U-04 Slack OAuth callback uses client secret) ---
+        // --- シークレット (追加: U-04 Slack OAuth コールバックがクライアントシークレットを使用) ---
         SLACK_CLIENT_SECRET_ARN: props.data.secrets.slackClientSecret.secretArn,
-        // Note: EVENT_BUS_NAME is not needed by the API Lambda (only by webhook Lambda)
+        // 注: EVENT_BUS_NAME は API Lambda では不要 (webhook Lambda のみが使用)
       },
     });
 
-    // --- Grant DynamoDB permissions ---
+    // --- DynamoDB 権限付与 ---
     props.data.tables.users.grantReadWriteData(honoFn);
     props.data.tables.connections.grantReadWriteData(honoFn);
-    // Changed: grantReadData → grantReadWriteData (ITaskCandidateRepository.delete requires Write)
+    // 変更: grantReadData → grantReadWriteData (ITaskCandidateRepository.delete が書き込み権限を必要とするため)
     props.data.tables.taskCandidates.grantReadWriteData(honoFn);
     props.data.tables.tasks.grantReadWriteData(honoFn);
     props.data.tables.proposals.grantReadData(honoFn);
     props.data.tables.honneData.grantReadWriteData(honoFn);
     props.data.tables.personas.grantReadData(honoFn);
 
-    // --- Grant Secrets Manager permissions (added: U-04 Slack OAuth) ---
+    // --- Secrets Manager 権限付与 (追加: U-04 Slack OAuth) ---
     props.data.secrets.slackClientSecret.grantRead(honoFn);
 
-    // --- JWT Authorizer ---
+    // --- JWT オーソライザー ---
     const authorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer(
       "CognitoAuthorizer",
       `https://cognito-idp.ap-northeast-1.amazonaws.com/${props.cognito.userPool.userPoolId}`,
@@ -99,7 +99,7 @@ export class SaborouApiStack extends cdk.Stack {
       },
     });
 
-    // Health check route (no auth)
+    // ヘルスチェックルート (認証なし)
     httpApi.addRoutes({
       path: "/health",
       methods: [apigatewayv2.HttpMethod.GET],
@@ -109,7 +109,7 @@ export class SaborouApiStack extends cdk.Stack {
       ),
     });
 
-    // Main routes (JWT auth required)
+    // メインルート (JWT 認証必須)
     httpApi.addRoutes({
       path: "/{proxy+}",
       methods: [apigatewayv2.HttpMethod.ANY],
@@ -132,7 +132,7 @@ export class SaborouApiStack extends cdk.Stack {
       description: "Hono Lambda function ARN",
     });
 
-    // --- cdk-nag suppressions ---
+    // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-IAM4",

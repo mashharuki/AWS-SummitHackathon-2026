@@ -98,14 +98,14 @@ async function request<T>(
   return res.json() as Promise<T>;
 }
 
-// --- Users ---
+// --- ユーザー ---
 
 /** GET /api/users/me */
 export async function getMe(): Promise<User> {
   return request<User>("/api/users/me");
 }
 
-// --- Task Candidates ---
+// --- タスク候補 ---
 
 /** GET /api/tasks/candidates */
 export async function getCandidates(): Promise<TaskCandidate[]> {
@@ -126,7 +126,7 @@ export async function rejectCandidate(candidateId: string): Promise<void> {
   });
 }
 
-// --- Tasks ---
+// --- タスク ---
 
 /** GET /api/tasks */
 export async function getTasks(): Promise<Task[]> {
@@ -168,7 +168,7 @@ export async function createTask(data: {
   });
 }
 
-// --- Proposals ---
+// --- 提案 ---
 
 /** GET /api/tasks/:id/proposal（最新提案取得） */
 export async function getProposal(taskId: string): Promise<Proposal | null> {
@@ -191,7 +191,7 @@ export async function submitHonne(
   });
 }
 
-// --- Connections ---
+// --- 接続 ---
 
 /** GET /api/connections */
 export async function getConnections(): Promise<ServiceConnection[]> {
@@ -205,7 +205,7 @@ export async function disconnectService(service: string): Promise<void> {
   });
 }
 
-/** Build SSE URL for proposal streaming (GET /api/tasks/:id/proposal?stream=true) */
+/** 提案ストリーミング用 SSE URL を構築 (GET /api/tasks/:id/proposal?stream=true) */
 export function buildProposalStreamUrl(taskId: string): string {
   const token = getAccessToken() ?? "";
   const params = new URLSearchParams({ stream: "true", access_token: token });

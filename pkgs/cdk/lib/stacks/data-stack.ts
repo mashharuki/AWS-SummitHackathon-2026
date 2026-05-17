@@ -2,7 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { NagSuppressions } from "cdk-nag";
-import { Construct } from "constructs";
+import type { Construct } from "constructs";
 
 export interface DataStackExports {
   readonly tables: {
@@ -29,7 +29,7 @@ export class SaborouDataStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
-    // --- DynamoDB common defaults ---
+    // --- DynamoDB 共通デフォルト ---
     const tableDefaults = {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
@@ -38,7 +38,7 @@ export class SaborouDataStack extends cdk.Stack {
       sortKey: { name: "SK", type: dynamodb.AttributeType.STRING },
     };
 
-    // --- Tables ---
+    // --- テーブル ---
     const users = new dynamodb.Table(this, "UsersTable", {
       ...tableDefaults,
       tableName: `saborou-users-${environment}`,
@@ -75,7 +75,7 @@ export class SaborouDataStack extends cdk.Stack {
       tableName: `saborou-personas-${environment}`,
     });
 
-    // --- GSIs ---
+    // --- GSI ---
     taskCandidates.addGlobalSecondaryIndex({
       indexName: "GSI-UserCreatedAt",
       partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING },
@@ -152,7 +152,7 @@ export class SaborouDataStack extends cdk.Stack {
       description: "DynamoDB Proposals Table Name",
     });
 
-    // --- cdk-nag suppressions ---
+    // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-DDB3",

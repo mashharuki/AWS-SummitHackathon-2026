@@ -1,7 +1,7 @@
 /**
- * OpenAPI 3.0 specification for Saborou API (U-04)
+ * Saborou API (U-04) の OpenAPI 3.0 仕様
  *
- * 15 endpoints across 6 resource groups:
+ * 6 リソースグループにわたる 15 エンドポイント:
  * /health (1) / /auth (2) / /tasks (6) / /tasks/:id/proposal (1)
  * /tasks/:id/honne (1) / /connections (2) / /webhooks (1)
  */

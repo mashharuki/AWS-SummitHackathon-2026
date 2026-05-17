@@ -1,15 +1,15 @@
 import type { Proposal, Task, Verdict } from "@saboru/shared";
 
 /**
- * U-03b: sabori-proposer internal type definitions
+ * U-03b: sabori-proposer 内部型定義
  *
- * These types are agent-internal and NOT exported from @saboru/shared.
- * External-facing types (Proposal, Verdict, Task) are imported from @saboru/shared.
+ * これらの型はエージェント内部用であり、@saboru/shared からはエクスポートしない。
+ * 外部向け型 (Proposal, Verdict, Task) は @saboru/shared からインポートする。
  */
 
 /**
- * TaskContext — Input to SaboriProposerAgent
- * Combines task data with optional Slack enrichment
+ * TaskContext — SaboriProposerAgent への入力
+ * タスクデータとオプションの Slack エンリッチメントを組み合わせる
  */
 export interface TaskContext {
   task: Task;
@@ -17,8 +17,8 @@ export interface TaskContext {
 }
 
 /**
- * SlackContext — Collected by ContextCollector (U-03a)
- * NFR-S1: rawSummary is deleted immediately after processing (never persisted)
+ * SlackContext — ContextCollector (U-03a) が収集する
+ * NFR-S1: rawSummary は処理後に即座に削除 (永続化しない)
  */
 export interface SlackContext {
   requesterStatus: "online" | "away" | "offline" | "unknown";
@@ -26,13 +26,13 @@ export interface SlackContext {
   reminderCount: number;
   urgencyKeywords: string[];
   threadActive: boolean;
-  /** Slack message summary text — deleted after Phase 1 processing (NFR-07) */
+  /** Slack メッセージ要約テキスト — フェーズ 1 処理後に削除 (NFR-07) */
   rawSummary: string;
 }
 
 /**
- * LLMJudgment — Phase 2 Bedrock Tool Use structured output (intermediate type)
- * Parsed from sabori_judgment tool response before PersonaRenderer transforms it
+ * LLMJudgment — フェーズ 2 Bedrock Tool Use 構造化出力 (中間型)
+ * PersonaRenderer が変換する前に sabori_judgment ツールレスポンスから解析される
  */
 export interface LLMJudgment {
   verdict: Verdict;

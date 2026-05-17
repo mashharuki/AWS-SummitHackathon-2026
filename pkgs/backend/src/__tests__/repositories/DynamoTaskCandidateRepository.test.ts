@@ -1,9 +1,9 @@
 /**
- * Tests for DynamoTaskCandidateRepository
+ * DynamoTaskCandidateRepository のテスト
  */
 
-import { describe, it, expect, vi } from "vitest";
 import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { describe, expect, it, vi } from "vitest";
 import { DynamoTaskCandidateRepository } from "../../repositories/DynamoTaskCandidateRepository.js";
 
 const CAND_TABLE = "candidates-test";

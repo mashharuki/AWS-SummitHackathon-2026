@@ -6,14 +6,14 @@ import type {
 } from "@aws-sdk/client-bedrock-runtime";
 
 /**
- * Abstraction interface for Bedrock Converse API (DP-01: Adapter pattern)
+ * Bedrock Converse API の抽象化インターフェース (DP-01: Adapter パターン)
  *
- * Purpose: Isolate AWS SDK dependency to a single file and make it
- * replaceable with a mock in tests (MockBedrockClient).
+ * 目的: AWS SDK 依存を単一ファイルに限定し、テストで
+ * モック (MockBedrockClient) に差し替えられるようにする。
  *
- * NFR: No real Bedrock calls in unit tests.
+ * NFR: ユニットテストでは実際の Bedrock 呼び出しを行わない。
  *
- * U-03b extension: converseStream() added for SSE streaming support
+ * U-03b 拡張: SSE ストリーミングサポートのため converseStream() を追加
  */
 export interface IBedrockClient {
   converse(input: ConverseCommandInput): Promise<ConverseCommandOutput>;

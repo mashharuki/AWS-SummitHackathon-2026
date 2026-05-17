@@ -1,17 +1,17 @@
 /**
- * DynamoDB implementation of IProposalRepository
+ * IProposalRepository の DynamoDB 実装
  *
- * Access patterns:
+ * アクセスパターン:
  * - Query GSI-TaskLatest PK=TASK#<taskId> ScanIndexForward=false LIMIT=1 — findLatestByTaskId
- * - PutItem — save (called by SaboriProposerAgent)
+ * - PutItem — save (SaboriProposerAgent から呼び出される)
  *
- * Note: This repository is READ-ONLY from the API perspective.
- * Writes are performed by SaboriProposerAgent (U-03b), not by U-04 routes.
- * The API only reads the latest proposal to display to the user.
+ * 注: このリポジトリは API の観点からは読み取り専用。
+ * 書き込みは SaboriProposerAgent (U-03b) が行い、U-04 ルートは行わない。
+ * API は最新の提案を読み込んでユーザーに表示するのみ。
  */
 
 import {
-  DynamoDBClient,
+  type DynamoDBClient,
   PutItemCommand,
   QueryCommand,
 } from "@aws-sdk/client-dynamodb";

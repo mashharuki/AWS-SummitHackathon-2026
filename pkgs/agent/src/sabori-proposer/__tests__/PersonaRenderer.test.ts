@@ -1,16 +1,16 @@
-import { beforeEach, describe, expect, it } from "vitest";
 import type {
   ConverseCommandInput,
   ConverseCommandOutput,
   ConverseStreamCommandInput,
   ConverseStreamCommandOutput,
 } from "@aws-sdk/client-bedrock-runtime";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { IBedrockClient } from "../../bedrock/IBedrockClient.js";
 import { PersonaRenderer } from "../PersonaRenderer.js";
 import type { RenderInput } from "../types.js";
 
 // ─────────────────────────────────────────────
-// MockBedrockClient for PersonaRenderer tests
+// PersonaRenderer テスト用 MockBedrockClient
 // ─────────────────────────────────────────────
 
 class MockBedrockClient implements IBedrockClient {
@@ -39,7 +39,7 @@ class MockBedrockClient implements IBedrockClient {
 }
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────────────────────────
 
 function makeHaikuResponse(
@@ -98,7 +98,7 @@ const MUST_DO_INPUT: RenderInput = {
 };
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("PersonaRenderer", () => {
@@ -166,7 +166,7 @@ describe("PersonaRenderer", () => {
       });
 
       const result = await renderer.render(CAN_SABORU_INPUT);
-      // Fallback: rawChatMessage is used directly
+      // フォールバック: rawChatMessage を直接使用
       expect(result.chatMessage).toBe(CAN_SABORU_INPUT.rawChatMessage);
       expect(result.summaryText).toBe(CAN_SABORU_INPUT.summaryText);
     });
@@ -183,7 +183,7 @@ describe("PersonaRenderer", () => {
                   toolUseId: "tool-haiku-bad",
                   name: "persona_render",
                   input: {
-                    // Missing required 'chatMessage' field
+                    // 必須フィールド 'chatMessage' がない
                     summaryText: "test",
                   },
                 },
@@ -197,7 +197,7 @@ describe("PersonaRenderer", () => {
       });
 
       const result = await renderer.render(CAN_SABORU_INPUT);
-      // Fallback activated
+      // フォールバック発動
       expect(result.chatMessage).toBe(CAN_SABORU_INPUT.rawChatMessage);
     });
 
@@ -212,7 +212,7 @@ describe("PersonaRenderer", () => {
       };
 
       const rendererWithError = new PersonaRenderer(throwingBedrock);
-      // Should not throw — should return fallback output
+      // スローせずフォールバック出力を返すべき
       const result = await rendererWithError.render(CAN_SABORU_INPUT);
       expect(result.chatMessage).toBe(CAN_SABORU_INPUT.rawChatMessage);
     });
@@ -230,7 +230,7 @@ describe("PersonaRenderer", () => {
 
       const rendererWithNonError = new PersonaRenderer(throwingBedrockNonError);
       const result = await rendererWithNonError.render(CAN_SABORU_INPUT);
-      // Should still return fallback gracefully
+      // それでもグレースフルにフォールバックを返すべき
       expect(result.chatMessage).toBe(CAN_SABORU_INPUT.rawChatMessage);
     });
 
@@ -264,13 +264,13 @@ describe("PersonaRenderer", () => {
     });
 
     it("uses fallback emoji and label when verdict is not in VERDICT_META", async () => {
-      // Cast to string to simulate an unexpected verdict value not in VERDICT_META
+      // VERDICT_META にない予期しない verdict 値をシミュレートするため文字列にキャスト
       const unknownInput: RenderInput = {
         ...CAN_SABORU_INPUT,
         verdict: "unknown_future_verdict" as RenderInput["verdict"],
       };
 
-      // Use a throwing bedrock so we go to fallback path and use the VERDICT_META fallback
+      // フォールバックパスに進み VERDICT_META フォールバックを使うため例外をスローする bedrock を使用
       const throwingBedrock: IBedrockClient = {
         async converse(): Promise<ConverseCommandOutput> {
           throw new Error("Error");
@@ -282,7 +282,7 @@ describe("PersonaRenderer", () => {
 
       const rendererWithError = new PersonaRenderer(throwingBedrock);
       const result = await rendererWithError.render(unknownInput);
-      // VERDICT_META does not have "unknown_future_verdict" → uses default { emoji: "🤔", label: "確認中" }
+      // VERDICT_META に "unknown_future_verdict" がない → デフォルト { emoji: "🤔", label: "確認中" } を使用
       expect(result.verdictEmoji).toBe("🤔");
       expect(result.verdictLabel).toBe("確認中");
     });

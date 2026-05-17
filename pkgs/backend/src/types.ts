@@ -1,16 +1,16 @@
 /**
- * Hono application type definitions for U-04 API
+ * U-04 API 向け Hono アプリケーション型定義
  *
- * HonoVariables: typed context variables set by middleware
- * AppEnv: Hono generics for type-safe c.get() / c.set()
+ * HonoVariables: ミドルウェアが設定する型付きコンテキスト変数
+ * AppEnv: 型安全な c.get() / c.set() のための Hono ジェネリクス
  */
 
-/** Context variables propagated by authMiddleware */
+/** authMiddleware が伝郎するコンテキスト変数 */
 export type HonoVariables = {
   userId: string;
 };
 
-/** Hono app env generics */
+/** Hono アプリ env ジェネリクス */
 export type AppEnv = {
   Variables: HonoVariables;
 };

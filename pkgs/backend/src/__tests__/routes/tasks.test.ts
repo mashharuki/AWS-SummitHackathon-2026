@@ -1,18 +1,18 @@
 /**
- * Tests for task routes
+ * タスクルートのテスト
  *
- * Uses mock repositories to avoid DynamoDB dependency.
- * Tests cover: list, create, get, update, delete, candidate approve/reject.
+ * DynamoDB 依存を顧めるためモックリポジトリを使用する。
+ * テスト範囲: 一覧・作成・取得・更新・削除・候補承認/却下。
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Hono } from "hono";
-import { createTasksRoute } from "../../routes/tasks.js";
-import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
-import type { DynamoTaskCandidateRepository } from "../../repositories/DynamoTaskCandidateRepository.js";
 import type { Task, TaskCandidate } from "@saboru/shared";
-import type { AppEnv } from "../../types.js";
+import { Hono } from "hono";
+import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
+import type { DynamoTaskCandidateRepository } from "../../repositories/DynamoTaskCandidateRepository.js";
+import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
+import { createTasksRoute } from "../../routes/tasks.js";
+import type { AppEnv } from "../../types.js";
 
 const MOCK_USER_ID = "user-test-123";
 
@@ -23,7 +23,7 @@ function buildTestApp(
 ) {
   const app = new Hono<AppEnv>();
 
-  // Inject userId without real JWT
+  // 実際の JWT なしで userId を注入
   app.use("*", async (c, next) => {
     (c as unknown as { env: unknown }).env = {
       requestContext: {

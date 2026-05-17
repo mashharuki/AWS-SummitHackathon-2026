@@ -1,6 +1,5 @@
-import { logError, logInfo } from "../utils/logger.js";
 import type { IBedrockClient } from "../bedrock/IBedrockClient.js";
-import type { RenderInput, RenderOutput } from "./types.js";
+import { logError, logInfo } from "../utils/logger.js";
 import {
   PERSONA_RENDER_TOOL,
   PERSONA_RENDER_TOOL_NAME,
@@ -8,18 +7,19 @@ import {
   SABORU_OTTORI_SYSTEM_PROMPT,
   VERDICT_META,
 } from "./personaRenderTool.js";
+import type { RenderInput, RenderOutput } from "./types.js";
 
 /**
- * PersonaRenderer — Phase 3 tone conversion agent (AG-03)
+ * PersonaRenderer — フェーズ 3 口調変換エージェント (AG-03)
  *
- * Converts neutral LLM rawChatMessage to Saboru persona tone
- * using Claude Haiku (cost-optimized for short text transformation).
+ * Claude Haiku (短文変換にコスト最適化) を使用して、中立的な LLM の
+ * rawChatMessage をサボロー口調に変換する。
  *
- * Model: anthropic.claude-haiku-3-5-20241022-v1:0
- * maxTokens: 256 (tone conversion is short output)
- * temperature: 0.3 (slight creativity for natural-sounding persona)
+ * モデル: anthropic.claude-haiku-3-5-20241022-v1:0
+ * maxTokens: 256 (口調変換は出力が短い)
+ * temperature: 0.3 (自然に聞こえる口調のためわずかな創造性)
  *
- * Fallback: If Haiku call fails, rawChatMessage is used as-is (NFR: graceful degradation)
+ * フォールバック: Haiku 呼び出し失敗時は rawChatMessage をそのまま使用 (NFR: グレースフルデグレード)
  */
 
 const HAIKU_MODEL_ID = "anthropic.claude-haiku-3-5-20241022-v1:0";
@@ -28,10 +28,10 @@ export class PersonaRenderer {
   constructor(private readonly bedrock: IBedrockClient) {}
 
   /**
-   * Render LLM judgment into persona-styled output
+   * LLM 判定を口調変換済み出力にレンダリングする
    *
-   * @param input - RenderInput with verdict, reasoning, summaryText, rawChatMessage
-   * @returns RenderOutput with tone-converted chatMessage and verdictEmoji
+   * @param input - verdict, reasoning, summaryText, rawChatMessage を持つ RenderInput
+   * @returns 口調変換済み chatMessage と verdictEmoji を持つ RenderOutput
    */
   async render(input: RenderInput): Promise<RenderOutput> {
     const verdictMeta = VERDICT_META[input.verdict] ?? {

@@ -1,6 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
-import * as lambda from "aws-cdk-lib/aws-lambda";
+import type * as lambda from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";
 
 export interface MonitoringConstructProps {
@@ -11,8 +11,8 @@ export interface MonitoringConstructProps {
 }
 
 /**
- * MonitoringConstruct: CloudWatch alarms and dashboard for Saborou application.
- * Integrates into SaborouApiStack (no separate stack to keep infra simple).
+ * MonitoringConstruct: Saborou アプリケーションの CloudWatch アラームとダッシュボード。
+ * インフラをシンプルに保つため別スタックにしず SaborouApiStack に組み込む。
  */
 export class MonitoringConstruct extends Construct {
   public readonly dashboard: cloudwatch.Dashboard;
@@ -20,7 +20,7 @@ export class MonitoringConstruct extends Construct {
   constructor(scope: Construct, id: string, props: MonitoringConstructProps) {
     super(scope, id);
 
-    // --- API Lambda Error Alarm ---
+    // --- API Lambda エラーアラーム ---
     const apiErrorAlarm = new cloudwatch.Alarm(this, "ApiErrorAlarm", {
       alarmName: `saborou-api-errors-${props.environment}`,
       alarmDescription: "API Lambda error rate exceeds threshold",
@@ -35,7 +35,7 @@ export class MonitoringConstruct extends Construct {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // --- API Lambda Throttle Alarm ---
+    // --- API Lambda スロットルアラーム ---
     const apiThrottleAlarm = new cloudwatch.Alarm(this, "ApiThrottleAlarm", {
       alarmName: `saborou-api-throttles-${props.environment}`,
       alarmDescription: "API Lambda throttle rate exceeds threshold",
@@ -50,7 +50,7 @@ export class MonitoringConstruct extends Construct {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // --- TaskExtractor Error Alarm ---
+    // --- TaskExtractor エラーアラーム ---
     const taskExtractorErrorAlarm = new cloudwatch.Alarm(
       this,
       "TaskExtractorErrorAlarm",
@@ -69,7 +69,7 @@ export class MonitoringConstruct extends Construct {
       },
     );
 
-    // --- SaboriProposer Error Alarm ---
+    // --- SaboriProposer エラーアラーム ---
     const saboriProposerErrorAlarm = new cloudwatch.Alarm(
       this,
       "SaboriProposerErrorAlarm",
@@ -88,7 +88,7 @@ export class MonitoringConstruct extends Construct {
       },
     );
 
-    // --- API Latency Alarm ---
+    // --- API レイテンシーアラーム ---
     const apiLatencyAlarm = new cloudwatch.Alarm(this, "ApiLatencyAlarm", {
       alarmName: `saborou-api-latency-${props.environment}`,
       alarmDescription: "API Lambda P99 latency exceeds 10 seconds",
@@ -103,7 +103,7 @@ export class MonitoringConstruct extends Construct {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
 
-    // --- CloudWatch Dashboard ---
+    // --- CloudWatch ダッシュボード ---
     this.dashboard = new cloudwatch.Dashboard(this, "Dashboard", {
       dashboardName: `saborou-dashboard-${props.environment}`,
     });

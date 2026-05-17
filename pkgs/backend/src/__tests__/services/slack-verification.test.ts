@@ -1,15 +1,15 @@
 /**
- * Tests for Slack HMAC signature verification
+ * Slack HMAC 署名検証のテスト
  *
- * NFR-S2: verifySlackSignature must reject:
- * - Expired timestamps (>5 minutes)
- * - Invalid signatures
- * - Tampered bodies
- * And must accept valid signatures.
+ * NFR-S2: verifySlackSignature は以下を拒否すること:
+ * - 期限切れタイムスタンプ (5 分超過)
+ * - 無効な署名
+ * - 改ざんされたボディ
+ * また有効な署名は受入れること。
  */
 
-import { describe, it, expect } from "vitest";
 import { createHmac } from "crypto";
+import { describe, expect, it } from "vitest";
 import { verifySlackSignature } from "../../services/slack-verification.js";
 
 const SIGNING_SECRET = "test-signing-secret-32chars-x";

@@ -1,22 +1,22 @@
 /**
- * Application-specific error codes
- * Hono error handler reads code to convert to appropriate HTTP response
+ * アプリケーション固有のエラーコード
+ * Hono エラーハンドラーがコードを読み取り、適切な HTTP レスポンスに変換する
  */
 export type ErrorCode =
-  | "TASK_NOT_FOUND" // 404: Task does not exist
-  | "CANDIDATE_NOT_FOUND" // 404: Task candidate does not exist
-  | "UNAUTHORIZED" // 401: JWT unauthenticated
-  | "TOKEN_EXPIRED" // 401: JWT expiration (Cognito)
-  | "EXTERNAL_API_FAILED" // 502: Slack API error
-  | "BEDROCK_TIMEOUT" // 504: Bedrock response timeout (5 seconds)
-  | "BEDROCK_COST_EXCEEDED" // 429: Bedrock cost limit guard
-  | "DYNAMO_WRITE_FAILED" // 500: DynamoDB write error
-  | "INVALID_INPUT" // 400: Input validation error (Zod)
-  | "PERSONA_NOT_FOUND" // 404: Persona does not exist
-  | "CONNECTION_NOT_FOUND"; // 404: Service connection does not exist
+  | "TASK_NOT_FOUND" // 404: タスクが存在しない
+  | "CANDIDATE_NOT_FOUND" // 404: タスク候補が存在しない
+  | "UNAUTHORIZED" // 401: JWT 未認証
+  | "TOKEN_EXPIRED" // 401: JWT 期限切れ (Cognito)
+  | "EXTERNAL_API_FAILED" // 502: Slack API エラー
+  | "BEDROCK_TIMEOUT" // 504: Bedrock レスポンスタイムアウト (5秒)
+  | "BEDROCK_COST_EXCEEDED" // 429: Bedrock コスト制限ガード
+  | "DYNAMO_WRITE_FAILED" // 500: DynamoDB 書き込みエラー
+  | "INVALID_INPUT" // 400: 入力バリデーションエラー (Zod)
+  | "PERSONA_NOT_FOUND" // 404: ペルソナが存在しない
+  | "CONNECTION_NOT_FOUND"; // 404: サービス接続が存在しない
 
 /**
- * Serialized error response structure
+ * シリアライズされたエラーレスポンス構造
  */
 export interface SerializedError {
   code: ErrorCode;
@@ -26,16 +26,16 @@ export interface SerializedError {
 }
 
 /**
- * Base error class (Q6 answer)
- * All service-specific errors inherit from this class.
- * Designed to prevent internal stack trace leakage in HTTP responses (NFR-03).
+ * 基底エラークラス (Q6 回答)
+ * サービス固有のエラーはすべてこのクラスを継承する。
+ * HTTP レスポンスへの内部スタックトレース漏洩を防ぐ設計 (NFR-03)。
  */
 export class AppError extends Error {
-  /** Application-specific error code */
+  /** アプリケーション固有のエラーコード */
   readonly code: ErrorCode;
-  /** HTTP status code */
+  /** HTTP ステータスコード */
   readonly statusCode: number;
-  /** Additional error details */
+  /** 追加エラー詳細 */
   readonly details?: unknown;
 
   constructor(
@@ -49,7 +49,7 @@ export class AppError extends Error {
     this.code = code;
     this.statusCode = statusCode ?? 500;
     this.details = details;
-    // Correctly attach stack trace to Error (V8 environments)
+    // V8 環境でスタックトレースを正しく Error に付与する
     const errorConstructor = Error as typeof Error & {
       captureStackTrace?: (target: Error, constructor: unknown) => void;
     };
@@ -59,11 +59,11 @@ export class AppError extends Error {
   }
 
   /**
-   * Serialize error for HTTP response
-   * Development: includes detailed message, details, and stack trace
-   * Production: returns only generic message (security, NFR-S5)
+   * HTTP レスポンス用にエラーをシリアライズする
+   * 開発環境: 詳細メッセージ・詳細・スタックトレースを含む
+   * 本番環境: 汎用メッセージのみ返す (セキュリティ, NFR-S5)
    *
-   * Server-side logging (CloudWatch) is independent and always records details
+   * サーバーサイドのログ (CloudWatch) は独立して動作し、常に詳細を記録する
    */
   serialize(): SerializedError {
     if (process.env["NODE_ENV"] === "production") {

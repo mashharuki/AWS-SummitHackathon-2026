@@ -1,15 +1,15 @@
+import type {
+  Proposal,
+  ServiceConnection,
+  Task,
+  TaskCandidate,
+  User,
+} from "@saboru/shared";
 /**
  * MSW ハンドラー — テスト用APIモック
  * NFR-DESIGN-9: MSW モックパターン
  */
 import { http, HttpResponse } from "msw";
-import type {
-  Task,
-  TaskCandidate,
-  ServiceConnection,
-  Proposal,
-  User,
-} from "@saboru/shared";
 
 const mockUser: User = {
   PK: "USER#test-sub",
@@ -88,12 +88,12 @@ const mockConnections: ServiceConnection[] = [
 ];
 
 export const handlers = [
-  // Users
+  // ユーザー
   http.get("*/api/users/me", () => {
     return HttpResponse.json(mockUser);
   }),
 
-  // Task Candidates
+  // タスク候補
   http.get("*/api/tasks/candidates", () => {
     return HttpResponse.json(mockCandidates);
   }),
@@ -120,7 +120,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Tasks
+  // タスク
   http.get("*/api/tasks", () => {
     return HttpResponse.json(mockTasks);
   }),
@@ -166,7 +166,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Proposals
+  // 提案
   http.get("*/api/tasks/:id/proposal", ({ request }) => {
     const url = new URL(request.url);
     if (url.searchParams.get("stream") === "true") {
@@ -197,7 +197,7 @@ export const handlers = [
     return HttpResponse.json(mockProposal);
   }),
 
-  // Proposal SSE streaming (Vercel AI SDK useChat — streamProtocol: "text")
+  // 提案 SSE ストリーミング (Vercel AI SDK useChat — streamProtocol: "text")
   http.post("*/api/tasks/:id/proposal", () => {
     const encoder = new TextEncoder();
     const chunks = [
@@ -215,7 +215,7 @@ export const handlers = [
       async start(controller) {
         for (const chunk of chunks) {
           controller.enqueue(encoder.encode(chunk));
-          // slight delay to simulate streaming
+          // ストリーミングをシミュレートするわずかな遅延
           await new Promise((resolve) => setTimeout(resolve, 80));
         }
         controller.close();
@@ -235,7 +235,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Connections
+  // 接続
   http.get("*/api/connections", () => {
     return HttpResponse.json(mockConnections);
   }),

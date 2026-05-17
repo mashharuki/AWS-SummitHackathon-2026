@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * ContextCollector unit tests (DP-06: Secrets Manager cache)
+ * ContextCollector ユニットテスト (DP-06: Secrets Manager キャッシュ)
  *
- * Mocks AWS SDK to avoid real Secrets Manager calls.
+ * 実障の Secrets Manager 呼び出しを防ぐため AWS SDK をモック化する。
  */
 
 // ─────────────────────────────────────────────
-// Module mocks
+// モジュールモック
 // ─────────────────────────────────────────────
 
 const mockSend = vi.fn();
@@ -18,13 +18,13 @@ vi.mock("@aws-sdk/client-secrets-manager", () => ({
 }));
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("ContextCollector (getSlackToken)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset module cache between tests
+    // テスト間でモジュールキャッシュをリセット
     vi.resetModules();
     process.env["SLACK_TOKEN_SECRET_NAME"] = "saborou-slack-client-secret-test";
   });
@@ -52,14 +52,14 @@ describe("ContextCollector (getSlackToken)", () => {
 
     expect(first).toBe("xoxb-test-token-cached");
     expect(second).toBe("xoxb-test-token-cached");
-    // Secrets Manager called only once despite two getSlackToken() calls
+    // getSlackToken() を 2 回呼び出しても Secrets Manager は 1 回のみ呼ばれる
     expect(mockSend).toHaveBeenCalledOnce();
   });
 
   it("throws when SLACK_TOKEN_SECRET_NAME is not set", async () => {
     delete process.env["SLACK_TOKEN_SECRET_NAME"];
 
-    // Must reset module to clear cached token from previous test
+    // 前のテストのキャッシュトークンをクリアするためモジュールをリセット
     const { getSlackToken, resetSlackTokenCache } = await import(
       "../ContextCollector.js"
     );

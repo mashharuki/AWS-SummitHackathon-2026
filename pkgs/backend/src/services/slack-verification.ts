@@ -1,26 +1,26 @@
 /**
- * Slack HMAC signature verification
+ * Slack HMAC 署名検証
  *
- * NFR-S2: Verifies that Webhook POST requests originate from Slack using
- * HMAC-SHA256 signature with the signing secret.
+ * NFR-S2: HMAC-SHA256 と署名シークレットを用いて Webhook POST リクエストが
+ * Slack から発信されたものであることを検証する。
  *
- * Security properties:
- * - Replay attack prevention: timestamps older than 5 minutes are rejected
- * - Timing attack prevention: timingSafeEqual for constant-time comparison
+ * セキュリティ特性:
+ * - リプレイ攻撃防止: 5 分以上前のタイムスタンプは拒否
+ * - タイミング攻撃防止: 定数時間比較に timingSafeEqual を使用
  *
- * Reference: https://api.slack.com/authentication/verifying-requests-from-slack
+ * 参考: https://api.slack.com/authentication/verifying-requests-from-slack
  */
 
 import { createHmac, timingSafeEqual } from "crypto";
 
 /**
- * Verify a Slack request signature.
+ * Slack リクエスト署名を検証する。
  *
- * @param body - Raw request body string (must be read before JSON parsing)
- * @param timestamp - X-Slack-Request-Timestamp header value
- * @param signature - X-Slack-Signature header value (e.g., "v0=abc123...")
- * @param signingSecret - Slack app signing secret from Secrets Manager
- * @returns true if the signature is valid and the request is recent
+ * @param body - 生のリクエストボディ文字列 (JSON パース前に読み取る必要あり)
+ * @param timestamp - X-Slack-Request-Timestamp ヘッダー値
+ * @param signature - X-Slack-Signature ヘッダー値 (例: "v0=abc123...")
+ * @param signingSecret - Secrets Manager から取得した Slack アプリ署名シークレット
+ * @returns 署名が有効かつリクエストが最新の場合 true
  */
 export async function verifySlackSignature(
   body: string,
@@ -28,26 +28,26 @@ export async function verifySlackSignature(
   signature: string,
   signingSecret: string,
 ): Promise<boolean> {
-  // Replay attack prevention: reject requests older than 5 minutes
+  // リプレイ攻撃防止: 5 分以上前のリクエストを拒否
   const now = Math.floor(Date.now() / 1000);
-  const ts = parseInt(timestamp, 10);
+  const ts = Number.parseInt(timestamp, 10);
   if (isNaN(ts) || Math.abs(now - ts) > 300) {
     return false;
   }
 
-  // Compute expected signature
+  // 期待される署名を計算
   const baseString = `v0:${timestamp}:${body}`;
   const expected = `v0=${createHmac("sha256", signingSecret)
     .update(baseString)
     .digest("hex")}`;
 
-  // Timing-safe comparison (prevents timing attacks)
+  // 定数時間比較 (タイミング攻撃防止)
   const expectedBuf = Buffer.from(expected, "utf8");
   const signatureBuf = Buffer.from(signature, "utf8");
 
   if (expectedBuf.length !== signatureBuf.length) {
-    // Length mismatch — still use timingSafeEqual on same-length buffers
-    // to avoid leaking length information
+    // 長さ不一致 — 長さ情報のリークを避けるため
+    // 同一長のバッファで timingSafeEqual を使用する
     return false;
   }
 

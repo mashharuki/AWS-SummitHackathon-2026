@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * TaskExtractorLambdaHandler unit tests
+ * TaskExtractorLambdaHandler ユニットテスト
  *
- * Strategy: Mock the module-level singletons (BedrockClientAdapter, DynamoTaskCandidateRepository)
- * by mocking the imported modules with vi.mock().
+ * 方針: vi.mock() でインポートモジュールをモック化し、
+ * モジュールレベルシングルトン（BedrockClientAdapter、DynamoTaskCandidateRepository）を別離する。
  *
- * No real Bedrock or DynamoDB calls are made.
+ * 実障の Bedrock および DynamoDB 呼び出しは行わない。
  */
 
 // ─────────────────────────────────────────────
-// Module mocks (hoisted)
+// モジュールモック（ホイスト済み）
 // ─────────────────────────────────────────────
 
 const mockConverse = vi.fn();
@@ -41,7 +41,7 @@ vi.mock("../../repositories/DynamoTaskCandidateRepository.js", () => ({
 }));
 
 // ─────────────────────────────────────────────
-// Helpers
+// ヘルパー
 // ─────────────────────────────────────────────
 
 function makeToolUseResponse(
@@ -96,7 +96,7 @@ const validEvent = {
 };
 
 // ─────────────────────────────────────────────
-// Tests
+// テスト
 // ─────────────────────────────────────────────
 
 describe("TaskExtractorLambdaHandler", () => {
@@ -117,11 +117,11 @@ describe("TaskExtractorLambdaHandler", () => {
   it("returns without error for invalid EventBridge payload (no DLQ)", async () => {
     const { handler } = await import("../TaskExtractorLambdaHandler.js");
 
-    // Malformed payload — missing required fields
+      // 不正なペイロード — 必須フィールドがない
     const malformed = { source: "slack", userId: "" };
     await expect(handler(malformed)).resolves.toBeUndefined();
 
-    // Bedrock should NOT have been called
+      // Bedrock は呼ばれていないべき
     expect(mockConverse).not.toHaveBeenCalled();
   });
 
@@ -144,7 +144,7 @@ describe("TaskExtractorLambdaHandler", () => {
 
     const { handler } = await import("../TaskExtractorLambdaHandler.js");
     await expect(handler(validEvent)).resolves.toBeUndefined();
-    // createTaskCandidateWithUserId (which calls create) should not be called
+      // createTaskCandidateWithUserId (create を呼び出す) は呼ばれないべき
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

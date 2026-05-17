@@ -1,16 +1,16 @@
-/**
- * タスクカード — pending / approved 両対応
- * モックUI saborou_v2_02-tasklist.png 参照
- */
-import { Check, X, ChevronRight, Clock } from "lucide-react";
-import { Link } from "react-router-dom";
-import type { Task, TaskCandidate } from "@saboru/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDateJa, isOverdue } from "@/lib/utils";
+import type { Task, TaskCandidate } from "@saboru/shared";
+/**
+ * タスクカード — pending / approved 両対応
+ * モックUI saborou_v2_02-tasklist.png 参照
+ */
+import { Check, ChevronRight, Clock, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
-// --- Pending (候補) カード ---
+// --- 保留中 (候補) カード ---
 interface CandidateCardProps {
   candidate: TaskCandidate;
   onApprove: (id: string) => void;
@@ -75,7 +75,7 @@ export function CandidateCard({
   );
 }
 
-// --- Approved (承認済み) カード ---
+// --- 承認済み カード ---
 interface TaskCardProps {
   task: Task;
   verdict?: "can_saboru" | "borderline" | "must_do" | null;

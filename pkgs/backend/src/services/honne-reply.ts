@@ -1,11 +1,11 @@
 /**
- * Honne (true feeling) reply text generator
+ * 本音 (本当の気持ち) 返信テキスト生成器
  *
- * Generates Saboru's empathetic response message based on the user's
- * honne reaction type. This keeps "personality" logic out of route handlers.
+ * ユーザーの本音リアクションタイプに応じて、サボるの共感的な返信メッセージを生成する。
+ * 「パーソナリティ」ロジックをルートハンドラーから分離する。
  *
- * FR-05: User's true reaction is recorded, and Saboru responds accordingly
- * to reinforce the "slacking is OK" mentality (「人をダメにするサービス」theme).
+ * FR-05: ユーザーの本音を記録し、サボるは「サボり OK」の気持ちを強化する
+ * ように応答する (「人をダメにするサービス」テーマ)。
  */
 
 import type { QuickReplyType } from "@saboru/shared";
@@ -22,7 +22,7 @@ const QUICK_REPLY_MESSAGES: Record<QuickReplyType, string> = {
 };
 
 /**
- * Get Saboru's reply for a quick_reply honne reaction
+ * quick_reply 本音リアクションに対するサボるの返信を取得する
  */
 export function getQuickReplyMessage(content: QuickReplyType): string {
   return (
@@ -32,9 +32,9 @@ export function getQuickReplyMessage(content: QuickReplyType): string {
 }
 
 /**
- * Get Saboru's reply for a free_text honne reaction
+ * free_text 本音リアクションに対するサボるの返信を取得する
  *
- * For free text, Saboru acknowledges the feeling without judgment.
+ * フリーテキストの場合、サボるは判断せず気持ちを受け入れる。
  */
 export function getFreeTextReply(content: string): string {
   const len = content.length;

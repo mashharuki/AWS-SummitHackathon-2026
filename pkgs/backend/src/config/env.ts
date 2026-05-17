@@ -1,11 +1,11 @@
 /**
- * Environment variable accessor with validation
+ * バリデーション付き環境変数アクセサー
  *
- * All environment variables are accessed through this module to ensure
- * missing variables fail fast with a clear error message rather than
- * producing undefined at runtime.
+ * 全ての環境変数はこのモジュール経由でアクセスする。
+ * 必須変数がない場合は、ランタイムで undefined になる代わりに
+ * 明確なエラーメッセージで即座に失敗する。
  *
- * NFR-P1: Variables are read once at module load (Lambda warm path).
+ * NFR-P1: 変数は Lambda モジュールロード時に一度読み込まれる (ウォームパス)。
  */
 
 function requireEnv(name: string): string {

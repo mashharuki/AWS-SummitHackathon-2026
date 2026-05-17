@@ -1,26 +1,26 @@
 /**
- * Honne (true feeling) recording route
+ * 本音記録ルート
  *
- * POST /tasks/:taskId/honne — Record user's true reaction (US-10 / FR-05)
+ * POST /tasks/:taskId/honne — ユーザーの本音リアクションを記録する (US-10 / FR-05)
  *
- * Stores the user's emotional response to a sabori proposal.
- * This data is used as raw material for future "user manual" generation
- * (「人をダメにするサービス」— learning from the user's slacking patterns).
+ * サボり提案に対するユーザーの感情的反応を保存する。
+ * このデータは将来の「ユーザーマニュアル」生成の素材として使われる
+ * (「人をダメにするサービス」— ユーザーのサボりパターンから学習)。
  */
 
-import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import type { AppEnv } from "../types.js";
-import { authMiddleware } from "../middleware/auth.js";
+import { CreateHonneSchema, toIsoString } from "@saboru/shared";
+import { Hono } from "hono";
 import { NotFoundError } from "../errors.js";
-import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoHonneRepository } from "../repositories/DynamoHonneRepository.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
-import { CreateHonneSchema, toIsoString } from "@saboru/shared";
+import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
 import {
-  getQuickReplyMessage,
   getFreeTextReply,
+  getQuickReplyMessage,
 } from "../services/honne-reply.js";
+import type { AppEnv } from "../types.js";
 
 export function createHonneRoute(
   taskRepository: DynamoTaskRepository,
@@ -34,11 +34,11 @@ export function createHonneRoute(
   /**
    * POST /tasks/:taskId/honne
    *
-   * Body (discriminated union):
+   * リクエストボディ (判別ユニオン):
    * - { type: "quick_reply", content: QuickReplyType }
-   * - { type: "free_text", content: string (1-500 chars) }
+   * - { type: "free_text", content: string (1ー500 文字) }
    *
-   * Returns Saboru's empathetic reply message.
+   * サボるの共感的な返信メッセージを返す。
    */
   honne.post(
     "/:taskId/honne",
@@ -61,16 +61,16 @@ export function createHonneRoute(
       const taskId = c.req.param("taskId");
       const body = c.req.valid("json");
 
-      // Verify task ownership
+      // タスクの所有者確認
       const task = await taskRepository.findById(userId, taskId);
       if (!task) throw new NotFoundError(`Task ${taskId} not found`);
 
-      // Get current proposal verdict for context preservation (FR-05)
+      // コンテキスト保全のため素の提案バーディクトを取得 (FR-05)
       const latestProposal =
         await proposalRepository.findLatestByTaskId(taskId);
       const proposalVerdict = latestProposal?.verdict ?? "borderline";
 
-      // Save honne data
+      // 本音データを保存
       await honneRepository.save({
         userId,
         taskId,
@@ -80,7 +80,7 @@ export function createHonneRoute(
         createdAt: toIsoString(new Date()),
       });
 
-      // Generate Saboru's empathetic reply
+      // サボるの共感的な返信を生成
       const replyMessage =
         body.type === "quick_reply"
           ? getQuickReplyMessage(body.content)

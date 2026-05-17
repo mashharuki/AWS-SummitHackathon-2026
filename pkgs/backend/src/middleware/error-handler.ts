@@ -1,10 +1,10 @@
 /**
- * Global error handler middleware for Hono
+ * Hono 向けグローバルエラーハンドラーミドルウェア
  *
- * NFR-R1: Centralised error handling — routes throw typed errors,
- * this handler maps them to structured JSON responses.
+ * NFR-R1: 集中エラーハンドリング — ルートは型付きエラーをスローし、
+ * このハンドラーが構造化 JSON レスポンスにマッピングする。
  *
- * Error response shape:
+ * エラーレスポンスの形式:
  * { "error": { "code": "ERROR_CODE", "message": "human-readable" } }
  */
 
@@ -20,7 +20,7 @@ export const errorHandler = (err: Error, c: Context) => {
     );
   }
 
-  // Hono built-in HTTPException
+  // Hono 組み込み HTTPException
   if ("status" in err && "message" in err) {
     const httpErr = err as { status: number; message: string };
     return c.json(

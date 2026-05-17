@@ -4,8 +4,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { NagSuppressions } from "cdk-nag";
-import { Construct } from "constructs";
-import { DataStackExports } from "./data-stack";
+import type { Construct } from "constructs";
+import type { DataStackExports } from "./data-stack";
 
 export interface AgentStackProps extends cdk.StackProps {
   readonly data: DataStackExports;
@@ -24,14 +24,14 @@ export class SaborouAgentStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
-    // --- Bedrock IAM Policy (shared) ---
+    // --- Bedrock IAM ポリシー (共通) ---
     const bedrockPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       resources: [
         `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0`,
         `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0`,
-        // U-03b: Claude Haiku for PersonaRenderer (Phase 3 tone conversion)
+        // U-03b: PersonaRenderer 用 Claude Haiku (Phase 3 トーン変換)
         `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-3-5-20241022-v1:0`,
         `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0`,
       ],
@@ -104,7 +104,7 @@ export class SaborouAgentStack extends cdk.Stack {
       functionName: `saborou-sabori-proposer-${environment}`,
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
-      // U-03b: 1024 MB for SSE streaming buffer; 90s for Phase 2 (Sonnet) + Phase 3 (Haiku)
+      // U-03b: SSE ストリーミングバッファのため 1024 MB; Phase 2 (Sonnet) + Phase 3 (Haiku) のため 90 秒
       memorySize: 1024,
       timeout: cdk.Duration.seconds(90),
       handler: "sabori-proposer/SaboriProposerLambdaHandler.handler",
@@ -117,17 +117,17 @@ export class SaborouAgentStack extends cdk.Stack {
         DYNAMODB_TABLE_PROPOSALS: props.data.tables.proposals.tableName,
         DYNAMODB_TABLE_TASKS: props.data.tables.tasks.tableName,
         BEDROCK_REGION: "ap-northeast-1",
-        // U-03b: secretName (not ARN) — ContextCollector uses SLACK_TOKEN_SECRET_NAME
+        // U-03b: ARN ではなく secretName を使用 — ContextCollector が SLACK_TOKEN_SECRET_NAME を参照するため
         SLACK_TOKEN_SECRET_NAME:
           props.data.secrets.slackClientSecret.secretName,
-        // DYNAMODB_TABLE_PERSONAS: removed (MVP scope — not used in U-03b)
+        // DYNAMODB_TABLE_PERSONAS: 削除 (MVP スコープ — U-03b では未使用)
       },
     });
 
     saboriProposerFn.addToRolePolicy(bedrockPolicy);
     props.data.tables.proposals.grantReadWriteData(saboriProposerFn);
     props.data.tables.tasks.grantReadData(saboriProposerFn);
-    // personas table grant removed (MVP scope)
+    // personas テーブルの権限付与を削除 (MVP スコープ)
     props.data.secrets.slackClientSecret.grantRead(saboriProposerFn);
 
     // --- CfnOutputs ---
@@ -141,7 +141,7 @@ export class SaborouAgentStack extends cdk.Stack {
       description: "Sabori Proposer Lambda ARN",
     });
 
-    // --- cdk-nag suppressions ---
+    // --- cdk-nag 抑制 ---
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-SQS3",
