@@ -46,11 +46,17 @@ export function SaborouCanvas({
 }: SaborouCanvasProps) {
   return (
     <div className={`${className} bg-[#F5F4F0] rounded-2xl overflow-hidden`}>
+      {/*
+       * ErrorBoundary catches synchronous throws from Canvas/createRenderer.
+       * Canvas v9 also accepts a `fallback` prop for WebGL-init failures,
+       * providing a second layer of isolation at the renderer level.
+       */}
       <ErrorBoundary fallback={<FallbackCloud />}>
         <Suspense fallback={<LoadingSpinner />}>
           <Canvas
             camera={{ position: [0, 0.5, 3], fov: 45 }}
             aria-label="サボローキャラクター"
+            fallback={<FallbackCloud />}
           >
             <SaborouCharacter verdict={verdict} isStreaming={isStreaming} />
           </Canvas>

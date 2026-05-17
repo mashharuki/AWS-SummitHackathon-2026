@@ -197,6 +197,40 @@ export const handlers = [
     return HttpResponse.json(mockProposal);
   }),
 
+  // Proposal SSE streaming (Vercel AI SDK useChat — streamProtocol: "text")
+  http.post("*/api/tasks/:id/proposal", () => {
+    const encoder = new TextEncoder();
+    const chunks = [
+      "おっとり",
+      "評価しましたよ〜。",
+      "\n\n",
+      "今日のタスクを見てみると、",
+      "締め切りまでまだ余裕があります。",
+      "\n\n",
+      "Slackも大して騒がしくないし、",
+      "今日は**安全にサボれます**！",
+      "\n\nゆっくり休んでくださいね〜 ☁️",
+    ];
+    const stream = new ReadableStream({
+      async start(controller) {
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode(chunk));
+          // slight delay to simulate streaming
+          await new Promise((resolve) => setTimeout(resolve, 80));
+        }
+        controller.close();
+      },
+    });
+    return new HttpResponse(stream, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "X-Vercel-AI-Data-Stream": "v1",
+      },
+    });
+  }),
+
   http.post("*/api/tasks/:id/honne", () => {
     return new HttpResponse(null, { status: 204 });
   }),
