@@ -57,7 +57,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build frontend
-        run: pnpm --filter frontend build
+        run: pnpm --filter @saboru/shared run build && pnpm --filter frontend build
       - name: Install Playwright browsers
         run: pnpm --filter frontend exec playwright install --with-deps
       - name: Run Playwright E2E tests
