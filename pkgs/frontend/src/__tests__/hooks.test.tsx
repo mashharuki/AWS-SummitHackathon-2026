@@ -10,14 +10,13 @@ describe("useReducedMotion", () => {
 
   it("matchMediaがない環境でもクラッシュしない", () => {
     const original = window.matchMedia;
-    // @ts-expect-error - intentionally removing matchMedia
-    delete window.matchMedia;
+    // configurable:true を必ず付与することで Vitest teardown 時の削除エラーを回避する
     Object.defineProperty(window, "matchMedia", {
       writable: true,
+      configurable: true,
       value: undefined,
     });
 
-    // matchMediaがない場合のフォールバック
     try {
       const { result } = renderHook(() => {
         try {
@@ -28,9 +27,9 @@ describe("useReducedMotion", () => {
       });
       expect(typeof result.current).toBe("boolean");
     } finally {
-      // 復元
       Object.defineProperty(window, "matchMedia", {
         writable: true,
+        configurable: true,
         value: original,
       });
     }

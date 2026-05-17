@@ -15,18 +15,21 @@ import { server } from "@/mocks/server";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// jsdom環境ではcrypto.subtleが未定義のためモックする
-vi.stubGlobal("crypto", {
-  ...globalThis.crypto,
-  getRandomValues: (arr: Uint8Array) => {
-    for (let i = 0; i < arr.length; i++) arr[i] = i % 256;
-    return arr;
-  },
-  randomUUID: () => `test-uuid-${Math.random().toString(36).slice(2)}`,
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => {
-      // SHA-256の代わりに固定長32バイトのダミーハッシュを返す
-      return new Uint8Array(32).fill(1).buffer;
+// jsdom環境ではcrypto.subtleが未定義のため、subtle を含む完全なモックに差し替える
+// Object.defineProperty を使うことで teardown 時の "Cannot delete property" エラーを回避
+Object.defineProperty(window, "crypto", {
+  writable: true,
+  configurable: true,
+  value: {
+    getRandomValues: (arr: Uint8Array) => {
+      for (let i = 0; i < arr.length; i++) arr[i] = i % 256;
+      return arr;
+    },
+    randomUUID: () => `test-uuid-${Math.random().toString(36).slice(2)}`,
+    subtle: {
+      digest: async (_algo: string, _data: ArrayBuffer) => {
+        return new Uint8Array(32).fill(1).buffer;
+      },
     },
   },
 });
