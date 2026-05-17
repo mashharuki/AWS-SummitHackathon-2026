@@ -1,0 +1,41 @@
+{
+  "name": "@saboru/agent",
+  "version": "1.0.0",
+  "description": "Saboru AI agent Lambda functions (task-extractor, sabori-proposer)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.826.0",
+    "@aws-sdk/client-dynamodb": "^3.826.0",
+    "@aws-sdk/client-secrets-manager": "^3.826.0",
+    "@aws-sdk/lib-dynamodb": "^3.826.0",
+    "@saboru/shared": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.149",
+    "@types/node": "^25.8.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}
