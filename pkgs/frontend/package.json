@@ -9,14 +9,15 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "pnpm exec playwright test",
     "dev": "vite",
+    "dev:mock": "vite --mode mock",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@react-three/drei": "^9.122.0",
-    "@react-three/fiber": "^8.18.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@saboru/shared": "workspace:*",
     "ai": "^4.3.16",
     "amazon-cognito-identity-js": "^6.3.12",

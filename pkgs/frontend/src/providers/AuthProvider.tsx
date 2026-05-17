@@ -43,6 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 初期化: リフレッシュトークンがあれば復元
   React.useEffect(() => {
+    // モックモード: Cognito を介さずログイン済み扱いにする（ローカル UI 検証用）
+    if (import.meta.env["VITE_USE_MOCK"] === "true") {
+      getMe()
+        .then((user) => {
+          setState({ user, isAuthenticated: true, isLoading: false });
+        })
+        .catch(() => {
+          setState({ user: null, isAuthenticated: false, isLoading: false });
+        });
+      return;
+    }
+
     const rt = getRefreshToken();
     if (!rt) {
       setState({ user: null, isAuthenticated: false, isLoading: false });
@@ -78,6 +90,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = React.useCallback(async () => {
     clearTokens();
     setState({ user: null, isAuthenticated: false, isLoading: false });
+    // モックモードでは Cognito ログアウト URL へ遷移せずログイン画面に戻す
+    if (import.meta.env["VITE_USE_MOCK"] === "true") {
+      window.location.href = "/login";
+      return;
+    }
     window.location.href = buildSignOutUrl();
   }, []);
 
