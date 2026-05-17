@@ -28,6 +28,7 @@
     "@aws-sdk/client-secrets-manager": "^3.826.0",
     "@aws-sdk/lib-dynamodb": "^3.826.0",
     "@saboru/shared": "workspace:*",
+    "@smithy/node-http-handler": "^4.7.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {

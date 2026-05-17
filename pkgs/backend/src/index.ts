@@ -51,7 +51,9 @@ import { createProposalsRoute } from "./routes/proposals.js";
 import { createTasksRoute } from "./routes/tasks.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
-const dynamoClient = new DynamoDBClient({ region: "ap-northeast-1" });
+const dynamoClient = new DynamoDBClient({
+  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+});
 
 // リポジトリを初期化
 const userRepository = new DynamoUserRepository(

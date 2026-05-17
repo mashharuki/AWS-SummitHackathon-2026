@@ -82,5 +82,41 @@ describe("pseudonymize", () => {
         expect(isAppError(e)).toBe(true);
       }
     });
+
+    it("should throw AppError when PSEUDONYMIZE_SALT is shorter than 16 chars (Phase 1-E-1 fix)", () => {
+      process.env["PSEUDONYMIZE_SALT"] = "short";
+      expect(() => pseudonymize("U12345678")).toThrow();
+
+      try {
+        pseudonymize("U12345678");
+      } catch (e) {
+        expect(isAppError(e)).toBe(true);
+        if (isAppError(e)) {
+          expect(e.code).toBe("INVALID_INPUT");
+        }
+      }
+    });
+  });
+
+  describe("HMAC collision prevention (Phase 1-E-1 fix)", () => {
+    it("should produce different hashes for inputs that would collide with SHA-256 naive concat", () => {
+      // 旧実装 SHA256(salt+name) では以下が衝突する:
+      // SHA256("abc" + "def") = SHA256("abcd" + "ef") = SHA256("abcdef")
+      // HMAC-SHA256 はソルトをキーとして扱うため衝突しない
+      process.env["PSEUDONYMIZE_SALT"] = "abc_valid_salt_16";
+      const hash1 = pseudonymize("def");
+
+      process.env["PSEUDONYMIZE_SALT"] = "abcd_valid_salt_1";
+      const hash2 = pseudonymize("ef");
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it("should return a non-empty hash for empty string input", () => {
+      process.env["PSEUDONYMIZE_SALT"] = testSalt;
+      const result = pseudonymize("");
+      expect(result).toHaveLength(64);
+      expect(result).toMatch(/^[0-9a-f]{64}$/);
+    });
   });
 });

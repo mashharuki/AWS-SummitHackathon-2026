@@ -59,12 +59,17 @@ export interface ITaskRepository {
    * Access pattern: DELETE /api/tasks/:id
    */
   softDelete(userId: string, taskId: string): Promise<void>;
+}
 
+/**
+ * Extended interface for transactional operations.
+ * Only DynamoTaskRepository implements this; route handlers use ITaskRepository only.
+ */
+export interface ITransactionalTaskRepository extends ITaskRepository {
   /**
-   * Called internally from TaskCandidateRepository.approve()
-   * Wraps Put operation of TransactWriteItems
-   * (Used via ITaskCandidateRepository)
-   * Direct calls prohibited (bypasses candidate approval flow)
+   * Called internally from TaskCandidateRepository.approve().
+   * Wraps Put within TransactWriteItems.
+   * Do not call directly from route handlers — bypasses candidate approval flow.
    */
   putFromTransaction(task: Task): Promise<void>;
 }

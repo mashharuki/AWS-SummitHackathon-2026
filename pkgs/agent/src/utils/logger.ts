@@ -17,7 +17,7 @@ export function log(level: LogLevel, data: Record<string, unknown>): void {
   console.log(
     JSON.stringify({
       level,
-      unit: "task-extractor",
+      unit: process.env["AWS_LAMBDA_FUNCTION_NAME"] ?? "task-extractor",
       timestamp: new Date().toISOString(),
       ...data,
     }),

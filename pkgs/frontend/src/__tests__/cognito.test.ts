@@ -15,6 +15,22 @@ import { server } from "@/mocks/server";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// jsdom環境ではcrypto.subtleが未定義のためモックする
+vi.stubGlobal("crypto", {
+  ...globalThis.crypto,
+  getRandomValues: (arr: Uint8Array) => {
+    for (let i = 0; i < arr.length; i++) arr[i] = i % 256;
+    return arr;
+  },
+  randomUUID: () => `test-uuid-${Math.random().toString(36).slice(2)}`,
+  subtle: {
+    digest: async (_algo: string, data: ArrayBuffer) => {
+      // SHA-256の代わりに固定長32バイトのダミーハッシュを返す
+      return new Uint8Array(32).fill(1).buffer;
+    },
+  },
+});
+
 // 環境変数モック
 vi.stubEnv("VITE_COGNITO_DOMAIN", "https://test.auth.cognito.com");
 vi.stubEnv("VITE_COGNITO_CLIENT_ID", "test-client-id");
@@ -104,38 +120,47 @@ describe("OAuth CSRF防止 — buildCognitoAuthUrl / validateOAuthState", () => 
     sessionStorage.clear();
   });
 
-  it("buildCognitoAuthUrlが正しいOAuthパラメータ構造を持つ", () => {
+  it("buildCognitoAuthUrlが正しいOAuthパラメータ構造を持つ", async () => {
     // COGNITO_DOMAIN, CLIENT_ID はモジュールレベル定数のためvi.stubEnvの影響を受けない
     // URLの構造（OAuthパラメータの存在）を検証する
-    const url = buildCognitoAuthUrl();
+    const url = await buildCognitoAuthUrl();
     expect(url).toContain("/oauth2/authorize");
     expect(url).toContain("response_type=code");
     expect(url).toContain("client_id=");
     expect(url).toContain("scope=openid+email+profile");
     expect(url).toContain("redirect_uri=");
     expect(url).toContain("state=");
+    expect(url).toContain("code_challenge=");
+    expect(url).toContain("code_challenge_method=S256");
   });
 
-  it("buildCognitoAuthUrlがstateをsessionStorageに保存する", () => {
-    buildCognitoAuthUrl();
+  it("buildCognitoAuthUrlがstateをsessionStorageに保存する", async () => {
+    await buildCognitoAuthUrl();
     const state = sessionStorage.getItem("oauth_state");
     expect(state).toBeTruthy();
     expect(state).toContain("test-uuid-");
   });
 
-  it("正しいstateで検証成功", () => {
-    buildCognitoAuthUrl();
+  it("buildCognitoAuthUrlがPKCE verifierをsessionStorageに保存する", async () => {
+    await buildCognitoAuthUrl();
+    const verifier = sessionStorage.getItem("pkce_verifier");
+    expect(verifier).toBeTruthy();
+    expect(typeof verifier).toBe("string");
+  });
+
+  it("正しいstateで検証成功", async () => {
+    await buildCognitoAuthUrl();
     const state = sessionStorage.getItem("oauth_state");
     expect(validateOAuthState(state!)).toBe(true);
   });
 
-  it("不正なstateで検証失敗", () => {
-    buildCognitoAuthUrl();
+  it("不正なstateで検証失敗", async () => {
+    await buildCognitoAuthUrl();
     expect(validateOAuthState("wrong-state")).toBe(false);
   });
 
-  it("検証後にsessionStorageからstateが削除される", () => {
-    buildCognitoAuthUrl();
+  it("検証後にsessionStorageからstateが削除される", async () => {
+    await buildCognitoAuthUrl();
     const state = sessionStorage.getItem("oauth_state");
     validateOAuthState(state!);
     expect(sessionStorage.getItem("oauth_state")).toBeNull();

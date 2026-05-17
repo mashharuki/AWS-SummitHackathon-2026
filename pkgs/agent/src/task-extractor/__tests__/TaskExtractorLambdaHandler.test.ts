@@ -102,7 +102,7 @@ const validEvent = {
 describe("TaskExtractorLambdaHandler", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    process.env["PSEUDONYMIZE_SALT"] = "test-salt";
+    process.env["PSEUDONYMIZE_SALT"] = "test-salt-1234567";
     process.env["BEDROCK_REGION"] = "ap-northeast-1";
   });
 
@@ -117,11 +117,11 @@ describe("TaskExtractorLambdaHandler", () => {
   it("returns without error for invalid EventBridge payload (no DLQ)", async () => {
     const { handler } = await import("../TaskExtractorLambdaHandler.js");
 
-      // 不正なペイロード — 必須フィールドがない
+    // 不正なペイロード — 必須フィールドがない
     const malformed = { source: "slack", userId: "" };
     await expect(handler(malformed)).resolves.toBeUndefined();
 
-      // Bedrock は呼ばれていないべき
+    // Bedrock は呼ばれていないべき
     expect(mockConverse).not.toHaveBeenCalled();
   });
 
@@ -144,7 +144,7 @@ describe("TaskExtractorLambdaHandler", () => {
 
     const { handler } = await import("../TaskExtractorLambdaHandler.js");
     await expect(handler(validEvent)).resolves.toBeUndefined();
-      // createTaskCandidateWithUserId (create を呼び出す) は呼ばれないべき
+    // createTaskCandidateWithUserId (create を呼び出す) は呼ばれないべき
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

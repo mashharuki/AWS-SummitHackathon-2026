@@ -14,10 +14,19 @@ import {
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
 
-const client = new SecretsManagerClient({ region: "ap-northeast-1" });
+const client = new SecretsManagerClient({
+  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+});
 
-let slackSigningSecretCache: string | undefined;
-let slackClientSecretCache: string | undefined;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface CachedSecret {
+  value: string;
+  fetchedAt: number;
+}
+
+let slackSigningSecretCache: CachedSecret | undefined;
+let slackClientSecretCache: CachedSecret | undefined;
 
 async function fetchSecret(secretArn: string): Promise<string> {
   const result = await client.send(
@@ -36,19 +45,33 @@ async function fetchSecret(secretArn: string): Promise<string> {
 export async function getSlackSigningSecret(
   secretArn: string,
 ): Promise<string> {
-  if (slackSigningSecretCache) return slackSigningSecretCache;
-  slackSigningSecretCache = await fetchSecret(secretArn);
-  return slackSigningSecretCache;
+  const now = Date.now();
+  if (
+    slackSigningSecretCache &&
+    now - slackSigningSecretCache.fetchedAt < CACHE_TTL_MS
+  ) {
+    return slackSigningSecretCache.value;
+  }
+  const value = await fetchSecret(secretArn);
+  slackSigningSecretCache = { value, fetchedAt: now };
+  return value;
 }
 
 /**
  * Slack クライアントシークレットを取得する (OAuth トークン交換用)
- * 初回取得後にキャッシュする。
+ * TTL (5分) 経過後に再フェッチする。
  */
 export async function getSlackClientSecret(secretArn: string): Promise<string> {
-  if (slackClientSecretCache) return slackClientSecretCache;
-  slackClientSecretCache = await fetchSecret(secretArn);
-  return slackClientSecretCache;
+  const now = Date.now();
+  if (
+    slackClientSecretCache &&
+    now - slackClientSecretCache.fetchedAt < CACHE_TTL_MS
+  ) {
+    return slackClientSecretCache.value;
+  }
+  const value = await fetchSecret(secretArn);
+  slackClientSecretCache = { value, fetchedAt: now };
+  return value;
 }
 
 /** キャッシュをリセットする — テスト専用 */

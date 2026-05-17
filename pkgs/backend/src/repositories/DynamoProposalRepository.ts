@@ -17,6 +17,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { IProposalRepository, Proposal } from "@saboru/shared";
+import { generateUlid } from "@saboru/shared";
 
 export class DynamoProposalRepository implements IProposalRepository {
   constructor(
@@ -43,7 +44,7 @@ export class DynamoProposalRepository implements IProposalRepository {
   async save(proposal: Omit<Proposal, "PK" | "SK">): Promise<Proposal> {
     const item: Proposal = {
       PK: `TASK#${proposal.taskId}`,
-      SK: `PROPOSAL#${proposal.evaluatedAt}`,
+      SK: `PROPOSAL#${proposal.evaluatedAt}#${generateUlid()}`,
       ...proposal,
     };
 

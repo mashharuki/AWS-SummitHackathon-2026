@@ -11,10 +11,14 @@ export interface CognitoStackExports {
   readonly userPoolDomain: cognito.UserPoolDomain;
 }
 
+export interface CognitoStackProps extends cdk.StackProps {
+  readonly frontendDomainName?: string;
+}
+
 export class SaborouCognitoStack extends cdk.Stack {
   public readonly exports: CognitoStackExports;
 
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: CognitoStackProps) {
     super(scope, id, props);
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
@@ -77,8 +81,18 @@ export class SaborouCognitoStack extends cdk.Stack {
           cognito.OAuthScope.EMAIL,
           cognito.OAuthScope.PROFILE,
         ],
-        callbackUrls: ["http://localhost:5173/auth/callback"],
-        logoutUrls: ["http://localhost:5173"],
+        callbackUrls: [
+          "http://localhost:5173/auth/callback",
+          ...(props?.frontendDomainName
+            ? [`https://${props.frontendDomainName}/auth/callback`]
+            : []),
+        ],
+        logoutUrls: [
+          "http://localhost:5173",
+          ...(props?.frontendDomainName
+            ? [`https://${props.frontendDomainName}`]
+            : []),
+        ],
       },
       supportedIdentityProviders: [
         cognito.UserPoolClientIdentityProvider.GOOGLE,

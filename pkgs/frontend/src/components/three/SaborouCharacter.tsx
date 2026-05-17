@@ -107,6 +107,11 @@ export function SaborouCharacter({
     scene.add(group);
     return () => {
       scene.remove(group);
+      group.traverse((obj) => {
+        if ((obj as THREE.Mesh).isMesh) {
+          (obj as THREE.Mesh).geometry?.dispose();
+        }
+      });
       mat.dispose();
       whiteMat.dispose();
       darkMat.dispose();

@@ -146,7 +146,7 @@ describe("TaskExtractorAgent", () => {
 
   beforeEach(() => {
     // pseudonymize() に必要な環境変数を設定
-    process.env["PSEUDONYMIZE_SALT"] = "test-salt-12345";
+    process.env["PSEUDONYMIZE_SALT"] = "test-salt-1234567";
 
     mockBedrock = new MockBedrockClient(makeTaskBedrockResponse());
     mockRepo = new MockTaskCandidateRepository();

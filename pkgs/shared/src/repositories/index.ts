@@ -5,5 +5,6 @@ export type { ITaskCandidateRepository } from "./interface/ITaskCandidateReposit
 export type {
   ApprovedTask,
   ITaskRepository,
+  ITransactionalTaskRepository,
 } from "./interface/ITaskRepository";
 export type { IUserRepository } from "./interface/IUserRepository";

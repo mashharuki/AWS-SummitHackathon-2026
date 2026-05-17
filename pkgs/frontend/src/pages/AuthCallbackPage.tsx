@@ -42,7 +42,10 @@ export function AuthCallbackPage() {
       return;
     }
 
-    exchangeCodeForTokens(code)
+    const codeVerifier = sessionStorage.getItem("pkce_verifier") ?? undefined;
+    sessionStorage.removeItem("pkce_verifier");
+
+    exchangeCodeForTokens(code, codeVerifier)
       .then(async ({ accessToken, refreshToken, expiresIn }) => {
         await handleCallback(accessToken, refreshToken, expiresIn);
         void navigate("/tasks", { replace: true });

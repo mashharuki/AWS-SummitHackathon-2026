@@ -21,6 +21,14 @@ describe("formatDeadline", () => {
     expect(formatDeadline(null)).toBe("締切なし");
   });
 
+  it("should return '締切なし' for invalid date string (Phase W-3 fix)", () => {
+    expect(formatDeadline("invalid-date")).toBe("締切なし");
+  });
+
+  it("should return '締切なし' for empty string (Phase W-3 fix)", () => {
+    expect(formatDeadline("")).toBe("締切なし");
+  });
+
   it("should return '今日 HH:mm' for same day deadline", () => {
     // 2026-05-17T10:00:00Z = 19:00 JST (same day)
     const result = formatDeadline("2026-05-17T10:00:00Z");

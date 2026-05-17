@@ -66,33 +66,6 @@ export class DynamoServiceConnectionRepository
     return unmarshall(result.Item) as ServiceConnection;
   }
 
-  async save(
-    connection: Omit<ServiceConnection, "PK" | "SK">,
-  ): Promise<ServiceConnection> {
-    const _item: ServiceConnection = {
-      ...connection,
-      PK: `USER#${connection.service}`,
-      SK: `CONN#${connection.service}`,
-    };
-    void _item;
-
-    // Build proper PK from the userId — connection.secretArn is not userId.
-    // We need userId from the caller. Since IServiceConnectionRepository.save()
-    // receives `Omit<ServiceConnection, "PK" | "SK">`, we derive userId from
-    // the secretArn pattern or a dedicated field if provided.
-    // For U-04 the routes pass userId via a wrapper — reconstruct here safely.
-    const conn: ServiceConnection = {
-      PK: `USER#${connection.secretArn}`, // placeholder; overridden by save wrapper
-      SK: `CONN#${connection.service}`,
-      ...connection,
-    };
-    void conn; // unused — see saveForUser below
-
-    throw new Error(
-      "Use saveForUser() — IServiceConnectionRepository.save() requires userId",
-    );
-  }
-
   /**
    * Save connection with explicit userId (U-04 internal helper).
    * The interface IServiceConnectionRepository.save() does not carry userId,

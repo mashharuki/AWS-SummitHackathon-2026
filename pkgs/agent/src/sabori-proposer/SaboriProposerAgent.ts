@@ -207,7 +207,7 @@ export class SaboriProposerAgent {
       logError({
         action: "sabori_propose_stream_parse_error",
         error: error instanceof Error ? error.message : String(error),
-        fullText: fullText.slice(0, 200),
+        fullTextLength: fullText.length,
       });
       // Fallback to synchronous judgment
       judgment = await this.runJudgmentPhase(narrativeText, contextSignals);

@@ -18,6 +18,7 @@
  */
 export function formatDeadline(isoDate: string | null): string {
   if (!isoDate) return "締切なし";
+  if (Number.isNaN(new Date(isoDate).getTime())) return "締切なし";
 
   const timeStr = new Date(isoDate).toLocaleTimeString("ja-JP", {
     hour: "2-digit",

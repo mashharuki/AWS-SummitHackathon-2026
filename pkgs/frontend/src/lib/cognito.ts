@@ -56,10 +56,32 @@ export function clearTokens() {
   }
 }
 
-/** NFR-DESIGN-2: Cognito Hosted UI URL を構築（CSRF state 付き） */
-export function buildCognitoAuthUrl(): string {
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+}
+
+/** NFR-DESIGN-2: Cognito Hosted UI URL を構築（CSRF state + PKCE 付き） */
+export async function buildCognitoAuthUrl(): Promise<string> {
   const state = crypto.randomUUID();
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
   sessionStorage.setItem("oauth_state", state);
+  sessionStorage.setItem("pkce_verifier", codeVerifier);
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -67,6 +89,8 @@ export function buildCognitoAuthUrl(): string {
     redirect_uri: REDIRECT_URI,
     scope: "openid email profile",
     state,
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
   });
 
   return `${COGNITO_DOMAIN}/oauth2/authorize?${params.toString()}`;
@@ -79,19 +103,26 @@ export function validateOAuthState(receivedState: string): boolean {
   return expectedState === receivedState;
 }
 
-/** 認証コードをトークンと交換 */
-export async function exchangeCodeForTokens(code: string): Promise<{
+/** 認証コードをトークンと交換 (PKCE code_verifier 付き) */
+export async function exchangeCodeForTokens(
+  code: string,
+  codeVerifier?: string,
+): Promise<{
   accessToken: string;
   refreshToken: string;
   idToken: string;
   expiresIn: number;
 }> {
-  const params = new URLSearchParams({
+  const paramsObj: Record<string, string> = {
     grant_type: "authorization_code",
     client_id: CLIENT_ID,
     code,
     redirect_uri: REDIRECT_URI,
-  });
+  };
+  if (codeVerifier) {
+    paramsObj["code_verifier"] = codeVerifier;
+  }
+  const params = new URLSearchParams(paramsObj);
 
   const res = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
     method: "POST",

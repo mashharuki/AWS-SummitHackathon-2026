@@ -10,6 +10,7 @@
  * 全ての外部呼び出しはモック — AWS 課金なし、ネットワーク呼び出しなし。
  */
 
+import { createHmac } from "crypto";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
@@ -53,6 +54,7 @@ vi.mock("../../config/env.js", () => ({
     DYNAMODB_TABLE_PERSONAS: "personas-test",
     SLACK_SIGNING_SECRET_ARN: "arn:test:signing",
     SLACK_CLIENT_SECRET_ARN: "arn:test:client",
+    OAUTH_STATE_SECRET: "test-oauth-state-secret-32chars!!",
     EVENT_BUS_NAME: "test-bus",
   },
 }));
@@ -83,10 +85,16 @@ async function buildTestApp(connRepo: Record<string, unknown> = {}) {
   return app;
 }
 
-// Valid base64url state encoding userId
-const validState = Buffer.from(
-  JSON.stringify({ userId: MOCK_USER_ID }),
-).toString("base64url");
+// Build a valid HMAC-signed state (matching the new implementation)
+const TEST_OAUTH_SECRET = "test-oauth-state-secret-32chars!!";
+function buildSignedState(userId: string): string {
+  const payload = JSON.stringify({ userId, nonce: "test-nonce" });
+  const mac = createHmac("sha256", TEST_OAUTH_SECRET)
+    .update(payload)
+    .digest("hex");
+  return Buffer.from(JSON.stringify({ payload, mac })).toString("base64url");
+}
+const validState = buildSignedState(MOCK_USER_ID);
 
 describe("GET /auth/slack/callback — success path (new secret)", () => {
   beforeEach(() => {

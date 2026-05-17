@@ -20,6 +20,7 @@ import {
   UpdateSecretCommand,
 } from "@aws-sdk/client-secrets-manager";
 import { toIsoString } from "@saboru/shared";
+import { createHmac, timingSafeEqual } from "crypto";
 import { Hono } from "hono";
 import { env } from "../config/env.js";
 import { getSlackClientSecret } from "../config/secrets.js";
@@ -38,7 +39,38 @@ const SLACK_OAUTH_SCOPES = [
 const SLACK_OAUTH_URL = "https://slack.com/oauth/v2/authorize";
 const SLACK_TOKEN_URL = "https://slack.com/api/oauth.v2.access";
 
-const smClient = new SecretsManagerClient({ region: "ap-northeast-1" });
+const smClient = new SecretsManagerClient({
+  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+});
+
+function signState(payload: string, secret: string): string {
+  return createHmac("sha256", secret).update(payload).digest("hex");
+}
+
+function verifyState(
+  stateParam: string,
+  secret: string,
+): { userId: string } | null {
+  try {
+    const decoded = Buffer.from(stateParam, "base64url").toString("utf8");
+    const { payload, mac } = JSON.parse(decoded) as {
+      payload: string;
+      mac: string;
+    };
+    const expected = signState(payload, secret);
+    const expectedBuf = Buffer.from(expected, "hex");
+    const actualBuf = Buffer.from(mac, "hex");
+    if (
+      expectedBuf.length !== actualBuf.length ||
+      !timingSafeEqual(expectedBuf, actualBuf)
+    ) {
+      return null;
+    }
+    return JSON.parse(payload) as { userId: string };
+  } catch {
+    return null;
+  }
+}
 
 export function createAuthRoute(
   connectionRepository: DynamoServiceConnectionRepository,
@@ -58,8 +90,14 @@ export function createAuthRoute(
 
     const redirectUri = `${c.req.url.replace("/auth/slack", "/auth/slack/callback")}`;
 
-    // state パラメータに userId をエンコードしてコールバック時に復元する
-    const state = Buffer.from(JSON.stringify({ userId })).toString("base64url");
+    // state パラメータに userId + HMAC-SHA256 署名をエンコードして CSRF 対策
+    const oauthStateSecret = env.OAUTH_STATE_SECRET;
+    const nonce = crypto.randomUUID();
+    const payload = JSON.stringify({ userId, nonce });
+    const mac = signState(payload, oauthStateSecret);
+    const state = Buffer.from(JSON.stringify({ payload, mac })).toString(
+      "base64url",
+    );
 
     const params = new URLSearchParams({
       client_id: process.env.SLACK_CLIENT_ID ?? "",
@@ -104,21 +142,21 @@ export function createAuthRoute(
       );
     }
 
-    // state から userId を復元
-    let userId: string;
-    try {
-      const decoded = JSON.parse(
-        Buffer.from(stateParam, "base64url").toString("utf8"),
-      ) as { userId: string };
-      userId = decoded.userId;
-    } catch {
+    // HMAC 署名を検証してから state から userId を復元 (CSRF 対策)
+    const oauthStateSecret = env.OAUTH_STATE_SECRET;
+    const verified = verifyState(stateParam, oauthStateSecret);
+    if (!verified) {
       return c.json(
         {
-          error: { code: "INVALID_STATE", message: "Invalid state parameter" },
+          error: {
+            code: "INVALID_STATE",
+            message: "Invalid or tampered state parameter",
+          },
         },
         400,
       );
     }
+    const userId = verified.userId;
 
     // Exchange code for token
     const clientSecretArn = env.SLACK_CLIENT_SECRET_ARN;

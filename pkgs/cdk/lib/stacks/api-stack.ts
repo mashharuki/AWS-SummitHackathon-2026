@@ -4,6 +4,7 @@ import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorize
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
 import type { CognitoStackExports } from "./cognito-stack";
@@ -12,6 +13,7 @@ import type { DataStackExports } from "./data-stack";
 export interface ApiStackProps extends cdk.StackProps {
   readonly cognito: CognitoStackExports;
   readonly data: DataStackExports;
+  readonly frontendDomainName?: string;
 }
 
 export interface ApiStackExports {
@@ -60,6 +62,11 @@ export class SaborouApiStack extends cdk.Stack {
         DYNAMODB_TABLE_PERSONAS: props.data.tables.personas.tableName,
         // --- シークレット (追加: U-04 Slack OAuth コールバックがクライアントシークレットを使用) ---
         SLACK_CLIENT_SECRET_ARN: props.data.secrets.slackClientSecret.secretArn,
+        // --- OAuth state HMAC シークレット (BE-C-1: CSRF 対策) ---
+        OAUTH_STATE_SECRET: ssm.StringParameter.valueForStringParameter(
+          this,
+          "/saborou/oauth/state-secret",
+        ),
         // 注: EVENT_BUS_NAME は API Lambda では不要 (webhook Lambda のみが使用)
       },
     });
@@ -92,7 +99,12 @@ export class SaborouApiStack extends cdk.Stack {
     const httpApi = new apigatewayv2.HttpApi(this, "HttpApi", {
       apiName: `saborou-api-${environment}`,
       corsPreflight: {
-        allowOrigins: ["http://localhost:5173", "https://*"],
+        allowOrigins: [
+          "http://localhost:5173",
+          ...(props.frontendDomainName
+            ? [`https://${props.frontendDomainName}`]
+            : []),
+        ],
         allowMethods: [apigatewayv2.CorsHttpMethod.ANY],
         allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
         maxAge: cdk.Duration.hours(1),

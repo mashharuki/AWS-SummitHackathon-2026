@@ -25,7 +25,9 @@ import { env } from "../config/env.js";
 import { getSlackSigningSecret } from "../config/secrets.js";
 import { verifySlackSignature } from "../services/slack-verification.js";
 
-const ebClient = new EventBridgeClient({ region: "ap-northeast-1" });
+const ebClient = new EventBridgeClient({
+  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+});
 
 export const webhooksRoute = new Hono();
 
@@ -87,7 +89,7 @@ webhooksRoute.post("/slack", async (c) => {
   // NFR-P3: Lambda が返る前に配信を保証するため await するが、
   // Slack の 3 秒ウィンドウ内に十分完了する。
   try {
-    await ebClient.send(
+    const ebResult = await ebClient.send(
       new PutEventsCommand({
         Entries: [
           {
@@ -103,6 +105,15 @@ webhooksRoute.post("/slack", async (c) => {
         ],
       }),
     );
+    if ((ebResult.FailedEntryCount ?? 0) > 0) {
+      console.error("[WEBHOOK] EventBridge partial failure", {
+        failedCount: ebResult.FailedEntryCount,
+        entries: ebResult.Entries?.map((e) => ({
+          errorCode: e.ErrorCode,
+          errorMessage: e.ErrorMessage,
+        })),
+      });
+    }
   } catch (err) {
     // ログするが失敗みない — Slack はリトライを避けるため 200 を必要とする
     console.error("[WEBHOOK] EventBridge put failed", { error: String(err) });

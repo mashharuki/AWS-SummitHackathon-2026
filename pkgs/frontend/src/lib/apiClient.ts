@@ -43,7 +43,7 @@ export class ApiError extends Error {
   }
 }
 
-let _isRefreshing = false;
+let _refreshPromise: Promise<string | null> | null = null;
 
 /** NFR-DESIGN-8: 認証付きリクエスト（401時はリフレッシュ + 1回リトライ） */
 async function request<T>(
@@ -64,17 +64,16 @@ async function request<T>(
     headers,
   });
 
-  if (res.status === 401 && retry && !_isRefreshing) {
-    _isRefreshing = true;
-    try {
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        setAccessToken(newToken);
-        _isRefreshing = false;
-        return request<T>(path, options, false);
-      }
-    } finally {
-      _isRefreshing = false;
+  if (res.status === 401 && retry) {
+    if (!_refreshPromise) {
+      _refreshPromise = refreshAccessToken().finally(() => {
+        _refreshPromise = null;
+      });
+    }
+    const newToken = await _refreshPromise;
+    if (newToken) {
+      setAccessToken(newToken);
+      return request<T>(path, options, false);
     }
     // リフレッシュ失敗 → ログアウト
     clearTokens();
@@ -205,11 +204,11 @@ export async function disconnectService(service: string): Promise<void> {
   });
 }
 
-/** 提案ストリーミング用 SSE URL を構築 (GET /api/tasks/:id/proposal?stream=true) */
+/** 提案ストリーミング用 SSE URL を構築 (GET /api/tasks/:id/proposal?stream=true)
+ * トークンは Authorization ヘッダーで送信するため URL に含めない (FE-C-1)
+ */
 export function buildProposalStreamUrl(taskId: string): string {
-  const token = getAccessToken() ?? "";
-  const params = new URLSearchParams({ stream: "true", access_token: token });
-  return `${API_BASE_URL}/api/tasks/${taskId}/proposal?${params.toString()}`;
+  return `${API_BASE_URL}/api/tasks/${taskId}/proposal?stream=true`;
 }
 
 export default {

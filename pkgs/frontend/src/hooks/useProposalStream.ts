@@ -27,9 +27,16 @@ export function useProposalStream({
   const [currentVerdict, setCurrentVerdict] = useState<Verdict | null>(null);
 
   const { messages, append, isLoading, error, setMessages } = useChat({
-    api: `${import.meta.env["VITE_API_BASE_URL"] ?? ""}/api/tasks/${taskId}/proposal`,
-    headers: {
-      Authorization: `Bearer ${getAccessToken() ?? ""}`,
+    api: apiClient.buildProposalStreamUrl(taskId),
+    fetch: async (input, init) => {
+      const token = getAccessToken();
+      return fetch(input, {
+        ...init,
+        headers: {
+          ...init?.headers,
+          Authorization: `Bearer ${token ?? ""}`,
+        },
+      });
     },
     streamProtocol: "text",
     onFinish: (_message) => {

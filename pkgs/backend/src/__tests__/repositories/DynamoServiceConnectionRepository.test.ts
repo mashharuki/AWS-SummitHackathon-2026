@@ -91,19 +91,5 @@ describe("DynamoServiceConnectionRepository.disconnect", () => {
   });
 });
 
-describe("DynamoServiceConnectionRepository.save (throws)", () => {
-  it("throws error (use saveForUser instead)", async () => {
-    const client = mockClient(() => ({}));
-    const repo = new DynamoServiceConnectionRepository(client, TABLE);
-
-    await expect(
-      repo.save({
-        service: "slack",
-        status: "connected",
-        secretArn: "arn:test",
-        connectedAt: "2026-05-17T00:00:00Z",
-        expiresAt: null,
-      }),
-    ).rejects.toThrow("Use saveForUser");
-  });
-});
+// Note: save() was removed from IServiceConnectionRepository and DynamoServiceConnectionRepository.
+// All callers should use saveForUser() directly (BE-C-3 fix).

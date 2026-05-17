@@ -13,7 +13,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { HonneData, IHonneRepository } from "@saboru/shared";
-import { DDB_PREFIX, toIsoString } from "@saboru/shared";
+import { DDB_PREFIX, generateUlid, toIsoString } from "@saboru/shared";
 
 export class DynamoHonneRepository implements IHonneRepository {
   constructor(
@@ -26,7 +26,7 @@ export class DynamoHonneRepository implements IHonneRepository {
 
     const item: HonneData = {
       PK: `${DDB_PREFIX.USER}${honneData.userId}`,
-      SK: `HONNE#${createdAt}`,
+      SK: `HONNE#${createdAt}#${generateUlid()}`,
       ...honneData,
       createdAt,
     };

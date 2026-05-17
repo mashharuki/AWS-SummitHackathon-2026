@@ -231,4 +231,41 @@ describe("guardTokenLimit", () => {
       expect(DEFAULT_MAX_TOKEN_LIMIT).toBe(8000);
     });
   });
+
+  describe("NaN/zero/negative env var guard (Phase 1-E-2 fix)", () => {
+    afterEach(() => {
+      delete process.env["MAX_TOKEN_LIMIT"];
+    });
+
+    it("should use DEFAULT_MAX_TOKEN_LIMIT when MAX_TOKEN_LIMIT is NaN string", () => {
+      process.env["MAX_TOKEN_LIMIT"] = "invalid";
+      const text = "a";
+      const result = guardTokenLimit(text);
+      expect(result).toBe(text);
+    });
+
+    it("should use DEFAULT_MAX_TOKEN_LIMIT when MAX_TOKEN_LIMIT is zero", () => {
+      process.env["MAX_TOKEN_LIMIT"] = "0";
+      const text = "hello world";
+      const result = guardTokenLimit(text);
+      expect(result).toBe(text);
+    });
+
+    it("should use DEFAULT_MAX_TOKEN_LIMIT when MAX_TOKEN_LIMIT is negative", () => {
+      process.env["MAX_TOKEN_LIMIT"] = "-100";
+      const text = "テストテキスト";
+      const result = guardTokenLimit(text);
+      expect(result).toBe(text);
+    });
+
+    it("should return empty string when explicit limit is 0", () => {
+      const result = guardTokenLimit("hello", 0);
+      expect(result).toBe("");
+    });
+
+    it("should not truncate when tokens exactly equal limit", () => {
+      // "aaaa" → 4 chars × 0.25 = 1 token (ceil(1.0))
+      expect(guardTokenLimit("aaaa", 1)).toBe("aaaa");
+    });
+  });
 });

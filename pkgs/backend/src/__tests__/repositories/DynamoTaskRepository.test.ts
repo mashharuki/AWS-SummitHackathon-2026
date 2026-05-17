@@ -136,32 +136,26 @@ describe("DynamoTaskRepository.putFromTransaction", () => {
 });
 
 describe("DynamoTaskRepository.update", () => {
-  it("updates task and returns updated version", async () => {
-    let callCount = 0;
-    const client = mockClient(() => {
-      callCount++;
-      if (callCount === 1) return {}; // UpdateItem response
-      return { Item: { ...sampleTaskItem, title: { S: "更新済み" } } }; // findById after update
-    });
+  it("updates task and returns updated version (uses ReturnValues ALL_NEW)", async () => {
+    // W-5 fix: update() now uses ReturnValues: "ALL_NEW" and reads from result.Attributes
+    const client = mockClient(() => ({
+      Attributes: { ...sampleTaskItem, title: { S: "更新済み" } },
+    }));
     const repo = new DynamoTaskRepository(client, TABLE);
 
     const updated = await repo.update("user1", "01ABC", { title: "更新済み" });
     expect(updated.taskId).toBe("01ABC");
+    expect(updated.title).toBe("更新済み");
   });
 
   it("updates task with deadline and description fields", async () => {
-    let callCount = 0;
-    const client = mockClient(() => {
-      callCount++;
-      if (callCount === 1) return {};
-      return {
-        Item: {
-          ...sampleTaskItem,
-          deadline: { S: "2026-12-31" },
-          description: { S: "詳細説明" },
-        },
-      };
-    });
+    const client = mockClient(() => ({
+      Attributes: {
+        ...sampleTaskItem,
+        deadline: { S: "2026-12-31" },
+        description: { S: "詳細説明" },
+      },
+    }));
     const repo = new DynamoTaskRepository(client, TABLE);
 
     const updated = await repo.update("user1", "01ABC", {
@@ -171,13 +165,10 @@ describe("DynamoTaskRepository.update", () => {
     expect(updated.deadline).toBe("2026-12-31");
   });
 
-  it("throws when task disappears after update (findById returns null)", async () => {
-    let callCount = 0;
-    const client = mockClient(() => {
-      callCount++;
-      if (callCount === 1) return {}; // UpdateItem OK
-      return {}; // findById returns no Item → null
-    });
+  it("throws when UpdateItem returns no Attributes", async () => {
+    // ReturnValues: ALL_NEW should always return Attributes on success;
+    // empty result means the item did not exist (ConditionExpression failed).
+    const client = mockClient(() => ({})); // no Attributes
     const repo = new DynamoTaskRepository(client, TABLE);
 
     await expect(repo.update("user1", "01ABC", { title: "x" })).rejects.toThrow(

@@ -79,8 +79,20 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
   async create(
     candidate: Omit<TaskCandidate, "PK" | "SK">,
   ): Promise<TaskCandidate> {
+    // _userId is an internal field injected by callers that need explicit userId.
+    // candidateId.split("#")[0] was previously used but ULID contains no "#",
+    // so it returned the full ULID as PK — a critical data corruption bug.
+    const extendedCandidate = candidate as Omit<TaskCandidate, "PK" | "SK"> & {
+      _userId?: string;
+    };
+    const userId = extendedCandidate._userId;
+    if (!userId) {
+      throw new Error(
+        "create() requires _userId on the candidate object. Use createForUser() instead.",
+      );
+    }
     const item: TaskCandidate = {
-      PK: `${DDB_PREFIX.USER}${candidate.candidateId.split("#")[0] ?? "unknown"}`,
+      PK: `${DDB_PREFIX.USER}${userId}`,
       SK: `${DDB_PREFIX.TASK_CAND}${candidate.candidateId}`,
       ...candidate,
     };

@@ -48,6 +48,7 @@ export type {
   IServiceConnectionRepository,
   ITaskCandidateRepository,
   ITaskRepository,
+  ITransactionalTaskRepository,
   ApprovedTask,
   IProposalRepository,
   IHonneRepository,

@@ -57,6 +57,9 @@ export const env = {
   get SLACK_CLIENT_SECRET_ARN(): string {
     return requireEnv("SLACK_CLIENT_SECRET_ARN");
   },
+  get OAUTH_STATE_SECRET(): string {
+    return requireEnv("OAUTH_STATE_SECRET");
+  },
   get EVENT_BUS_NAME(): string {
     return requireEnv("EVENT_BUS_NAME");
   },

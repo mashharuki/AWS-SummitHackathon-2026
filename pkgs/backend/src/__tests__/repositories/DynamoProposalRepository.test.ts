@@ -76,7 +76,8 @@ describe("DynamoProposalRepository.save", () => {
     });
 
     expect(saved.PK).toBe("TASK#T01");
-    expect(saved.SK).toBe("PROPOSAL#2026-05-17T00:00:00Z");
+    // SK includes ULID suffix for collision prevention (W-11)
+    expect(saved.SK).toMatch(/^PROPOSAL#2026-05-17T00:00:00Z#[0-9A-Z]{26}$/);
     expect(saved.verdict).toBe("borderline");
     expect(client.send).toHaveBeenCalledOnce();
   });

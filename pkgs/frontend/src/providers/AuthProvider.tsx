@@ -84,7 +84,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = React.useCallback(() => {
-    window.location.href = buildCognitoAuthUrl();
+    void buildCognitoAuthUrl().then((url) => {
+      window.location.href = url;
+    });
   }, []);
 
   const signOut = React.useCallback(async () => {

@@ -428,19 +428,20 @@ describe("ApiError クラス", () => {
 });
 
 describe("buildProposalStreamUrl", () => {
-  it("アクセストークンありでSSE URLを構築する", () => {
+  it("stream=trueパラメータとタスクIDを含むURLを構築する", () => {
     setAccessToken("stream-token", 3600);
     const url = buildProposalStreamUrl("task-123");
     expect(url).toContain("stream=true");
-    expect(url).toContain("access_token=stream-token");
     expect(url).toContain("/api/tasks/task-123/proposal");
+    // access_token はURLではなくAuthorizationヘッダーで渡す（FE-C-1修正）
+    expect(url).not.toContain("access_token=");
   });
 
-  it("アクセストークンなしでも空のaccess_tokenでURLを構築する", () => {
+  it("トークンなしでもURLは正しく構築される", () => {
     clearTokens();
     const url = buildProposalStreamUrl("task-456");
     expect(url).toContain("stream=true");
-    expect(url).toContain("access_token=");
     expect(url).toContain("/api/tasks/task-456/proposal");
+    expect(url).not.toContain("access_token=");
   });
 });

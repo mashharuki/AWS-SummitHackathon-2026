@@ -7,6 +7,7 @@ import {
   type ConverseStreamCommandInput,
   type ConverseStreamCommandOutput,
 } from "@aws-sdk/client-bedrock-runtime";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import type { IBedrockClient } from "./IBedrockClient.js";
 
 /**
@@ -30,6 +31,9 @@ export class BedrockClientAdapter implements IBedrockClient {
       region,
       maxAttempts: 5,
       retryMode: "adaptive",
+      requestHandler: new NodeHttpHandler({
+        requestTimeout: 25_000, // Lambda timeout (30s) より短く設定
+      }),
     });
   }
 

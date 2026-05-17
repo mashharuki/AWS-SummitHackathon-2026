@@ -1,7 +1,7 @@
 /**
  * タスク手動追加モーダル
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,31 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
   const [deadline, setDeadline] = useState("");
   const [description, setDescription] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && modalRef.current) {
+        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (
+          e.shiftKey
+            ? document.activeElement === first
+            : document.activeElement === last
+        ) {
+          e.preventDefault();
+          (e.shiftKey ? last : first)?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -48,6 +73,7 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
 
   return (
     <div
+      ref={modalRef}
       className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4"
       role="dialog"
       aria-modal="true"

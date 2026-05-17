@@ -99,7 +99,12 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
     const extendedCandidate = candidate as Omit<TaskCandidate, "PK" | "SK"> & {
       _userId?: string;
     };
-    const userId = extendedCandidate._userId ?? candidate.candidateId;
+    const userId = extendedCandidate._userId;
+    if (!userId) {
+      throw new Error(
+        "create() requires _userId on the candidate object. Use createTaskCandidateWithUserId() instead.",
+      );
+    }
     // Clean up internal field
     const { _userId: _removed, ...cleanCandidate } = extendedCandidate;
 

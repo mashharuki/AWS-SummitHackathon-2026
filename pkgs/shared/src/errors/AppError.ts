@@ -66,7 +66,9 @@ export class AppError extends Error {
    * サーバーサイドのログ (CloudWatch) は独立して動作し、常に詳細を記録する
    */
   serialize(): SerializedError {
-    if (process.env["NODE_ENV"] === "production") {
+    const nodeEnv = process.env["NODE_ENV"];
+    const isDev = nodeEnv === "development" || nodeEnv === "test";
+    if (!isDev) {
       return {
         code: this.code,
         message: "An unexpected error occurred.",

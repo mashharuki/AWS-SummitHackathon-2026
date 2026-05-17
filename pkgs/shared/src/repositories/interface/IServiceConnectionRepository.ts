@@ -26,15 +26,6 @@ export interface IServiceConnectionRepository {
   ): Promise<ServiceConnection | null>;
 
   /**
-   * Save service connection info (at OAuth callback)
-   * DynamoDB: PutItem PK=USER#<userId> SK=CONN#<service>
-   * Security: Only secretArn is stored (token managed by Secrets Manager, BR-08)
-   */
-  save(
-    connection: Omit<ServiceConnection, "PK" | "SK">,
-  ): Promise<ServiceConnection>;
-
-  /**
    * Disconnect service (update status=disconnected)
    * DynamoDB: UpdateItem PK=USER#<userId> SK=CONN#<service>
    */

@@ -25,6 +25,7 @@ vi.mock("../../config/env.js", () => ({
     DYNAMODB_TABLE_PERSONAS: "personas-test",
     SLACK_SIGNING_SECRET_ARN: "arn:test:signing",
     SLACK_CLIENT_SECRET_ARN: "arn:test:client",
+    OAUTH_STATE_SECRET: "test-oauth-state-secret-32chars!!",
     EVENT_BUS_NAME: "test-bus",
   },
 }));

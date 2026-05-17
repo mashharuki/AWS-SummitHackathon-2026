@@ -17,7 +17,7 @@ import {
   UpdateItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
-import type { ITaskRepository, Task } from "@saboru/shared";
+import type { ITransactionalTaskRepository, Task } from "@saboru/shared";
 import {
   DDB_PREFIX,
   SOURCE_TYPE,
@@ -26,7 +26,7 @@ import {
   toIsoString,
 } from "@saboru/shared";
 
-export class DynamoTaskRepository implements ITaskRepository {
+export class DynamoTaskRepository implements ITransactionalTaskRepository {
   constructor(
     private readonly client: DynamoDBClient,
     private readonly tableName: string,
@@ -124,7 +124,7 @@ export class DynamoTaskRepository implements ITaskRepository {
       expressionAttributeValues[":description"] = updates.description;
     }
 
-    await this.client.send(
+    const result = await this.client.send(
       new UpdateItemCommand({
         TableName: this.tableName,
         Key: marshall({
@@ -143,9 +143,9 @@ export class DynamoTaskRepository implements ITaskRepository {
       }),
     );
 
-    const updated = await this.findById(userId, taskId);
-    if (!updated) throw new Error(`Task ${taskId} not found after update`);
-    return updated;
+    if (!result.Attributes)
+      throw new Error(`Task ${taskId} not found after update`);
+    return unmarshall(result.Attributes) as Task;
   }
 
   async softDelete(userId: string, taskId: string): Promise<void> {

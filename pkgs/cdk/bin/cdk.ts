@@ -23,21 +23,45 @@ cdk.Tags.of(app).add("ManagedBy", "aws-cdk");
 cdk.Tags.of(app).add("Environment", environment);
 
 // --- Stack definitions (in dependency order) ---
-const cognitoStack = new SaborouCognitoStack(
-  app,
-  `SaborouCognito-${environment}`,
-  { env },
-);
-
+// --- Stack definitions (in dependency order) ---
+// FrontendStack is instantiated before CognitoStack so its distributionDomainName
+// CDK token can be forwarded to Cognito callbackUrls and API CORS allowOrigins.
+// FrontendStack.apiUrl is declared in props but its CloudFront/S3 infrastructure
+// does not use it at synth time, so passing the ApiStack token (created below) is safe.
 const dataStack = new SaborouDataStack(app, `SaborouData-${environment}`, {
   env,
 });
 
+// Step 1: FrontendStack — produces distributionDomainName token
+// apiUrl will be back-filled via Lazy once apiStack is synthesised.
+let resolvedApiUrl = "";
+const frontendStack = new SaborouFrontendStack(
+  app,
+  `SaborouFrontend-${environment}`,
+  {
+    env,
+    apiUrl: cdk.Lazy.string({ produce: () => resolvedApiUrl }),
+  },
+);
+
+// Step 2: CognitoStack — needs CloudFront domain for callbackUrls / logoutUrls
+const cognitoStack = new SaborouCognitoStack(
+  app,
+  `SaborouCognito-${environment}`,
+  {
+    env,
+    frontendDomainName: frontendStack.exports.distributionDomainName,
+  },
+);
+
+// Step 3: ApiStack — needs Cognito exports; also forwards CloudFront domain for CORS
 const apiStack = new SaborouApiStack(app, `SaborouApi-${environment}`, {
   env,
   cognito: cognitoStack.exports,
   data: dataStack.exports,
+  frontendDomainName: frontendStack.exports.distributionDomainName,
 });
+resolvedApiUrl = apiStack.exports.httpApiUrl;
 
 const agentStack = new SaborouAgentStack(app, `SaborouAgent-${environment}`, {
   env,
@@ -49,11 +73,6 @@ new SaborouWebhookStack(app, `SaborouWebhook-${environment}`, {
   data: dataStack.exports,
   api: apiStack.exports,
   agents: agentStack.exports,
-});
-
-new SaborouFrontendStack(app, `SaborouFrontend-${environment}`, {
-  env,
-  apiUrl: apiStack.exports.httpApiUrl,
 });
 
 // --- cdk-nag: AWS Solutions Checks ---
