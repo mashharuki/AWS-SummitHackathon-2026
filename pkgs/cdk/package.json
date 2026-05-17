@@ -15,7 +15,10 @@
     "deploy": "cdk deploy",
     "destroy": "cdk destroy",
     "floci:start": "docker compose up -d",
-    "floci:stop": "docker compose down"
+    "floci:stop": "docker compose down",
+    "floci:bootstrap": "sh ./scripts/floci-bootstrap.sh",
+    "floci:deploy": "sh ./scripts/floci-deploy.sh",
+    "floci:destroy": "sh ./scripts/floci-destroy.sh"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
