@@ -13,7 +13,9 @@
     "diff": "cdk diff",
     "synth": "cdk synth",
     "deploy": "cdk deploy",
-    "destroy": "cdk destroy"
+    "destroy": "cdk destroy",
+    "floci:start": "docker compose up -d",
+    "floci:stop": "docker compose down"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
