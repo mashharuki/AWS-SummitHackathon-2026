@@ -1,6 +1,9 @@
-export type { IUserRepository } from "./IUserRepository";
-export type { IServiceConnectionRepository } from "./IServiceConnectionRepository";
-export type { ITaskCandidateRepository } from "./ITaskCandidateRepository";
-export type { ITaskRepository, ApprovedTask } from "./ITaskRepository";
-export type { IProposalRepository } from "./IProposalRepository";
-export type { IHonneRepository } from "./IHonneRepository";
+export type { IHonneRepository } from "./interface/IHonneRepository";
+export type { IProposalRepository } from "./interface/IProposalRepository";
+export type { IServiceConnectionRepository } from "./interface/IServiceConnectionRepository";
+export type { ITaskCandidateRepository } from "./interface/ITaskCandidateRepository";
+export type {
+  ApprovedTask,
+  ITaskRepository,
+} from "./interface/ITaskRepository";
+export type { IUserRepository } from "./interface/IUserRepository";

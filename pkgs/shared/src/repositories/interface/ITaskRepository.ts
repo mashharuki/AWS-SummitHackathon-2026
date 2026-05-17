@@ -1,4 +1,4 @@
-import type { Task } from "../types";
+import type { Task } from "../../types";
 
 /** Return type for approve() */
 export type ApprovedTask = Task;

@@ -1,4 +1,4 @@
-import type { HonneData } from "../types";
+import type { HonneData } from "../../types";
 
 /**
  * Honne data repository interface

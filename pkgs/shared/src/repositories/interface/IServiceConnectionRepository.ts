@@ -1,4 +1,4 @@
-import type { ServiceConnection, ServiceType } from "../types";
+import type { ServiceConnection, ServiceType } from "../../types";
 
 /**
  * Service connection repository interface

@@ -1,4 +1,4 @@
-import type { TaskCandidate } from "../types";
+import type { TaskCandidate } from "../../types";
 import type { ApprovedTask } from "./ITaskRepository";
 
 /**
