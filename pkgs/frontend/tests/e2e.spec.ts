@@ -12,7 +12,9 @@ test.describe("ログインページ", () => {
     await page.goto(`${BASE_URL}/login`);
     await expect(page).toHaveTitle(/SABOROU/i);
     await expect(page.getByText("SABOROU")).toBeVisible();
-    await expect(page.getByText("Googleでログイン")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Googleでログイン")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test("特徴リストが表示される", async ({ page }) => {

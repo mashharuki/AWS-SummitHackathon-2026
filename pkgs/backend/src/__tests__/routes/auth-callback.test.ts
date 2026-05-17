@@ -75,7 +75,9 @@ async function buildTestApp(connRepo: Record<string, unknown> = {}) {
   });
   app.route(
     "/auth",
-    createAuthRoute(connRepo as unknown as Parameters<typeof createAuthRoute>[0]),
+    createAuthRoute(
+      connRepo as unknown as Parameters<typeof createAuthRoute>[0],
+    ),
   );
   app.onError(errorHandler);
   return app;
