@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll } from "vitest";
 import { server } from "./mocks/server";
 
 // MSW サーバー起動
