@@ -75,6 +75,21 @@
 #### 全Unit完了後
 - [x] Build and Test（完了: 2026-05-17T14:20:00Z）— 542テスト全パス / E2E 5テスト全パス / Biome 0エラー / tsc 全パッケージ成功 / CONSTRUCTION フェーズ完了
 
+#### U-06: ui-redesign
+- [x] Functional Design — 完了・**改訂版**（2026-05-20T07:00:00Z）。**方針変更**: Three.js 全廃止 → **Three.js 併用 + Mid レベル仕上げ** へ。HTML 2D 世界観に「3D ヒーロー」をログイン+詳細の2箇所に局所投入する相乗効果設計に転換。成果物（7本）:
+  - `ui-redesign-spec.md`（7画面構成 + 2D/3D 配置マトリクス + 既存 Three.js リメイク方針）
+  - `design-tokens.md`（Tailwind 設定・CSS 変数・フォント戦略 + **11章「3Dシーン設定」追加**：マテリアル/3点ライト/Environment/ContactShadows/呼吸アニメ/verdict 連動色）
+  - `component-mapping.md`（HTML vs 現フロント対応表 + Three.js 廃止撤回 → `SaborouCharacter2D`/`SaborouCharacter3D` 併存設計）
+  - `migration-plan.md`（7フェーズ・Phase 3 を「Three.js リメイク Mid 仕上げ 6-8h」に変更・合計 20-29h）
+  - `api-html-gap-analysis.md`（9ギャップ分析・対応方針／変更なし）
+  - **新規** `2d-3d-coexistence-rules.md`（憲法6条・配置マトリクス・PRレビューチェックリスト・アンチパターン10件）
+  - **新規** `character-design-sheet.md`（2D/3D 共通の顔・色・比率設計図・SVGパス・3D再現方法）
+  - ユーザーレビュー待ち。
+- [ ] NFR Requirements — 未実施
+- [ ] NFR Design — 未実施
+- [ ] Infrastructure Design — スキップ予定（フロントエンドのみ変更、インフラ変更なし）
+- [ ] Code Generation — 未実施（Functional Design ユーザー承認後に開始）
+
 ### OPERATIONS フェーズ
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
 - [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）
