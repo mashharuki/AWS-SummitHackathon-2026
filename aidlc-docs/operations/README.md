@@ -39,7 +39,7 @@
 | コード品質 | Biome 1.9.4（フォーマッター + リンター）|
 | DB | DynamoDB On-Demand（7テーブル） |
 | AI | Claude Sonnet（anthropic.claude-3-5-sonnet-20241022-v2:0） |
-| 認証 | Amazon Cognito + Google ソーシャルログイン |
+| 認証 | Amazon Cognito（メール/パスワード認証・セルフサインアップ有効） |
 | 連携 | Slack Events API + Webhook |
 | ローカルエミュレーター | Floci（Java 25 + Quarkus 3.x、ポート4566） |
 | リージョン | ap-northeast-1（東京） |
@@ -50,7 +50,7 @@
 
 | スタック | 責務 |
 |---------|------|
-| CognitoStack | User Pool + Google IdP |
+| CognitoStack | User Pool + メール/パスワード認証（COGNITO IdP） |
 | DataStack | DynamoDB 7テーブル |
 | ApiStack | API Gateway HTTP API + Hono Lambda |
 | AgentStack | TaskExtractor / SaboriProposer / BackgroundRefresh Lambda + EventBridge + DLQ |

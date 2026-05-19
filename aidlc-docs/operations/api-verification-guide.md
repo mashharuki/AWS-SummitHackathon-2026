@@ -412,7 +412,7 @@ Swagger UI 上部の **Servers** ドロップダウンから本番 URL を選択
 CDK デプロイ後の URL 確認:
 ```bash
 aws cloudformation describe-stacks \
-  --stack-name SaborouApiStack \
+  --stack-name SaborouApi-dev \
   --region ap-northeast-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`HttpApiUrl`].OutputValue' \
   --output text
