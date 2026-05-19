@@ -1,0 +1,75 @@
+import type { Task } from "../../types";
+
+/** Return type for approve() */
+export type ApprovedTask = Task;
+
+/**
+ * Task repository interface
+ *
+ * Access patterns:
+ * - Query GSI-UserStatus userId=USER#<userId> status=approved
+ * - GetItem PK=USER#<userId> SK=TASK#<taskId>
+ * - PutItem — Manual add / approval
+ * - UpdateItem — Inline edit / logical delete
+ * - TransactWriteItems Put — Atomic operation on candidate approval
+ */
+export interface ITaskRepository {
+  /**
+   * Get approved task list
+   * DynamoDB: Query GSI-UserStatus userId=USER#<userId> status=approved
+   * Access pattern: GET /api/tasks (approved)
+   */
+  findApprovedByUserId(userId: string): Promise<Task[]>;
+
+  /**
+   * Get single task
+   * DynamoDB: GetItem PK=USER#<userId> SK=TASK#<taskId>
+   * Access pattern: GET /api/tasks/:id
+   */
+  findById(userId: string, taskId: string): Promise<Task | null>;
+
+  /**
+   * Manually create task (immediately approved with status=approved)
+   * DynamoDB: PutItem PK=USER#<userId> SK=TASK#<ulid>
+   * ULID generated with generateUlid() (BR-04)
+   * Access pattern: POST /api/tasks
+   */
+  create(
+    task: Omit<
+      Task,
+      "PK" | "SK" | "taskId" | "status" | "approvedAt" | "updatedAt"
+    >,
+  ): Promise<Task>;
+
+  /**
+   * Update task (inline edit)
+   * DynamoDB: UpdateItem PK=USER#<userId> SK=TASK#<taskId>
+   * updatedAt automatically updated
+   * Access pattern: PATCH /api/tasks/:id
+   */
+  update(
+    userId: string,
+    taskId: string,
+    updates: Partial<Pick<Task, "title" | "deadline" | "description">>,
+  ): Promise<Task>;
+
+  /**
+   * Logical delete task (change status=deleted, no physical delete, BR-03)
+   * DynamoDB: UpdateItem PK=USER#<userId> SK=TASK#<taskId>
+   * Access pattern: DELETE /api/tasks/:id
+   */
+  softDelete(userId: string, taskId: string): Promise<void>;
+}
+
+/**
+ * Extended interface for transactional operations.
+ * Only DynamoTaskRepository implements this; route handlers use ITaskRepository only.
+ */
+export interface ITransactionalTaskRepository extends ITaskRepository {
+  /**
+   * Called internally from TaskCandidateRepository.approve().
+   * Wraps Put within TransactWriteItems.
+   * Do not call directly from route handlers — bypasses candidate approval flow.
+   */
+  putFromTransaction(task: Task): Promise<void>;
+}

@@ -13,22 +13,13 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests",
-  /* Run tests in files in parallel */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: "http://localhost:5173",
     trace: "on-first-retry",
   },
 
@@ -70,10 +61,18 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  webServer: {
+    command: "pnpm dev",
+    url: "http://localhost:5173",
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+    env: {
+      VITE_COGNITO_DOMAIN:
+        "https://dummy.auth.ap-northeast-1.amazoncognito.com",
+      VITE_COGNITO_CLIENT_ID: "dummy-client-id",
+      VITE_OAUTH_REDIRECT_URI: "http://localhost:5173/auth/callback",
+      VITE_COGNITO_USER_POOL_ID: "ap-northeast-1_dummy",
+      VITE_API_BASE_URL: "http://localhost:3000",
+    },
+  },
 });

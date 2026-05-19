@@ -4,8 +4,8 @@
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
 - **プロジェクトタイプ**: Greenfield（新規）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: INCEPTION フェーズ 完了（v1.3.0 — モノレポベース実装完了・Inception ドキュメント更新済み）
-- **ドキュメントバージョン**: v1.3.0（2026-05-16 更新）
+- **現在のステージ**: コードレビュー完了 + 修正適用済み（2026-05-17T21:57:00Z）。19件 Critical・主要 Warning 全修正・Lean 4 形式検証完了。517テスト全パス。次は OPERATIONS フェーズ（CDK デプロイ）
+- **ドキュメントバージョン**: v2.2.0（2026-05-17 コードレビュー修正・形式検証反映）
 
 ## ワークスペース状態
 - **既存コード**: なし
@@ -29,12 +29,51 @@
 - [x] Units Generation（完了: 2026-05-09T15:00:00Z）
 
 ### CONSTRUCTION フェーズ
-- [ ] Functional Design（EXECUTE — 各Unit）
-- [ ] NFR Requirements（EXECUTE — 各Unit）
-- [ ] NFR Design（EXECUTE — 各Unit）
-- [ ] Infrastructure Design（EXECUTE — 各Unit）
-- [ ] Code Generation（EXECUTE — 各Unit・必須）
-- [ ] Build and Test（EXECUTE — 全Unit完了後・必須）
+
+#### U-01: shared
+- [x] Functional Design — 完了・承認済み（2026-05-17T06:00:00Z）。domain-entities.md / business-rules.md / business-logic-model.md 生成済み。ユーザー承認取得。
+- [x] NFR Requirements — 完了・承認済み（2026-05-17T08:00:00Z）。nfr-requirements.md / tech-stack-decisions.md 生成済み。品質最大化方針確定（プロダクション品質優先）。ユーザー承認（[B] Continue to Next Stage）。
+- [x] NFR Design — 完了（2026-05-17T08:30:00Z）。nfr-design-patterns.md / logical-components.md 生成済み。質問なし・ファストトラック自動進行。
+- [x] Infrastructure Design — スキップ（N/A: @saboru/shared はランタイムなしの純粋 TypeScript ライブラリ。AWS リソースを直接使用しないため Infrastructure Design の対象なし）
+- [x] Code Generation — 完了（2026-05-17T10:15:00Z）。pkgs/shared/ 生成済み（93テスト全パス・カバレッジ100%・ESM/CJS/DTS ビルド成功）
+
+#### U-02: infra
+- [x] Functional Design — 完了（2026-05-17T11:15:00Z）。functional-design.md 生成済み。6スタック責務・Props設計・RemovalPolicy・タグ付け・CfnOutput定義。質問なしファストトラック自動進行。
+- [x] NFR Requirements — 完了（2026-05-17T11:30:00Z）。nfr-requirements.md 生成済み。NFR-I1〜I6（セキュリティ/コスト/テスト/IaC再現性/可観測性/cdk-nag）定義。
+- [x] NFR Design — 完了（2026-05-17T11:45:00Z）。nfr-design.md 生成済み。8設計パターン（Grant Method Chain / ARN Injection / OAC / ARM64 / CDK Assertions / Context-Based Config / CloudWatch アラーム自動生成 / AwsSolutionsChecks）定義。
+- [x] Infrastructure Design — 完了（2026-05-17T12:00:00Z）。infrastructure-design.md 生成済み。6スタック詳細実装仕様・テストファイル仕様・デプロイ手順・CfnOutput 一覧・Well-Architected 6本柱準拠確認。
+- [x] Code Generation — 完了（2026-05-17T15:30:00Z）。6スタック + 1コンストラクト + 6テストファイル（33テスト全パス）。cdk synth 成功（Errors=0 / cdk-nag 全Rule対応）。aidlc-docs/construction/infra/code/code-generation-summary.md 生成済み。
+
+#### U-03a: task-extractor
+- [x] Functional Design — 完了（2026-05-17T16:10:00Z）。functional-design.md 生成済み。データモデル・Tool Use スキーマ・ビジネスロジック・パッケージ構成定義。質問なしファストトラック自動進行。
+- [x] NFR Requirements — 完了（2026-05-17T16:15:00Z）。nfr-requirements.md 生成済み。性能・セキュリティ・信頼性・コスト・テスト容易性・可観測性 NFR 定義。
+- [x] NFR Design — 完了（2026-05-17T16:20:00Z）。nfr-design.md 生成済み。8設計パターン定義（Adapter / ToolChoice強制 / Zodダブルバリデーション / 生データ破棄 / 冪等性PutItem / SecretsManagerキャッシュ / 構造化ログ / maxTokens固定）。
+- [x] Infrastructure Design — 完了（2026-05-17T16:25:00Z）。infrastructure-design.md 生成済み。U-02既存リソース活用・AgentStack修正点特定（code パス / SLACK_TOKEN_SECRET_NAME / grantRead追加）。
+- [x] Code Generation — 完了（2026-05-17T01:50:00Z UTC）。pkgs/agent 新規作成（32テスト全パス・カバレッジ Statements 98.36% / Branches 84.21% / Functions 90.9%）。pkgs/cdk既存33テスト継続パス確認。AgentStack修正完了。
+
+#### U-03b: sabori-proposer
+- [x] Functional Design — 完了（2026-05-17T03:10:00Z）。functional-design.md 生成済み。3フェーズ設計・Tool Use スキーマ・心理学5理論シグナル・SSE ストリーミング設計・IBedrockClient 拡張定義。質問なしファストトラック自動進行。
+- [x] NFR Requirements — 完了（2026-05-17T03:15:00Z）。nfr-requirements.md 生成済み。NFR-P1〜P4（パフォーマンス）/S1〜S4（セキュリティ）/R1〜R4（信頼性）/C1〜C2（コスト）/T1〜T2（テスト容易性）/O1〜O3（可観測性）全19件定義。
+- [x] NFR Design — 完了（2026-05-17T03:20:00Z）。nfr-design.md 生成済み。10設計パターン定義（IBedrockClient拡張/ToolChoice強制/Zodダブルバリデーション/rawSummaryスコープ制限/DynamoDB冪等性/SecretsManagerキャッシュ再利用/構造化ログ/maxTokens2段階/PersonaRendererフォールバック/Slack APIタイムアウト）。
+- [x] Infrastructure Design — 完了（2026-05-17T03:25:00Z）。infrastructure-design.md 生成済み。AgentStack修正点特定（handler パス/codeパス/timeout=90s/memorySize=1024MB/SLACK_TOKEN_SECRET_NAME/Haiku IAM ARN追加）。
+- [x] Code Generation — 完了（2026-05-17T02:20:00Z UTC）。新規10ファイル・変更6ファイル。pkgs/agentビルド成功（ESM+CJS+DTS）。104テスト全パス（Statements 88.79% / Branches 85.45%）。pkgs/cdk 35テスト全パス（agent-stack.test.ts U-03b仕様2件追加）。code-generation-summary.md 生成済み。
+
+#### U-04: api
+- [x] Functional Design — 完了（2026-05-17T05:10:00Z）。domain-entities.md / business-rules.md / business-logic-model.md 生成済み。BR-API-01〜10定義。15エンドポイント仕様・SSEフロー・Webhook受信フロー確定。質問なしファストトラック自動進行。
+- [x] NFR Requirements — 完了（2026-05-17T05:15:00Z）。nfr-requirements.md / tech-stack-decisions.md 生成済み。NFR-P1〜P3/S1〜S5/R1〜R3/C1〜C2/T1〜T2/O1〜O3 全17件定義。
+- [x] NFR Design — 完了（2026-05-17T05:20:00Z）。nfr-design.md 生成済み。8設計パターン定義（Hono Variables / Zod二重防衛 / Slack HMAC / Secrets Manager キャッシュ / streamSSE / エラーハンドラ / EventBridge fire-and-forget / esbuild ARM64）。
+- [x] Infrastructure Design — 完了（2026-05-17T05:25:00Z）。infrastructure-design.md 生成済み。2Lambda エントリポイント構成・CDK変更点（環境変数追加・IAM権限修正）・ビルドスクリプト設計確定。
+- [x] Code Generation — 完了（2026-05-17T13:07:00Z）。新規23ファイル（types/errors/middleware 3/config 2/services 2/repositories 6/routes 7/webhook-handler）・変更6ファイル（index/handler/openapi/package.json/tsconfig/vitest.config）・CDK api-stack.ts 更新。build: dist/index.js 286.7kb + dist/webhook.js 76.7kb 成功。test: 117テスト all pass（Statements 72.96% / Branches 67.06% / Functions 72.04% / Lines 72.99%）。CDK jest 35テスト継続パス。code-summary.md 生成済み。
+
+#### U-05: web
+- [x] Functional Design — 完了（2026-05-17T14:00:00Z）。domain-entities.md / business-rules.md / business-logic-model.md / frontend-components.md 生成済み。モックUI（01-login/02-tasklist/03-detail/04-settings）参照済み。質問なしファストトラック自動進行。
+- [x] NFR Requirements — 完了（2026-05-17T14:10:00Z）。nfr-requirements.md / tech-stack-decisions.md 生成済み。NFR-WEB-P1〜P4/S1〜S5/R1〜R4/A1〜A2/U1〜U3/T1〜T4/O1〜O2 全20件定義。質問なしファストトラック自動進行。
+- [x] NFR Design — 完了（2026-05-17T14:20:00Z）。nfr-design-patterns.md（10パターン）/ logical-components.md 生成済み。質問なしファストトラック自動進行。
+- [x] Infrastructure Design — 完了（2026-05-17T14:30:00Z）。infrastructure-design.md 生成済み。環境変数定義・ビルド・デプロイ手順・CDK変更点（DistributionId追加/CORS開発許可）確定。
+- [x] Code Generation — 完了（2026-05-17T14:45:00Z）。53テスト全pass / tsc エラーゼロ / vite build 成功。E2Eテストファイル作成（tests/e2e.spec.ts）。
+
+#### 全Unit完了後
+- [x] Build and Test（完了: 2026-05-17T14:20:00Z）— 542テスト全パス / E2E 5テスト全パス / Biome 0エラー / tsc 全パッケージ成功 / CONSTRUCTION フェーズ完了
 
 ### OPERATIONS フェーズ
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）

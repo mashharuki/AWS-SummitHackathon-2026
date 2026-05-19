@@ -22,6 +22,7 @@
 | CDK操作ガイド | [cdk-operations.md](./cdk-operations.md) | CDKスタックのブートストラップ・Flociローカル検証・本番デプロイ・スタック破棄手順 |
 | バックエンド操作ガイド | [backend-operations.md](./backend-operations.md) | Hono on Lambda のローカル開発・Lambda デプロイ確認・CloudWatch ログ確認手順 |
 | フロントエンド操作ガイド | [frontend-operations.md](./frontend-operations.md) | React + Vite のローカル開発・ビルド・S3 + CloudFront デプロイ手順 |
+| API 動作検証ガイド | [api-verification-guide.md](./api-verification-guide.md) | Swagger UI を使った全エンドポイントの動作確認手順・エラー確認チェックリスト |
 
 ---
 

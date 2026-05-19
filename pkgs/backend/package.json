@@ -4,22 +4,35 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "vitest",
-    "dev": "tsx ./src/index.ts",
-    "build": "esbuild --bundle --outfile=./dist/index.js --platform=node --target=node20 ./src/handler.ts",
-    "zip": "zip -j lambda.zip dist/index.js",
-    "update": "aws lambda update-function-code --zip-file fileb://lambda.zip --function-name hello",
-    "deploy": "run-s build zip update"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "dev": "node --env-file=.env --import tsx ./src/index.ts",
+    "build": "run-s build:clean build:api build:webhook",
+    "build:clean": "rm -rf dist",
+    "build:api": "esbuild --bundle --outfile=dist/index.js --platform=node --target=node22 --external:@aws-sdk/* --external:@saboru/* src/handler.ts",
+    "build:webhook": "esbuild --bundle --outfile=dist/webhook.js --platform=node --target=node22 --external:@aws-sdk/* --external:@saboru/* src/webhook-handler.ts",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@hono/node-server": "^2.0.2",
     "@hono/swagger-ui": "^0.6.1",
+    "@types/node": "^25.8.0",
+    "@vitest/coverage-v8": "^4.1.6",
     "esbuild": "^0.21.4",
     "npm-run-all2": "^6.2.0",
     "tsx": "^4.22.0",
     "vitest": "^4.1.6"
   },
   "dependencies": {
-    "hono": "^4.12.19"
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-eventbridge": "^3.0.0",
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "@aws-sdk/util-dynamodb": "^3.0.0",
+    "@hono/zod-validator": "^0.4.2",
+    "@saboru/agent": "workspace:*",
+    "@saboru/shared": "workspace:*",
+    "hono": "^4.12.19",
+    "zod": "^3.25.0"
   }
 }

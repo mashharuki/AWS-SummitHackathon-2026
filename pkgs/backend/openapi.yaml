@@ -1,0 +1,976 @@
+openapi: "3.0.0"
+
+info:
+  title: Saborou API
+  version: "1.0.0"
+  description: >
+    「人をダメにするサービス」— Saborou API.
+    タスクのサボり可否を AI が判断し、ユーザーがプロフェッショナルにタスクを回避できるよう支援します。
+
+    ## 認証
+    全エンドポイント（`/health`, `/auth/slack/callback`, `/webhooks/slack` を除く）は
+    Cognito が発行した Bearer JWT が必要です。
+
+    ## SSE ストリーミング
+    `GET /tasks/{taskId}/proposal?stream=true` は `text/event-stream` を返します。
+    イベント種別: `verdict` / `chat` / `done` / `error`
+
+servers:
+  - url: https://api.saborou.example.com
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: System
+    description: ヘルスチェック
+  - name: Auth
+    description: Slack OAuth 2.0 認証フロー
+  - name: Tasks
+    description: タスク管理（承認済みタスク・候補タスク）
+  - name: Proposals
+    description: AI によるサボり提案（SSE ストリーミング対応）
+  - name: Honne
+    description: ユーザーの本音リアクション記録
+  - name: Connections
+    description: 外部サービス接続管理
+  - name: Webhooks
+    description: Slack Webhook 受信
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Cognito User Pool が発行した JWT トークン
+
+  schemas:
+    # ---------- 共通エラー ----------
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              example: NOT_FOUND
+              description: >
+                エラーコード一覧:
+                NOT_FOUND / VALIDATION_ERROR / INVALID_SERVICE /
+                OAUTH_DENIED / INVALID_CALLBACK / INVALID_STATE /
+                TOKEN_EXCHANGE_FAILED / FORBIDDEN / INVALID_BODY
+            message:
+              type: string
+              example: Task not found
+            details:
+              description: Zod バリデーションエラー詳細（VALIDATION_ERROR 時のみ）
+              type: object
+
+    # ---------- タスク ----------
+    Task:
+      type: object
+      required:
+        - taskId
+        - userId
+        - status
+        - title
+      properties:
+        taskId:
+          type: string
+          example: "01HZF3QJV..."
+        userId:
+          type: string
+          example: "cognito-sub-uuid"
+        status:
+          type: string
+          enum: [approved, deleted]
+        title:
+          type: string
+          example: "四半期報告書の作成"
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-30T23:59:59Z"
+        requester:
+          type: string
+          example: "田中部長"
+        description:
+          type: string
+          example: "Q2 の売上データをまとめて報告書を作成する"
+        sourceType:
+          type: string
+          enum: [slack, manual]
+        approvedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ---------- 候補タスク ----------
+    TaskCandidate:
+      type: object
+      required:
+        - candidateId
+        - title
+        - status
+      properties:
+        candidateId:
+          type: string
+          example: "cand-01HZF3QJV"
+        title:
+          type: string
+          example: "週次ミーティングの議事録作成"
+        deadline:
+          type: string
+          format: date-time
+          nullable: true
+        requester:
+          type: string
+        description:
+          type: string
+        sourceType:
+          type: string
+          enum: [slack, manual]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        createdAt:
+          type: string
+          format: date-time
+
+    # ---------- サボり提案 ----------
+    Proposal:
+      type: object
+      required:
+        - taskId
+        - verdict
+        - summaryText
+      properties:
+        taskId:
+          type: string
+        verdict:
+          type: string
+          enum: [can_saboru, borderline, must_do]
+          description: >
+            サボり可否の判定:
+            `can_saboru` = サボれる / `borderline` = 要検討 / `must_do` = やるしかない
+        summaryText:
+          type: string
+          example: "このタスクは緊急度が低く、期限まで余裕があるためサボれます。"
+        reasoning:
+          type: array
+          items:
+            type: string
+          example: ["期限が2週間後", "代替担当者あり"]
+        chatMessage:
+          type: string
+          example: "大丈夫、これは後回しにして全然OK。"
+        personaId:
+          type: string
+        evaluatedAt:
+          type: string
+          format: date-time
+        nextCheckAt:
+          type: string
+          format: date-time
+
+    # ---------- SSE イベント ----------
+    SseVerdictEvent:
+      type: object
+      description: SSE `verdict` イベントのデータ
+      properties:
+        type:
+          type: string
+          enum: [verdict]
+        verdict:
+          type: string
+          enum: [can_saboru, borderline, must_do]
+        summaryText:
+          type: string
+
+    SseChatEvent:
+      type: object
+      description: SSE `chat` イベントのデータ
+      properties:
+        type:
+          type: string
+          enum: [chat]
+        chatMessage:
+          type: string
+
+    SseDoneEvent:
+      type: object
+      description: SSE `done` イベントのデータ（ストリーム終了）
+      properties:
+        type:
+          type: string
+          enum: [done]
+        proposalId:
+          type: string
+        cached:
+          type: boolean
+
+    SseErrorEvent:
+      type: object
+      description: SSE `error` イベントのデータ
+      properties:
+        type:
+          type: string
+          enum: [error]
+        message:
+          type: string
+
+    # ---------- サービス接続 ----------
+    ServiceConnection:
+      type: object
+      required:
+        - service
+        - status
+      properties:
+        service:
+          type: string
+          enum: [slack]
+        status:
+          type: string
+          enum: [connected, disconnected, token_expired]
+        connectedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+  # ---------- 再利用パラメータ ----------
+  parameters:
+    TaskIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: タスク ID (ULID)
+
+    TaskIdPathAlt:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: タスク ID (ULID)
+
+    CandidateIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      description: 候補タスク ID
+
+  # ---------- 再利用レスポンス ----------
+  responses:
+    NotFound:
+      description: リソースが見つからない
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: NOT_FOUND
+              message: Task not found
+
+    BadRequest:
+      description: リクエストが不正
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Forbidden:
+      description: 署名検証失敗
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error:
+              code: FORBIDDEN
+              message: Invalid Slack signature
+
+    Unauthorized:
+      description: 認証トークンが無効または未提供
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+paths:
+  # ============================================================
+  # System
+  # ============================================================
+  /health:
+    get:
+      summary: ヘルスチェック
+      operationId: getHealth
+      tags: [System]
+      security: []
+      responses:
+        "200":
+          description: サービス正常稼働中
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # ============================================================
+  # Auth
+  # ============================================================
+  /auth/slack:
+    get:
+      summary: Slack OAuth フロー開始
+      description: >
+        Slack の認証ページへリダイレクトします。
+        CSRF 対策のため、userId + nonce を HMAC-SHA256 で署名した state パラメータを付与します。
+        **認証必須**: userId を使って接続を紐付けるため Bearer JWT が必要です。
+      operationId: initiateSlackOAuth
+      tags: [Auth]
+      responses:
+        "302":
+          description: Slack OAuth ページへリダイレクト
+          headers:
+            Location:
+              schema:
+                type: string
+              example: "https://slack.com/oauth/v2/authorize?client_id=..."
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/slack/callback:
+    get:
+      summary: Slack OAuth コールバック
+      description: >
+        Slack からのリダイレクトを受け取り、認証コードを bot トークンと交換します。
+        トークンは Secrets Manager に保存され、接続情報が DynamoDB に記録されます。
+        成功時はフロントエンドの `/settings?slack=connected` へリダイレクトします。
+      operationId: handleSlackOAuthCallback
+      tags: [Auth]
+      security: []
+      parameters:
+        - name: code
+          in: query
+          description: Slack が発行した OAuth 認証コード
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: CSRF 検証用の署名済み state パラメータ
+          schema:
+            type: string
+        - name: error
+          in: query
+          description: OAuth が拒否された場合のエラー文字列
+          schema:
+            type: string
+      responses:
+        "302":
+          description: フロントエンドへリダイレクト（成功）
+          headers:
+            Location:
+              schema:
+                type: string
+              example: "http://localhost:5173/settings?slack=connected"
+        "400":
+          description: >
+            OAuth エラー（エラーコード一覧）:
+            `OAUTH_DENIED` / `INVALID_CALLBACK` / `INVALID_STATE`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              examples:
+                oauth_denied:
+                  summary: ユーザーが OAuth を拒否
+                  value:
+                    error:
+                      code: OAUTH_DENIED
+                      message: "Slack OAuth denied: access_denied"
+                invalid_callback:
+                  summary: code または state が欠損
+                  value:
+                    error:
+                      code: INVALID_CALLBACK
+                      message: "Missing code or state parameter"
+                invalid_state:
+                  summary: state 改ざん検知
+                  value:
+                    error:
+                      code: INVALID_STATE
+                      message: "Invalid or tampered state parameter"
+        "500":
+          description: Slack トークン交換失敗
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: TOKEN_EXCHANGE_FAILED
+                  message: "Slack token exchange failed: invalid_code"
+
+  # ============================================================
+  # Tasks
+  # ============================================================
+  /tasks:
+    get:
+      summary: 承認済みタスク一覧取得
+      description: ログインユーザーの承認済みタスク（status=approved）を全件返します。
+      operationId: listTasks
+      tags: [Tasks]
+      responses:
+        "200":
+          description: タスク一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+              example:
+                tasks:
+                  - taskId: "01HZF3QJV1"
+                    userId: "user-001"
+                    status: approved
+                    title: "四半期報告書の作成"
+                    deadline: "2025-06-30T23:59:59Z"
+                    sourceType: manual
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      summary: タスク手動作成
+      description: フロントエンドから直接タスクを作成します（sourceType = manual）。
+      operationId: createTask
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  example: "週次ミーティング資料の作成"
+                deadline:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  example: "2025-06-15T18:00:00Z"
+                description:
+                  type: string
+                  example: "毎週月曜日の定例会議用スライドを作成する"
+      responses:
+        "201":
+          description: 作成されたタスク
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: "Invalid request body"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /tasks/candidates:
+    get:
+      summary: 候補タスク一覧取得（保留中）
+      description: >
+        Slack から自動取得され、まだ承認・却下されていない候補タスク（status=pending）を返します。
+      operationId: listTaskCandidates
+      tags: [Tasks]
+      responses:
+        "200":
+          description: 候補タスク一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  candidates:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TaskCandidate"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /tasks/candidates/{id}/approve:
+    post:
+      summary: 候補タスクを承認
+      description: 候補タスクを承認済みタスクに変換します。
+      operationId: approveTaskCandidate
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/CandidateIdPath"
+      responses:
+        "201":
+          description: 承認されたタスク
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /tasks/candidates/{id}:
+    delete:
+      summary: 候補タスクを却下
+      description: 候補タスクを却下して削除します。
+      operationId: rejectTaskCandidate
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/CandidateIdPath"
+      responses:
+        "204":
+          description: 却下完了（レスポンスボディなし）
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /tasks/{id}:
+    get:
+      summary: タスク詳細取得
+      operationId: getTask
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/TaskIdPath"
+      responses:
+        "200":
+          description: タスク詳細
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      summary: タスクのインライン編集
+      description: タスクのタイトル・期限・説明を部分更新します。
+      operationId: updateTask
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/TaskIdPath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                deadline:
+                  type: string
+                  format: date-time
+                  nullable: true
+                description:
+                  type: string
+      responses:
+        "200":
+          description: 更新後のタスク
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      summary: タスクの論理削除
+      description: タスクの status を `deleted` に変更します（物理削除はしません）。
+      operationId: deleteTask
+      tags: [Tasks]
+      parameters:
+        - $ref: "#/components/parameters/TaskIdPath"
+      responses:
+        "204":
+          description: 削除完了（レスポンスボディなし）
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ============================================================
+  # Proposals (SSE)
+  # ============================================================
+  /tasks/{taskId}/proposal:
+    get:
+      summary: サボり提案の取得（JSON または SSE）
+      description: >
+        AI によるサボり提案を返します。
+
+        **`stream=false`（デフォルト）**: JSON を同期的に返します。
+        キャッシュが有効な場合はキャッシュを返し、なければ AI が生成します。
+
+        **`stream=true`**: Server-Sent Events (SSE) でストリーミングします。
+
+        ## SSE イベント仕様
+        ```
+        event: verdict
+        data: {"type":"verdict","verdict":"can_saboru","summaryText":"..."}
+
+        event: chat
+        data: {"type":"chat","chatMessage":"大丈夫、サボって全然OK。"}
+
+        event: done
+        data: {"type":"done","proposalId":"...","cached":false}
+
+        event: error
+        data: {"type":"error","message":"Proposal generation failed"}
+        ```
+      operationId: getProposal
+      tags: [Proposals]
+      parameters:
+        - $ref: "#/components/parameters/TaskIdPathAlt"
+        - name: stream
+          in: query
+          description: true の場合は SSE ストリームを返す
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: サボり提案（JSON）または SSE ストリーム
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+              example:
+                taskId: "01HZF3QJV1"
+                verdict: can_saboru
+                summaryText: "このタスクは期限まで余裕があり、緊急度が低いためサボれます。"
+                reasoning:
+                  - "期限が2週間後"
+                  - "代替担当者が存在する"
+                chatMessage: "大丈夫、これは後回しにして全然OK！"
+                evaluatedAt: "2025-05-20T10:00:00Z"
+                nextCheckAt: "2025-05-21T10:00:00Z"
+            text/event-stream:
+              schema:
+                type: string
+                description: >
+                  SSE 形式のテキストストリーム。
+                  各イベントは `event:` + `data:` フィールドで構成されます。
+              example: |
+                event: verdict
+                data: {"type":"verdict","verdict":"can_saboru","summaryText":"サボれます。"}
+
+                event: chat
+                data: {"type":"chat","chatMessage":"大丈夫、これは後回しにして全然OK！"}
+
+                event: done
+                data: {"type":"done","proposalId":"prop-01HZF","cached":false}
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ============================================================
+  # Honne
+  # ============================================================
+  /tasks/{taskId}/honne:
+    post:
+      summary: 本音リアクションの記録
+      description: >
+        サボり提案に対するユーザーの感情的反応（本音）を記録します。
+        このデータは将来の「ユーザーマニュアル」生成（サボりパターン学習）に使用されます。
+
+        リクエストボディは **判別ユニオン** です（`type` フィールドで分岐）:
+        - `quick_reply`: 定型リアクション
+        - `free_text`: 自由記述（1〜500文字）
+      operationId: recordHonne
+      tags: [Honne]
+      parameters:
+        - $ref: "#/components/parameters/TaskIdPathAlt"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - title: QuickReply
+                  type: object
+                  required: [type, content]
+                  properties:
+                    type:
+                      type: string
+                      enum: [quick_reply]
+                    content:
+                      type: string
+                      enum:
+                        - truly_tired
+                        - actually_important
+                        - agree_with_ai
+                        - disagree_with_ai
+                      description: >
+                        `truly_tired` = 本当に疲れている /
+                        `actually_important` = 実は重要 /
+                        `agree_with_ai` = AI に同意 /
+                        `disagree_with_ai` = AI に不同意
+                - title: FreeText
+                  type: object
+                  required: [type, content]
+                  properties:
+                    type:
+                      type: string
+                      enum: [free_text]
+                    content:
+                      type: string
+                      minLength: 1
+                      maxLength: 500
+                      example: "実はこの仕事、誰かがやらなくても大丈夫な気がする"
+            examples:
+              quick_reply:
+                summary: クイックリプライ
+                value:
+                  type: quick_reply
+                  content: truly_tired
+              free_text:
+                summary: 自由記述
+                value:
+                  type: free_text
+                  content: "この仕事、本当に誰かがやる必要があるのか疑問"
+      responses:
+        "201":
+          description: 本音を記録し、サボるの共感的な返信を返す
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, recorded]
+                properties:
+                  message:
+                    type: string
+                    description: サボるからの共感メッセージ
+                    example: "わかる〜！本当に疲れてる時はサボっていいんだよ。"
+                  recorded:
+                    type: boolean
+                    example: true
+        "400":
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: "Invalid honne data"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ============================================================
+  # Connections
+  # ============================================================
+  /connections:
+    get:
+      summary: サービス接続一覧取得
+      description: ログインユーザーの全外部サービス接続を返します。
+      operationId: listConnections
+      tags: [Connections]
+      responses:
+        "200":
+          description: 接続一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connections:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ServiceConnection"
+              example:
+                connections:
+                  - service: slack
+                    status: connected
+                    connectedAt: "2025-05-20T09:00:00Z"
+                    expiresAt: null
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /connections/{service}:
+    delete:
+      summary: サービス接続の解除
+      description: "指定サービスとの接続を解除します。現在対応サービス: `slack`"
+      operationId: disconnectService
+      tags: [Connections]
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [slack]
+          description: 接続解除するサービス名
+      responses:
+        "204":
+          description: 接続解除完了（レスポンスボディなし）
+        "400":
+          description: 無効なサービス名
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: INVALID_SERVICE
+                  message: "Unknown service: foo. Valid services: slack"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ============================================================
+  # Webhooks
+  # ============================================================
+  /webhooks/slack:
+    post:
+      summary: Slack Webhook 受信
+      description: >
+        Slack Event API からのコールバックを受け取ります。
+
+        **セキュリティ**: `X-Slack-Signature` ヘッダーで HMAC-SHA256 署名を検証します。
+
+        **フロー**:
+        1. HMAC 検証（失敗時 403）
+        2. `url_verification` → challenge をそのまま返す（Slack アプリセットアップ用）
+        3. `event_callback` → EventBridge にファイアアンドフォーゲットで転送
+        4. 即座に `200 OK` を返す（Slack の 3 秒タイムアウトを満たすため）
+      operationId: receiveSlackWebhook
+      tags: [Webhooks]
+      security: []
+      parameters:
+        - name: X-Slack-Request-Timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Unix タイムスタンプ（リプレイ攻撃防止）
+          example: "1716195600"
+        - name: X-Slack-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: "HMAC-SHA256 署名（形式: `v0=<hex>`）"
+          example: "v0=a2114d57b48eac39b9ad189dd8316235a7b4a8d21a10bd27519666489c69b503"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type:
+                  type: string
+                  enum: [url_verification, event_callback]
+                challenge:
+                  type: string
+                  description: url_verification 時のみ存在
+                event:
+                  type: object
+                  description: event_callback 時のイベントオブジェクト
+                team_id:
+                  type: string
+                  example: "T0123ABCDEF"
+            examples:
+              url_verification:
+                summary: URL 検証（Slack アプリセットアップ時）
+                value:
+                  type: url_verification
+                  challenge: "3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P"
+              event_callback:
+                summary: メッセージイベント
+                value:
+                  type: event_callback
+                  team_id: "T0123ABCDEF"
+                  event:
+                    type: message
+                    text: "この報告書を来週までに作成してください"
+                    user: "U0123ABCDEF"
+      responses:
+        "200":
+          description: 受信完了（`url_verification` の場合は challenge を返す）
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    description: url_verification レスポンス
+                    properties:
+                      challenge:
+                        type: string
+                  - type: object
+                    description: 通常イベント受信レスポンス
+                    properties:
+                      ok:
+                        type: boolean
+                        example: true
+        "400":
+          description: JSON パースエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error:
+                  code: INVALID_BODY
+                  message: "Invalid JSON body"
+        "403":
+          $ref: "#/components/responses/Forbidden"

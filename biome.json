@@ -25,7 +25,9 @@
       "**/.github/**",
       "**/.vscode/**",
       "**/.serena/**",
-      "**/.aws-aidlc-rule-details/**"
+      "**/.aws-aidlc-rule-details/**",
+      "**/tsconfig*.json",
+      "**/jest.config.*"
     ]
   },
   "formatter": {
