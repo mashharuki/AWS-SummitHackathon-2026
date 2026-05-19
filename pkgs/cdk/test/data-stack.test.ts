@@ -66,8 +66,8 @@ describe("SaborouDataStack", () => {
     });
   });
 
-  test("3 Secrets Manager secrets are created", () => {
-    template.resourceCountIs("AWS::SecretsManager::Secret", 3);
+  test("2 Secrets Manager secrets are created", () => {
+    template.resourceCountIs("AWS::SecretsManager::Secret", 2);
   });
 
   test("All tables have RETAIN removal policy", () => {
