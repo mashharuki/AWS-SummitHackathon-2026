@@ -454,13 +454,13 @@ MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新�
 	> 事前にAWSへのログインが必要
 
 	```bash
-	pnpm cdk run deploy
+	pnpm cdk run deploy --all
 	```
 
 - AWSからリソースをアンデプロイ
 
 	```bash
-	pnpm cdk run destroy
+	pnpm cdk run destroy --all --force
 	```
 
 ### バックエンド

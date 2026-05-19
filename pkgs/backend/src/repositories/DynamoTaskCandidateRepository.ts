@@ -120,7 +120,7 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
   ): Promise<TaskCandidate> {
     const candidateId = generateUlid();
     const now = toIsoString(new Date());
-    const ttlDays = TASK_CANDIDATE_TTL_DAYS;
+    const ttlDays = TASK_CANDIDATE_TTL_DAYS ?? 30;
     const ttl = Math.floor(Date.now() / 1000) + ttlDays * 86400;
 
     const item: TaskCandidate = {

@@ -33,14 +33,14 @@ U-04 api の実装は `pkgs/backend` に配置し、2 つの Lambda 関数から
 | HTTP API | `saborou-api-{env}` | ApiStack | エンドポイント公開・JWT Authorizer |
 | JWT Authorizer | CognitoJwtAuthorizer | ApiStack | Cognito トークン検証 |
 | DynamoDB: Users | `saborou-users-{env}` | DataStack | ユーザー情報 |
-| DynamoDB: ServiceConnections | `saborou-connections-{env}` | DataStack | Slack OAuth トークン管理 |
+| DynamoDB: ServiceConnections | `saborou-service-connections-{env}` | DataStack | Slack OAuth トークン管理 |
 | DynamoDB: TaskCandidates | `saborou-task-candidates-{env}` | DataStack | 候補一覧 |
 | DynamoDB: Tasks | `saborou-tasks-{env}` | DataStack | 承認済みタスク |
 | DynamoDB: Proposals | `saborou-proposals-{env}` | DataStack | サボり提案キャッシュ |
 | DynamoDB: HonneData | `saborou-honne-data-{env}` | DataStack | 本音データ |
 | Secrets Manager | `slackSigningSecret` | DataStack | Slack Signing Secret |
 | EventBridge | `saborou-event-bus-{env}` | WebhookStack | Slack イベント転送 |
-| Cognito UserPool | `saborou-user-pool-{env}` | CognitoStack | Google OAuth / JWT |
+| Cognito UserPool | `saborou-user-pool-{env}` | CognitoStack | メール/パスワード認証 / JWT |
 | CloudWatch LogGroups | `/aws/lambda/saborou-api-{env}` 等 | ApiStack/WebhookStack | 構造化ログ |
 
 ---
@@ -123,7 +123,7 @@ pkgs/backend/
     "build:webhook": "esbuild --bundle --outfile=dist/webhook.js --platform=node --target=node22 --external:@aws-sdk/* src/webhook-handler.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "dev": "tsx src/index.ts"
+    "dev": "node --env-file=.env --import tsx ./src/index.ts"
   }
 }
 ```
@@ -186,7 +186,7 @@ pkgs/backend/
 ```bash
 # pkgs/backend ローカル起動
 cd pkgs/backend
-pnpm dev  # tsx src/index.ts → http://localhost:3000
+pnpm backend run dev  # node --env-file=.env --import tsx ./src/index.ts → http://localhost:3000
 
 # 環境変数（.env.local）
 ENVIRONMENT=dev

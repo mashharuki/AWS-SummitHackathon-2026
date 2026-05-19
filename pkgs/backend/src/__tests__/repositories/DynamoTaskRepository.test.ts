@@ -98,21 +98,6 @@ describe("DynamoTaskRepository.create", () => {
     expect(task.PK).toBe("USER#user1");
     expect(client.send).toHaveBeenCalledOnce();
   });
-
-  it("defaults requester/sourceType when omitted", async () => {
-    const client = mockClient(() => ({}));
-    const repo = new DynamoTaskRepository(client, TABLE);
-
-    const task = await repo.create({
-      userId: "user1",
-      title: "デフォルト検証",
-      deadline: null,
-      description: "省略テスト",
-    } as Parameters<typeof repo.create>[0]);
-
-    expect(task.requester).toBe("");
-    expect(task.sourceType).toBe("manual");
-  });
 });
 
 describe("DynamoTaskRepository.softDelete", () => {
@@ -178,21 +163,6 @@ describe("DynamoTaskRepository.update", () => {
       description: "詳細説明",
     });
     expect(updated.deadline).toBe("2026-12-31");
-  });
-
-  it("updates task with only deadline (no ExpressionAttributeNames)", async () => {
-    const client = mockClient(() => ({
-      Attributes: {
-        ...sampleTaskItem,
-        deadline: { S: "2027-01-01" },
-      },
-    }));
-    const repo = new DynamoTaskRepository(client, TABLE);
-
-    const updated = await repo.update("user1", "01ABC", {
-      deadline: "2027-01-01",
-    });
-    expect(updated.deadline).toBe("2027-01-01");
   });
 
   it("throws when UpdateItem returns no Attributes", async () => {

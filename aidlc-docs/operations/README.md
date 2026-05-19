@@ -22,6 +22,7 @@
 | CDK操作ガイド | [cdk-operations.md](./cdk-operations.md) | CDKスタックのブートストラップ・Flociローカル検証・本番デプロイ・スタック破棄手順 |
 | バックエンド操作ガイド | [backend-operations.md](./backend-operations.md) | Hono on Lambda のローカル開発・Lambda デプロイ確認・CloudWatch ログ確認手順 |
 | フロントエンド操作ガイド | [frontend-operations.md](./frontend-operations.md) | React + Vite のローカル開発・ビルド・S3 + CloudFront デプロイ手順 |
+| API 動作検証ガイド | [api-verification-guide.md](./api-verification-guide.md) | Swagger UI を使った全エンドポイントの動作確認手順・エラー確認チェックリスト |
 
 ---
 
@@ -38,7 +39,7 @@
 | コード品質 | Biome 1.9.4（フォーマッター + リンター）|
 | DB | DynamoDB On-Demand（7テーブル） |
 | AI | Claude Sonnet（anthropic.claude-3-5-sonnet-20241022-v2:0） |
-| 認証 | Amazon Cognito + Google ソーシャルログイン |
+| 認証 | Amazon Cognito（メール/パスワード認証・セルフサインアップ有効） |
 | 連携 | Slack Events API + Webhook |
 | ローカルエミュレーター | Floci（Java 25 + Quarkus 3.x、ポート4566） |
 | リージョン | ap-northeast-1（東京） |
@@ -49,7 +50,7 @@
 
 | スタック | 責務 |
 |---------|------|
-| CognitoStack | User Pool + Google IdP |
+| CognitoStack | User Pool + メール/パスワード認証（COGNITO IdP） |
 | DataStack | DynamoDB 7テーブル |
 | ApiStack | API Gateway HTTP API + Hono Lambda |
 | AgentStack | TaskExtractor / SaboriProposer / BackgroundRefresh Lambda + EventBridge + DLQ |

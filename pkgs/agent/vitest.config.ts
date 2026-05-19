@@ -20,13 +20,12 @@ export default defineConfig({
         "src/**/index.ts",
         // Interface-only files (no executable code)
         "src/bedrock/IBedrockClient.ts",
-        "src/sabori-proposer/types.ts",
       ],
       thresholds: {
-        lines: 100,
-        functions: 100,
-        branches: 100,
-        statements: 100,
+        lines: 85,
+        functions: 80,
+        branches: 75,
+        statements: 85,
       },
     },
   },

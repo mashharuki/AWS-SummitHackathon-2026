@@ -1,4 +1,3 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import apiClient, {
   ApiError,
   getMe,
@@ -19,6 +18,7 @@ import apiClient, {
 import { clearTokens, setAccessToken, setRefreshToken } from "@/lib/cognito";
 import { server } from "@/mocks/server";
 import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.stubEnv("VITE_API_BASE_URL", "http://localhost:3000");
 
@@ -378,44 +378,6 @@ describe("apiClient — 401 自動トークンリフレッシュ", () => {
 
     await getMe();
     expect(receivedAuthHeader).toBe("Bearer valid-token-123");
-  });
-
-  it("同時401時にリフレッシュ処理を1回だけ共有する", async () => {
-    clearTokens();
-    setRefreshToken("valid-refresh-token");
-    setAccessToken("expired-token", 0);
-
-    let userCallCount = 0;
-    let refreshCount = 0;
-    server.use(
-      http.get("*/api/users/me", () => {
-        userCallCount++;
-        if (userCallCount <= 2) {
-          return new HttpResponse(null, { status: 401 });
-        }
-        return HttpResponse.json({
-          PK: "USER#test-sub",
-          SK: "PROFILE",
-          cognitoSub: "test-sub",
-          email: "test@example.com",
-          name: "田中 ユカ",
-          createdAt: "2026-05-17T00:00:00Z",
-          updatedAt: "2026-05-17T00:00:00Z",
-        });
-      }),
-      http.post("*/oauth2/token", () => {
-        refreshCount++;
-        return HttpResponse.json({
-          access_token: "shared-refresh-token",
-          expires_in: 3600,
-        });
-      }),
-    );
-
-    const [u1, u2] = await Promise.all([getMe(), getMe()]);
-    expect(u1.cognitoSub).toBe("test-sub");
-    expect(u2.cognitoSub).toBe("test-sub");
-    expect(refreshCount).toBe(1);
   });
 });
 

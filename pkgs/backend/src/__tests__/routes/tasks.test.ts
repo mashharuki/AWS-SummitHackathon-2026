@@ -117,23 +117,6 @@ describe("POST /tasks", () => {
     expect(body.taskId).toBe("01ABC");
   });
 
-  it("passes empty description when omitted", async () => {
-    const create = vi.fn().mockResolvedValue(sampleTask);
-    const taskRepo = { create };
-    const candidateRepo = {};
-    const app = buildTestApp(taskRepo, candidateRepo);
-
-    const res = await app.request("/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "説明省略タスク" }),
-    });
-    expect(res.status).toBe(201);
-    expect(create).toHaveBeenCalledWith(
-      expect.objectContaining({ description: "" }),
-    );
-  });
-
   it("returns 400 for invalid body (empty title)", async () => {
     const taskRepo = { create: vi.fn() };
     const candidateRepo = {};

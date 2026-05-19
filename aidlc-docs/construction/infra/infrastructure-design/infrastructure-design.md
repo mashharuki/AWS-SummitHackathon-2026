@@ -150,19 +150,18 @@ Aspects.of(app).add(new AwsSolutionsChecks({ verbose: true }));
 
 | リソース | プロパティ | 値 |
 |---------|-----------|-----|
-| UserPool | `selfSignUpEnabled` | `false` |
+| UserPool | `selfSignUpEnabled` | `true`（メール確認付きセルフサインアップ有効） |
 | UserPool | `signInAliases` | `{ email: true }` |
+| UserPool | `autoVerify` | `{ email: true }` |
 | UserPool | `mfa` | `cognito.Mfa.OFF`（デモ環境）|
 | UserPool | `passwordPolicy` | minLength: 8, requireLowercase: true, requireDigits: true |
 | UserPool | `removalPolicy` | `RETAIN` |
 | UserPool | `deletionProtection` | `false`（ハッカソンスコープ）|
-| Google IdP | `clientId` | `ssm.StringParameter.valueForStringParameter(this, '/saborou/google/client-id')` |
-| Google IdP | `clientSecretValue` | `secretsmanager.Secret.fromSecretNameV2(this, 'GoogleSecret', '/saborou/google/client-secret').secretValue` |
-| Google IdP | `scopes` | `['openid', 'email', 'profile']` |
+| UserPoolClient | `authFlows` | `{ userPassword: true, userSrp: true }` |
 | UserPoolClient | `oAuth.flows` | `{ authorizationCodeGrant: true }` |
 | UserPoolClient | `oAuth.callbackUrls` | CloudFront URL + `/auth/callback`（CfnOutput 参照）|
 | UserPoolClient | `oAuth.logoutUrls` | CloudFront URL（CfnOutput 参照）|
-| UserPoolClient | `supportedIdentityProviders` | `[cognito.UserPoolClientIdentityProvider.GOOGLE]` |
+| UserPoolClient | `supportedIdentityProviders` | `[cognito.UserPoolClientIdentityProvider.COGNITO]` |
 | CognitoDomain | `domainPrefix` | `saborou-auth-${environment}` |
 
 **cdk-nag 抑制**:
@@ -281,11 +280,6 @@ const secrets = {
   slackSigningSecret: new secretsmanager.Secret(this, 'SlackSigningSecret', {
     secretName: `/saborou/slack/signing-secret-${environment}`,
     description: 'Slack Signing Secret for webhook verification',
-    removalPolicy: cdk.RemovalPolicy.RETAIN,
-  }),
-  googleClientSecret: new secretsmanager.Secret(this, 'GoogleClientSecret', {
-    secretName: `/saborou/google/client-secret-${environment}`,
-    description: 'Google OAuth Client Secret',
     removalPolicy: cdk.RemovalPolicy.RETAIN,
   }),
 };
@@ -523,13 +517,9 @@ aws secretsmanager put-secret-value \
   --secret-id /saborou/slack/client-secret-dev \
   --secret-string '{"value":"YOUR_SLACK_CLIENT_SECRET"}'
 
-aws secretsmanager put-secret-value \
-  --secret-id /saborou/google/client-secret-dev \
-  --secret-string '{"value":"YOUR_GOOGLE_CLIENT_SECRET"}'
-
-# 4. SSM Parameter Store 初期値設定
-aws ssm put-parameter --name /saborou/google/client-id \
-  --value "YOUR_GOOGLE_CLIENT_ID" --type String
+# 4. SSM Parameter Store 初期値設定（Slack OAuth CSRF 対策シークレット）
+aws ssm put-parameter --name /saborou/oauth/state-secret \
+  --value "$(openssl rand -base64 32)" --type SecureString
 
 aws ssm put-parameter --name /saborou/slack/client-id \
   --value "YOUR_SLACK_CLIENT_ID" --type String

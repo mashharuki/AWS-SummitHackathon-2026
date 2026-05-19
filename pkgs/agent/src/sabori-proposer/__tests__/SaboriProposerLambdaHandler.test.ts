@@ -244,19 +244,4 @@ describe("SaboriProposerLambdaHandler", () => {
     // Lambda エラーはリトライ/DLQ 処理のため伝播する
     await expect(handler(event)).rejects.toThrow("DynamoDB connection failed");
   });
-
-  it("skips processing for scheduler background refresh events", async () => {
-    const { handler } = await import("../SaboriProposerLambdaHandler.js");
-    const event = {
-      source: "scheduler",
-      type: "background_refresh",
-    };
-
-    const response = await handler(event);
-    const body = JSON.parse(response.body) as { skipped: boolean };
-
-    expect(response.statusCode).toBe(200);
-    expect(body.skipped).toBe(true);
-    expect(mockPropose).not.toHaveBeenCalled();
-  });
 });

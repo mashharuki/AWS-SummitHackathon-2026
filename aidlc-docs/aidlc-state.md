@@ -75,6 +75,28 @@
 #### 全Unit完了後
 - [x] Build and Test（完了: 2026-05-17T14:20:00Z）— 542テスト全パス / E2E 5テスト全パス / Biome 0エラー / tsc 全パッケージ成功 / CONSTRUCTION フェーズ完了
 
+#### U-06: ui-redesign
+- [x] Functional Design — 完了・**改訂版**（2026-05-20T07:00:00Z）。**方針変更**: Three.js 全廃止 → **Three.js 併用 + Mid レベル仕上げ** へ。HTML 2D 世界観に「3D ヒーロー」をログイン+詳細の2箇所に局所投入する相乗効果設計に転換。成果物（7本）:
+  - `ui-redesign-spec.md`（7画面構成 + 2D/3D 配置マトリクス + 既存 Three.js リメイク方針）
+  - `design-tokens.md`（Tailwind 設定・CSS 変数・フォント戦略 + **11章「3Dシーン設定」追加**：マテリアル/3点ライト/Environment/ContactShadows/呼吸アニメ/verdict 連動色）
+  - `component-mapping.md`（HTML vs 現フロント対応表 + Three.js 廃止撤回 → `SaborouCharacter2D`/`SaborouCharacter3D` 併存設計）
+  - `migration-plan.md`（7フェーズ・Phase 3 を「Three.js リメイク Mid 仕上げ 6-8h」に変更・合計 20-29h）
+  - `api-html-gap-analysis.md`（9ギャップ分析・対応方針／変更なし）
+  - **新規** `2d-3d-coexistence-rules.md`（憲法6条・配置マトリクス・PRレビューチェックリスト・アンチパターン10件）
+  - **新規** `character-design-sheet.md`（2D/3D 共通の顔・色・比率設計図・SVGパス・3D再現方法）
+  - **ユーザー承認取得（2026-05-20T08:00:00Z）。実装開始。**
+- [ ] NFR Requirements — スキップ（既存フロント NFR を流用）
+- [ ] NFR Design — スキップ（既存フロント NFR を流用）
+- [ ] Infrastructure Design — スキップ（フロントエンドのみ変更、インフラ変更なし）
+- [x] Code Generation — **完了**（2026-05-20T08:15:00Z）。Phase 1〜7 の7フェーズ全て完了。成果物:
+  - Phase 1: `index.css` を Tailwind v4 `@theme` で全面書き換え・`@utility` で card-brutal/btn-brutal-*/input-brutal 定義、`index.html` で Google Fonts プリコネクト
+  - Phase 2: `SaborouCharacter2D` (HTML SVG 完全移植) / `SaborouAvatar` (チャット 28-48px 用) / `verdictMeta.ts` (VERDICT_META/VERDICT_SVG_CONFIG/QUICK_REPLY_LABELS) を新規作成、テスト 13/13 パス
+  - Phase 3: `SaborouCharacter3D` (RoundedBox squircle + 雲 + 表情 + 呼吸 + verdict連動) / `SaborouScene3D` (Canvas + 3点ライト + Environment sunset + ContactShadows + Suspense/ErrorBoundary fallback に 2D) / `saboruColors.ts` を新規作成、旧 SaborouCanvas/SaborouCharacter 削除
+  - Phase 4: `AppShell` 改修（max-w-md + BottomNav 組込）/ `Logo` / `PageHeader` / `BottomNav` (NavLink + safe-area-inset) / `SectionLabel` を新規作成、旧 Header 削除
+  - Phase 5: `TaskCard`/`CandidateCard` (ネオブルータリズム + 2D アバター) / `VerdictBox` / `EvidenceList` / `ChatMessage` / `ChatPane` / `QuickReplyButtons` / `FreeTextInput` 改修、`PsychSignalsCard` / `ContextCollectingAnim` 新規、LoginPage (3Dヒーロー 280px) / TaskListPage (今日バナー + 2Dアバター) / TaskDetailPage (3Dヒーロー 320px + PsychSignals + ContextCollectingAnim) / SettingsPage 全面刷新
+  - Phase 6: `ManualPage` (取扱説明書) / `PersonaPage` (ペルソナ選択 + localStorage 永続化) / `RoadmapPage` (タイムライン UI) 新規、`staticContent.ts` (MANUAL_TRAITS/PERSONAS/ROADMAP_ITEMS) 集約、App.tsx に /manual /settings/persona /roadmap ルート追加
+  - Phase 7: 全テスト 126/126 パス / typecheck エラーゼロ / build 成功 / Three.js は別チャンク (919KB / gzip 249KB) に分離・初期バンドル 219KB / shared 103 + backend 172 + cdk 35 + frontend 126 = 全436テストパス
+
 ### OPERATIONS フェーズ
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
 - [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）

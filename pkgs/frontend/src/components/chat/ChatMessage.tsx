@@ -1,9 +1,9 @@
 /**
- * チャット吹き出しコンポーネント
- * モックUI saborou_v2_03-detail.png 参照
+ * チャットメッセージバブル
+ * U-06-ui-redesign Phase 5 改修版（ネオブルータリズム + SaborouAvatar）
  */
+import { SaborouAvatar } from "@/components/character/SaborouAvatar";
 import type { ChatMessage as ChatMessageType } from "@/types/ui";
-import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -13,52 +13,83 @@ export function ChatMessage({ message }: ChatMessageProps) {
   const isAssistant = message.role === "assistant";
 
   return (
-    <div className={cn("flex", isAssistant ? "justify-start" : "justify-end")}>
-      {isAssistant && (
-        <div
-          className="w-7 h-7 rounded-full bg-[#FF6B2B] flex items-center justify-center mr-2 shrink-0 mt-auto"
-          aria-hidden="true"
-        >
-          <span className="text-white text-xs font-bold">S</span>
-        </div>
-      )}
-
+    <div
+      className="flex gap-2"
+      style={{
+        justifyContent: isAssistant ? "flex-start" : "flex-end",
+        animation: "fadeSlide 0.3s ease",
+      }}
+    >
+      {isAssistant && <SaborouAvatar size={28} />}
       <div
-        className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-          isAssistant
-            ? "bg-white border border-[#E5E7EB] text-[#1A1A1A] rounded-bl-sm"
-            : "bg-[#FF6B2B] text-white rounded-br-sm",
-        )}
         role="article"
         aria-label={isAssistant ? "サボローのメッセージ" : "あなたのメッセージ"}
+        style={{
+          maxWidth: "80%",
+          background: isAssistant ? "#FFFFFF" : "#F97316",
+          color: isAssistant ? "#1F2937" : "#FFFFFF",
+          border: isAssistant ? "3px solid #2B1E16" : "2.5px solid #2B1E16",
+          borderRadius: 18,
+          padding: "9px 13px",
+          fontSize: 12,
+          lineHeight: 1.5,
+          boxShadow: "0 3px 0 #2B1E16",
+        }}
       >
+        {isAssistant && (
+          <p
+            className="font-bold"
+            style={{ fontSize: 9, color: "#EA580C", marginBottom: 2 }}
+          >
+            サボロー
+          </p>
+        )}
         {message.content}
       </div>
     </div>
   );
 }
 
-/** ストリーミング中のタイピングインジケーター */
+/** タイピングインジケータ */
 export function TypingIndicator() {
   return (
     <div
-      className="flex justify-start"
+      className="flex justify-start gap-2"
       aria-live="polite"
       aria-label="サボローが入力中"
     >
+      <SaborouAvatar size={28} />
       <div
-        className="w-7 h-7 rounded-full bg-[#FF6B2B] flex items-center justify-center mr-2 shrink-0"
-        aria-hidden="true"
+        style={{
+          background: "#FFFFFF",
+          border: "3px solid #2B1E16",
+          borderRadius: 18,
+          padding: "10px 14px",
+          boxShadow: "0 3px 0 #2B1E16",
+          display: "flex",
+          alignItems: "center",
+          gap: 3,
+        }}
       >
-        <span className="text-white text-xs font-bold">S</span>
-      </div>
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl rounded-bl-sm px-4 py-3">
-        <div className="flex gap-1 items-center h-4" aria-hidden="true">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF] animate-bounce [animation-delay:0ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF] animate-bounce [animation-delay:150ms]" />
-          <span className="w-1.5 h-1.5 rounded-full bg-[#9CA3AF] animate-bounce [animation-delay:300ms]" />
-        </div>
+        {[0, 150, 300].map((delay) => (
+          <span
+            key={delay}
+            aria-hidden="true"
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 3,
+              background: "#9CA3AF",
+              animation: `dotPulse 1.2s infinite ${delay}ms`,
+            }}
+          />
+        ))}
+        <style>{`
+          @keyframes dotPulse {
+            0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-3px); }
+          }
+        `}</style>
       </div>
     </div>
   );

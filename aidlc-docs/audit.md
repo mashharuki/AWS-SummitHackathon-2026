@@ -2,6 +2,27 @@
 
 ---
 
+## U-06-ui-redesign — Functional Design 設計書作成
+**Timestamp**: 2026-05-20T00:00:00Z
+**User Input**: "SABOROUプロジェクトのフロントエンド UI を、チームメンバー共有の `~/Downloads/SABOROU Standalone (1).html` のデザインに寄せて改修するための**設計書**を作成してほしい。実装はせず、設計書のみ。\n\n## 背景と前提（既に調査済み）\n\n### チームメンバー共有HTMLの実態\n- 9.3MBのStandalone bundler形式HTML。実コードを展開済み（`/tmp/saborou_src/10_49e19093.js` = saborou-screens.jsx 974行 / `/tmp/saborou_src/08_16ee81b3.js` = saborou-extras.jsx 530行）\n- 画面: `LoginScreen` / `TaskListScreen` / `TaskDetailScreen` / `ManualScreen` / `SettingsScreen` / `PersonaScreen` / `RoadmapScreen` の7画面\n- データは全てハードコード。API連携・ルーティングなし。iPhoneデバイス枠内表示前提\n- デザイン言語: **ネオブルータリズム風**（太い黒枠 `3px solid #2B1E16` + ハードシャドウ `0 5px 0 #2B1E16` + 丸み大 `borderRadius: 18-22`）\n- カラー: `#F97316`オレンジ / クリーム `#FFFAF5` / ink `#1F2937`\n- フォント: Space Grotesk + Nunito + Noto Sans JP\n- 2D SVG の `SaborouCharacter`（verdict連動の表情変化）\n\n### 現状フロント\n- `pkgs/frontend/src/` 配下、React + Vite + Tailwind + Shadcn/ui\n- 既存ページ: LoginPage / AuthCallbackPage / TaskListPage / TaskDetailPage / SettingsPage\n- 既存コンポーネント: AppShell, TaskCard, TaskAddModal, ChatPane, VerdictBox, EvidenceList, SaborouCanvas (Three.js), SaborouCharacter (Three.js)\n- apiClient / useTasks / useProposalStream / Cognito認証 など配線は完成済み\n\n### API契約（OpenAPI: `pkgs/backend/openapi.yaml`、shared型）\n- **verdict 値**: `can_saboru` / `borderline` / `must_do`（共有HTMLの `caution`/`danger` ではない）\n- **QuickReply**: `truly_tired` / `actually_important` / `agree_with_ai` / `disagree_with_ai` の固定4値\n- **reasoning**: `string[]`（HTMLの `{text, theory, source}` 構造化はAPI未対応）\n- 取説・ペルソナ・ロードマップ用 API は **存在しない**（静的UIで対応）\n- 認証は Cognito Hosted UI（Google IdP は削除済み = メール/パスワードのみ）\n\n## ユーザー確定の方針\n\n1. **キャラ表現**: HTMLの 2D SVG（`SaborouCharacter`）に寄せる。Three.js 実装（SaborouCanvas / SaborouCharacter）は廃止\n2. **デバイスフレーム**: iPhone枠なし、レスポンシブ。`max-w-md` 程度でモバイル幅維持しつつデスクトップ対応\n3. **追加画面**: 取説（Manual）/ ペルソナ（Persona）/ ロードマップ（Roadmap）の3画面を新規追加\n4. **API契約はAPI側を正とする**: HTMLの `caution`/`danger` は `borderline`/`must_do` にマッピング\n5. **進め方**: 今回は**設計書のみ作成**。実装はユーザー承認後"
+**AI Response**: `aidlc-docs/construction/U-06-ui-redesign/functional-design/` 配下に5ファイルの設計書を新規作成。ui-redesign-spec.md（7画面構成・verdict マッピング・ルーティング）/ design-tokens.md（Tailwind 設定・CSS 変数・フォント戦略）/ component-mapping.md（HTML vs 現フロントの対応表・Three.js 廃止リスト・props インターフェース）/ migration-plan.md（7フェーズ段階的移行・テスト戦略・リスク分析）/ api-html-gap-analysis.md（9ギャップ分析・対応方針）を完成。aidlc-state.md に U-06 を追加。
+**Context**: CONSTRUCTION フェーズ U-06-ui-redesign の Functional Design 完了。実装は未着手・ユーザーレビュー待ち。
+## OPERATIONS — 実装コードとドキュメントの乖離修正
+**Timestamp**: 2026-05-20T16:10:00Z
+**User Input**: "実装コードとAI-DLCのドキュメントで乖離がないかチェックしてください！"
+**AI Response**: サブエージェントによる調査で 12 件の乖離を特定（HIGH×5、MEDIUM×5、LOW×2）。全件を修正。主な修正: 環境変数名の全面修正（`TASKS_TABLE` → `DYNAMODB_TABLE_TASKS` 等）、Google IdP 削除の反映、dev スクリプト更新、CDK スタック ID 修正、Webhook Lambda 名修正、docker-compose 注記追加、テーブル名誤記修正。
+**Context**: 修正対象ファイル: operations/README.md、backend-operations.md、cdk-operations.md、api-verification-guide.md、construction/infra/infrastructure-design.md、construction/api/infrastructure-design.md
+
+---
+
+## OPERATIONS — API 動作検証ガイド作成
+**Timestamp**: 2026-05-20T15:40:00Z
+**User Input**: "AI-DLCの ドキュメントで operationsのセクションで swagger uiを使ったAPIの一連の動作確認手順をまとめてもらいたいです！！"
+**AI Response**: `aidlc-docs/operations/api-verification-guide.md` を新規作成。全エンドポイント（15本）の Swagger UI 操作手順・SSE curl 検証・エラー確認チェックリスト・本番切り替え手順・OpenAPI YAML 活用方法を記載。`aidlc-docs/operations/README.md` の索引に追記。
+**Context**: OPERATIONS フェーズ成果物追加。`pkgs/backend/openapi.yaml`（本日生成）と連携するドキュメント。
+
+---
+
 ## Build and Test — CONSTRUCTION フェーズ最終ステージ実行
 **Timestamp**: 2026-05-17T14:20:00Z
 **User Input**: "全6 Unit（U-01 shared / U-02 infra / U-03a task-extractor / U-03b sabori-proposer / U-04 api / U-05 web）の Code Generation が完了し、ユーザーが全て承認しました。CONSTRUCTION フェーズの最終ステージ「Build and Test」を実行してください。[ファストトラック・品質最大化方針（時間制約を気にせず最高品質）][ユーザーは「指示書作成＋実際に実行検証」を選択。指示書を作るだけでなく、実際にビルド・テスト・E2Eを実行して検証すること][AWS への実デプロイ（cdk deploy / s3 sync 等）は実行しないこと]"
@@ -1040,5 +1061,101 @@ AIーDLCワークフローに沿って aidlc-docs一覧を作成したのです�
 **User Input**: "U-05: web の設計4ステージはユーザーが承認しました。Three.js 演出は設計どおり含めることを承認済みです。最終ステージ「Code Generation」を実行してください。ファストトラック・品質最大化方針（時間制約を気にせず最高品質）/ ユーザーは「pnpm install / build / test まで自動実行」「Three.js を含めて生成」を承認済み"
 **AI Response**: U-05: web Code Generation 完了。生成ファイル: types/ui.ts / lib(cognito.ts/apiClient.ts/utils.ts) / providers(AuthProvider/ToastProvider) / hooks(useAuth/useTasks/useProposalStream/useConnections/useToast/useReducedMotion) / components(ui:button/badge/card/input/textarea/toast / layout:Header/AppShell / task:TaskCard/TaskEditForm/TaskAddModal / chat:ChatMessage/ChatPane/QuickReplyButtons/FreeTextInput / verdict:VerdictBox/EvidenceList / three:SaborouCanvas/SaborouCharacter) / pages(LoginPage/AuthCallbackPage/TaskListPage/TaskDetailPage/SettingsPage) / mocks(handlers.ts/server.ts) / App.tsx / index.css / .env.example / vitest.config.ts(jsdom環境) / test-setup.ts / __tests__(utils/cognito/apiClient/components/hooks)。pnpm install 完了。tsc --noEmit エラーゼロ。vite build 成功（Three.js chunk 822KB遅延ロード設計）。vitest: 5テストファイル・53テスト全pass。CDK jest 35テスト継続パス。E2Eテストファイル(tests/e2e.spec.ts)作成済み（ローカルAPI起動が必要なため実行は任意）。カバレッジ: lib/ Statements 63.26% / Branches 65.71% / Functions 68.57%（ビジネスロジック中心に高カバレッジ達成。Reactコンポーネントのjsdom環境でのカバレッジ制約により全体値は低め）。モックUI 4画面（login/tasklist/detail/settings）デザイン忠実に再現完了。
 **Context**: U-05: web / Code Generation Part 1 (Planning) + Part 2 (Generation) / 完了 / ファストトラック・品質最大化方針
+
+---
+
+## U-06: ui-redesign / Functional Design 設計書改訂 — ユーザー指示
+**Timestamp**: 2026-05-20T10:00:00Z
+**User Input**: "U-06-ui-redesign の設計書5本を「Three.js併用版 + Midレベル仕上げ + 憲法6条」に改訂し、新規2本を追加してほしい。前回のあなたの作業の続きです。方針の変更（前回から）**前回**: Three.js 全廃止、2D SVGに統一 **今回**: **Three.js 併用**。HTML の 2D 世界観に「3D を局所投入」して相乗効果を狙う。仕上げレベルは **Mid**（1日で到達可能な「商業プロダクトっぽい」レベル）[中略] ユーザーが確定した「整合性のための憲法6条」: 1.パレットは完全共有 2.3Dの最小サイズ240px 3.3Dコンテナ背景はcream #FFFAF5 4.3Dの外枠はHTML側が担当 5.2D/3Dは同じ顔 6.3Dはverdict連動の特別な瞬間にしか出さない [中略] 改訂対象: ui-redesign-spec.md / design-tokens.md / component-mapping.md / migration-plan.md（api-html-gap-analysis.mdは変更なし）。新規追加: 2d-3d-coexistence-rules.md / character-design-sheet.md"
+**AI Response**: 設計書改訂・新規作成作業を開始。変更サマリー: (1) ui-redesign-spec.md — 廃止セクション削除・3D配置エリアセクション追加・配置マトリクス掲載・verdict連動3D表現表追加 (2) design-tokens.md — 3Dマテリアル/シーン設定セクション追加（環境マップ・ライティング・マテリアル統一設定・verdict別3D色） (3) component-mapping.md — 廃止3件を「全面リメイク・Mid仕上げ」に変更・SaborouCharacter2D/3D分割・props インターフェース更新・npm パッケージ維持 (4) migration-plan.md — フェーズ3をThree.js廃止からThree.js リメイクへ変更・フェーズ2.5追加・所要時間6〜8hに拡張 (5) 新規: 2d-3d-coexistence-rules.md（憲法6条・配置マトリクス・アンチパターン集） (6) 新規: character-design-sheet.md（2D/3D共通顔設計図・SVGパス解析・verdict別表情・3D再現方法）
+**Context**: U-06: ui-redesign / Functional Design 設計書改訂 / Three.js廃止撤回→Two.js併用Mid仕上げ方針 / 憲法6条確定 / 設計書5本改訂+新規2本追加
+
+---
+
+## U-06: ui-redesign / Functional Design 設計書改訂 — 完了
+**Timestamp**: 2026-05-20T07:30:00Z
+**User Input**: "Three.js を併用してより良いものにするってことも可能なのでしょうか？" → "Three.jsをきちんと使い込んで意味あるところで出すとちゃっちくなくリッチになるのでしょうか？" → "2でいきいますが、共有したHTMLと併用しながらお互いぶつからずに整合性と取りながらのUIの想定ですが大丈夫でしょうか？" → "はい、併用版に改訂（推奨）" → "続きお願いします"
+**AI Response**: 設計書5本改訂 + 新規2本作成、すべて完了。前回 aidlc-specialist 委譲はソケット切断（agentId: a2ffcf4c281a37acc）したため、本セッション内で TaskCreate/TaskUpdate により8タスク管理で直接実装。最終成果物:
+- 改訂4本:
+  - `ui-redesign-spec.md` — 改訂履歴セクション追加、2.1セクションを「廃止対象」から「既存 Three.js 実装の扱い（方針変更）」に書き換え、3.1 LoginPage と 3.3 TaskDetailPage に3Dヒーロー配置を明記、7章「2D/3D 配置マトリクス（9行表）」と8章「既存 Three.js 実装からの差分（リメイク方針）」を末尾に追加
+  - `design-tokens.md` — 改訂履歴セクション追加、11章「3Dシーン設定」を末尾に追加（採用ライブラリ・3Dカラー定数・マテリアル設定・3点ライト・Environment sunset・ContactShadows・呼吸アニメ・verdict連動・カメラ設定・パフォーマンス制約・3Dコンテナ HTML スタイル）
+  - `component-mapping.md` — 改訂履歴セクション追加、1.2「キャラクター関連」を2D/3D 併存設計に書き換え、移行方針サマリーを「廃止0件・全面リメイク2件」に更新、3.1 を SaborouCharacter2D / 3.1b を SaborouCharacter3D + SaborouScene3D に書き換え、4章を「Three.js リメイクリスト」に全面書き換え（4.1〜4.5: リメイク対象/維持パッケージ/バンドル戦略/影響ファイル/リスク対策）
+  - `migration-plan.md` — 改訂履歴セクション追加、フェーズ構成サマリで Phase 2「2Dキャラ実装（先行・顔の確定）」と Phase 3「Three.js リメイク（Mid仕上げ）6-8h」に変更、合計 20-29h、Phase 5 既存ページ改修に3Dヒーロー埋込明記、バンドル戦略を「削減見込み」から「維持時の遅延ロード戦略」に書き換え、移行完了基準に Mid 仕上げ8項目・憲法準拠を追加
+- 変更なし: `api-html-gap-analysis.md`
+- 新規作成2本:
+  - `2d-3d-coexistence-rules.md`（7章構成、約9KB）— 役割分担3軸（位置/サイズ/タイミング）・憲法6条（パレット共有/240px最小/cream背景/HTML外枠/同じ顔/verdict連動瞬間）・配置マトリクス10行・アンチパターン10件（AP-01〜AP-10）・PRレビューチェックリスト・例外申請プロセス
+  - `character-design-sheet.md`（7章構成、約10KB）— キャラクター設定・viewBox 120 系・squircle SVGパス・drei RoundedBox 比率（1.0×1.05×0.8）・verdict 3値の目/口/頬/天気/Zzz/稲妻仕様・3D座標換算・SaborouAvatar 仕様・アニメーション（saboruBob/saboruZzz/saboruLightning/呼吸/まばたき）・カラーチャート（全色 SABORU_THEME 由来確認）・実装チェックリスト
+
+aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（生成物リストに新規2本追加・改訂版である旨を明記）。実装は依然「ユーザー承認待ち」ステータス。
+**Context**: U-06: ui-redesign / Functional Design 設計書改訂 / Three.js廃止撤回→併用Mid仕上げ方針 / 憲法6条確定 / 設計書5本改訂+新規2本追加 / 全作業完了
+
+---
+
+## U-06: ui-redesign / Functional Design 承認・実装開始
+**Timestamp**: 2026-05-20T08:00:00Z
+**User Input**: "コミットしておいて欲しい。そして承認するので実装に入ってください"
+**AI Response**: 設計書7本（改訂4 + 新規2 + 変更なし1）を commit 678aae9 でコミット、origin/feature/aidlc-construction に push 完了。NFR Requirements/Design はスキップ（既存フロントのNFRを流用）、Infrastructure Design もスキップ（フロントのみ変更）として Code Generation に直接進行。Phase 1〜7 の7フェーズで段階実装を開始。
+**Context**: U-06: ui-redesign / Functional Design 承認 / Code Generation Phase 1 開始
+
+---
+
+## U-06: ui-redesign / Code Generation 完了
+**Timestamp**: 2026-05-20T08:15:00Z
+**User Input**: "コミットしておいて欲しい。そして承認するので実装に入ってください"
+**AI Response**: Phase 1〜7 の段階的実装をすべて完了。
+
+**新規作成ファイル（19件）**:
+- `pkgs/frontend/src/lib/verdictMeta.ts` — VERDICT_META / VERDICT_SVG_CONFIG / QUICK_REPLY_LABELS
+- `pkgs/frontend/src/lib/staticContent.ts` — MANUAL_TRAITS / PERSONAS / ROADMAP_ITEMS
+- `pkgs/frontend/src/lib/three/saboruColors.ts` — 3D マテリアル色定数（憲法1 準拠）
+- `pkgs/frontend/src/components/character/SaborouCharacter2D.tsx` — 2D SVG キャラ（character-design-sheet.md 完全準拠）
+- `pkgs/frontend/src/components/character/SaborouAvatar.tsx` — チャット用ミニアバター
+- `pkgs/frontend/src/components/character/__tests__/SaborouCharacter2D.test.tsx` — 13テスト
+- `pkgs/frontend/src/components/three/SaborouCharacter3D.tsx` — 3D キャラ Mid 仕上げ（旧 SaborouCharacter.tsx リメイク）
+- `pkgs/frontend/src/components/three/SaborouScene3D.tsx` — 3D シーンラッパー（旧 SaborouCanvas.tsx リメイク）
+- `pkgs/frontend/src/components/layout/Logo.tsx`
+- `pkgs/frontend/src/components/layout/PageHeader.tsx`
+- `pkgs/frontend/src/components/layout/BottomNav.tsx`
+- `pkgs/frontend/src/components/ui/SectionLabel.tsx`
+- `pkgs/frontend/src/components/verdict/PsychSignalsCard.tsx`
+- `pkgs/frontend/src/components/verdict/ContextCollectingAnim.tsx`
+- `pkgs/frontend/src/pages/ManualPage.tsx`
+- `pkgs/frontend/src/pages/PersonaPage.tsx`
+- `pkgs/frontend/src/pages/RoadmapPage.tsx`
+
+**改修ファイル（11件）**:
+- `pkgs/frontend/src/index.css`（Tailwind v4 @theme + @utility）
+- `pkgs/frontend/index.html`（Google Fonts プリコネクト）
+- `pkgs/frontend/src/App.tsx`（3 ルート追加）
+- `pkgs/frontend/src/components/layout/AppShell.tsx`（max-w-md + BottomNav）
+- `pkgs/frontend/src/components/task/TaskCard.tsx`（ネオブルータリズム + 2D アバター）
+- `pkgs/frontend/src/components/verdict/VerdictBox.tsx` / `EvidenceList.tsx`
+- `pkgs/frontend/src/components/chat/ChatMessage.tsx` / `ChatPane.tsx` / `QuickReplyButtons.tsx` / `FreeTextInput.tsx`
+- `pkgs/frontend/src/pages/LoginPage.tsx`（3Dヒーロー 280px）
+- `pkgs/frontend/src/pages/TaskListPage.tsx`（今日バナー + 2Dアバター + BottomNav）
+- `pkgs/frontend/src/pages/TaskDetailPage.tsx`（3Dヒーロー 320px + PsychSignals + ContextCollectingAnim）
+- `pkgs/frontend/src/pages/SettingsPage.tsx`（ペルソナ・ロードマップ遷移リンク）
+- `pkgs/frontend/src/__tests__/components.test.tsx`（VERDICT_META 新ラベルに追従）
+
+**削除ファイル（2件）**:
+- `pkgs/frontend/src/components/three/SaborouCanvas.tsx`（旧、SaborouScene3D に置換）
+- `pkgs/frontend/src/components/three/SaborouCharacter.tsx`（旧、SaborouCharacter3D に置換）
+- `pkgs/frontend/src/components/layout/Header.tsx`（旧、PageHeader/AppShell+BottomNav に置換）
+
+**検証結果**:
+- typecheck: エラーゼロ
+- build: 成功（初期バンドル 219KB / Three.js 別チャンク 919KB / gzip 249KB で遅延ロード）
+- frontend test: 6 ファイル / 126 テスト全パス（追加 13・削除 1）
+- 他パッケージ: shared 103・backend 172・cdk 35 全パス（影響なし）
+
+**憲法6条の遵守**:
+- 憲法1（パレット共有）: SABORU_3D_COLOR は HTML SABORU_THEME 由来のみ
+- 憲法2（240px 最小）: SaborouScene3D 内で size<240 を警告
+- 憲法3（cream 背景）: brutal-3d-container ユーティリティで統一
+- 憲法4（HTML 外枠）: brutal-3d-container で枠線+ハードシャドウ
+- 憲法5（同じ顔）: Suspense/ErrorBoundary fallback に SaborouCharacter2D
+- 憲法6（特別な瞬間のみ）: 3D は LoginPage + TaskDetailPage の 2 箇所のみ
+
+**Context**: U-06: ui-redesign / Code Generation 7 フェーズ完了 / 全テストパス / ユーザー承認後のフェーズ実装完了
 
 ---

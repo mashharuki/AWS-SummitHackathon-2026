@@ -1,15 +1,21 @@
+import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
+import { AppShell } from "@/components/layout/AppShell";
+import { Logo } from "@/components/layout/Logo";
+import { TaskAddModal } from "@/components/task/TaskAddModal";
+import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { useAuth } from "@/hooks/useAuth";
+import { useTasks } from "@/hooks/useTasks";
 /**
- * タスク一覧ページ
- * モックUI saborou_v2_02-tasklist.png に忠実に実装
+ * タスク一覧ページ — U-06-ui-redesign Phase 5 改修版
+ *
+ * 共有 HTML TaskListScreen 準拠（ネオブルータリズム + 2D アバター）
+ * 今日バナー / 承認済みタスク / 候補タスク / FAB の構成。
+ * キャラはすべて 2D SVG（憲法2,6）。
  */
+import type { Verdict } from "@saboru/shared";
 import { Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { AppShell } from "@/components/layout/AppShell";
-import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
-import { TaskAddModal } from "@/components/task/TaskAddModal";
-import { Button } from "@/components/ui/button";
-import { useTasks } from "@/hooks/useTasks";
-import { useAuth } from "@/hooks/useAuth";
 
 export function TaskListPage() {
   const { user } = useAuth();
@@ -26,106 +32,185 @@ export function TaskListPage() {
 
   const activeTasks = tasks.filter((t) => t.status === "approved");
 
+  // 今日バナーの verdict: タスクが無い or 全部 can_saboru なら "can_saboru"、
+  // それ以外は最も重い verdict を採用（MVP では can_saboru 固定でも OK）
+  const bannerVerdict: Verdict = "can_saboru";
+  const bannerMessage =
+    activeTasks.length === 0
+      ? "今日はサボり放題！何もないのが一番の贅沢だよぉ ☁️"
+      : `${activeTasks.length}件あるけど、今日も無理しなくていいんだよぉ ☁️`;
+
   return (
     <AppShell>
-      <div className="max-w-md mx-auto px-4 py-4 pb-24">
-        {/* 今日のバナー */}
-        {user && (
-          <div className="bg-[#FF6B2B] text-white rounded-2xl px-4 py-3 mb-4 text-sm font-medium">
-            今日はサボれます！AIが安全を確認しただれます
-          </div>
-        )}
-
-        {/* 候補タスクセクション */}
-        {candidates.length > 0 && (
-          <section aria-labelledby="candidates-heading" className="mb-6">
-            <h2
-              id="candidates-heading"
-              className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3"
+      <div className="flex flex-col h-full">
+        {/* ヘッダー（Logo + アバター） */}
+        <header
+          className="bg-saboru-paper px-4 py-3.5 flex items-center justify-between"
+          style={{ borderBottom: "3px solid #2B1E16" }}
+        >
+          <Logo size={30} />
+          {user && (
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{
+                background: "#FED7AA",
+                color: "#EA580C",
+                fontWeight: 700,
+                fontSize: 12,
+              }}
+              aria-label={`${user.name} のアカウント`}
             >
-              確認待ちタスク
-            </h2>
-            <div className="space-y-2">
-              {candidates.map((c) => (
-                <CandidateCard
-                  key={c.candidateId}
-                  candidate={c}
-                  onApprove={(id) => void approveCandidate(id)}
-                  onReject={(id) => void rejectCandidate(id)}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* 承認済みタスクセクション */}
-        <section aria-labelledby="tasks-heading">
-          <div className="flex items-center justify-between mb-3">
-            <h2
-              id="tasks-heading"
-              className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider"
-            >
-              承認済みタスク
-            </h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => void refresh()}
-              className="h-7 w-7"
-              aria-label="タスクを更新"
-              disabled={isLoading}
-            >
-              <RefreshCw
-                size={14}
-                className={isLoading ? "animate-spin" : ""}
-              />
-            </Button>
-          </div>
-
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-20 rounded-2xl bg-white/60 animate-pulse"
-                  aria-hidden="true"
-                />
-              ))}
-            </div>
-          ) : activeTasks.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-[#9CA3AF] text-sm">タスクがありません</p>
-              <p className="text-[#9CA3AF] text-xs mt-1">
-                今日はサボり放題です！
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {activeTasks.map((task) => (
-                <TaskCard key={task.taskId} task={task} />
-              ))}
+              {user.name.charAt(0).toUpperCase()}
             </div>
           )}
-        </section>
+        </header>
+
+        {/* 今日バナー */}
+        <div className="px-4 pt-3 pb-2">
+          <div
+            className="card-brutal flex items-center gap-3 px-3.5 py-3"
+            style={{
+              background: "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
+            }}
+          >
+            <SaborouCharacter2D verdict={bannerVerdict} size={56} />
+            <div className="flex-1 min-w-0">
+              <p
+                className="font-bold tracking-wider"
+                style={{
+                  fontSize: 11,
+                  color: "#EA580C",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                今日のサボロー
+              </p>
+              <p
+                className="text-saboru-ink font-semibold mt-0.5"
+                style={{ fontSize: 13, lineHeight: 1.4 }}
+              >
+                {bannerMessage}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* タスクリスト本体 */}
+        <div className="flex-1 overflow-y-auto px-4 pb-24">
+          {/* 候補タスク */}
+          {candidates.length > 0 && (
+            <section aria-labelledby="candidates-heading" className="pt-4">
+              <SectionLabel hint={`AI抽出 · ${candidates.length}件`}>
+                <span id="candidates-heading">承認待ちタスク</span>
+              </SectionLabel>
+              <div className="flex flex-col gap-2">
+                {candidates.map((c) => (
+                  <CandidateCard
+                    key={c.candidateId}
+                    candidate={c}
+                    onApprove={(id) => void approveCandidate(id)}
+                    onReject={(id) => void rejectCandidate(id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 承認済みタスク */}
+          <section aria-labelledby="tasks-heading" className="pt-5">
+            <div className="flex items-center justify-between mb-1.5 px-1">
+              <h2
+                id="tasks-heading"
+                className="text-saboru-ink-soft font-bold"
+                style={{ fontSize: 10, letterSpacing: "0.1em" }}
+              >
+                承認済みタスク
+                <span
+                  className="ml-2 text-saboru-ink-muted"
+                  style={{ fontWeight: 500 }}
+                >
+                  {activeTasks.length}件
+                </span>
+              </h2>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={isLoading}
+                aria-label="タスクを更新"
+                className="text-saboru-ink-soft hover:text-saboru-ink p-1"
+              >
+                <RefreshCw
+                  size={14}
+                  className={isLoading ? "animate-spin" : ""}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+
+            {isLoading ? (
+              <div className="flex flex-col gap-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-20 rounded-2xl bg-saboru-paper/60 animate-pulse"
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+            ) : activeTasks.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-saboru-ink-muted" style={{ fontSize: 13 }}>
+                  タスクがありません
+                </p>
+                <p
+                  className="text-saboru-ink-muted mt-1"
+                  style={{ fontSize: 11 }}
+                >
+                  今日はサボり放題です！
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {activeTasks.map((task) => (
+                  <TaskCard key={task.taskId} task={task} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* FAB: タスク追加 */}
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          aria-label="タスクを追加"
+          className="fixed bottom-24 right-4 flex items-center justify-center"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            background: "#F97316",
+            border: "3px solid #2B1E16",
+            color: "#FFFFFF",
+            fontSize: 28,
+            fontWeight: 900,
+            cursor: "pointer",
+            boxShadow: "0 5px 0 #2B1E16, 0 10px 20px rgba(249,115,22,0.28)",
+            lineHeight: 1,
+          }}
+        >
+          <Plus size={26} aria-hidden="true" />
+        </button>
+
+        {/* タスク追加モーダル */}
+        <TaskAddModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onAdd={async (data) => {
+            await createTask(data);
+          }}
+        />
       </div>
-
-      {/* FAB: タスク追加 */}
-      <Button
-        onClick={() => setIsAddModalOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg text-white"
-        aria-label="タスクを追加"
-      >
-        <Plus size={24} />
-      </Button>
-
-      {/* タスク追加モーダル */}
-      <TaskAddModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={async (data) => {
-          await createTask(data);
-        }}
-      />
     </AppShell>
   );
 }

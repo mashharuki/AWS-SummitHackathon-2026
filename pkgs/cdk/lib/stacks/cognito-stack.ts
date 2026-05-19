@@ -1,7 +1,5 @@
 import * as cdk from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
-import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
 
@@ -26,8 +24,12 @@ export class SaborouCognitoStack extends cdk.Stack {
     // --- ユーザープール ---
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: `saborou-user-pool-${environment}`,
-      selfSignUpEnabled: false,
+      selfSignUpEnabled: true,
       signInAliases: { email: true },
+      autoVerify: { email: true },
+      standardAttributes: {
+        email: { required: true, mutable: true },
+      },
       mfa: cognito.Mfa.OFF,
       passwordPolicy: {
         minLength: 8,
@@ -41,39 +43,14 @@ export class SaborouCognitoStack extends cdk.Stack {
       deletionProtection: false,
     });
 
-    // --- Google IdP ---
-    const googleClientId = ssm.StringParameter.valueForStringParameter(
-      this,
-      "/saborou/google/client-id",
-    );
-
-    const googleClientSecret = secretsmanager.Secret.fromSecretNameV2(
-      this,
-      "GoogleSecret",
-      "/saborou/google/client-secret",
-    );
-
-    const googleIdP = new cognito.UserPoolIdentityProviderGoogle(
-      this,
-      "GoogleIdP",
-      {
-        userPool,
-        clientId: googleClientId,
-        clientSecretValue: googleClientSecret.secretValue,
-        scopes: ["openid", "email", "profile"],
-        attributeMapping: {
-          email: cognito.ProviderAttribute.GOOGLE_EMAIL,
-          givenName: cognito.ProviderAttribute.GOOGLE_GIVEN_NAME,
-          familyName: cognito.ProviderAttribute.GOOGLE_FAMILY_NAME,
-          profilePicture: cognito.ProviderAttribute.GOOGLE_PICTURE,
-        },
-      },
-    );
-
     // --- ユーザープールクライアント ---
     const userPoolClient = new cognito.UserPoolClient(this, "UserPoolClient", {
       userPool,
       userPoolClientName: `saborou-client-${environment}`,
+      authFlows: {
+        userPassword: true,
+        userSrp: true,
+      },
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [
@@ -95,11 +72,10 @@ export class SaborouCognitoStack extends cdk.Stack {
         ],
       },
       supportedIdentityProviders: [
-        cognito.UserPoolClientIdentityProvider.GOOGLE,
+        cognito.UserPoolClientIdentityProvider.COGNITO,
       ],
       generateSecret: false,
     });
-    userPoolClient.node.addDependency(googleIdP);
 
     // --- Cognito ホスト型 UI ドメイン ---
     const userPoolDomain = new cognito.UserPoolDomain(this, "UserPoolDomain", {

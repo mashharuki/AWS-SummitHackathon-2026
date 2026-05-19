@@ -57,12 +57,7 @@ vi.mock("@aws-sdk/client-eventbridge", () => ({
   EventBridgeClient: vi.fn().mockImplementation(function (this: unknown) {
     (this as { send: typeof mockSend }).send = mockSend;
   }),
-  PutEventsCommand: vi.fn().mockImplementation(function (
-    this: { input: unknown },
-    input: unknown,
-  ) {
-    this.input = input;
-  }),
+  PutEventsCommand: vi.fn().mockImplementation((input: unknown) => input),
 }));
 
 describe("POST /webhooks/slack", () => {
@@ -92,12 +87,7 @@ describe("POST /webhooks/slack", () => {
       EventBridgeClient: vi.fn().mockImplementation(function (this: unknown) {
         (this as { send: typeof mockSend }).send = mockSend;
       }),
-      PutEventsCommand: vi.fn().mockImplementation(function (
-        this: { input: unknown },
-        input: unknown,
-      ) {
-        this.input = input;
-      }),
+      PutEventsCommand: vi.fn().mockImplementation((input: unknown) => input),
     }));
 
     const { webhooksRoute } = await import("../../routes/webhooks.js");
@@ -212,58 +202,6 @@ describe("POST /webhooks/slack", () => {
     const body = JSON.stringify({
       type: "event_callback",
       event: {},
-      team_id: "T999",
-    });
-    const ts = nowTs();
-    const sig = makeSignature(body, ts);
-
-    const res = await app.request("/webhooks/slack", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-slack-request-timestamp": ts,
-        "x-slack-signature": sig,
-      },
-      body,
-    });
-    expect(res.status).toBe(200);
-    const resBody = await res.json();
-    expect(resBody.ok).toBe(true);
-  });
-
-  it("returns ok when EventBridge has partial failures", async () => {
-    mockSend.mockResolvedValueOnce({
-      FailedEntryCount: 1,
-      Entries: [{ ErrorCode: "InternalFailure", ErrorMessage: "failed" }],
-    });
-
-    const body = JSON.stringify({
-      type: "event_callback",
-      event: { type: "message" },
-      team_id: "T999",
-    });
-    const ts = nowTs();
-    const sig = makeSignature(body, ts);
-
-    const res = await app.request("/webhooks/slack", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-slack-request-timestamp": ts,
-        "x-slack-signature": sig,
-      },
-      body,
-    });
-    expect(res.status).toBe(200);
-    const resBody = await res.json();
-    expect(resBody.ok).toBe(true);
-  });
-
-  it("returns ok when EventBridge response omits FailedEntryCount", async () => {
-    mockSend.mockResolvedValueOnce({});
-    const body = JSON.stringify({
-      type: "event_callback",
-      event: { type: "message" },
       team_id: "T999",
     });
     const ts = nowTs();

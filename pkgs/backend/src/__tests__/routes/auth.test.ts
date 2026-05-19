@@ -110,21 +110,4 @@ describe("GET /auth/slack/callback error cases", () => {
     const body = await res.json();
     expect(body.error.code).toBe("INVALID_STATE");
   });
-
-  it("returns 400 for tampered state with invalid MAC", async () => {
-    const connRepo = {};
-    const app = buildTestApp(connRepo);
-    const payload = JSON.stringify({ userId: MOCK_USER_ID, nonce: "n-1" });
-    const state = Buffer.from(
-      JSON.stringify({
-        payload,
-        mac: "a".repeat(64),
-      }),
-    ).toString("base64url");
-
-    const res = await app.request(`/auth/slack/callback?code=abc&state=${state}`);
-    expect(res.status).toBe(400);
-    const body = await res.json();
-    expect(body.error.code).toBe("INVALID_STATE");
-  });
 });

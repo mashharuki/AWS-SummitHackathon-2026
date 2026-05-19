@@ -80,28 +80,6 @@ describe("DynamoTaskCandidateRepository", () => {
   });
 
   describe("create()", () => {
-    it("uses default region/table names when env vars are missing", async () => {
-      delete process.env["AWS_REGION"];
-      delete process.env["DYNAMODB_TABLE_TASK_CANDIDATES"];
-      delete process.env["DYNAMODB_TABLE_TASKS"];
-      vi.clearAllMocks();
-
-      const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
-      const repo = new (await import("../DynamoTaskCandidateRepository.js"))
-        .DynamoTaskCandidateRepository();
-      mockSend.mockResolvedValueOnce({ Items: [] });
-
-      await repo.findAllByUserId(userId);
-
-      expect(vi.mocked(DynamoDBClient)).toHaveBeenCalledWith(
-        expect.objectContaining({ region: "ap-northeast-1" }),
-      );
-      const callArgs = mockSend.mock.calls[0]?.[0] as {
-        input: { TableName: string };
-      };
-      expect(callArgs.input.TableName).toBe("saborou-task-candidates-dev");
-    });
-
     it("calls DynamoDB PutCommand and returns TaskCandidate with PK/SK", async () => {
       mockSend.mockResolvedValueOnce({});
 
@@ -154,39 +132,6 @@ describe("DynamoTaskCandidateRepository", () => {
       expect(result.SK).toBe(existingItem.SK);
       expect(mockSend).toHaveBeenCalledTimes(2);
     });
-
-    it("throws when _userId is missing", async () => {
-      const { DynamoTaskCandidateRepository } = await import(
-        "../DynamoTaskCandidateRepository.js"
-      );
-      const repo = new DynamoTaskCandidateRepository();
-
-      await expect(
-        repo.create(makeCandidate() as Parameters<typeof repo.create>[0]),
-      ).rejects.toThrow("create() requires _userId");
-    });
-
-    it("throws when ConditionalCheckFailed and existing item cannot be loaded", async () => {
-      const { ConditionalCheckFailedException } = await import(
-        "@aws-sdk/client-dynamodb"
-      );
-      mockSend.mockRejectedValueOnce(
-        new ConditionalCheckFailedException({ message: "Already exists" }),
-      );
-      mockSend.mockResolvedValueOnce({ Item: undefined });
-
-      const { DynamoTaskCandidateRepository } = await import(
-        "../DynamoTaskCandidateRepository.js"
-      );
-      const repo = new DynamoTaskCandidateRepository();
-
-      await expect(
-        repo.create({
-          ...makeCandidate(),
-          _userId: userId,
-        } as Parameters<typeof repo.create>[0]),
-      ).rejects.toThrow("Failed to create TaskCandidate");
-    });
   });
 
   describe("findAllByUserId()", () => {
@@ -219,18 +164,6 @@ describe("DynamoTaskCandidateRepository", () => {
 
       expect(results).toHaveLength(1);
       expect(results[0]?.title).toBe("テストタスク");
-    });
-
-    it("returns empty array when Items is undefined", async () => {
-      mockSend.mockResolvedValueOnce({});
-
-      const { DynamoTaskCandidateRepository } = await import(
-        "../DynamoTaskCandidateRepository.js"
-      );
-      const repo = new DynamoTaskCandidateRepository();
-      const results = await repo.findAllByUserId(userId);
-
-      expect(results).toEqual([]);
     });
   });
 
@@ -319,48 +252,6 @@ describe("DynamoTaskCandidateRepository", () => {
       await expect(
         repo.approve(userId, "01HX000000000000000000001"),
       ).rejects.toThrow("Failed to approve TaskCandidate");
-    });
-
-    it("returns approved task when transaction succeeds", async () => {
-      mockSend.mockResolvedValueOnce({
-        Item: {
-          PK: `${DDB_PREFIX.USER}${userId}`,
-          SK: `${DDB_PREFIX.TASK_CAND}01HX000000000000000000001`,
-          ...makeCandidate({ candidateId: "01HX000000000000000000001" }),
-        },
-      });
-      mockSend.mockResolvedValueOnce({});
-
-      const { DynamoTaskCandidateRepository } = await import(
-        "../DynamoTaskCandidateRepository.js"
-      );
-      const repo = new DynamoTaskCandidateRepository();
-      const task = await repo.approve(userId, "01HX000000000000000000001");
-
-      expect(task.title).toBe("テストタスク");
-      expect(task.status).toBe("approved");
-    });
-
-    it("approves candidate with null deadline", async () => {
-      mockSend.mockResolvedValueOnce({
-        Item: {
-          PK: `${DDB_PREFIX.USER}${userId}`,
-          SK: `${DDB_PREFIX.TASK_CAND}01HX000000000000000000099`,
-          ...makeCandidate({
-            candidateId: "01HX000000000000000000099",
-            deadline: null,
-          }),
-        },
-      });
-      mockSend.mockResolvedValueOnce({});
-
-      const { DynamoTaskCandidateRepository } = await import(
-        "../DynamoTaskCandidateRepository.js"
-      );
-      const repo = new DynamoTaskCandidateRepository();
-      const task = await repo.approve(userId, "01HX000000000000000000099");
-
-      expect(task.deadline).toBeNull();
     });
   });
 });

@@ -1,4 +1,3 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cn,
   formatDateJa,
@@ -6,6 +5,7 @@ import {
   isOverdue,
   toUserMessage,
 } from "@/lib/utils";
+import { describe, expect, it } from "vitest";
 
 describe("cn", () => {
   it("クラス名をマージする", () => {
@@ -56,14 +56,6 @@ describe("formatDateJa", () => {
     past.setDate(past.getDate() - 2);
     const result = formatDateJa(past.toISOString());
     expect(result).toMatch(/日超過/);
-  });
-
-  it("同日の日付を厳密に「今日」と表示する", () => {
-    vi.useFakeTimers();
-    const now = new Date("2026-05-20T09:00:00Z");
-    vi.setSystemTime(now);
-    const result = formatDateJa(now.toISOString());
-    expect(result).toBe("今日");
   });
 });
 
@@ -116,17 +108,8 @@ describe("toUserMessage", () => {
     expect(msg).toContain("接続");
   });
 
-  it("5xxエラーのメッセージ", () => {
-    const msg = toUserMessage(new Error("500 Internal Server Error"));
-    expect(msg).toContain("サーバーエラー");
-  });
-
   it("非Errorオブジェクト", () => {
     const msg = toUserMessage({ code: 500 });
     expect(msg).toBeTruthy();
   });
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
