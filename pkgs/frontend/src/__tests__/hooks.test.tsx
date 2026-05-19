@@ -1,6 +1,6 @@
-import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 describe("useReducedMotion", () => {
   it("デフォルトではfalseを返す（jsdom環境）", () => {

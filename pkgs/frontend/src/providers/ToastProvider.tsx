@@ -1,6 +1,6 @@
+import * as React from "react";
 import { ToastContainer } from "@/components/ui/toast";
 import type { ToastMessage } from "@/types/ui";
-import * as React from "react";
 
 interface ToastContextValue {
   showToast: (

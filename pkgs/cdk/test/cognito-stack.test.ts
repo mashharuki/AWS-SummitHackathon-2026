@@ -15,11 +15,11 @@ describe("SaborouCognitoStack", () => {
     template = buildTemplate();
   });
 
-  test("UserPool is created with email sign-in and self-signup enabled", () => {
+  test("UserPool is created with email sign-in and no self-signup", () => {
     template.hasResourceProperties("AWS::Cognito::UserPool", {
       UsernameAttributes: Match.arrayWith(["email"]),
       AdminCreateUserConfig: {
-        AllowAdminCreateUserOnly: false,
+        AllowAdminCreateUserOnly: true,
       },
     });
   });
@@ -52,7 +52,7 @@ describe("SaborouCognitoStack", () => {
   test("UserPoolClient is created with AuthorizationCodeGrant flow", () => {
     template.hasResourceProperties("AWS::Cognito::UserPoolClient", {
       AllowedOAuthFlows: Match.arrayWith(["code"]),
-      SupportedIdentityProviders: Match.arrayWith(["COGNITO"]),
+      SupportedIdentityProviders: Match.arrayWith(["Google"]),
     });
   });
 });

@@ -1,11 +1,11 @@
-import apiClient from "@/lib/apiClient";
-import { toUserMessage } from "@/lib/utils";
-import type { Task, TaskCandidate } from "@saboru/shared";
 /**
  * タスク管理フック
  * NFR-DESIGN-3: 楽観的更新パターン
  */
 import { useCallback, useEffect, useState } from "react";
+import type { Task, TaskCandidate } from "@saboru/shared";
+import apiClient from "@/lib/apiClient";
+import { toUserMessage } from "@/lib/utils";
 import { useToast } from "./useToast";
 
 export function useTasks() {

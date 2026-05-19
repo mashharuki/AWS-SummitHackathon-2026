@@ -155,26 +155,26 @@ pnpm exec cdk diff ApiStack
 
 依存関係を考慮した順序で個別デプロイする場合は以下の順序を守ること。
 
-> **スタック ID について**: スタック ID は `{スタック名}-{environment}` 形式（例: `SaborouData-dev`）。
-> `--all` で CDK が依存関係を自動解決するため、通常は一括デプロイを推奨。
-
 ```bash
 cd pkgs/cdk
 
-# ステップ 1: DataStack（DynamoDB テーブル・他スタックが参照）
-pnpm exec cdk deploy SaborouData-dev
+# ステップ 1: CognitoStack（他スタックが参照するユーザープール）
+pnpm exec cdk deploy CognitoStack
 
-# ステップ 2: FrontendStack（CloudFront ドメインを Cognito callbackUrls に渡すため先に作成）
-pnpm exec cdk deploy SaborouFrontend-dev
+# ステップ 2: DataStack（DynamoDB テーブル）
+pnpm exec cdk deploy DataStack
 
-# ステップ 3: CognitoStack（CloudFront ドメインを受け取り User Pool を作成）
-pnpm exec cdk deploy SaborouCognito-dev
+# ステップ 3: ApiStack（API Gateway + Hono Lambda）
+# DataStack の Output を参照するため DataStack 完了後に実施
+pnpm exec cdk deploy ApiStack
 
-# ステップ 4: ApiStack（Cognito + DataStack の Output を参照）
-pnpm exec cdk deploy SaborouApi-dev
+# ステップ 4: AgentStack + WebhookStack（並列デプロイ可）
+# ApiStack の Output を参照するため ApiStack 完了後に実施
+pnpm exec cdk deploy AgentStack WebhookStack
 
-# ステップ 5: AgentStack + WebhookStack（並列デプロイ可）
-pnpm exec cdk deploy SaborouAgent-dev SaborouWebhook-dev
+# ステップ 5: FrontendStack（S3 + CloudFront）
+# すべてのバックエンドスタック完了後に実施
+pnpm exec cdk deploy FrontendStack
 ```
 
 ---

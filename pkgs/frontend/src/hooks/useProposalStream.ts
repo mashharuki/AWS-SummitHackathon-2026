@@ -1,6 +1,3 @@
-import apiClient from "@/lib/apiClient";
-import { getAccessToken } from "@/lib/cognito";
-import type { Proposal, Verdict } from "@saboru/shared";
 /**
  * サボローチャット SSE ストリーミングフック
  * Vercel AI SDK useChat ラッパー
@@ -8,6 +5,9 @@ import type { Proposal, Verdict } from "@saboru/shared";
  */
 import { useChat } from "ai/react";
 import { useCallback, useRef, useState } from "react";
+import type { Proposal, Verdict } from "@saboru/shared";
+import apiClient from "@/lib/apiClient";
+import { getAccessToken } from "@/lib/cognito";
 import { useToast } from "./useToast";
 
 interface UseProposalStreamOptions {

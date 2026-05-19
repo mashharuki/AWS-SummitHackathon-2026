@@ -1,22 +1,35 @@
-import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
-import { useAuth } from "@/hooks/useAuth";
 /**
- * ログインページ — U-06-ui-redesign Phase 5 改修版
- *
- * 共有 HTML LoginScreen 準拠（ネオブルータリズム + 3D ヒーロー）
- * Cognito Hosted UI へのリダイレクト起点。
- * 3D ヒーロー（280px）でブランドのインパクトを提示し、
- * ボタン押下で Cognito（Cognito Hosted UI 経由でメール/PW認証）に遷移する。
+ * ログインページ
+ * モックUI saborou_v2_01-login.png に忠実に実装
  */
-import { Suspense, lazy, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
-// 3D ヒーローは遅延ロード（憲法: 初期バンドル外）
-const SaborouScene3D = lazy(() =>
-  import("@/components/three/SaborouScene3D").then((m) => ({
-    default: m.SaborouScene3D,
-  })),
-);
+/** Googleアイコン（SVG） */
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"
+        fill="#4285F4"
+      />
+      <path
+        d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"
+        fill="#34A853"
+      />
+      <path
+        d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
 
 export function LoginPage() {
   const { isAuthenticated, isLoading, signIn } = useAuth();
@@ -30,108 +43,68 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-saboru-cream flex flex-col items-center justify-center px-4 py-8"
+      className="min-h-screen bg-[#F5F4F0] flex items-center justify-center px-4"
       role="main"
     >
-      <div className="w-full max-w-md flex flex-col gap-6">
-        {/* 3D ヒーロー（憲法2,3,4,6 準拠） */}
-        <div className="brutal-3d-container" style={{ height: 280 }}>
-          <Suspense
-            fallback={
-              <div className="w-full h-full flex items-center justify-center">
-                <SaborouCharacter2D verdict="can_saboru" size={160} />
-              </div>
-            }
-          >
-            <SaborouScene3D verdict="can_saboru" size={280} />
-          </Suspense>
-        </div>
-
-        {/* ブランド名 + キャッチコピー */}
-        <div className="text-center">
-          <h1
-            className="text-saboru-ink"
-            style={{
-              fontFamily: "Space Grotesk, system-ui, sans-serif",
-              fontWeight: 800,
-              fontSize: 32,
-              letterSpacing: "-0.04em",
-            }}
-          >
-            SABOROU
-          </h1>
-          <p className="text-saboru-ink-soft mt-1" style={{ fontSize: 12 }}>
-            サボりの最適解を、AIと。
-          </p>
-        </div>
-
-        {/* 認証カード */}
-        <div className="card-brutal-lg p-5">
-          <h2
-            className="text-center text-saboru-ink font-bold"
-            style={{ fontSize: 15 }}
-          >
-            ログインして始める
-          </h2>
-          <p
-            className="text-center text-saboru-ink-muted mt-1 mb-4"
-            style={{ fontSize: 11 }}
-          >
-            Amazon Cognito で安全にサインイン
-          </p>
-
-          <button
-            type="button"
-            onClick={signIn}
-            disabled={isLoading}
-            className="btn-brutal-primary w-full"
-            aria-label="ログインまたは新規登録"
-          >
-            {isLoading ? "認証中..." : "ログイン / 新規登録"}
-          </button>
-
-          {/* Cognito バッジ */}
-          <div
-            className="mt-4 flex items-center justify-center gap-1.5"
-            style={{ fontSize: 10 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="#DD344C"
-                d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"
-              />
-              <path
-                fill="#FFF"
-                d="M12 7a3 3 0 100 6 3 3 0 000-6zm0 8c-2 0-6 1-6 3v1h12v-1c0-2-4-3-6-3z"
-              />
-            </svg>
-            <span className="text-saboru-ink-soft">Secured by</span>
-            <span
-              className="font-extrabold"
-              style={{
-                color: "#232F3E",
-                fontFamily: "Space Grotesk, system-ui, sans-serif",
-              }}
+      <div className="w-full max-w-xs">
+        {/* ロゴカード */}
+        <div className="bg-white rounded-2xl shadow-md p-8 mb-4">
+          {/* ロゴ */}
+          <div className="flex flex-col items-center mb-8">
+            <div
+              className="w-16 h-16 rounded-2xl bg-[#FF6B2B] flex items-center justify-center mb-3 shadow-md"
+              aria-hidden="true"
             >
-              Amazon Cognito
-            </span>
+              <span className="text-white font-bold text-2xl">S</span>
+            </div>
+            <h1 className="text-xl font-bold text-[#1A1A1A] tracking-wide">
+              SABOROU
+            </h1>
+            <p className="text-xs text-[#9CA3AF] mt-1">
+              AIがあなたのサボりを守ります
+            </p>
+          </div>
+
+          {/* ログインセクション */}
+          <div>
+            <h2 className="text-base font-semibold text-[#1A1A1A] text-center mb-1">
+              ログインして始める
+            </h2>
+            <p className="text-xs text-[#9CA3AF] text-center mb-4">
+              Googleアカウントで安全にサインイン
+            </p>
+
+            <Button
+              onClick={signIn}
+              variant="outline"
+              className="w-full flex items-center gap-3 h-11 border-[#E5E7EB] hover:bg-[#F5F4F0]"
+              disabled={isLoading}
+              aria-label="Googleアカウントでログイン"
+            >
+              <GoogleIcon />
+              <span className="text-sm font-medium text-[#1A1A1A]">
+                Googleでログイン
+              </span>
+            </Button>
           </div>
         </div>
 
         {/* フィーチャーリスト */}
-        <ul className="space-y-1.5" aria-label="SABOROU の特徴">
+        <ul className="space-y-2" aria-label="SABOROUの特徴">
           {[
-            { ic: "🔗", text: "Slack 自動連携で文脈を読解" },
-            { ic: "🧠", text: "AI が「サボっていい根拠」を提示" },
-            { ic: "☁️", text: "安心してサボれる" },
-          ].map((f) => (
+            "タスクを自動で把握",
+            "AIが根拠を持って判断",
+            "安心してサボれる",
+          ].map((text) => (
             <li
-              key={f.text}
-              className="flex items-center gap-2 px-2"
-              style={{ fontSize: 11 }}
+              key={text}
+              className="flex items-center justify-center gap-2 text-xs text-[#6B7280]"
             >
-              <span>{f.ic}</span>
-              <span className="text-saboru-ink-soft">{f.text}</span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FF6B2B]"
+                aria-hidden="true"
+              />
+              {text}
             </li>
           ))}
         </ul>

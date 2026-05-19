@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import {
   cn,
   formatDateJa,
@@ -5,7 +6,6 @@ import {
   isOverdue,
   toUserMessage,
 } from "@/lib/utils";
-import { describe, expect, it } from "vitest";
 
 describe("cn", () => {
   it("クラス名をマージする", () => {

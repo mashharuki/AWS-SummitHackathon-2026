@@ -1,6 +1,6 @@
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToastMessage } from "@/types/ui";
-import { X } from "lucide-react";
 
 interface ToastItemProps {
   toast: ToastMessage;

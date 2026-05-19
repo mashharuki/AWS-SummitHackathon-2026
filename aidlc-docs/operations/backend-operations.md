@@ -98,36 +98,38 @@ HONNE_DATA_TABLE=saborou-honne-data-dev
 PERSONAS_TABLE=saborou-personas-dev
 ```
 
-### 2.2 pkgs/backend/.env（ローカル開発設定）
-
-> **注意**: ファイル名は `.env.local` ではなく `.env` です（`package.json` の dev スクリプトが `--env-file=.env` を参照）。
+### 2.2 pkgs/backend/.env.local（Floci 接続設定）
 
 ```bash
-ENVIRONMENT=dev
-AWS_REGION=ap-northeast-1
+# Floci ローカル DynamoDB
+DYNAMO_ENDPOINT=http://localhost:4566
+AWS_DEFAULT_REGION=ap-northeast-1
+AWS_ACCESS_KEY_ID=test
+AWS_SECRET_ACCESS_KEY=test
 
-# Cognito（CDK デプロイ後の実際の値に置き換える）
-COGNITO_USER_POOL_ID=ap-northeast-1_XXXXXXXXX
+# 認証（ローカルテストではモック or Cognito Local を使用）
+COGNITO_USER_POOL_ID=ap-northeast-1_xxxxxxxx
 COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+COGNITO_REGION=ap-northeast-1
 
-# DynamoDB テーブル名（pkgs/backend/src/config/env.ts の変数名に合わせる）
-DYNAMODB_TABLE_USERS=saborou-users-dev
-DYNAMODB_TABLE_CONNECTIONS=saborou-service-connections-dev
-DYNAMODB_TABLE_TASK_CANDIDATES=saborou-task-candidates-dev
-DYNAMODB_TABLE_TASKS=saborou-tasks-dev
-DYNAMODB_TABLE_PROPOSALS=saborou-proposals-dev
-DYNAMODB_TABLE_HONNE_DATA=saborou-honne-data-dev
-DYNAMODB_TABLE_PERSONAS=saborou-personas-dev
+# Bedrock
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 
-# Secrets Manager ARN（CDK デプロイ後の実際の ARN に置き換える）
-SLACK_SIGNING_SECRET_ARN=arn:aws:secretsmanager:ap-northeast-1:ACCOUNT_ID:secret:saborou/slack/signing-secret-dev
-SLACK_CLIENT_SECRET_ARN=arn:aws:secretsmanager:ap-northeast-1:ACCOUNT_ID:secret:saborou/slack/client-secret-dev
+# Slack（Webhook 署名検証）
+SLACK_SIGNING_SECRET=your_slack_signing_secret
 
-# OAuth state HMAC シークレット（任意の 32 文字以上の文字列）
-OAUTH_STATE_SECRET=your-oauth-state-secret-32chars!!
+# Lambda 関数名（ローカル Lambda invoke 設定）
+TASK_EXTRACTOR_LAMBDA=saborou-task-extractor-dev
+SABORI_PROPOSER_LAMBDA=saborou-sabori-proposer-dev
 
-# EventBridge バス名
-EVENT_BUS_NAME=saborou-events-dev
+# DynamoDB テーブル名
+TASK_CANDIDATES_TABLE=saborou-task-candidates-dev
+TASKS_TABLE=saborou-tasks-dev
+PROPOSALS_TABLE=saborou-proposals-dev
+HONNE_DATA_TABLE=saborou-honne-data-dev
+PERSONAS_TABLE=saborou-personas-dev
+USERS_TABLE=saborou-users-dev
+SERVICE_CONNECTIONS_TABLE=saborou-service-connections-dev
 ```
 
 ---
@@ -135,9 +137,6 @@ EVENT_BUS_NAME=saborou-events-dev
 ## 3. Lambda ローカル実行
 
 ### 3.1 Floci を使ったローカル統合テスト（推奨）
-
-> **注意**: `docker-compose.yml` はプロジェクトルートに含まれていません。
-> Floci を使う場合は `aidlc-docs/inception/application-design/cdk-local-development.md` のサンプルを参考に作成してください。
 
 ```bash
 # Floci 起動
@@ -159,7 +158,7 @@ cat output.json
 # Hono API Lambda を Floci 上で invoke
 aws --endpoint-url=http://localhost:4566 lambda invoke \
   --function-name saborou-api-dev \
-  --payload '{"httpMethod":"GET","path":"/tasks","headers":{"Authorization":"Bearer mock-token"}}' \
+  --payload '{"httpMethod":"GET","path":"/api/tasks","headers":{"Authorization":"Bearer mock-token"}}' \
   response.json
 cat response.json
 ```
@@ -179,7 +178,7 @@ DYNAMO_ENDPOINT=http://localhost:4566 sam local start-api \
   --env-vars .env.local
 
 # curl でエンドポイント確認
-curl -X GET http://localhost:3001/tasks \
+curl -X GET http://localhost:3001/api/tasks \
   -H "Authorization: Bearer mock-token"
 ```
 
@@ -270,7 +269,7 @@ aws logs tail /aws/lambda/saborou-sabori-proposer-dev \
 ### 5.4 Webhook Lambda のログ確認
 
 ```bash
-aws logs tail /aws/lambda/saborou-webhook-dev \
+aws logs tail /aws/lambda/saborou-slack-webhook-dev \
   --follow \
   --region ap-northeast-1
 ```
@@ -338,37 +337,25 @@ aws bedrock-runtime converse \
 
 ---
 
-## 7. 環境変数一覧
-
-### 7.1 pkgs/backend 環境変数（`pkgs/backend/src/config/env.ts` 準拠）
+## 7. 環境変数一覧（全Lambda共通）
 
 | 環境変数 | 説明 | 設定箇所 |
 |---------|------|---------|
-| `ENVIRONMENT` | 環境名（`dev` / `prod`） | `.env` / Lambda 環境変数 |
-| `COGNITO_USER_POOL_ID` | Cognito ユーザープール ID | Lambda 環境変数 |
+| `DYNAMO_ENDPOINT` | DynamoDB エンドポイント URL（Floci: `http://localhost:4566`、本番: 設定不要） | `.env.local` / Lambda 環境変数 |
+| `AWS_DEFAULT_REGION` | AWS リージョン（`ap-northeast-1`） | `.env.local` / Lambda 環境変数 |
+| `COGNITO_USER_POOL_ID` | Cognito ユーザープール ID | Secrets Manager / Lambda 環境変数 |
 | `COGNITO_CLIENT_ID` | Cognito アプリクライアント ID | Lambda 環境変数 |
-| `DYNAMODB_TABLE_USERS` | Users DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_CONNECTIONS` | ServiceConnections DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_TASK_CANDIDATES` | TaskCandidates DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_TASKS` | Tasks DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_PROPOSALS` | Proposals DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_HONNE_DATA` | HonneData DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_PERSONAS` | Personas DynamoDB テーブル名 | Lambda 環境変数 |
-| `SLACK_SIGNING_SECRET_ARN` | Slack 署名シークレット ARN（Webhook 検証用） | Lambda 環境変数 |
-| `SLACK_CLIENT_SECRET_ARN` | Slack OAuth クライアントシークレット ARN | Lambda 環境変数 |
-| `OAUTH_STATE_SECRET` | Slack OAuth CSRF 対策 HMAC シークレット | Lambda 環境変数 |
-| `EVENT_BUS_NAME` | EventBridge バス名（Webhook Lambda のみ使用） | Lambda 環境変数 |
-
-### 7.2 pkgs/agent 環境変数
-
-| 環境変数 | 説明 | 設定箇所 |
-|---------|------|---------|
 | `BEDROCK_MODEL_ID` | Bedrock モデル ID | Lambda 環境変数 |
-| `DYNAMODB_TABLE_TASK_CANDIDATES` | TaskCandidates DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_TASKS` | Tasks DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_PROPOSALS` | Proposals DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_HONNE_DATA` | HonneData DynamoDB テーブル名 | Lambda 環境変数 |
-| `DYNAMODB_TABLE_PERSONAS` | Personas DynamoDB テーブル名 | Lambda 環境変数 |
+| `SLACK_SIGNING_SECRET` | Slack 署名シークレット（Webhook 検証用） | Secrets Manager |
+| `TASK_EXTRACTOR_LAMBDA` | TaskExtractor Lambda 関数名 | Lambda 環境変数 |
+| `SABORI_PROPOSER_LAMBDA` | SaboriProposer Lambda 関数名 | Lambda 環境変数 |
+| `TASK_CANDIDATES_TABLE` | TaskCandidates DynamoDB テーブル名 | Lambda 環境変数 |
+| `TASKS_TABLE` | Tasks DynamoDB テーブル名 | Lambda 環境変数 |
+| `PROPOSALS_TABLE` | Proposals DynamoDB テーブル名 | Lambda 環境変数 |
+| `HONNE_DATA_TABLE` | HonneData DynamoDB テーブル名 | Lambda 環境変数 |
+| `PERSONAS_TABLE` | Personas DynamoDB テーブル名 | Lambda 環境変数 |
+| `USERS_TABLE` | Users DynamoDB テーブル名 | Lambda 環境変数 |
+| `SERVICE_CONNECTIONS_TABLE` | ServiceConnections DynamoDB テーブル名 | Lambda 環境変数 |
 
 ---
 

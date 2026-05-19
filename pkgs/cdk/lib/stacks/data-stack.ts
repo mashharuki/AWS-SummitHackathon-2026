@@ -17,6 +17,7 @@ export interface DataStackExports {
   readonly secrets: {
     readonly slackClientSecret: secretsmanager.Secret;
     readonly slackSigningSecret: secretsmanager.Secret;
+    readonly googleClientSecret: secretsmanager.Secret;
   };
 }
 
@@ -124,6 +125,16 @@ export class SaborouDataStack extends cdk.Stack {
       },
     );
 
+    const googleClientSecret = new secretsmanager.Secret(
+      this,
+      "GoogleClientSecret",
+      {
+        secretName: `/saborou/google/client-secret-${environment}`,
+        description: "Google OAuth Client Secret",
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+      },
+    );
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "UsersTableName", {
       value: users.tableName,
@@ -165,7 +176,7 @@ export class SaborouDataStack extends cdk.Stack {
         honneData,
         personas,
       },
-      secrets: { slackClientSecret, slackSigningSecret },
+      secrets: { slackClientSecret, slackSigningSecret, googleClientSecret },
     };
   }
 }

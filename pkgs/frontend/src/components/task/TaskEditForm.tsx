@@ -1,11 +1,11 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import type { Task } from "@saboru/shared";
 /**
  * タスクインライン編集フォーム
  */
 import { useState } from "react";
+import type { Task } from "@saboru/shared";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface TaskEditFormProps {
   task: Task;

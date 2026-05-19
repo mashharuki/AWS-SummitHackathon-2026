@@ -1,22 +1,29 @@
-import { SaborouAvatar } from "@/components/character/SaborouAvatar";
-import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
+/**
+ * 設定ページ
+ * モックUI saborou_v2_04-settings.png に忠実に実装
+ */
+import { LogOut } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { SectionLabel } from "@/components/ui/SectionLabel";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useConnections } from "@/hooks/useConnections";
-/**
- * 設定ページ — U-06-ui-redesign Phase 5 改修版
- * 共有 HTML SettingsScreen 準拠（ネオブルータリズム）
- */
-import { ChevronRight, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
 
+const SERVICE_CONFIG = {
+  slack: {
+    name: "Slack",
+    color: "bg-[#4A154B]",
+    description: "タスクを自動検出",
+  },
+} as const;
+
+// Gmail / Google Calendar は将来実装
 const FUTURE_SERVICES = [
-  { name: "Gmail", color: "#EA4335", description: "メールからタスク検出" },
+  { name: "Gmail", color: "bg-[#EA4335]", description: "メールからタスク検出" },
   {
     name: "Google Calendar",
-    color: "#1A73E8",
+    color: "bg-[#4285F4]",
     description: "カレンダーと同期",
   },
 ] as const;
@@ -29,248 +36,152 @@ export function SettingsPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-full">
-        <PageHeader title="設定" />
+      <div className="max-w-sm mx-auto px-4 py-4 space-y-4">
+        <h1 className="text-lg font-bold text-[#1A1A1A]">設定</h1>
 
-        <div className="flex-1 overflow-y-auto px-4 pb-24 pt-3 flex flex-col gap-3">
-          {/* プロフィール */}
-          {user && (
-            <div className="card-brutal p-3.5 flex items-center gap-3">
-              <SaborouAvatar size={48} />
-              <div className="min-w-0">
-                <p
-                  className="font-bold text-saboru-ink truncate"
-                  style={{ fontSize: 14 }}
-                >
-                  {user.name}
-                </p>
-                <p
-                  className="text-saboru-ink-muted truncate"
-                  style={{ fontSize: 11 }}
-                >
-                  {user.email}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* サービス連携 */}
-          <section aria-labelledby="connections-heading">
-            <SectionLabel>
-              <span id="connections-heading">サービス連携</span>
-            </SectionLabel>
-            <div className="card-brutal overflow-hidden">
-              {/* Slack */}
-              <div
-                className="flex items-center gap-3 p-3"
-                style={{ borderBottom: "1px solid #F3F4F6" }}
-              >
+        {/* ユーザー情報 */}
+        {user && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: "#4A154B" }}
+                  className="w-12 h-12 rounded-full bg-[#FF6B2B] flex items-center justify-center shrink-0"
                   aria-hidden="true"
                 >
-                  <span className="text-white text-xs font-extrabold">S</span>
+                  <span className="text-white text-lg font-bold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-[#1A1A1A] truncate">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-[#6B7280] truncate">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* サービス連携 */}
+        <section aria-labelledby="service-connections-heading">
+          <h2
+            id="service-connections-heading"
+            className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2"
+          >
+            サービス連携
+          </h2>
+
+          <Card>
+            <CardContent className="p-0 divide-y divide-[#E5E7EB]">
+              {/* Slack */}
+              <div className="flex items-center gap-3 p-4">
+                <div
+                  className={`w-8 h-8 rounded-lg ${SERVICE_CONFIG.slack.color} flex items-center justify-center shrink-0`}
+                  aria-hidden="true"
+                >
+                  <span className="text-white text-xs font-bold">S</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p
-                    className="text-saboru-ink font-semibold"
-                    style={{ fontSize: 13 }}
-                  >
-                    Slack
-                  </p>
-                  <p
-                    className="text-saboru-ink-muted mt-0.5"
-                    style={{ fontSize: 10 }}
-                  >
-                    タスクを自動検出
+                  <p className="text-sm font-medium text-[#1A1A1A]">Slack</p>
+                  <p className="text-xs text-[#6B7280]">
+                    {SERVICE_CONFIG.slack.description}
                   </p>
                 </div>
                 {isLoading ? (
                   <div
-                    className="w-4 h-4 border border-saboru-line border-t-transparent rounded-full animate-spin"
+                    className="w-4 h-4 border border-[#E5E7EB] border-t-transparent rounded-full animate-spin"
                     role="status"
                     aria-label="確認中"
                   />
                 ) : slackConnection?.status === "connected" ? (
                   <div className="flex items-center gap-2">
-                    <span
-                      className="font-bold"
-                      style={{
-                        fontSize: 10,
-                        color: "#10B981",
-                        background: "#ECFDF5",
-                        padding: "3px 8px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      連携済
-                    </span>
-                    <button
-                      type="button"
+                    <Badge variant="connected">連携済</Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => void disconnect("slack")}
+                      className="text-xs text-[#F44336] hover:bg-red-50 h-7 px-2"
                       aria-label="Slack 連携を解除"
-                      className="text-red-500 hover:bg-red-50 px-2 py-1 rounded"
-                      style={{ fontSize: 11, fontWeight: 600 }}
                     >
                       解除
-                    </button>
+                    </Button>
                   </div>
                 ) : (
-                  <span
-                    className="font-bold"
-                    style={{
-                      fontSize: 10,
-                      color: "#9CA3AF",
-                      background: "#F3F4F6",
-                      padding: "3px 8px",
-                      borderRadius: 4,
-                    }}
-                  >
-                    未連携
-                  </span>
+                  <Badge variant="disconnected">未連携</Badge>
                 )}
               </div>
 
-              {FUTURE_SERVICES.map((svc, i) => (
+              {/* 将来実装のサービス（グレーアウト） */}
+              {FUTURE_SERVICES.map((svc) => (
                 <div
                   key={svc.name}
-                  className="flex items-center gap-3 p-3 opacity-50"
+                  className="flex items-center gap-3 p-4 opacity-50"
                   aria-disabled="true"
-                  style={{
-                    borderBottom:
-                      i < FUTURE_SERVICES.length - 1
-                        ? "1px solid #F3F4F6"
-                        : undefined,
-                  }}
                 >
                   <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: svc.color }}
+                    className={`w-8 h-8 rounded-lg ${svc.color} flex items-center justify-center shrink-0`}
                     aria-hidden="true"
                   >
-                    <span className="text-white text-xs font-extrabold">
+                    <span className="text-white text-xs font-bold">
                       {svc.name.charAt(0)}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p
-                      className="text-saboru-ink font-semibold"
-                      style={{ fontSize: 13 }}
-                    >
+                    <p className="text-sm font-medium text-[#1A1A1A]">
                       {svc.name}
                     </p>
-                    <p
-                      className="text-saboru-ink-muted mt-0.5"
-                      style={{ fontSize: 10 }}
-                    >
-                      {svc.description}
-                    </p>
+                    <p className="text-xs text-[#6B7280]">{svc.description}</p>
                   </div>
-                  <span
-                    className="text-saboru-ink-muted"
-                    style={{ fontSize: 10 }}
-                  >
-                    近日公開
-                  </span>
+                  <span className="text-xs text-[#9CA3AF]">近日公開</span>
                 </div>
               ))}
-            </div>
-          </section>
+            </CardContent>
+          </Card>
+        </section>
 
-          {/* AI ペルソナ */}
-          <section aria-labelledby="persona-heading">
-            <SectionLabel>
-              <span id="persona-heading">AI ペルソナ</span>
-            </SectionLabel>
-            <Link
-              to="/settings/persona"
-              aria-label="ペルソナ設定へ"
-              className="card-brutal flex items-center gap-3 p-3.5"
-              style={{ textDecoration: "none" }}
-            >
-              <SaborouCharacter2D
-                verdict="can_saboru"
-                size={44}
-                animated={false}
-              />
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-saboru-ink font-bold"
-                  style={{ fontSize: 13 }}
-                >
-                  おっとりサボロー
-                </p>
-                <p
-                  className="text-saboru-ink-muted mt-0.5"
-                  style={{ fontSize: 10 }}
-                >
-                  やさしくサボりを支援するキャラ · 全4種
-                </p>
-              </div>
-              <ChevronRight
-                size={16}
-                className="text-saboru-ink-muted"
-                aria-hidden="true"
-              />
-            </Link>
-          </section>
-
-          {/* プロダクト */}
-          <section aria-labelledby="product-heading">
-            <SectionLabel>
-              <span id="product-heading">プロダクト</span>
-            </SectionLabel>
-            <Link
-              to="/roadmap"
-              aria-label="プロダクトロードマップへ"
-              className="card-brutal flex items-center gap-3 p-3.5"
-              style={{ textDecoration: "none" }}
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: "linear-gradient(135deg, #FED7AA, #FB923C)",
-                  fontSize: 16,
-                }}
-                aria-hidden="true"
-              >
-                🗺
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-saboru-ink font-bold"
-                  style={{ fontSize: 13 }}
-                >
-                  プロダクトロードマップ
-                </p>
-                <p
-                  className="text-saboru-ink-muted mt-0.5"
-                  style={{ fontSize: 10 }}
-                >
-                  v1.0 → v3.0 の将来ビジョン
-                </p>
-              </div>
-              <ChevronRight
-                size={16}
-                className="text-saboru-ink-muted"
-                aria-hidden="true"
-              />
-            </Link>
-          </section>
-
-          {/* ログアウト */}
-          <button
-            type="button"
-            onClick={() => void signOut()}
-            aria-label="ログアウト"
-            className="card-brutal w-full p-3 mt-2 flex items-center justify-center gap-2 text-saboru-ink-soft hover:text-red-500"
-            style={{ fontSize: 13, fontWeight: 600 }}
+        {/* AIパーソナ */}
+        <section aria-labelledby="persona-heading">
+          <h2
+            id="persona-heading"
+            className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2"
           >
-            <LogOut size={16} aria-hidden="true" />
-            ログアウト
-          </button>
-        </div>
+            AIパーソナ
+          </h2>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-full bg-[#FF6B2B] flex items-center justify-center shrink-0"
+                  aria-hidden="true"
+                >
+                  <span className="text-white text-sm font-bold">S</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#1A1A1A]">
+                    おっとりサボロー
+                  </p>
+                  <p className="text-xs text-[#6B7280]">
+                    やさしくサボりを支援するふたまず
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* ログアウト */}
+        <Button
+          variant="outline"
+          className="w-full text-[#F44336] border-[#F44336]/30 hover:bg-red-50"
+          onClick={() => void signOut()}
+          aria-label="ログアウト"
+        >
+          <LogOut size={16} className="mr-2" aria-hidden="true" />
+          ログアウト
+        </Button>
       </div>
     </AppShell>
   );

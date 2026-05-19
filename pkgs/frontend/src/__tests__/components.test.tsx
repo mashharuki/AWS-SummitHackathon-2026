@@ -1,9 +1,9 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { VerdictBox } from "@/components/verdict/VerdictBox";
+import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EvidenceList } from "@/components/verdict/EvidenceList";
-import { VerdictBox } from "@/components/verdict/VerdictBox";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 
 describe("VerdictBox", () => {
   it("can_saboru 判定を正しく表示する", () => {
@@ -17,26 +17,34 @@ describe("VerdictBox", () => {
 
   it("must_do 判定を正しく表示する", () => {
     render(<VerdictBox verdict="must_do" summaryText="これは急ぎです" />);
-    // U-06: VERDICT_META.must_do.label = "やるしかない"
-    expect(screen.getByText("やるしかない")).toBeInTheDocument();
+    expect(screen.getByText("やらないとまずい")).toBeInTheDocument();
   });
 
   it("borderline 判定を正しく表示する", () => {
     render(<VerdictBox verdict="borderline" summaryText="グレーゾーンです" />);
-    // U-06: VERDICT_META.borderline.label = "要検討"
-    expect(screen.getByText("要検討")).toBeInTheDocument();
+    expect(screen.getByText("ボーダーライン")).toBeInTheDocument();
   });
 
-  it("evaluatedAt を表示する", () => {
+  it("todayMessage を表示する", () => {
     render(
       <VerdictBox
         verdict="can_saboru"
         summaryText="サボれます"
-        evaluatedAt="5/20 14:30"
+        todayMessage="今日は最高の日です！"
       />,
     );
-    expect(screen.getByText("5/20 14:30")).toBeInTheDocument();
-    expect(screen.getByText(/Claude Sonnet/)).toBeInTheDocument();
+    expect(screen.getByText("今日は最高の日です！")).toBeInTheDocument();
+  });
+
+  it("達成度を表示する", () => {
+    render(
+      <VerdictBox
+        verdict="can_saboru"
+        summaryText="サボれます"
+        completionRate={87}
+      />,
+    );
+    expect(screen.getByText("達成度 87%")).toBeInTheDocument();
   });
 });
 

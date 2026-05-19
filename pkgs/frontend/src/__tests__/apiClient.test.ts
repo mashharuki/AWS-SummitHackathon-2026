@@ -1,3 +1,4 @@
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import apiClient, {
   ApiError,
   getMe,
@@ -18,7 +19,6 @@ import apiClient, {
 import { clearTokens, setAccessToken, setRefreshToken } from "@/lib/cognito";
 import { server } from "@/mocks/server";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.stubEnv("VITE_API_BASE_URL", "http://localhost:3000");
 
