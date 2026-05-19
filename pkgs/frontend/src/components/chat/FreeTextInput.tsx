@@ -1,10 +1,9 @@
 /**
  * 自由記述入力フォーム
+ * U-06-ui-redesign Phase 5 改修版（ネオブルータリズム）
  */
 import { Send } from "lucide-react";
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 
 interface FreeTextInputProps {
   onSend: (text: string) => void;
@@ -36,8 +35,11 @@ export function FreeTextInput({
   };
 
   return (
-    <div className="flex items-end gap-2 p-3 border-t border-[#E5E7EB] bg-white rounded-b-2xl">
-      <Textarea
+    <div
+      className="flex items-end gap-2 px-3 py-2.5 bg-saboru-paper"
+      style={{ borderTop: "3px solid #2B1E16" }}
+    >
+      <textarea
         ref={textareaRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -45,18 +47,33 @@ export function FreeTextInput({
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className="resize-none min-h-[36px] max-h-28 text-sm"
+        className="input-brutal resize-none flex-1"
+        style={{
+          minHeight: 36,
+          maxHeight: 112,
+          fontSize: 12,
+        }}
         aria-label="サボローへのメッセージ"
       />
-      <Button
+      <button
+        type="button"
         onClick={handleSend}
-        size="icon"
         disabled={disabled || !text.trim()}
         aria-label="送信"
-        className="h-9 w-9 shrink-0 rounded-full"
+        className="flex items-center justify-center disabled:opacity-50"
+        style={{
+          background: "#F97316",
+          border: "none",
+          color: "#FFFFFF",
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          cursor: text.trim() && !disabled ? "pointer" : "not-allowed",
+          flexShrink: 0,
+        }}
       >
-        <Send size={15} />
-      </Button>
+        <Send size={14} aria-hidden="true" />
+      </button>
     </div>
   );
 }

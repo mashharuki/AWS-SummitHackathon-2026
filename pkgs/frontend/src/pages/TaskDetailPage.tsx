@@ -1,31 +1,36 @@
-/**
- * タスク詳細ページ
- * モックUI saborou_v2_03-detail.png に忠実に実装
- * 左: タスク情報 + 判定ボックス / 右: サボローチャット
- */
-import { lazy, Suspense, useEffect, useState } from "react";
-import { ArrowLeft, Edit2, Trash2 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import type { Task, Proposal, QuickReplyType } from "@saboru/shared";
-import type { ChatMessage } from "@/types/ui";
+import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
+import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
+import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
-import { Button } from "@/components/ui/button";
 import { useProposalStream } from "@/hooks/useProposalStream";
 import { useTasks } from "@/hooks/useTasks";
-import { formatDeadlineDisplay } from "@/lib/utils";
 import apiClient from "@/lib/apiClient";
+import { formatDeadlineDisplay } from "@/lib/utils";
+import type { ChatMessage as ChatMessageType } from "@/types/ui";
+/**
+ * タスク詳細ページ — U-06-ui-redesign Phase 5 改修版
+ *
+ * 共有 HTML TaskDetailScreen 準拠（ネオブルータリズム）
+ * 構成: PageHeader / タスクヘッダー / 3Dヒーロー（判定の主役）/ VerdictBox /
+ *       PsychSignalsCard / EvidenceList / ContextCollectingAnim / ChatPane
+ */
+import type { Proposal, QuickReplyType, Task } from "@saboru/shared";
+import { Edit2, Trash2 } from "lucide-react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-// Three.js を遅延ロード（独立chunk）
-const SaborouCanvas = lazy(() =>
-  import("@/components/three/SaborouCanvas").then((m) => ({
-    default: m.SaborouCanvas,
+// 3D ヒーロー（憲法: lazy で別チャンク）
+const SaborouScene3D = lazy(() =>
+  import("@/components/three/SaborouScene3D").then((m) => ({
+    default: m.SaborouScene3D,
   })),
 );
 
-// ChatPane を遅延ロード
+// ChatPane（独立 chunk）
 const ChatPane = lazy(() =>
   import("@/components/chat/ChatPane").then((m) => ({ default: m.ChatPane })),
 );
@@ -67,7 +72,7 @@ export function TaskDetailPage() {
       });
   }, [taskId]);
 
-  // ストリーミング
+  // SSE ストリーミング
   const {
     messages: streamMessages,
     isStreaming,
@@ -89,12 +94,19 @@ export function TaskDetailPage() {
   }, [taskId]);
 
   // チャットメッセージを型変換
-  const chatMessages: ChatMessage[] = streamMessages.map((m) => ({
+  const chatMessages: ChatMessageType[] = streamMessages.map((m) => ({
     id: m.id,
     role: m.role as "user" | "assistant",
     content: m.content,
     timestamp: new Date().toISOString(),
   }));
+
+  // SSE 進行から phase を推定（GAP-04 対応の簡易ロジック）
+  const phase: 0 | 1 | 2 = !currentVerdict
+    ? 0
+    : streamMessages.some((m) => m.role === "assistant")
+      ? 2
+      : 1;
 
   const handleDelete = async () => {
     if (!taskId || !window.confirm("このタスクを削除しますか？")) return;
@@ -110,12 +122,9 @@ export function TaskDetailPage() {
   const handleQuickReply = (type: QuickReplyType, label: string) => {
     void sendQuickReply(label);
     void apiClient
-      .submitHonne(taskId ?? "", {
-        type: "quick_reply",
-        content: type,
-      })
+      .submitHonne(taskId ?? "", { type: "quick_reply", content: type })
       .catch(() => {
-        // honne記録失敗は非致命的
+        // 非致命的
       });
   };
 
@@ -124,7 +133,7 @@ export function TaskDetailPage() {
       <AppShell>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div
-            className="w-8 h-8 border-2 border-[#FF6B2B] border-t-transparent rounded-full animate-spin"
+            className="w-8 h-8 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
             role="status"
             aria-label="読み込み中"
           />
@@ -133,110 +142,136 @@ export function TaskDetailPage() {
     );
   }
 
+  const verdictForDisplay = proposal?.verdict ?? currentVerdict ?? null;
+
   return (
     <AppShell>
-      <div className="max-w-4xl mx-auto px-4 py-4">
-        {/* 戻るボタン */}
-        <Link
-          to="/tasks"
-          className="inline-flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1A1A1A] mb-4 transition-colors"
-          aria-label="タスク一覧に戻る"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          タスク詳細
-        </Link>
-
-        {/* 2カラムレイアウト */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* 左ペイン: タスク情報 */}
-          <div className="space-y-4">
-            {/* タスクヘッダー */}
-            <div className="bg-white rounded-2xl p-4 border border-[#E5E7EB]">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                {isEditing ? (
-                  <div className="flex-1">
-                    <TaskEditForm
-                      task={task}
-                      onSave={async (data) => {
-                        const updated = await updateTask(task.taskId, data);
-                        setTask(updated);
-                        setIsEditing(false);
-                      }}
-                      onCancel={() => setIsEditing(false)}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex-1 min-w-0">
-                      <h1 className="font-bold text-[#1A1A1A] text-base leading-tight">
-                        {task.title}
-                      </h1>
-                      <p className="text-xs text-[#6B7280] mt-1">
-                        担当: {task.requester} ・ 期限:{" "}
-                        {formatDeadlineDisplay(task.deadline)}
-                      </p>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setIsEditing(true)}
-                        className="h-8 w-8"
-                        aria-label="タスクを編集"
-                      >
-                        <Edit2 size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => void handleDelete()}
-                        className="h-8 w-8 text-[#F44336] hover:bg-red-50"
-                        aria-label="タスクを削除"
-                        disabled={isDeleting}
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </div>
-                  </>
-                )}
+      <div className="flex flex-col h-full">
+        <PageHeader
+          title="タスク詳細"
+          subtitle={`${task.requester ?? ""} ${task.sourceType === "slack" ? "· Slack" : ""}`}
+          onBack={() => navigate("/tasks")}
+          right={
+            !isEditing ? (
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  aria-label="タスクを編集"
+                  className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
+                >
+                  <Edit2 size={15} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={isDeleting}
+                  aria-label="タスクを削除"
+                  className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
               </div>
-            </div>
+            ) : undefined
+          }
+        />
 
-            {/* 判定ボックス */}
-            {(proposal ?? currentVerdict) && (
-              <div className="space-y-3">
-                <VerdictBox
-                  verdict={proposal?.verdict ?? currentVerdict ?? "borderline"}
-                  summaryText={proposal?.summaryText ?? "AIが評価中です..."}
-                  todayMessage="今日は安全にサボれます、報告もばっちりだよだれます！"
-                />
-                {proposal?.reasoning && proposal.reasoning.length > 0 && (
-                  <div className="bg-white rounded-2xl p-4 border border-[#E5E7EB]">
-                    <EvidenceList items={proposal.reasoning} />
-                  </div>
-                )}
-              </div>
+        <div className="flex-1 overflow-y-auto px-4 pb-24 flex flex-col gap-3 pt-3">
+          {/* タスク情報 */}
+          <div className="card-brutal p-3.5">
+            {isEditing ? (
+              <TaskEditForm
+                task={task}
+                onSave={async (data) => {
+                  const updated = await updateTask(task.taskId, data);
+                  setTask(updated);
+                  setIsEditing(false);
+                }}
+                onCancel={() => setIsEditing(false)}
+              />
+            ) : (
+              <>
+                <h1
+                  className="text-saboru-ink font-extrabold"
+                  style={{
+                    fontSize: 19,
+                    letterSpacing: "-0.02em",
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {task.title}
+                </h1>
+                <p
+                  className="text-saboru-ink-muted mt-1.5"
+                  style={{ fontSize: 11 }}
+                >
+                  📅 {formatDeadlineDisplay(task.deadline)}
+                </p>
+              </>
             )}
-
-            {/* Three.js キャラクター（SM以下では非表示） */}
-            <div className="hidden lg:block">
-              <Suspense fallback={null}>
-                <SaborouCanvas
-                  verdict={proposal?.verdict ?? currentVerdict ?? null}
-                  isStreaming={isStreaming}
-                  className="h-48 w-full"
-                />
-              </Suspense>
-            </div>
           </div>
 
-          {/* 右ペイン: チャット */}
-          <div className="h-[600px]">
+          {/* 3D 判定ヒーロー（憲法2: 320px / 憲法4: brutal-3d-container で外枠） */}
+          <div className="brutal-3d-container" style={{ height: 280 }}>
             <Suspense
               fallback={
-                <div className="flex items-center justify-center h-full bg-[#F5F4F0] rounded-2xl border border-[#E5E7EB]">
+                <div className="w-full h-full flex items-center justify-center">
+                  <SaborouCharacter2D
+                    verdict={verdictForDisplay ?? "can_saboru"}
+                    size={160}
+                  />
+                </div>
+              }
+            >
+              <SaborouScene3D
+                verdict={verdictForDisplay}
+                isStreaming={isStreaming}
+                size={280}
+              />
+            </Suspense>
+          </div>
+
+          {/* ストリーミング中: ContextCollectingAnim を表示 */}
+          {isStreaming && !proposal && <ContextCollectingAnim phase={phase} />}
+
+          {/* VerdictBox */}
+          {verdictForDisplay && proposal && (
+            <VerdictBox
+              verdict={verdictForDisplay}
+              summaryText={proposal.summaryText}
+              evaluatedAt={
+                proposal.evaluatedAt
+                  ? new Date(proposal.evaluatedAt).toLocaleString("ja-JP", {
+                      month: "numeric",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : undefined
+              }
+            />
+          )}
+
+          {/* PsychSignals（verdict 連動の静的プリセット表示） */}
+          {verdictForDisplay && (
+            <PsychSignalsCard verdict={verdictForDisplay} />
+          )}
+
+          {/* reasoning リスト */}
+          {proposal?.reasoning && proposal.reasoning.length > 0 && (
+            <EvidenceList items={proposal.reasoning} />
+          )}
+
+          {/* チャット（独立 chunk） */}
+          <div style={{ height: 480 }}>
+            <Suspense
+              fallback={
+                <div
+                  className="card-brutal flex items-center justify-center h-full"
+                  style={{ background: "#FFFAF5" }}
+                >
                   <div
-                    className="w-6 h-6 border-2 border-[#FF6B2B] border-t-transparent rounded-full animate-spin"
+                    className="w-6 h-6 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
                     role="status"
                     aria-label="読み込み中"
                   />

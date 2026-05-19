@@ -1,10 +1,10 @@
+import apiClient from "@/lib/apiClient";
+import { toUserMessage } from "@/lib/utils";
+import type { ServiceConnection } from "@saboru/shared";
 /**
  * サービス連携状態管理フック
  */
 import { useCallback, useEffect, useState } from "react";
-import type { ServiceConnection } from "@saboru/shared";
-import apiClient from "@/lib/apiClient";
-import { toUserMessage } from "@/lib/utils";
 import { useToast } from "./useToast";
 
 export function useConnections() {

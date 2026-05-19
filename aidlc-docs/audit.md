@@ -1085,3 +1085,72 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 **Context**: U-06: ui-redesign / Functional Design 設計書改訂 / Three.js廃止撤回→併用Mid仕上げ方針 / 憲法6条確定 / 設計書5本改訂+新規2本追加 / 全作業完了
 
 ---
+
+## U-06: ui-redesign / Functional Design 承認・実装開始
+**Timestamp**: 2026-05-20T08:00:00Z
+**User Input**: "コミットしておいて欲しい。そして承認するので実装に入ってください"
+**AI Response**: 設計書7本（改訂4 + 新規2 + 変更なし1）を commit 678aae9 でコミット、origin/feature/aidlc-construction に push 完了。NFR Requirements/Design はスキップ（既存フロントのNFRを流用）、Infrastructure Design もスキップ（フロントのみ変更）として Code Generation に直接進行。Phase 1〜7 の7フェーズで段階実装を開始。
+**Context**: U-06: ui-redesign / Functional Design 承認 / Code Generation Phase 1 開始
+
+---
+
+## U-06: ui-redesign / Code Generation 完了
+**Timestamp**: 2026-05-20T08:15:00Z
+**User Input**: "コミットしておいて欲しい。そして承認するので実装に入ってください"
+**AI Response**: Phase 1〜7 の段階的実装をすべて完了。
+
+**新規作成ファイル（19件）**:
+- `pkgs/frontend/src/lib/verdictMeta.ts` — VERDICT_META / VERDICT_SVG_CONFIG / QUICK_REPLY_LABELS
+- `pkgs/frontend/src/lib/staticContent.ts` — MANUAL_TRAITS / PERSONAS / ROADMAP_ITEMS
+- `pkgs/frontend/src/lib/three/saboruColors.ts` — 3D マテリアル色定数（憲法1 準拠）
+- `pkgs/frontend/src/components/character/SaborouCharacter2D.tsx` — 2D SVG キャラ（character-design-sheet.md 完全準拠）
+- `pkgs/frontend/src/components/character/SaborouAvatar.tsx` — チャット用ミニアバター
+- `pkgs/frontend/src/components/character/__tests__/SaborouCharacter2D.test.tsx` — 13テスト
+- `pkgs/frontend/src/components/three/SaborouCharacter3D.tsx` — 3D キャラ Mid 仕上げ（旧 SaborouCharacter.tsx リメイク）
+- `pkgs/frontend/src/components/three/SaborouScene3D.tsx` — 3D シーンラッパー（旧 SaborouCanvas.tsx リメイク）
+- `pkgs/frontend/src/components/layout/Logo.tsx`
+- `pkgs/frontend/src/components/layout/PageHeader.tsx`
+- `pkgs/frontend/src/components/layout/BottomNav.tsx`
+- `pkgs/frontend/src/components/ui/SectionLabel.tsx`
+- `pkgs/frontend/src/components/verdict/PsychSignalsCard.tsx`
+- `pkgs/frontend/src/components/verdict/ContextCollectingAnim.tsx`
+- `pkgs/frontend/src/pages/ManualPage.tsx`
+- `pkgs/frontend/src/pages/PersonaPage.tsx`
+- `pkgs/frontend/src/pages/RoadmapPage.tsx`
+
+**改修ファイル（11件）**:
+- `pkgs/frontend/src/index.css`（Tailwind v4 @theme + @utility）
+- `pkgs/frontend/index.html`（Google Fonts プリコネクト）
+- `pkgs/frontend/src/App.tsx`（3 ルート追加）
+- `pkgs/frontend/src/components/layout/AppShell.tsx`（max-w-md + BottomNav）
+- `pkgs/frontend/src/components/task/TaskCard.tsx`（ネオブルータリズム + 2D アバター）
+- `pkgs/frontend/src/components/verdict/VerdictBox.tsx` / `EvidenceList.tsx`
+- `pkgs/frontend/src/components/chat/ChatMessage.tsx` / `ChatPane.tsx` / `QuickReplyButtons.tsx` / `FreeTextInput.tsx`
+- `pkgs/frontend/src/pages/LoginPage.tsx`（3Dヒーロー 280px）
+- `pkgs/frontend/src/pages/TaskListPage.tsx`（今日バナー + 2Dアバター + BottomNav）
+- `pkgs/frontend/src/pages/TaskDetailPage.tsx`（3Dヒーロー 320px + PsychSignals + ContextCollectingAnim）
+- `pkgs/frontend/src/pages/SettingsPage.tsx`（ペルソナ・ロードマップ遷移リンク）
+- `pkgs/frontend/src/__tests__/components.test.tsx`（VERDICT_META 新ラベルに追従）
+
+**削除ファイル（2件）**:
+- `pkgs/frontend/src/components/three/SaborouCanvas.tsx`（旧、SaborouScene3D に置換）
+- `pkgs/frontend/src/components/three/SaborouCharacter.tsx`（旧、SaborouCharacter3D に置換）
+- `pkgs/frontend/src/components/layout/Header.tsx`（旧、PageHeader/AppShell+BottomNav に置換）
+
+**検証結果**:
+- typecheck: エラーゼロ
+- build: 成功（初期バンドル 219KB / Three.js 別チャンク 919KB / gzip 249KB で遅延ロード）
+- frontend test: 6 ファイル / 126 テスト全パス（追加 13・削除 1）
+- 他パッケージ: shared 103・backend 172・cdk 35 全パス（影響なし）
+
+**憲法6条の遵守**:
+- 憲法1（パレット共有）: SABORU_3D_COLOR は HTML SABORU_THEME 由来のみ
+- 憲法2（240px 最小）: SaborouScene3D 内で size<240 を警告
+- 憲法3（cream 背景）: brutal-3d-container ユーティリティで統一
+- 憲法4（HTML 外枠）: brutal-3d-container で枠線+ハードシャドウ
+- 憲法5（同じ顔）: Suspense/ErrorBoundary fallback に SaborouCharacter2D
+- 憲法6（特別な瞬間のみ）: 3D は LoginPage + TaskDetailPage の 2 箇所のみ
+
+**Context**: U-06: ui-redesign / Code Generation 7 フェーズ完了 / 全テストパス / ユーザー承認後のフェーズ実装完了
+
+---

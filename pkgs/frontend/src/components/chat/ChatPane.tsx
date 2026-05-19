@@ -1,10 +1,10 @@
-/**
- * チャットペイン全体 — タスク詳細ページの右側
- * モックUI saborou_v2_03-detail.png 参照
- */
-import { useEffect, useRef } from "react";
-import type { QuickReplyType } from "@saboru/shared";
 import type { ChatMessage as ChatMessageType } from "@/types/ui";
+/**
+ * ChatPane — タスク詳細のチャットエリア
+ * U-06-ui-redesign Phase 5 改修版（ネオブルータリズム）
+ */
+import type { QuickReplyType } from "@saboru/shared";
+import { useEffect, useRef } from "react";
 import { ChatMessage, TypingIndicator } from "./ChatMessage";
 import { FreeTextInput } from "./FreeTextInput";
 import { QuickReplyButtons } from "./QuickReplyButtons";
@@ -26,45 +26,44 @@ export function ChatPane({
 }: ChatPaneProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // 新しいメッセージが来たら最下部にスクロール
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isStreaming]);
-
-  const mappedMessages: ChatMessageType[] = messages.map((m) => ({
-    id: m.id,
-    role: m.role as "user" | "assistant",
-    content: m.content,
-    timestamp: m.timestamp ?? new Date().toISOString(),
-  }));
+  }, [isStreaming]);
 
   return (
     <div
-      className="flex flex-col h-full bg-[#F5F4F0] rounded-2xl overflow-hidden border border-[#E5E7EB]"
       role="region"
       aria-label="おっとりサボロー チャット"
+      className="card-brutal flex flex-col h-full overflow-hidden"
     >
       {/* タイトル */}
-      <div className="px-4 py-3 bg-white border-b border-[#E5E7EB]">
-        <h2 className="font-semibold text-[#1A1A1A] text-sm">
+      <header
+        className="bg-saboru-paper px-4 py-3"
+        style={{ borderBottom: "3px solid #2B1E16" }}
+      >
+        <h2 className="font-bold text-saboru-ink" style={{ fontSize: 13 }}>
           おっとりサボロー
         </h2>
-      </div>
+      </header>
 
       {/* メッセージエリア */}
       <div
-        className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
         role="log"
         aria-label="チャットメッセージ"
         aria-live="polite"
+        className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2"
+        style={{ background: "#FFFAF5" }}
       >
-        {mappedMessages.length === 0 && !isStreaming && (
-          <p className="text-center text-sm text-[#9CA3AF] py-8">
+        {messages.length === 0 && !isStreaming && (
+          <p
+            className="text-center text-saboru-ink-muted py-8"
+            style={{ fontSize: 12 }}
+          >
             サボロー判定を開始します...
           </p>
         )}
 
-        {mappedMessages.map((msg) => (
+        {messages.map((msg) => (
           <ChatMessage key={msg.id} message={msg} />
         ))}
 
@@ -74,8 +73,11 @@ export function ChatPane({
       </div>
 
       {/* クイックリプライ */}
-      {showQuickReplies && mappedMessages.length > 0 && (
-        <div className="px-4 bg-white border-t border-[#E5E7EB]">
+      {showQuickReplies && messages.length > 0 && (
+        <div
+          className="px-3 bg-saboru-paper"
+          style={{ borderTop: "1px solid #F3F4F6" }}
+        >
           <QuickReplyButtons onSelect={onQuickReply} disabled={isStreaming} />
         </div>
       )}

@@ -1,10 +1,3 @@
-/**
- * AuthProvider — Cognito JWT 管理
- * NFR-DESIGN-1: メモリ内トークン管理
- * NFR-DESIGN-2: OAuth CSRF 防止
- */
-import * as React from "react";
-import type { User } from "@saboru/shared";
 import { getMe } from "@/lib/apiClient";
 import {
   buildCognitoAuthUrl,
@@ -15,6 +8,13 @@ import {
   setAccessToken,
   setRefreshToken,
 } from "@/lib/cognito";
+import type { User } from "@saboru/shared";
+/**
+ * AuthProvider — Cognito JWT 管理
+ * NFR-DESIGN-1: メモリ内トークン管理
+ * NFR-DESIGN-2: OAuth CSRF 防止
+ */
+import * as React from "react";
 
 interface AuthState {
   user: User | null;

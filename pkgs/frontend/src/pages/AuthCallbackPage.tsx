@@ -1,12 +1,12 @@
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
+import { exchangeCodeForTokens, validateOAuthState } from "@/lib/cognito";
 /**
  * Cognito OAuth コールバックページ
  * NFR-DESIGN-2: OAuth CSRF state 検証
  */
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/useToast";
-import { exchangeCodeForTokens, validateOAuthState } from "@/lib/cognito";
 
 export function AuthCallbackPage() {
   const { handleCallback } = useAuth();
