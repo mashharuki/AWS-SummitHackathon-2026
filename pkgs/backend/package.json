@@ -7,7 +7,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "dev": "tsx ./src/index.ts",
+    "dev": "node --env-file=.env --import tsx ./src/index.ts",
     "build": "run-s build:clean build:api build:webhook",
     "build:clean": "rm -rf dist",
     "build:api": "esbuild --bundle --outfile=dist/index.js --platform=node --target=node22 --external:@aws-sdk/* --external:@saboru/* src/handler.ts",
