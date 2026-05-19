@@ -116,6 +116,16 @@ describe("リフレッシュトークン管理 — setRefreshToken / getRefreshT
   it("localStorageもメモリもない場合はnullを返す", () => {
     expect(getRefreshToken()).toBeNull();
   });
+
+  it("localStorage.getItem が throw した場合は null を返す", () => {
+    const spy = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementationOnce(() => {
+        throw new Error("storage broken");
+      });
+    expect(getRefreshToken()).toBeNull();
+    spy.mockRestore();
+  });
 });
 
 describe("OAuth CSRF防止 — buildCognitoAuthUrl / validateOAuthState", () => {
@@ -219,6 +229,24 @@ describe("exchangeCodeForTokens — 認証コードとトークン交換", () =>
     await expect(exchangeCodeForTokens("expired-code")).rejects.toThrow(
       "Token exchange failed: 401",
     );
+  });
+
+  it("codeVerifier を指定した場合は code_verifier を送信する", async () => {
+    let sentBody = "";
+    server.use(
+      http.post("*/oauth2/token", async ({ request }) => {
+        sentBody = await request.text();
+        return HttpResponse.json({
+          access_token: "new-access-token",
+          refresh_token: "new-refresh-token",
+          id_token: "new-id-token",
+          expires_in: 3600,
+        });
+      }),
+    );
+
+    await exchangeCodeForTokens("auth-code-123", "verifier-xyz");
+    expect(sentBody).toContain("code_verifier=verifier-xyz");
   });
 });
 

@@ -1,5 +1,5 @@
 import type { Task } from "@saboru/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   assembleContextNarrative,
   calcNextCheckAt,
@@ -371,6 +371,17 @@ describe("assembleContextNarrative", () => {
     expect(narrative).toContain("過ぎています（期限切れ）");
   });
 
+  it("formats past deadline under 1 hour without hour prefix", () => {
+    const soonPastDeadline = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const context: TaskContext = {
+      task: makeTask({ deadline: soonPastDeadline }),
+    };
+    const narrative = assembleContextNarrative(context);
+
+    expect(narrative).toMatch(/\d+分 過ぎています/);
+    expect(narrative).not.toContain("0時間10分");
+  });
+
   it("omits description line when description is not provided", () => {
     const context: TaskContext = {
       task: makeTask({ description: undefined }),
@@ -378,6 +389,21 @@ describe("assembleContextNarrative", () => {
     const narrative = assembleContextNarrative(context);
     // description なしのタスクは '説明:' 行を持つべきでない
     expect(narrative).not.toContain("- 説明:");
+  });
+
+  it("falls back to raw deadline when locale formatting throws", () => {
+    const spy = vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(() => {
+      throw new Error("locale failure");
+    });
+    const rawDeadline = "not-a-date";
+    const context: TaskContext = {
+      task: makeTask({ deadline: rawDeadline }),
+    };
+
+    const narrative = assembleContextNarrative(context);
+
+    expect(narrative).toContain(rawDeadline);
+    spy.mockRestore();
   });
 });
 

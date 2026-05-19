@@ -84,6 +84,51 @@ describe("DynamoTaskCandidateRepository.findById", () => {
   });
 });
 
+describe("DynamoTaskCandidateRepository.create", () => {
+  it("creates candidate with explicit _userId", async () => {
+    const client = mockClient(() => ({}));
+    const repo = new DynamoTaskCandidateRepository(client, CAND_TABLE, TASK_TABLE);
+
+    const created = await repo.create({
+      candidateId: "01CANDNEW",
+      title: "新規候補",
+      deadline: null,
+      requester: "req-hash",
+      description: "create test",
+      sourceType: "slack",
+      sourceRef: "src-ref",
+      status: "pending",
+      createdAt: "2026-05-17T00:00:00Z",
+      ttl: 9999999999,
+      _userId: "user1",
+    } as Parameters<typeof repo.create>[0]);
+
+    expect(created.PK).toBe("USER#user1");
+    expect(created.SK).toBe("TASK_CAND#01CANDNEW");
+    expect(client.send).toHaveBeenCalledOnce();
+  });
+
+  it("throws when _userId is missing", async () => {
+    const client = mockClient(() => ({}));
+    const repo = new DynamoTaskCandidateRepository(client, CAND_TABLE, TASK_TABLE);
+
+    await expect(
+      repo.create({
+        candidateId: "01CANDNEW",
+        title: "新規候補",
+        deadline: null,
+        requester: "req-hash",
+        description: "create test",
+        sourceType: "slack",
+        sourceRef: "src-ref",
+        status: "pending",
+        createdAt: "2026-05-17T00:00:00Z",
+        ttl: 9999999999,
+      }),
+    ).rejects.toThrow("create() requires _userId");
+  });
+});
+
 describe("DynamoTaskCandidateRepository.delete", () => {
   it("calls DeleteItem", async () => {
     const client = mockClient(() => ({}));

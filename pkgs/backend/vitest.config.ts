@@ -34,14 +34,16 @@ export default defineConfig({
         // createApp() function logic is covered via route-level tests.
         // The module-level initialisation requires live env vars and AWS clients.
         "src/index.ts",
+        // Type-only app context declarations
+        "src/types.ts",
         "src/**/*.test.ts",
         "src/**/__tests__/**",
       ],
       thresholds: {
-        statements: 90,
-        branches: 85,
-        functions: 90,
-        lines: 90,
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
       },
     },
   },

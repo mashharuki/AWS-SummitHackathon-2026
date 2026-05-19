@@ -154,4 +154,18 @@ describe("TaskExtractorLambdaHandler", () => {
     const { handler } = await import("../TaskExtractorLambdaHandler.js");
     await expect(handler(validEvent)).rejects.toThrow("ThrottlingException");
   });
+
+  it("uses default BEDROCK_REGION when env var is missing", async () => {
+    delete process.env.BEDROCK_REGION;
+    vi.resetModules();
+
+    const { BedrockClientAdapter } = await import("../../bedrock/BedrockClientAdapter.js");
+    const BedrockCtor = vi.mocked(BedrockClientAdapter);
+
+    mockConverse.mockResolvedValueOnce(makeToolUseResponse());
+    const { handler } = await import("../TaskExtractorLambdaHandler.js");
+    await expect(handler(validEvent)).resolves.toBeUndefined();
+
+    expect(BedrockCtor).toHaveBeenCalledWith("ap-northeast-1");
+  });
 });

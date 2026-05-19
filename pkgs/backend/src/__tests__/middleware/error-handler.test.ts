@@ -84,6 +84,19 @@ describe("errorHandler", () => {
     expect(body.error.code).toBe("HTTP_ERROR");
   });
 
+  it("falls back to 500 when HTTP-like error has undefined status", async () => {
+    const app = buildApp(() => {
+      const err = Object.assign(new Error("http-ish"), {
+        status: undefined,
+      });
+      throw err;
+    });
+    const res = await app.request("/test");
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error.code).toBe("HTTP_ERROR");
+  });
+
   it("returns custom statusCode for AppError subclass", async () => {
     const app = buildApp(() => {
       throw new AppError(422, "UNPROCESSABLE", "invalid entity");
