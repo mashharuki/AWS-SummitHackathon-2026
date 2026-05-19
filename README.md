@@ -390,6 +390,14 @@ MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新�
 	pnpm shared run build
 	```
 
+### AI Agent
+
+- ビルド
+
+	```bash
+	pnpm agent run build
+	```
+
 ### CDK
 
 - ビルド
