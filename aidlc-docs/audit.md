@@ -2,6 +2,14 @@
 
 ---
 
+## OPERATIONS — API 動作検証ガイド作成
+**Timestamp**: 2026-05-20T15:40:00Z
+**User Input**: "AI-DLCの ドキュメントで operationsのセクションで swagger uiを使ったAPIの一連の動作確認手順をまとめてもらいたいです！！"
+**AI Response**: `aidlc-docs/operations/api-verification-guide.md` を新規作成。全エンドポイント（15本）の Swagger UI 操作手順・SSE curl 検証・エラー確認チェックリスト・本番切り替え手順・OpenAPI YAML 活用方法を記載。`aidlc-docs/operations/README.md` の索引に追記。
+**Context**: OPERATIONS フェーズ成果物追加。`pkgs/backend/openapi.yaml`（本日生成）と連携するドキュメント。
+
+---
+
 ## Build and Test — CONSTRUCTION フェーズ最終ステージ実行
 **Timestamp**: 2026-05-17T14:20:00Z
 **User Input**: "全6 Unit（U-01 shared / U-02 infra / U-03a task-extractor / U-03b sabori-proposer / U-04 api / U-05 web）の Code Generation が完了し、ユーザーが全て承認しました。CONSTRUCTION フェーズの最終ステージ「Build and Test」を実行してください。[ファストトラック・品質最大化方針（時間制約を気にせず最高品質）][ユーザーは「指示書作成＋実際に実行検証」を選択。指示書を作るだけでなく、実際にビルド・テスト・E2Eを実行して検証すること][AWS への実デプロイ（cdk deploy / s3 sync 等）は実行しないこと]"
