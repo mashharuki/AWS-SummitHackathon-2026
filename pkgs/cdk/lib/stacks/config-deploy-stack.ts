@@ -19,7 +19,7 @@ import type { FrontendStackExports } from "./frontend-stack";
  * パラメータとして渡され、Lambda 呼び出し前に CloudFormation が解決する。
  *
  * 依存関係:
- *   ConfigDeployStack → FrontendStack (bucket, distribution)
+ *   ConfigDeployStack → FrontendStack (bucket のみ — distribution は参照しない)
  *   ConfigDeployStack → CognitoStack (userPoolId, clientId, domain)
  *   ConfigDeployStack → ApiStack (httpApiUrl)
  */
