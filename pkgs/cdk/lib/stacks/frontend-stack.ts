@@ -38,9 +38,12 @@ export class SaborouFrontendStack extends cdk.Stack {
     });
 
     // --- OAC 付き CloudFront ディストリビューション ---
+    // origin を一度生成して default と additionalBehaviors で共有し、OAC が重複しないようにする
+    const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
+
     const distribution = new cloudfront.Distribution(this, "Distribution", {
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+        origin: s3Origin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
@@ -64,6 +67,17 @@ export class SaborouFrontendStack extends cdk.Stack {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_200,
       comment: `Saborou Frontend Distribution (${environment})`,
       enableLogging: false,
+      additionalBehaviors: {
+        // env-config.json はランタイム設定のため CloudFront キャッシュを無効化する
+        "/env-config.json": {
+          origin: s3Origin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          compress: false,
+        },
+      },
     });
 
     // --- ビルド済みフロントエンドアセットを S3 に同期 ---

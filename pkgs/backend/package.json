@@ -10,8 +10,8 @@
     "dev": "node --env-file=.env --import tsx ./src/index.ts",
     "build": "run-s build:clean build:api build:webhook",
     "build:clean": "rm -rf dist",
-    "build:api": "esbuild --bundle --outfile=dist/index.js --platform=node --target=node22 --external:@aws-sdk/* --external:@saboru/* src/handler.ts",
-    "build:webhook": "esbuild --bundle --outfile=dist/webhook.js --platform=node --target=node22 --external:@aws-sdk/* --external:@saboru/* src/webhook-handler.ts",
+    "build:api": "esbuild --bundle --outfile=dist/index.js --platform=node --target=node22 --external:@aws-sdk/* src/handler.ts",
+    "build:webhook": "esbuild --bundle --outfile=dist/webhook.js --platform=node --target=node22 --external:@aws-sdk/* src/webhook-handler.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
