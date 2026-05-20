@@ -3,11 +3,12 @@
  * NFR-DESIGN-1: メモリ内トークン管理（XSS対策）
  * NFR-DESIGN-2: OAuth CSRF 防止
  */
+import { getRuntimeConfig } from "./runtimeConfig.js";
 
-const COGNITO_DOMAIN = import.meta.env["VITE_COGNITO_DOMAIN"] as string;
-const CLIENT_ID = import.meta.env["VITE_COGNITO_CLIENT_ID"] as string;
-const REDIRECT_URI = import.meta.env["VITE_OAUTH_REDIRECT_URI"] as string;
-const USER_POOL_ID = import.meta.env["VITE_COGNITO_USER_POOL_ID"] as string;
+const COGNITO_DOMAIN = () => getRuntimeConfig("VITE_COGNITO_DOMAIN");
+const CLIENT_ID = () => getRuntimeConfig("VITE_COGNITO_CLIENT_ID");
+const REDIRECT_URI = () => getRuntimeConfig("VITE_OAUTH_REDIRECT_URI");
+const USER_POOL_ID = () => getRuntimeConfig("VITE_COGNITO_USER_POOL_ID");
 
 // NFR-DESIGN-1: アクセストークンをメモリ内に保持（XSS対策）
 let _accessToken: string | null = null;
@@ -85,15 +86,15 @@ export async function buildCognitoAuthUrl(): Promise<string> {
 
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    client_id: CLIENT_ID(),
+    redirect_uri: REDIRECT_URI(),
     scope: "openid email profile",
     state,
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
   });
 
-  return `${COGNITO_DOMAIN}/oauth2/authorize?${params.toString()}`;
+  return `${COGNITO_DOMAIN()}/oauth2/authorize?${params.toString()}`;
 }
 
 /** OAuth コールバックの state を検証 */
@@ -115,16 +116,16 @@ export async function exchangeCodeForTokens(
 }> {
   const paramsObj: Record<string, string> = {
     grant_type: "authorization_code",
-    client_id: CLIENT_ID,
+    client_id: CLIENT_ID(),
     code,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: REDIRECT_URI(),
   };
   if (codeVerifier) {
     paramsObj["code_verifier"] = codeVerifier;
   }
   const params = new URLSearchParams(paramsObj);
 
-  const res = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+  const res = await fetch(`${COGNITO_DOMAIN()}/oauth2/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
@@ -157,11 +158,11 @@ export async function refreshAccessToken(): Promise<string | null> {
   try {
     const params = new URLSearchParams({
       grant_type: "refresh_token",
-      client_id: CLIENT_ID,
+      client_id: CLIENT_ID(),
       refresh_token: rt,
     });
 
-    const res = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+    const res = await fetch(`${COGNITO_DOMAIN()}/oauth2/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
@@ -211,10 +212,14 @@ export function parseIdToken(idToken: string): {
 /** Cognito サインアウト URL */
 export function buildSignOutUrl(): string {
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: CLIENT_ID(),
     logout_uri: `${window.location.origin}/login`,
   });
-  return `${COGNITO_DOMAIN}/logout?${params.toString()}`;
+  return `${COGNITO_DOMAIN()}/logout?${params.toString()}`;
+}
+
+export function getUserPoolId(): string {
+  return USER_POOL_ID();
 }
 
 export { USER_POOL_ID };

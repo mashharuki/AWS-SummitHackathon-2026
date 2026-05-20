@@ -16,9 +16,11 @@ import {
   refreshAccessToken,
   setAccessToken,
 } from "./cognito";
+import { getRuntimeConfig } from "./runtimeConfig.js";
 
-const API_BASE_URL =
-  (import.meta.env["VITE_API_BASE_URL"] as string) ?? "http://localhost:3000";
+function getApiBaseUrl(): string {
+  return getRuntimeConfig("VITE_API_BASE_URL") || "http://localhost:3000";
+}
 
 /** APIエラー型 */
 export class ApiError extends Error {
@@ -59,7 +61,7 @@ async function request<T>(
     ...(options?.headers ?? {}),
   };
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${getApiBaseUrl()}${path}`, {
     ...options,
     headers,
   });
@@ -208,7 +210,7 @@ export async function disconnectService(service: string): Promise<void> {
  * トークンは Authorization ヘッダーで送信するため URL に含めない (FE-C-1)
  */
 export function buildProposalStreamUrl(taskId: string): string {
-  return `${API_BASE_URL}/api/tasks/${taskId}/proposal?stream=true`;
+  return `${getApiBaseUrl()}/api/tasks/${taskId}/proposal?stream=true`;
 }
 
 export default {

@@ -2,22 +2,26 @@ import * as cdk from "aws-cdk-lib";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
+import * as path from "node:path";
 
-export interface FrontendStackProps extends cdk.StackProps {
-  readonly apiUrl: string;
-}
+// 他スタックへの依存を持たないシンプルなProps
+export type FrontendStackProps = cdk.StackProps;
 
 export interface FrontendStackExports {
   readonly distributionDomainName: string;
   readonly bucketName: string;
+  // ConfigDeployStack が env-config.json を書き込むために使用
+  readonly bucket: s3.Bucket;
+  readonly distribution: cloudfront.Distribution;
 }
 
 export class SaborouFrontendStack extends cdk.Stack {
   public readonly exports: FrontendStackExports;
 
-  constructor(scope: Construct, id: string, props: FrontendStackProps) {
+  constructor(scope: Construct, id: string, props?: FrontendStackProps) {
     super(scope, id, props);
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
@@ -60,6 +64,22 @@ export class SaborouFrontendStack extends cdk.Stack {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_200,
       comment: `Saborou Frontend Distribution (${environment})`,
       enableLogging: false,
+    });
+
+    // --- ビルド済みフロントエンドアセットを S3 に同期 ---
+    // env-config.json は ConfigDeployStack が別途デプロイするため除外する
+    new s3deploy.BucketDeployment(this, "DeployFrontendAssets", {
+      sources: [
+        s3deploy.Source.asset(
+          path.join(__dirname, "../../../frontend/dist"),
+        ),
+      ],
+      destinationBucket: bucket,
+      distribution,
+      distributionPaths: ["/*"],
+      prune: true,
+      memoryLimit: 512,
+      exclude: ["env-config.json"],
     });
 
     // --- CfnOutputs ---
@@ -109,22 +129,25 @@ export class SaborouFrontendStack extends cdk.Stack {
       {
         id: "AwsSolutions-IAM4",
         reason:
-          "Auto-delete objects custom resource uses managed policy; CDK-generated",
+          "Auto-delete objects and BucketDeployment custom resources use managed policies; CDK-generated",
       },
       {
         id: "AwsSolutions-IAM5",
         reason:
-          "Auto-delete custom resource requires S3 wildcard to clean up bucket objects",
+          "Auto-delete and BucketDeployment custom resources require S3 wildcard to operate",
       },
       {
         id: "AwsSolutions-L1",
-        reason: "Auto-delete objects Lambda runtime managed by CDK framework",
+        reason:
+          "Auto-delete objects and BucketDeployment Lambda runtimes are managed by CDK framework",
       },
     ]);
 
     this.exports = {
       distributionDomainName: distribution.distributionDomainName,
       bucketName: bucket.bucketName,
+      bucket,
+      distribution,
     };
   }
 }

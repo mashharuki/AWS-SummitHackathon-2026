@@ -4,9 +4,7 @@ import { SaborouFrontendStack } from "../lib/stacks/frontend-stack";
 
 function buildTemplate(): Template {
   const app = new cdk.App({ context: { environment: "test" } });
-  const stack = new SaborouFrontendStack(app, "TestFrontendStack", {
-    apiUrl: "https://api.example.com",
-  });
+  const stack = new SaborouFrontendStack(app, "TestFrontendStack");
   return Template.fromStack(stack);
 }
 
