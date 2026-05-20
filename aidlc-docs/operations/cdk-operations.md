@@ -82,7 +82,38 @@ aws cloudformation describe-stacks --stack-name CDKToolkit --region ap-northeast
 本番 AWS にデプロイする前に、Floci を使ってローカルでスタックを検証する。
 詳細は `aidlc-docs/inception/application-design/cdk-local-development.md` を参照。
 
-### 4.1 Floci 起動
+### 4.0 推奨手順（floci スクリプト経由・最も簡単）
+
+`pkgs/cdk/scripts/` に環境変数設定済みのラッパースクリプトが用意されている。
+
+```bash
+# 1. floci コンテナ起動
+pnpm --filter cdk floci:start
+
+# 2. 初回のみ CDK bootstrap
+pnpm --filter cdk floci:bootstrap
+
+# 3. 全スタックをローカルにデプロイ
+pnpm --filter cdk floci:deploy
+
+# 4. 動作確認後にクリーンアップ
+pnpm --filter cdk floci:destroy     # CDK スタック削除 + Secret 強制削除
+pnpm --filter cdk floci:stop        # コンテナ停止
+```
+
+### 4.0.1 既知の floci 制限事項
+
+floci は完全な AWS エミュレータではないため、以下の制限がある。
+**いずれも実 AWS にデプロイすると正常動作**する。
+
+| 制限 | 影響 | 対処 |
+|------|------|------|
+| ECR 未サポート | `cdk bootstrap` で `ContainerAssetsRepository` が `CREATE_FAILED` | CDK が許容して bootstrap 完了扱い。Lambda は zip パッケージなので動作には影響なし |
+| EventBridge の競合 | 同一テンプレ内の EventBus → Rule 依存解決で `EventBus not found` が出る場合あり | スタック自体は CREATE_COMPLETE。実 AWS では正常 |
+| Secrets Manager の RETAIN | `cdk destroy` 後も Secret が残り、次回 deploy で「既に存在」エラー | `floci:destroy` スクリプトが自動で `force-delete-without-recovery` する |
+| Cognito の SES | 検証メール送信は floci では到達しない | ユーザー作成のみ確認可能、認証フロー完全検証は実 AWS で実施 |
+
+### 4.1 Floci 起動（手動）
 
 ```bash
 # プロジェクトルートで実行

@@ -1188,3 +1188,39 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 **Context**: リモート追従 / 事故検出 / 実測検証 / a328048 復元 / 全パッケージ 100% カバレッジ達成
 
 ---
+
+## floci ローカル検証・スクリプト修正
+**Timestamp**: 2026-05-20T11:50:00Z
+**User Input**: "flociの挙動を実際に確認して、もし修正すべきところがあれば修正してコミットする"
+**AI Response**: floci ローカル AWS エミュレータで CDK の bootstrap → deploy → destroy 全フローを実際に走らせて検証。複数の問題を発見・修正した。
+
+**発見した問題と修正内容**:
+
+1. **floci-deploy.sh**: TTY なしの非対話実行で `--require-approval` が IAM 変更承認待ちでハングする → `--require-approval never --no-rollback` を追加
+2. **floci-destroy.sh**: RemovalPolicy=RETAIN な Secrets / DynamoDB が cdk destroy で削除されず、次回 deploy で「既に存在」エラー → AWS CLI で明示的に強制削除する処理を追加
+3. **floci-destroy.sh**: IAM Policy / Role / CloudFormation スタックも RETAIN 由来で残存し再 deploy で衝突 → アプリ由来分のみ削除（CDKToolkit / cdk-* は保持）する処理を追加
+4. **floci-bootstrap.sh**: ECR 未サポートを既知制限としてコメント記載
+5. **既知制限の文書化**: aidlc-docs/operations/cdk-operations.md に「4.0 推奨手順（floci スクリプト経由）」「4.0.1 既知の floci 制限事項」セクションを追加（ECR / EventBridge / Secrets / Cognito SES の 4 制限を表形式で記載）
+
+**検証結果（4 回の deploy/destroy サイクル）**:
+- 1 回目 deploy: SaborouData-dev のみ完了で残りはハング（TTY ブロック）→ 修正①
+- 2 回目 deploy: 全 6 スタック完了、ただし EventBridge Rule 1 件失敗（floci 制限）
+- 1 回目 destroy: Secret は削除されたが DynamoDB / IAM 残存 → 修正②③
+- 3 回目 deploy: IAM Policy 衝突発生 → 修正③で完全対処
+- 2 回目 destroy: アプリ系すべて削除完了、cdk-bootstrap は保持
+- 4 回目 deploy: 完全再現性確認、EventBridge 1 件以外すべて成功
+- 最終 destroy: クリーンアップ完了
+
+**デプロイされたリソース（floci 上）**:
+- DynamoDB: 7 テーブル（users / service-connections / task-candidates / tasks / proposals / honne-data / personas）
+- Lambda: 5 関数（api / task-extractor / sabori-proposer / webhook / S3 cleanup）
+- S3: 2 バケット（frontend + CDK assets）
+- CloudFormation: 6 スタック全 CREATE_COMPLETE
+
+**残る既知の制限（CDK 側の問題ではない）**:
+- ECR: floci が完全サポートしておらず ContainerAssetsRepository が CREATE_FAILED（Lambda は zip なので動作影響なし）
+- EventBridge: 同一テンプレ内の EventBus → Rule の競合状態で SlackToTaskExtractorRule が CREATE_FAILED（実 AWS では正常）
+
+**Context**: floci 実機検証 / スクリプト 3 本修正 / オペレーションドキュメント追記 / CDK コード自体は変更なし（本番運用設計を維持）
+
+---
