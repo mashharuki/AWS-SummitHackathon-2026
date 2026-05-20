@@ -41,6 +41,14 @@ describe("DynamoServiceConnectionRepository.findAllByUserId", () => {
     const items = await repo.findAllByUserId("user1");
     expect(items).toHaveLength(0);
   });
+
+  it("returns empty when Items is undefined", async () => {
+    const client = mockClient(() => ({}));
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const items = await repo.findAllByUserId("user1");
+    expect(items).toEqual([]);
+  });
 });
 
 describe("DynamoServiceConnectionRepository.findByUserAndService", () => {
@@ -78,6 +86,20 @@ describe("DynamoServiceConnectionRepository.saveForUser", () => {
     expect(saved.PK).toBe("USER#user1");
     expect(saved.SK).toBe("CONN#slack");
     expect(client.send).toHaveBeenCalledOnce();
+  });
+
+  it("fills connectedAt when omitted", async () => {
+    const client = mockClient(() => ({}));
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const saved = await repo.saveForUser("user1", {
+      service: "slack",
+      status: "connected",
+      secretArn: "arn:test:secret",
+      expiresAt: null,
+    });
+
+    expect(saved.connectedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 });
 

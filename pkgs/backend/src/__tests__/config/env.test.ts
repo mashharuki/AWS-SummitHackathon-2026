@@ -21,6 +21,7 @@ const REQUIRED_VARS = [
   "DYNAMODB_TABLE_PERSONAS",
   "SLACK_SIGNING_SECRET_ARN",
   "SLACK_CLIENT_SECRET_ARN",
+  "OAUTH_STATE_SECRET",
   "EVENT_BUS_NAME",
 ] as const;
 
@@ -182,6 +183,18 @@ describe("env — requireEnv (getter)", () => {
   it("returns value for EVENT_BUS_NAME when set", () => {
     process.env.EVENT_BUS_NAME = "saborou-bus";
     expect(env.EVENT_BUS_NAME).toBe("saborou-bus");
+  });
+
+  it("returns value for OAUTH_STATE_SECRET when set", () => {
+    process.env.OAUTH_STATE_SECRET = "oauth-state-secret";
+    expect(env.OAUTH_STATE_SECRET).toBe("oauth-state-secret");
+  });
+
+  it("throws for OAUTH_STATE_SECRET when missing", () => {
+    delete process.env.OAUTH_STATE_SECRET;
+    expect(() => env.OAUTH_STATE_SECRET).toThrow(
+      "Missing required environment variable",
+    );
   });
 
   it("throws for EVENT_BUS_NAME when missing", () => {

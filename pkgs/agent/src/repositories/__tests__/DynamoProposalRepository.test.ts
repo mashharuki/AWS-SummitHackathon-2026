@@ -74,6 +74,25 @@ describe("DynamoProposalRepository", () => {
   });
 
   describe("save()", () => {
+    it("uses default region/table when env vars are not set", async () => {
+      delete process.env["AWS_REGION"];
+      delete process.env["DYNAMODB_TABLE_PROPOSALS"];
+      vi.clearAllMocks();
+
+      const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
+      repo = new DynamoProposalRepository();
+      mockSend.mockResolvedValueOnce({});
+      await repo.save(makeProposalInput());
+
+      expect(vi.mocked(DynamoDBClient)).toHaveBeenCalledWith(
+        expect.objectContaining({ region: "ap-northeast-1" }),
+      );
+      const callArgs = mockSend.mock.calls[0]?.[0] as {
+        input: { TableName: string };
+      };
+      expect(callArgs.input.TableName).toBe("saborou-proposals-dev");
+    });
+
     it("builds PK as TASK#<taskId>", async () => {
       mockSend.mockResolvedValueOnce({});
 

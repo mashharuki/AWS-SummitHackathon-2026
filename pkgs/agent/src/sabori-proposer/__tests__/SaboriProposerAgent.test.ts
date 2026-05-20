@@ -5,7 +5,7 @@ import type {
   ConverseStreamCommandOutput,
 } from "@aws-sdk/client-bedrock-runtime";
 import type { IProposalRepository, Proposal, Task } from "@saboru/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IBedrockClient } from "../../bedrock/IBedrockClient.js";
 import { PersonaRenderer } from "../PersonaRenderer.js";
 import { SaboriProposerAgent } from "../SaboriProposerAgent.js";
@@ -646,6 +646,47 @@ describe("SaboriProposerAgent", () => {
       const verdictEvent = deltas.find((d) => d.type === "verdict");
       expect(verdictEvent).toBeDefined();
       expect(verdictEvent?.payload).toBe("must_do");
+    });
+
+    it("falls back when JSON.parse throws non-Error value", async () => {
+      const parseSpy = vi.spyOn(JSON, "parse").mockImplementationOnce(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw "parse-failed";
+      });
+      const mockBedrockBadJson: IBedrockClient = {
+        async converse() {
+          return makeSaboriJudgmentResponse({ verdict: "borderline" });
+        },
+        async converseStream() {
+          return {
+            $metadata: {},
+            stream: (async function* () {
+              yield {
+                contentBlockDelta: {
+                  delta: { toolUse: { input: "{}" } },
+                },
+              };
+            })() as unknown as ConverseStreamCommandOutput["stream"],
+          };
+        },
+      };
+      const agentWithBadParse = new SaboriProposerAgent(
+        mockBedrockBadJson,
+        mockRepo,
+        mockRenderer,
+      );
+
+      const deltas = [];
+      for await (const delta of agentWithBadParse.proposeStream(
+        "task-001",
+        TEST_TASK_CONTEXT,
+      )) {
+        deltas.push(delta);
+      }
+      parseSpy.mockRestore();
+
+      const verdictEvent = deltas.find((d) => d.type === "verdict");
+      expect(verdictEvent?.payload).toBe("borderline");
     });
 
     it("yields chat_message_chunk events when stream has valid chunks", async () => {
