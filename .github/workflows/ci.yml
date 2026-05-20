@@ -38,6 +38,8 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Build workspace dependencies
+        run: pnpm --filter @saboru/shared build && pnpm --filter @saboru/agent build
       - name: Build backend
         run: pnpm --filter backend build
 
