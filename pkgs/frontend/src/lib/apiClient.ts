@@ -110,7 +110,10 @@ export async function getMe(): Promise<User> {
 
 /** GET /api/tasks/candidates */
 export async function getCandidates(): Promise<TaskCandidate[]> {
-  return request<TaskCandidate[]>("/api/tasks/candidates");
+  const data = await request<{ candidates: TaskCandidate[] }>(
+    "/api/tasks/candidates",
+  );
+  return data.candidates;
 }
 
 /** POST /api/tasks/candidates/:id/approve */
@@ -131,7 +134,8 @@ export async function rejectCandidate(candidateId: string): Promise<void> {
 
 /** GET /api/tasks */
 export async function getTasks(): Promise<Task[]> {
-  return request<Task[]>("/api/tasks");
+  const data = await request<{ tasks: Task[] }>("/api/tasks");
+  return data.tasks;
 }
 
 /** GET /api/tasks/:id */
@@ -196,7 +200,10 @@ export async function submitHonne(
 
 /** GET /api/connections */
 export async function getConnections(): Promise<ServiceConnection[]> {
-  return request<ServiceConnection[]>("/api/connections");
+  const data = await request<{ connections: ServiceConnection[] }>(
+    "/api/connections",
+  );
+  return data.connections;
 }
 
 /** DELETE /api/connections/:service */

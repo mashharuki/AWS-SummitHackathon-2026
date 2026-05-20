@@ -95,7 +95,7 @@ export const handlers = [
 
   // タスク候補
   http.get("*/api/tasks/candidates", () => {
-    return HttpResponse.json(mockCandidates);
+    return HttpResponse.json({ candidates: mockCandidates });
   }),
 
   http.post("*/api/tasks/candidates/:id/approve", ({ params }) => {
@@ -122,7 +122,7 @@ export const handlers = [
 
   // タスク
   http.get("*/api/tasks", () => {
-    return HttpResponse.json(mockTasks);
+    return HttpResponse.json({ tasks: mockTasks });
   }),
 
   http.get("*/api/tasks/:id", ({ params }) => {
@@ -237,7 +237,7 @@ export const handlers = [
 
   // 接続
   http.get("*/api/connections", () => {
-    return HttpResponse.json(mockConnections);
+    return HttpResponse.json({ connections: mockConnections });
   }),
 
   http.delete("*/api/connections/:service", () => {

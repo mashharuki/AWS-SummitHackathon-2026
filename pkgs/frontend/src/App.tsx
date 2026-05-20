@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ToastProvider } from "@/providers/ToastProvider";
 /**
@@ -51,29 +52,31 @@ function PageLoader() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* 公開ルート */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <ErrorBoundary>
+        <AuthProvider>
+          <ToastProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* 公開ルート */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-              {/* 認証必須ルート（AppShell内でガード） */}
-              <Route path="/tasks" element={<TaskListPage />} />
-              <Route path="/tasks/:id" element={<TaskDetailPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/persona" element={<PersonaPage />} />
-              <Route path="/manual" element={<ManualPage />} />
-              <Route path="/roadmap" element={<RoadmapPage />} />
+                {/* 認証必須ルート（AppShell内でガード） */}
+                <Route path="/tasks" element={<TaskListPage />} />
+                <Route path="/tasks/:id" element={<TaskDetailPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/persona" element={<PersonaPage />} />
+                <Route path="/manual" element={<ManualPage />} />
+                <Route path="/roadmap" element={<RoadmapPage />} />
 
-              {/* デフォルトリダイレクト */}
-              <Route path="/" element={<Navigate to="/tasks" replace />} />
-              <Route path="*" element={<Navigate to="/tasks" replace />} />
-            </Routes>
-          </Suspense>
-        </ToastProvider>
-      </AuthProvider>
+                {/* デフォルトリダイレクト */}
+                <Route path="/" element={<Navigate to="/tasks" replace />} />
+                <Route path="*" element={<Navigate to="/tasks" replace />} />
+              </Routes>
+            </Suspense>
+          </ToastProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
