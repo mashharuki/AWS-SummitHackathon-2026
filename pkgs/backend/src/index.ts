@@ -49,6 +49,7 @@ import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
 import { createProposalsRoute } from "./routes/proposals.js";
 import { createTasksRoute } from "./routes/tasks.js";
+import { createUsersRoute } from "./routes/users.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
@@ -103,11 +104,14 @@ export function createApp() {
 
   // Routes
   app.route("/health", healthRoute);
-  app.route("/auth", createAuthRoute(connectionRepository));
-  app.route("/tasks", createTasksRoute(taskRepository, candidateRepository));
-  // Proposal and honne share the /tasks prefix for :taskId param
+
+  // /api/* — フロントエンドの apiClient が期待するプレフィックス
+  app.route("/api/users", createUsersRoute(userRepository));
+  app.route("/api/auth", createAuthRoute(connectionRepository));
+  app.route("/api/tasks", createTasksRoute(taskRepository, candidateRepository));
+  // Proposal and honne share the /api/tasks prefix for :taskId param
   app.route(
-    "/tasks",
+    "/api/tasks",
     createProposalsRoute(
       taskRepository,
       proposalRepository,
@@ -115,10 +119,10 @@ export function createApp() {
     ),
   );
   app.route(
-    "/tasks",
+    "/api/tasks",
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
-  app.route("/connections", createConnectionsRoute(connectionRepository));
+  app.route("/api/connections", createConnectionsRoute(connectionRepository));
 
   // OpenAPI / Swagger UI
   app.get("/doc", (c) => c.json(openApiDoc));

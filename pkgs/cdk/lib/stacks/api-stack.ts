@@ -122,9 +122,18 @@ export class SaborouApiStack extends cdk.Stack {
     });
 
     // メインルート (JWT 認証必須)
+    // OPTIONS は除外: API Gateway の corsPreflight が preflight を自動処理する。
+    // ANY に OPTIONS を含めると JWT Authorizer が preflight に 401 を返し CORS が壊れる。
     httpApi.addRoutes({
       path: "/{proxy+}",
-      methods: [apigatewayv2.HttpMethod.ANY],
+      methods: [
+        apigatewayv2.HttpMethod.GET,
+        apigatewayv2.HttpMethod.POST,
+        apigatewayv2.HttpMethod.PUT,
+        apigatewayv2.HttpMethod.DELETE,
+        apigatewayv2.HttpMethod.PATCH,
+        apigatewayv2.HttpMethod.HEAD,
+      ],
       integration: new apigatewayv2Integrations.HttpLambdaIntegration(
         "HonoIntegration",
         honoFn,
