@@ -160,7 +160,8 @@ export class SaborouWebhookStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "WebhookUrl", {
       value: webhookUrl.url,
-      description: "Lambda Function URL for Slack Event API — set this as the Slack Request URL",
+      description:
+        "Lambda Function URL for Slack Event API — set this as the Slack Request URL",
     });
 
     // --- cdk-nag 抑制 ---
