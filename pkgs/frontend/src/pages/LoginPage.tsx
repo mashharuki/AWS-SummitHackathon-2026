@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
  * ボタン押下で Cognito（Cognito Hosted UI 経由でメール/PW認証）に遷移する。
  */
 import { Suspense, lazy, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 // 3D ヒーローは遅延ロード（憲法: 初期バンドル外）
@@ -19,6 +20,7 @@ const SaborouScene3D = lazy(() =>
 );
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading, signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -61,7 +63,7 @@ export function LoginPage() {
             SABOROU
           </h1>
           <p className="text-saboru-ink-soft mt-1" style={{ fontSize: 12 }}>
-            サボりの最適解を、AIと。
+            {t("login.tagline")}
           </p>
         </div>
 
@@ -71,13 +73,13 @@ export function LoginPage() {
             className="text-center text-saboru-ink font-bold"
             style={{ fontSize: 15 }}
           >
-            ログインして始める
+            {t("login.startTitle")}
           </h2>
           <p
             className="text-center text-saboru-ink-muted mt-1 mb-4"
             style={{ fontSize: 11 }}
           >
-            Amazon Cognito で安全にサインイン
+            {t("login.startDescription")}
           </p>
 
           <button
@@ -85,9 +87,9 @@ export function LoginPage() {
             onClick={signIn}
             disabled={isLoading}
             className="btn-brutal-primary w-full"
-            aria-label="ログインまたは新規登録"
+            aria-label={t("login.loginAria")}
           >
-            {isLoading ? "認証中..." : "ログイン / 新規登録"}
+            {isLoading ? t("login.authenticating") : t("login.loginOrSignup")}
           </button>
 
           {/* Cognito バッジ */}
@@ -105,7 +107,7 @@ export function LoginPage() {
                 d="M12 7a3 3 0 100 6 3 3 0 000-6zm0 8c-2 0-6 1-6 3v1h12v-1c0-2-4-3-6-3z"
               />
             </svg>
-            <span className="text-saboru-ink-soft">Secured by</span>
+            <span className="text-saboru-ink-soft">{t("login.securedBy")}</span>
             <span
               className="font-extrabold"
               style={{
@@ -119,19 +121,17 @@ export function LoginPage() {
         </div>
 
         {/* フィーチャーリスト */}
-        <ul className="space-y-1.5" aria-label="SABOROU の特徴">
-          {[
-            { ic: "🔗", text: "Slack 自動連携で文脈を読解" },
-            { ic: "🧠", text: "AI が「サボっていい根拠」を提示" },
-            { ic: "☁️", text: "安心してサボれる" },
-          ].map((f) => (
+        <ul className="space-y-1.5" aria-label={t("login.featuresAria")}>
+          {(["🔗", "🧠", "☁️"] as const).map((ic, i) => (
             <li
-              key={f.text}
+              key={ic}
               className="flex items-center gap-2 px-2"
               style={{ fontSize: 11 }}
             >
-              <span>{f.ic}</span>
-              <span className="text-saboru-ink-soft">{f.text}</span>
+              <span>{ic}</span>
+              <span className="text-saboru-ink-soft">
+                {t(`login.features.${i}`)}
+              </span>
             </li>
           ))}
         </ul>

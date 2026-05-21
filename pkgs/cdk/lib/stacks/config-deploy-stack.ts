@@ -85,8 +85,7 @@ export class SaborouConfigDeployStack extends cdk.Stack {
       },
       {
         id: "AwsSolutions-L1",
-        reason:
-          "AwsCustomResource Lambda runtime is managed by CDK framework",
+        reason: "AwsCustomResource Lambda runtime is managed by CDK framework",
       },
     ]);
   }

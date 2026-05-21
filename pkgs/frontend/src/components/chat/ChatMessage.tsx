@@ -4,12 +4,14 @@
  */
 import { SaborouAvatar } from "@/components/character/SaborouAvatar";
 import type { ChatMessage as ChatMessageType } from "@/types/ui";
+import { useTranslation } from "react-i18next";
 
 interface ChatMessageProps {
   message: ChatMessageType;
 }
 
 export function ChatMessage({ message }: ChatMessageProps) {
+  const { t } = useTranslation();
   const isAssistant = message.role === "assistant";
 
   return (
@@ -23,7 +25,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
       {isAssistant && <SaborouAvatar size={28} />}
       <div
         role="article"
-        aria-label={isAssistant ? "サボローのメッセージ" : "あなたのメッセージ"}
+        aria-label={
+          isAssistant ? t("chat.assistantMessage") : t("chat.userMessage")
+        }
         style={{
           maxWidth: "80%",
           background: isAssistant ? "#FFFFFF" : "#F97316",
@@ -41,7 +45,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             className="font-bold"
             style={{ fontSize: 9, color: "#EA580C", marginBottom: 2 }}
           >
-            サボロー
+            {t("chat.title")}
           </p>
         )}
         {message.content}
@@ -52,11 +56,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
 /** タイピングインジケータ */
 export function TypingIndicator() {
+  const { t } = useTranslation();
   return (
     <div
       className="flex justify-start gap-2"
       aria-live="polite"
-      aria-label="サボローが入力中"
+      aria-label={t("chat.typing")}
     >
       <SaborouAvatar size={28} />
       <div

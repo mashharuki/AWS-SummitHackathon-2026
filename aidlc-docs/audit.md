@@ -2,6 +2,19 @@
 
 ---
 
+## OPERATIONS — フロントエンド i18n 多言語対応（日本語/英語）
+**Timestamp**: 2026-05-21T14:16:36Z
+**User Input**: "<current_datetime>2026-05-21T23:05:05.488+09:00</current_datetime>
+
+ありがとうございます！！ローカルではPWA化できることを確認しました！！
+
+続けて i18n を使って日本語と英語の多言語対応をお願いします！！！
+的確な実装計画を立てて実装・テストまで完遂させてください！！"
+**AI Response**: フロントエンドへ i18n 基盤を追加し、主要画面・主要コンポーネントを日本語/英語で切り替え可能に実装。`i18next` / `react-i18next` を導入し、`pkgs/frontend/src/i18n.ts` を新規作成。`main.tsx` と `test-setup.ts` で初期化。Settings 画面に言語セレクタを追加して `ja/en` を切替可能にし、ロケールを localStorage 永続化。Task 系・Chat 系・Verdict 系・Header/Nav・AuthCallback/ErrorBoundary/Toast などの文言を翻訳キー化。`staticContent.ts` をローカライズ対応型へ拡張し、Manual/Persona/Roadmap で言語別テキスト表示に対応。テストとビルドを実行し、frontend test 126/126 pass・frontend build 成功を確認。
+**Context**: OPERATIONS（既存機能拡張）/ i18n localization / 実装＋テスト完了
+
+---
+
 ## OPERATIONS — フロントエンドPWA化（専用ブランチ）
 **Timestamp**: 2026-05-21T13:56:05Z
 **User Input**: "<current_datetime>2026-05-21T22:48:16.073+09:00</current_datetime>

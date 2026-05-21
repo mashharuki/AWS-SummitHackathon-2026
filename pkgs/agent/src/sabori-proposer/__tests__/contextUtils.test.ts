@@ -372,7 +372,9 @@ describe("assembleContextNarrative", () => {
   });
 
   it("formats past deadline under 1 hour without hour prefix", () => {
-    const soonPastDeadline = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const soonPastDeadline = new Date(
+      Date.now() - 10 * 60 * 1000,
+    ).toISOString();
     const context: TaskContext = {
       task: makeTask({ deadline: soonPastDeadline }),
     };
@@ -392,9 +394,11 @@ describe("assembleContextNarrative", () => {
   });
 
   it("falls back to raw deadline when locale formatting throws", () => {
-    const spy = vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(() => {
-      throw new Error("locale failure");
-    });
+    const spy = vi
+      .spyOn(Date.prototype, "toLocaleString")
+      .mockImplementation(() => {
+        throw new Error("locale failure");
+      });
     const rawDeadline = "not-a-date";
     const context: TaskContext = {
       task: makeTask({ deadline: rawDeadline }),

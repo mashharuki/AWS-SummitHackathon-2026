@@ -6,15 +6,16 @@
  * フロント側で吸収せず、シンプルに行リストで表示する（GAP-02 対応）。
  */
 
+import { useTranslation } from "react-i18next";
+
 interface EvidenceListProps {
   items: string[];
   title?: string;
 }
 
-export function EvidenceList({
-  items,
-  title = "サボろうの根拠",
-}: EvidenceListProps) {
+export function EvidenceList({ items, title }: EvidenceListProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t("verdict.rationaleTitle");
   if (items.length === 0) return null;
 
   return (
@@ -24,7 +25,7 @@ export function EvidenceList({
         className="text-saboru-ink-soft font-bold mb-2"
         style={{ fontSize: 10, letterSpacing: "0.1em" }}
       >
-        {title}
+        {resolvedTitle}
       </h3>
       <ul className="flex flex-col gap-1.5" role="list">
         {items.map((item, i) => (

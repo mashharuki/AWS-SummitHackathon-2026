@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { ToastMessage } from "@/types/ui";
 import { X } from "lucide-react";
+import i18n from "@/i18n";
 
 interface ToastItemProps {
   toast: ToastMessage;
@@ -29,7 +30,7 @@ function ToastItem({ toast, onDismiss }: ToastItemProps) {
         type="button"
         onClick={() => onDismiss(toast.id)}
         className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="通知を閉じる"
+        aria-label={i18n.t("common.close")}
       >
         <X size={14} />
       </button>
@@ -45,7 +46,7 @@ interface ToastContainerProps {
 export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
   return (
     <div
-      aria-label="通知エリア"
+      aria-label="Toast area"
       className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
     >
       {toasts.map((t) => (

@@ -159,7 +159,9 @@ describe("TaskExtractorLambdaHandler", () => {
     delete process.env.BEDROCK_REGION;
     vi.resetModules();
 
-    const { BedrockClientAdapter } = await import("../../bedrock/BedrockClientAdapter.js");
+    const { BedrockClientAdapter } = await import(
+      "../../bedrock/BedrockClientAdapter.js"
+    );
     const BedrockCtor = vi.mocked(BedrockClientAdapter);
 
     mockConverse.mockResolvedValueOnce(makeToolUseResponse());

@@ -10,30 +10,53 @@
  *  2 = PersonaRenderer（サボロー口調変換）
  */
 
+import { useTranslation } from "react-i18next";
+
 export interface ContextCollectingAnimProps {
   phase: 0 | 1 | 2;
 }
 
-const PHASES = [
-  {
-    icon: "🛰",
-    title: "外部APIから文脈を収集中",
-    sub: "Phase 1 — ContextCollector",
-  },
-  {
-    icon: "🧠",
-    title: "Bedrockで文脈読解中",
-    sub: "Phase 2 — SaboriProposer (Tool Use)",
-  },
-  {
-    icon: "💬",
-    title: "サボロー口調に変換中",
-    sub: "Phase 3 — PersonaRenderer",
-  },
-];
+const PHASES = {
+  ja: [
+    {
+      icon: "🛰",
+      title: "外部APIから文脈を収集中",
+      sub: "Phase 1 — ContextCollector",
+    },
+    {
+      icon: "🧠",
+      title: "Bedrockで文脈読解中",
+      sub: "Phase 2 — SaboriProposer (Tool Use)",
+    },
+    {
+      icon: "💬",
+      title: "サボロー口調に変換中",
+      sub: "Phase 3 — PersonaRenderer",
+    },
+  ],
+  en: [
+    {
+      icon: "🛰",
+      title: "Collecting context from external APIs",
+      sub: "Phase 1 — ContextCollector",
+    },
+    {
+      icon: "🧠",
+      title: "Interpreting context with Bedrock",
+      sub: "Phase 2 — SaboriProposer (Tool Use)",
+    },
+    {
+      icon: "💬",
+      title: "Converting into Saborou tone",
+      sub: "Phase 3 — PersonaRenderer",
+    },
+  ],
+} as const;
 
 export function ContextCollectingAnim({ phase }: ContextCollectingAnimProps) {
-  const current = PHASES[phase];
+  const { i18n } = useTranslation();
+  const locale = i18n.language.startsWith("ja") ? "ja" : "en";
+  const current = PHASES[locale][phase];
   return (
     <div className="card-brutal p-3.5">
       <div className="flex items-center gap-3 mb-2.5">

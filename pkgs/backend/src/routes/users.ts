@@ -33,8 +33,7 @@ export function createUsersRoute(userRepository: DynamoUserRepository) {
 
     // 初回ログイン: Cognito JWT クレームからプロフィールを生成して保存
     const lambdaEvent = (c.env as unknown as CognitoLambdaEvent) ?? {};
-    const claims =
-      lambdaEvent?.requestContext?.authorizer?.jwt?.claims ?? {};
+    const claims = lambdaEvent?.requestContext?.authorizer?.jwt?.claims ?? {};
 
     const user = await userRepository.upsert({
       cognitoSub: userId,

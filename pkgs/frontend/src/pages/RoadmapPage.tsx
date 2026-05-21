@@ -7,6 +7,7 @@ import { ROADMAP_ITEMS } from "@/lib/staticContent";
  * U-06-ui-redesign Phase 6 / 共有 HTML RoadmapScreen 準拠
  */
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const STATUS_STYLE = {
   current: {
@@ -14,33 +15,39 @@ const STATUS_STYLE = {
     ring: "#FED7AA",
     badgeBg: "#F97316",
     badgeFg: "#FFFFFF",
-    label: "現在地",
+    label: "current",
   },
   next: {
     dot: "#6366F1",
     ring: "#C7D2FE",
     badgeBg: "#6366F1",
     badgeFg: "#FFFFFF",
-    label: "次",
+    label: "next",
   },
   planned: {
     dot: "#9CA3AF",
     ring: "#F3F4F6",
     badgeBg: "#F3F4F6",
     badgeFg: "#6B7280",
-    label: "計画中",
+    label: "planned",
   },
 } as const;
 
 export function RoadmapPage() {
+  const { i18n, t } = useTranslation();
+  const locale = i18n.language.startsWith("ja") ? "ja" : "en";
   const navigate = useNavigate();
 
   return (
     <AppShell>
       <div className="flex flex-col h-full">
         <PageHeader
-          title="プロダクトロードマップ"
-          subtitle="「人をダメにする」を、文化に育てる"
+          title={locale === "ja" ? "プロダクトロードマップ" : "Product Roadmap"}
+          subtitle={
+            locale === "ja"
+              ? "「人をダメにする」を、文化に育てる"
+              : 'Turning "human-weakening" into culture'
+          }
           onBack={() => navigate("/settings")}
         />
 
@@ -70,9 +77,19 @@ export function RoadmapPage() {
                 lineHeight: 1.6,
               }}
             >
-              「早く終わらせる人が偉い」から
-              <br />
-              「必要以上に頑張らずギリギリで生還する人が賢い」へ
+              {locale === "ja" ? (
+                <>
+                  「早く終わらせる人が偉い」から
+                  <br />
+                  「必要以上に頑張らずギリギリで生還する人が賢い」へ
+                </>
+              ) : (
+                <>
+                  From "finishing fast is best"
+                  <br />
+                  to "surviving smart without overworking"
+                </>
+              )}
             </p>
           </div>
 
@@ -133,7 +150,7 @@ export function RoadmapPage() {
                         letterSpacing: "0.05em",
                       }}
                     >
-                      {style.label}
+                      {t(`status.${style.label}`)}
                     </span>
                   </div>
 
@@ -168,13 +185,13 @@ export function RoadmapPage() {
                             className="font-bold text-saboru-ink"
                             style={{ fontSize: 11 }}
                           >
-                            {f.name}
+                            {f.name[locale]}
                           </p>
                           <p
                             className="text-saboru-ink-muted mt-0.5"
                             style={{ fontSize: 9 }}
                           >
-                            {f.desc}
+                            {f.desc[locale]}
                           </p>
                         </div>
                       </div>

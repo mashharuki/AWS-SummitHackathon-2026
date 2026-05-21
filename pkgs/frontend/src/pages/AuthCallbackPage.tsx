@@ -6,9 +6,11 @@ import { exchangeCodeForTokens, validateOAuthState } from "@/lib/cognito";
  * NFR-DESIGN-2: OAuth CSRF state 検証
  */
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 export function AuthCallbackPage() {
+  const { t } = useTranslation();
   const { handleCallback } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -24,20 +26,20 @@ export function AuthCallbackPage() {
     const error = params.get("error");
 
     if (error) {
-      showToast("ログインがキャンセルされました", "warning");
+      showToast(t("authCallback.cancelled"), "warning");
       void navigate("/login", { replace: true });
       return;
     }
 
     if (!code || !state) {
-      showToast("無効なコールバックパラメータです", "error");
+      showToast(t("authCallback.invalidParams"), "error");
       void navigate("/login", { replace: true });
       return;
     }
 
     // NFR-DESIGN-2: CSRF state 検証
     if (!validateOAuthState(state)) {
-      showToast("セキュリティエラー: ログインを再試行してください", "error");
+      showToast(t("authCallback.securityError"), "error");
       void navigate("/login", { replace: true });
       return;
     }
@@ -51,7 +53,7 @@ export function AuthCallbackPage() {
         void navigate("/tasks", { replace: true });
       })
       .catch(() => {
-        showToast("ログイン処理に失敗しました。再試行してください", "error");
+        showToast(t("authCallback.failed"), "error");
         void navigate("/login", { replace: true });
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -60,15 +62,15 @@ export function AuthCallbackPage() {
     <div
       className="min-h-screen bg-[#F5F4F0] flex items-center justify-center"
       role="main"
-      aria-label="ログイン処理中"
+      aria-label={t("authCallback.processingAria")}
     >
       <div className="flex flex-col items-center gap-4">
         <div
           className="w-12 h-12 border-2 border-[#FF6B2B] border-t-transparent rounded-full animate-spin"
           role="status"
-          aria-label="処理中"
+          aria-label={t("authCallback.spinnerAria")}
         />
-        <p className="text-sm text-[#6B7280]">ログイン中...</p>
+        <p className="text-sm text-[#6B7280]">{t("authCallback.loggingIn")}</p>
       </div>
     </div>
   );

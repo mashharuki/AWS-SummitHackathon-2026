@@ -108,7 +108,10 @@ export function createApp() {
   // /api/* — フロントエンドの apiClient が期待するプレフィックス
   app.route("/api/users", createUsersRoute(userRepository));
   app.route("/api/auth", createAuthRoute(connectionRepository));
-  app.route("/api/tasks", createTasksRoute(taskRepository, candidateRepository));
+  app.route(
+    "/api/tasks",
+    createTasksRoute(taskRepository, candidateRepository),
+  );
   // Proposal and honne share the /api/tasks prefix for :taskId param
   app.route(
     "/api/tasks",

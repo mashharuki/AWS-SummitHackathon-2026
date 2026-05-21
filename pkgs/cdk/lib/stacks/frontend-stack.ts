@@ -102,9 +102,7 @@ export class SaborouFrontendStack extends cdk.Stack {
     // env-config.json は ConfigDeployStack が別途デプロイするため除外する
     new s3deploy.BucketDeployment(this, "DeployFrontendAssets", {
       sources: [
-        s3deploy.Source.asset(
-          path.join(__dirname, "../../../frontend/dist"),
-        ),
+        s3deploy.Source.asset(path.join(__dirname, "../../../frontend/dist")),
       ],
       destinationBucket: bucket,
       distribution,

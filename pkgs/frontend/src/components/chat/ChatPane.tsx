@@ -5,6 +5,7 @@ import type { ChatMessage as ChatMessageType } from "@/types/ui";
  */
 import type { QuickReplyType } from "@saboru/shared";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { ChatMessage, TypingIndicator } from "./ChatMessage";
 import { FreeTextInput } from "./FreeTextInput";
 import { QuickReplyButtons } from "./QuickReplyButtons";
@@ -24,6 +25,7 @@ export function ChatPane({
   onFreeText,
   showQuickReplies = true,
 }: ChatPaneProps) {
+  const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,7 +35,7 @@ export function ChatPane({
   return (
     <div
       role="region"
-      aria-label="おっとりサボロー チャット"
+      aria-label={t("chat.paneAria")}
       className="card-brutal flex flex-col h-full overflow-hidden"
     >
       {/* タイトル */}
@@ -42,14 +44,14 @@ export function ChatPane({
         style={{ borderBottom: "3px solid #2B1E16" }}
       >
         <h2 className="font-bold text-saboru-ink" style={{ fontSize: 13 }}>
-          おっとりサボロー
+          {t("chat.title")}
         </h2>
       </header>
 
       {/* メッセージエリア */}
       <div
         role="log"
-        aria-label="チャットメッセージ"
+        aria-label={t("chat.logAria")}
         aria-live="polite"
         className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2"
         style={{ background: "#FFFAF5" }}
@@ -59,7 +61,7 @@ export function ChatPane({
             className="text-center text-saboru-ink-muted py-8"
             style={{ fontSize: 12 }}
           >
-            サボロー判定を開始します...
+            {t("chat.startMessage")}
           </p>
         )}
 
@@ -86,7 +88,7 @@ export function ChatPane({
       <FreeTextInput
         onSend={onFreeText}
         disabled={isStreaming}
-        placeholder="サボろうについて質問..."
+        placeholder={t("chat.messagePlaceholder")}
       />
     </div>
   );

@@ -4,6 +4,7 @@
  */
 import { Send } from "lucide-react";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface FreeTextInputProps {
   onSend: (text: string) => void;
@@ -14,10 +15,12 @@ interface FreeTextInputProps {
 export function FreeTextInput({
   onSend,
   disabled = false,
-  placeholder = "サボろうについて質問...",
+  placeholder,
 }: FreeTextInputProps) {
+  const { t } = useTranslation();
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const resolvedPlaceholder = placeholder ?? t("chat.messagePlaceholder");
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -44,7 +47,7 @@ export function FreeTextInput({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         disabled={disabled}
         rows={1}
         className="input-brutal resize-none flex-1"
@@ -53,13 +56,13 @@ export function FreeTextInput({
           maxHeight: 112,
           fontSize: 12,
         }}
-        aria-label="サボローへのメッセージ"
+        aria-label={t("chat.toSaborou")}
       />
       <button
         type="button"
         onClick={handleSend}
         disabled={disabled || !text.trim()}
-        aria-label="送信"
+        aria-label={t("chat.send")}
         className="flex items-center justify-center disabled:opacity-50"
         style={{
           background: "#F97316",
