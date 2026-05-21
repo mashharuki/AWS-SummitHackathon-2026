@@ -1,3 +1,12 @@
+# SABOROU Frontend
+
+## PWA
+
+- This app now uses `vite-plugin-pwa`.
+- Production build generates `manifest.webmanifest` and `sw.js`.
+- Service Worker is registered from `src/main.tsx` via `virtual:pwa-register`.
+- CloudFront deployment keeps `/sw.js` and `/manifest.webmanifest` uncached for fast update reflection.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

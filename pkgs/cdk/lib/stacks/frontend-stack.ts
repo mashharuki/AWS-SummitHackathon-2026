@@ -77,6 +77,24 @@ export class SaborouFrontendStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
           compress: false,
         },
+        // PWA 更新を確実にするため Service Worker 本体はキャッシュ無効化
+        "/sw.js": {
+          origin: s3Origin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          compress: false,
+        },
+        // マニフェスト差し替えを即時反映
+        "/manifest.webmanifest": {
+          origin: s3Origin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          compress: false,
+        },
       },
     });
 
