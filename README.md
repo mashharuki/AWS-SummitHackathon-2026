@@ -328,7 +328,7 @@ graph TD
 - チャットUI: Vercel AI SDK / useChat フック（サボローチャット ストリーミング表示）
 - AI: Amazon Bedrock（Claude Sonnet）, Bedrock AgentCore
 - データ: DynamoDB（On-Demand）
-- 認証: Amazon Cognito（Google OAuth）
+- 認証: Amazon Cognito（Google OAuth）— PKCE (Proof Key for Code Exchange) 対応済み、CSRF対策に HMAC-SHA256 署名付き OAuth state を使用
 - シークレット管理: AWS Secrets Manager
 - インフラ: AWS CDK v2（TypeScript）
 - リージョン: ap-northeast-1（東京）
@@ -382,6 +382,22 @@ MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新�
 	pnpm run biome:format
 	```
 
+- Sharedコンポーネントのビルド
+
+	> これを先に実行しないとフロントやバックエンドでビルドエラーになります。
+
+	```bash
+	pnpm shared run build
+	```
+
+### AI Agent
+
+- ビルド
+
+	```bash
+	pnpm agent run build
+	```
+
 ### CDK
 
 - ビルド
@@ -399,37 +415,60 @@ MVP後は、Slack / Gmail / Notion / Calendar 連携、リアルタイム更新�
 - flociのDockerコンテナ起動
 
 	```bash
+	pnpm cdk run floci:start
+	```
 
+	起動後に以下のコンテナが立ち上がっていればOK!
+	
+	```bash
+	CONTAINER ID   IMAGE                COMMAND                  CREATED          STATUS                    PORTS                    NAMES
+	ef3a29634d68   floci/floci:latest   "/usr/local/bin/dock…"   16 seconds ago   Up 16 seconds (healthy)   0.0.0.0:4566->4566/tcp   cdk-floci-1
 	```
 
 - flociのDockerコンテナ停止
 
 	```bash
-
+	docker compose down
 	```
 
 - flociへのCDKスタックデプロイ
 
-	```bash
+	初回の場合は最初に `bootstrap`しておく必要あり。スクリプトは `AWS_S3_USE_PATH_STYLE=1` を自動設定するため、path-style S3 URL を使用する floci と CDK v2 の互換性問題を解消している。
 
+	```bash
+	pnpm cdk run floci:bootstrap
+	```
+
+	```bash
+	# 1. フロントエンドビルド（先に実行）
+	pnpm frontend run build   
+	# 2. バックエンドビルド（先に実行）
+  pnpm backend run build    
+	pnpm cdk run floci:deploy
 	```
 
 - flociからのリソースをアンデプロイ
 
 	```bash
-
+	pnpm cdk run floci:destroy
 	```
 
 - AWSへデプロイ
 
+	> 事前にAWSへのログインが必要
+
 	```bash
-	pnpm cdk run deploy
+	# 1. フロントエンドビルド（先に実行）
+	pnpm frontend run build   
+	# 2. バックエンドビルド（先に実行）
+  pnpm backend run build    
+	pnpm cdk run deploy --require-approval never --all
 	```
 
 - AWSからリソースをアンデプロイ
 
 	```bash
-	pnpm cdk run destroy
+	pnpm cdk run destroy --all --force
 	```
 
 ### バックエンド

@@ -82,7 +82,38 @@ aws cloudformation describe-stacks --stack-name CDKToolkit --region ap-northeast
 本番 AWS にデプロイする前に、Floci を使ってローカルでスタックを検証する。
 詳細は `aidlc-docs/inception/application-design/cdk-local-development.md` を参照。
 
-### 4.1 Floci 起動
+### 4.0 推奨手順（floci スクリプト経由・最も簡単）
+
+`pkgs/cdk/scripts/` に環境変数設定済みのラッパースクリプトが用意されている。
+
+```bash
+# 1. floci コンテナ起動
+pnpm --filter cdk floci:start
+
+# 2. 初回のみ CDK bootstrap
+pnpm --filter cdk floci:bootstrap
+
+# 3. 全スタックをローカルにデプロイ
+pnpm --filter cdk floci:deploy
+
+# 4. 動作確認後にクリーンアップ
+pnpm --filter cdk floci:destroy     # CDK スタック削除 + Secret 強制削除
+pnpm --filter cdk floci:stop        # コンテナ停止
+```
+
+### 4.0.1 既知の floci 制限事項
+
+floci は完全な AWS エミュレータではないため、以下の制限がある。
+**いずれも実 AWS にデプロイすると正常動作**する。
+
+| 制限 | 影響 | 対処 |
+|------|------|------|
+| ECR 未サポート | `cdk bootstrap` で `ContainerAssetsRepository` が `CREATE_FAILED` | CDK が許容して bootstrap 完了扱い。Lambda は zip パッケージなので動作には影響なし |
+| EventBridge の競合 | 同一テンプレ内の EventBus → Rule 依存解決で `EventBus not found` が出る場合あり | スタック自体は CREATE_COMPLETE。実 AWS では正常 |
+| Secrets Manager の RETAIN | `cdk destroy` 後も Secret が残り、次回 deploy で「既に存在」エラー | `floci:destroy` スクリプトが自動で `force-delete-without-recovery` する |
+| Cognito の SES | 検証メール送信は floci では到達しない | ユーザー作成のみ確認可能、認証フロー完全検証は実 AWS で実施 |
+
+### 4.1 Floci 起動（手動）
 
 ```bash
 # プロジェクトルートで実行
@@ -155,26 +186,26 @@ pnpm exec cdk diff ApiStack
 
 依存関係を考慮した順序で個別デプロイする場合は以下の順序を守ること。
 
+> **スタック ID について**: スタック ID は `{スタック名}-{environment}` 形式（例: `SaborouData-dev`）。
+> `--all` で CDK が依存関係を自動解決するため、通常は一括デプロイを推奨。
+
 ```bash
 cd pkgs/cdk
 
-# ステップ 1: CognitoStack（他スタックが参照するユーザープール）
-pnpm exec cdk deploy CognitoStack
+# ステップ 1: DataStack（DynamoDB テーブル・他スタックが参照）
+pnpm exec cdk deploy SaborouData-dev
 
-# ステップ 2: DataStack（DynamoDB テーブル）
-pnpm exec cdk deploy DataStack
+# ステップ 2: FrontendStack（CloudFront ドメインを Cognito callbackUrls に渡すため先に作成）
+pnpm exec cdk deploy SaborouFrontend-dev
 
-# ステップ 3: ApiStack（API Gateway + Hono Lambda）
-# DataStack の Output を参照するため DataStack 完了後に実施
-pnpm exec cdk deploy ApiStack
+# ステップ 3: CognitoStack（CloudFront ドメインを受け取り User Pool を作成）
+pnpm exec cdk deploy SaborouCognito-dev
 
-# ステップ 4: AgentStack + WebhookStack（並列デプロイ可）
-# ApiStack の Output を参照するため ApiStack 完了後に実施
-pnpm exec cdk deploy AgentStack WebhookStack
+# ステップ 4: ApiStack（Cognito + DataStack の Output を参照）
+pnpm exec cdk deploy SaborouApi-dev
 
-# ステップ 5: FrontendStack（S3 + CloudFront）
-# すべてのバックエンドスタック完了後に実施
-pnpm exec cdk deploy FrontendStack
+# ステップ 5: AgentStack + WebhookStack（並列デプロイ可）
+pnpm exec cdk deploy SaborouAgent-dev SaborouWebhook-dev
 ```
 
 ---

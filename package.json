@@ -7,6 +7,8 @@
     "biome:format": "npx biome format --write .",
     "biome:format:check": "npx biome format .",
     "biome:check": "npx biome check --write .",
+    "shared": "pnpm --filter @saboru/shared",
+    "agent": "pnpm --filter @saboru/agent",
     "cdk": "pnpm --filter cdk",
     "frontend": "pnpm --filter frontend",
     "backend": "pnpm --filter backend"

@@ -1,0 +1,9 @@
+# Local AWS emulator for development
+# https://github.com/hectorvent/floci
+services:
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+    environment:
+      FLOCI_BASE_URL: http://localhost:4566

@@ -1,111 +1,252 @@
+@import "tailwindcss";
+
+/**
+ * SABOROU デザイントークン v2.0
+ * U-06-ui-redesign Phase 1: ネオブルータリズム × 3D ヒーロー併用
+ *
+ * 参照: aidlc-docs/construction/U-06-ui-redesign/functional-design/design-tokens.md
+ * 共通設計図: character-design-sheet.md
+ * 共存ルール: 2d-3d-coexistence-rules.md
+ */
+@theme {
+  /* ---------- Brand カラー ---------- */
+  --color-saboru-orange: #f97316;
+  --color-saboru-orange-dark: #ea580c;
+  --color-saboru-orange-light: #fed7aa;
+
+  --color-saboru-cream: #fffaf5;
+  --color-saboru-paper: #ffffff;
+
+  --color-saboru-ink: #1f2937;
+  --color-saboru-ink-soft: #6b7280;
+  --color-saboru-ink-muted: #9ca3af;
+
+  --color-saboru-line: #f3f4f6;
+  --color-saboru-line-soft: #fafaf9;
+
+  /** ネオブルータリズム枠線色（憲法1: 全コンポーネント共通） */
+  --color-saboru-heavy: #2b1e16;
+
+  /* ---------- Verdict カラー ---------- */
+  /* 配色は character-design-sheet.md カラーチャートと完全一致 */
+  --color-verdict-can: #10b981;
+  --color-verdict-can-bg: #ecfdf5;
+  --color-verdict-borderline: #f59e0b;
+  --color-verdict-borderline-bg: #fffbeb;
+  --color-verdict-must: #ef4444;
+  --color-verdict-must-bg: #fef2f2;
+
+  /* ---------- 外部サービスカラー ---------- */
+  --color-slack: #4a154b;
+  --color-gmail: #ea4335;
+  --color-gcal: #1a73e8;
+  --color-gdrive: #34a853;
+
+  /* ---------- フォント ---------- */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "Nunito", "Noto Sans JP", "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", system-ui, sans-serif;
+
+  /* ---------- 角丸 ---------- */
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+
+  /* ---------- ハードシャドウ（ネオブルータリズム核心） ---------- */
+  --shadow-hard-sm: 0 4px 0 #2b1e16;
+  --shadow-hard-md: 0 5px 0 #2b1e16;
+  --shadow-hard-lg: 0 6px 0 #2b1e16, 0 14px 28px rgba(43, 30, 22, 0.13);
+  --shadow-hard-orange: 0 4px 0 #ea580c;
+
+  /* ---------- アニメーション ---------- */
+  --animate-saboru-bob: saboruBob 4s ease-in-out infinite;
+  --animate-saboru-zzz: saboruZzz 2.5s infinite;
+  --animate-saboru-lightning: saboruLightning 1.5s infinite;
+  --animate-fade-slide: fadeSlide 0.3s ease;
+}
+
+/* ---------- Keyframes（character-design-sheet.md 4 章準拠） ---------- */
+@keyframes saboruBob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(2deg);
+  }
+}
+
+@keyframes saboruZzz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(8px, -16px) scale(1);
+  }
+}
+
+@keyframes saboruLightning {
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+  }
+  92%,
+  96% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes fadeSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- グローバル基本設定 ---------- */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow: rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px
-    -2px;
-
-  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px / 145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  color: var(--color-saboru-ink);
+  background-color: var(--color-saboru-cream);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow: rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px
-      -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-saboru-cream);
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+#root {
+  min-height: 100vh;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+/* スクロールバー */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-saboru-line);
+  border-radius: 2px;
+}
+
+/* prefers-reduced-motion 対応 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+/* ---------- @utility（Tailwind v4 のカスタムユーティリティ） ---------- */
+
+/** ネオブルータリズム カード */
+@utility card-brutal {
+  background: var(--color-saboru-paper);
+  border: 3px solid var(--color-saboru-heavy);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-hard-md);
+}
+
+/** ネオブルータリズム カード（大型） */
+@utility card-brutal-lg {
+  background: var(--color-saboru-paper);
+  border: 3px solid var(--color-saboru-heavy);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-hard-lg);
+}
+
+/** プライマリボタン */
+@utility btn-brutal-primary {
+  background: var(--color-saboru-orange);
+  border: 3px solid var(--color-saboru-heavy);
+  border-radius: 9999px;
+  box-shadow: var(--shadow-hard-sm);
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 800;
+  padding: 0.75rem 1.25rem;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  cursor: pointer;
+}
+@utility btn-brutal-primary {
+  &:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 }
-p {
-  margin: 0;
+
+/** セカンダリボタン */
+@utility btn-brutal-secondary {
+  background: var(--color-saboru-paper);
+  border: 3px solid var(--color-saboru-heavy);
+  border-radius: 9999px;
+  box-shadow: var(--shadow-hard-sm);
+  color: var(--color-saboru-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  padding: 0.5rem 1rem;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  cursor: pointer;
+}
+@utility btn-brutal-secondary {
+  &:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/** 入力フィールド */
+@utility input-brutal {
+  background: var(--color-saboru-cream);
+  border: 1px solid var(--color-saboru-line);
+  border-radius: 12px;
+  color: var(--color-saboru-ink);
+  padding: 0.5rem 0.875rem;
+  transition: border-color 0.15s ease;
+}
+@utility input-brutal {
+  &:focus {
+    outline: none;
+    border-color: var(--color-saboru-orange);
+  }
+  &::placeholder {
+    color: var(--color-saboru-ink-muted);
+  }
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/** 3Dコンテナ（憲法4: 3Dの外枠はHTML側） */
+@utility brutal-3d-container {
+  background: var(--color-saboru-cream);
+  border: 3px solid var(--color-saboru-heavy);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-hard-lg);
+  overflow: hidden;
 }
