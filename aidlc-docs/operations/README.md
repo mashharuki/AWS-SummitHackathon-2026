@@ -24,6 +24,7 @@
 | フロントエンド操作ガイド | [frontend-operations.md](./frontend-operations.md) | React + Vite のローカル開発・ビルド・S3 + CloudFront デプロイ手順 |
 | API 動作検証ガイド | [api-verification-guide.md](./api-verification-guide.md) | Swagger UI を使った全エンドポイントの動作確認手順・エラー確認チェックリスト |
 | Slack App 設定ガイド | [slack-app-setup.md](./slack-app-setup.md) | Slack App 作成・OAuth スコープ・Secrets Manager登録・Request URL登録・E2E検証手順 |
+| ログ取得・監視コマンド集 | [log-monitoring.md](./log-monitoring.md) | 全Lambda CloudWatch Logs tail/filter・Insights クエリ・DLQ確認・デモ当日監視コマンド一式 |
 
 ---
 
