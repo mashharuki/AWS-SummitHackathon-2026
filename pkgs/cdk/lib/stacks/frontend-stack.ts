@@ -77,6 +77,24 @@ export class SaborouFrontendStack extends cdk.Stack {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
           compress: false,
         },
+        // PWA 更新を確実にするため Service Worker 本体はキャッシュ無効化
+        "/sw.js": {
+          origin: s3Origin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          compress: false,
+        },
+        // マニフェスト差し替えを即時反映
+        "/manifest.webmanifest": {
+          origin: s3Origin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          compress: false,
+        },
       },
     });
 
@@ -84,9 +102,7 @@ export class SaborouFrontendStack extends cdk.Stack {
     // env-config.json は ConfigDeployStack が別途デプロイするため除外する
     new s3deploy.BucketDeployment(this, "DeployFrontendAssets", {
       sources: [
-        s3deploy.Source.asset(
-          path.join(__dirname, "../../../frontend/dist"),
-        ),
+        s3deploy.Source.asset(path.join(__dirname, "../../../frontend/dist")),
       ],
       destinationBucket: bucket,
       distribution,

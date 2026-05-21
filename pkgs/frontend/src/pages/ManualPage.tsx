@@ -8,8 +8,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { MANUAL_PROGRESS, MANUAL_TRAITS } from "@/lib/staticContent";
+import { useTranslation } from "react-i18next";
 
 export function ManualPage() {
+  const { i18n } = useTranslation();
+  const locale = i18n.language.startsWith("ja") ? "ja" : "en";
+  const isJa = locale === "ja";
   const percent = Math.round(
     (MANUAL_PROGRESS.collected / MANUAL_PROGRESS.total) * 100,
   );
@@ -18,8 +22,12 @@ export function ManualPage() {
     <AppShell>
       <div className="flex flex-col h-full">
         <PageHeader
-          title="あなたの取扱説明書"
-          subtitle={`本音データから生成 · ${MANUAL_PROGRESS.collected}件のサンプル`}
+          title={isJa ? "あなたの取扱説明書" : "Your Personal Manual"}
+          subtitle={
+            isJa
+              ? `本音データから生成 · ${MANUAL_PROGRESS.collected}件のサンプル`
+              : `Generated from honne data · ${MANUAL_PROGRESS.collected} samples`
+          }
         />
 
         <div className="flex-1 overflow-y-auto px-4 pb-24 pt-3 flex flex-col gap-3">
@@ -50,9 +58,19 @@ export function ManualPage() {
                   lineHeight: 1.5,
                 }}
               >
-                本音を蓄積するほど、あなただけの
-                <br />
-                「サボり方の癖」がわかる
+                {isJa ? (
+                  <>
+                    本音を蓄積するほど、あなただけの
+                    <br />
+                    「サボり方の癖」がわかる
+                  </>
+                ) : (
+                  <>
+                    The more honest data you collect,
+                    <br />
+                    the better we understand your personal slack patterns
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -64,7 +82,7 @@ export function ManualPage() {
                 className="text-saboru-ink-soft font-semibold"
                 style={{ fontSize: 11 }}
               >
-                取扱説明書の完成度
+                {isJa ? "取扱説明書の完成度" : "Manual completion"}
               </span>
               <span
                 className="font-extrabold"
@@ -90,13 +108,16 @@ export function ManualPage() {
               />
             </div>
             <p className="text-saboru-ink-muted mt-2" style={{ fontSize: 10 }}>
-              あと {MANUAL_PROGRESS.total - MANUAL_PROGRESS.collected}{" "}
-              件の本音データで、外部 AI に渡せる完全版が完成します
+              {isJa
+                ? `あと ${MANUAL_PROGRESS.total - MANUAL_PROGRESS.collected} 件の本音データで、外部 AI に渡せる完全版が完成します`
+                : `${MANUAL_PROGRESS.total - MANUAL_PROGRESS.collected} more samples to complete the full manual for external AI`}
             </p>
           </div>
 
           {/* 傾向リスト */}
-          <SectionLabel>発見されたあなたの傾向</SectionLabel>
+          <SectionLabel>
+            {isJa ? "発見されたあなたの傾向" : "Detected tendencies"}
+          </SectionLabel>
           <div className="flex flex-col gap-2">
             {MANUAL_TRAITS.map((t, i) => (
               <div
@@ -109,7 +130,7 @@ export function ManualPage() {
                     className="font-bold text-saboru-ink flex-1"
                     style={{ fontSize: 13, lineHeight: 1.3 }}
                   >
-                    {t.title}
+                    {t.title[locale]}
                   </p>
                   <span
                     className="font-bold flex-shrink-0"
@@ -128,7 +149,7 @@ export function ManualPage() {
                   className="text-saboru-ink-soft mt-1.5"
                   style={{ fontSize: 11, lineHeight: 1.5 }}
                 >
-                  {t.body}
+                  {t.body[locale]}
                 </p>
               </div>
             ))}
@@ -159,9 +180,9 @@ export function ManualPage() {
                 lineHeight: 1.5,
               }}
             >
-              ChatGPT / Claude / Notion AI と MCP
-              連携。あなたの「サボり癖」を他の AI
-              にも共有して、より自然なタスク管理を。
+              {isJa
+                ? "ChatGPT / Claude / Notion AI と MCP 連携。あなたの「サボり癖」を他の AI にも共有して、より自然なタスク管理を。"
+                : "MCP integration with ChatGPT / Claude / Notion AI. Share your slack patterns with external AIs for more natural task management."}
             </p>
           </div>
         </div>

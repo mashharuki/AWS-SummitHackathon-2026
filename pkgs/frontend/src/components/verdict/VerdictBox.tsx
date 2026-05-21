@@ -4,6 +4,7 @@ import { VERDICT_META } from "@/lib/verdictMeta";
  * U-06-ui-redesign Phase 5 改修版（ネオブルータリズム）
  */
 import type { Verdict } from "@saboru/shared";
+import { useTranslation } from "react-i18next";
 
 interface VerdictBoxProps {
   verdict: Verdict;
@@ -17,12 +18,19 @@ export function VerdictBox({
   summaryText,
   evaluatedAt,
 }: VerdictBoxProps) {
+  const { t } = useTranslation();
   const meta = VERDICT_META[verdict];
+  const verdictLabel =
+    verdict === "can_saboru"
+      ? t("verdict.canSaboru")
+      : verdict === "borderline"
+        ? t("verdict.borderline")
+        : t("verdict.mustDo");
 
   return (
     <div
       role="region"
-      aria-label={`サボロー判定: ${meta.label}`}
+      aria-label={`Saborou verdict: ${verdictLabel}`}
       className="card-brutal p-3.5"
     >
       <div className="flex items-center gap-2 mb-2">
@@ -39,7 +47,7 @@ export function VerdictBox({
           }}
         >
           <span aria-hidden="true">{meta.emoji}</span>
-          {meta.label}
+          {verdictLabel}
         </span>
       </div>
 
@@ -55,7 +63,7 @@ export function VerdictBox({
             borderTop: "1px solid #F3F4F6",
           }}
         >
-          <span>🤖 Claude Sonnet + Tool Use</span>
+          <span>{t("verdict.aiSource")}</span>
           <span>{evaluatedAt}</span>
         </p>
       )}

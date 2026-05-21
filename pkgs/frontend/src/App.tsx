@@ -6,6 +6,7 @@ import { ToastProvider } from "@/providers/ToastProvider";
  * NFR-DESIGN-6: ページを遅延ロード（コード分割）
  */
 import { Suspense, lazy } from "react";
+import { useTranslation } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 // ページの遅延ロード（コード分割）
@@ -38,11 +39,13 @@ const RoadmapPage = lazy(() =>
 
 /** ページロード中のスピナー */
 function PageLoader() {
+  const { t } = useTranslation();
+
   return (
     <div
       className="min-h-screen bg-saboru-cream flex items-center justify-center"
       role="status"
-      aria-label="ページを読み込み中"
+      aria-label={t("app.pageLoading")}
     >
       <div className="w-8 h-8 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin" />
     </div>

@@ -266,7 +266,9 @@ describe("GET /auth/slack/callback — success path (new secret)", () => {
     const resourceExistsError = Object.assign(new Error("already exists"), {
       name: "ResourceExistsException",
     });
-    mockSend.mockRejectedValueOnce(resourceExistsError).mockResolvedValueOnce({});
+    mockSend
+      .mockRejectedValueOnce(resourceExistsError)
+      .mockResolvedValueOnce({});
     const saveForUser = vi.fn().mockResolvedValue({});
     const app = await buildTestApp({ saveForUser });
 

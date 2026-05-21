@@ -6,6 +6,7 @@ import { X } from "lucide-react";
  * タスク手動追加モーダル
  */
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface TaskAddModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface TaskAddModalProps {
 }
 
 export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
   const [description, setDescription] = useState("");
@@ -83,13 +85,13 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-[#E5E7EB]">
           <h2 id="add-task-title" className="font-semibold text-[#1A1A1A]">
-            タスクを追加
+            {t("tasks.addTaskTitle")}
           </h2>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            aria-label="閉じる"
+            aria-label={t("common.close")}
             className="h-8 w-8"
           >
             <X size={16} />
@@ -103,13 +105,13 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
               htmlFor="new-title"
               className="text-xs font-medium text-[#6B7280] mb-1 block"
             >
-              タスク名 <span aria-hidden="true">*</span>
+              {t("taskForm.taskName")} <span aria-hidden="true">*</span>
             </label>
             <Input
               id="new-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="例: クライアント向けレポート作成"
+              placeholder={t("taskForm.taskNamePlaceholder")}
               required
               maxLength={200}
               autoFocus
@@ -121,7 +123,7 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
               htmlFor="new-deadline"
               className="text-xs font-medium text-[#6B7280] mb-1 block"
             >
-              期限
+              {t("taskForm.deadline")}
             </label>
             <Input
               id="new-deadline"
@@ -136,13 +138,13 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
               htmlFor="new-description"
               className="text-xs font-medium text-[#6B7280] mb-1 block"
             >
-              内容・メモ
+              {t("taskForm.description")}
             </label>
             <Textarea
               id="new-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="タスクの詳細（任意）"
+              placeholder={t("taskForm.descriptionPlaceholder")}
               rows={3}
               maxLength={1000}
             />
@@ -150,14 +152,14 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
 
           <div className="flex gap-2 justify-end pt-1">
             <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              キャンセル
+              {t("common.cancel")}
             </Button>
             <Button
               type="submit"
               size="sm"
               disabled={isAdding || !title.trim()}
             >
-              {isAdding ? "追加中..." : "追加する"}
+              {isAdding ? t("taskForm.adding") : t("taskForm.add")}
             </Button>
           </div>
         </form>

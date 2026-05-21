@@ -122,7 +122,9 @@ describe("GET /auth/slack/callback error cases", () => {
       }),
     ).toString("base64url");
 
-    const res = await app.request(`/auth/slack/callback?code=abc&state=${state}`);
+    const res = await app.request(
+      `/auth/slack/callback?code=abc&state=${state}`,
+    );
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.code).toBe("INVALID_STATE");

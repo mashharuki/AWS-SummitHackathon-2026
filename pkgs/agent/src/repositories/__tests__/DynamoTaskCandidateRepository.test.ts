@@ -87,8 +87,9 @@ describe("DynamoTaskCandidateRepository", () => {
       vi.clearAllMocks();
 
       const { DynamoDBClient } = await import("@aws-sdk/client-dynamodb");
-      const repo = new (await import("../DynamoTaskCandidateRepository.js"))
-        .DynamoTaskCandidateRepository();
+      const repo = new (
+        await import("../DynamoTaskCandidateRepository.js")
+      ).DynamoTaskCandidateRepository();
       mockSend.mockResolvedValueOnce({ Items: [] });
 
       await repo.findAllByUserId(userId);

@@ -10,6 +10,7 @@ import { useConnections } from "@/hooks/useConnections";
  * 共有 HTML SettingsScreen 準拠（ネオブルータリズム）
  */
 import { ChevronRight, LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 const FUTURE_SERVICES = [
@@ -22,6 +23,7 @@ const FUTURE_SERVICES = [
 ] as const;
 
 export function SettingsPage() {
+  const { i18n, t } = useTranslation();
   const { user, signOut } = useAuth();
   const { connections, disconnect, isLoading } = useConnections();
 
@@ -30,7 +32,7 @@ export function SettingsPage() {
   return (
     <AppShell>
       <div className="flex flex-col h-full">
-        <PageHeader title="設定" />
+        <PageHeader title={t("settings.title")} />
 
         <div className="flex-1 overflow-y-auto px-4 pb-24 pt-3 flex flex-col gap-3">
           {/* プロフィール */}
@@ -57,7 +59,7 @@ export function SettingsPage() {
           {/* サービス連携 */}
           <section aria-labelledby="connections-heading">
             <SectionLabel>
-              <span id="connections-heading">サービス連携</span>
+              <span id="connections-heading">{t("settings.connections")}</span>
             </SectionLabel>
             <div className="card-brutal overflow-hidden">
               {/* Slack */}
@@ -83,14 +85,14 @@ export function SettingsPage() {
                     className="text-saboru-ink-muted mt-0.5"
                     style={{ fontSize: 10 }}
                   >
-                    タスクを自動検出
+                    {t("settings.slackDescription")}
                   </p>
                 </div>
                 {isLoading ? (
                   <div
                     className="w-4 h-4 border border-saboru-line border-t-transparent rounded-full animate-spin"
                     role="status"
-                    aria-label="確認中"
+                    aria-label={t("settings.checking")}
                   />
                 ) : slackConnection?.status === "connected" ? (
                   <div className="flex items-center gap-2">
@@ -104,16 +106,16 @@ export function SettingsPage() {
                         borderRadius: 4,
                       }}
                     >
-                      連携済
+                      {t("settings.connected")}
                     </span>
                     <button
                       type="button"
                       onClick={() => void disconnect("slack")}
-                      aria-label="Slack 連携を解除"
+                      aria-label={t("settings.disconnect")}
                       className="text-red-500 hover:bg-red-50 px-2 py-1 rounded"
                       style={{ fontSize: 11, fontWeight: 600 }}
                     >
-                      解除
+                      {t("settings.disconnect")}
                     </button>
                   </div>
                 ) : (
@@ -127,7 +129,7 @@ export function SettingsPage() {
                       borderRadius: 4,
                     }}
                   >
-                    未連携
+                    {t("settings.disconnected")}
                   </span>
                 )}
               </div>
@@ -171,21 +173,40 @@ export function SettingsPage() {
                     className="text-saboru-ink-muted"
                     style={{ fontSize: 10 }}
                   >
-                    近日公開
+                    {t("settings.comingSoon")}
                   </span>
                 </div>
               ))}
             </div>
           </section>
 
+          <section aria-labelledby="language-heading">
+            <SectionLabel>
+              <span id="language-heading">{t("common.language")}</span>
+            </SectionLabel>
+            <div className="card-brutal p-3.5">
+              <select
+                className="input-brutal w-full"
+                aria-label={t("common.language")}
+                value={i18n.language.startsWith("ja") ? "ja" : "en"}
+                onChange={(e) => {
+                  void i18n.changeLanguage(e.target.value);
+                }}
+              >
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </section>
+
           {/* AI ペルソナ */}
           <section aria-labelledby="persona-heading">
             <SectionLabel>
-              <span id="persona-heading">AI ペルソナ</span>
+              <span id="persona-heading">{t("settings.persona")}</span>
             </SectionLabel>
             <Link
               to="/settings/persona"
-              aria-label="ペルソナ設定へ"
+              aria-label={t("settings.persona")}
               className="card-brutal flex items-center gap-3 p-3.5"
               style={{ textDecoration: "none" }}
             >
@@ -199,13 +220,13 @@ export function SettingsPage() {
                   className="text-saboru-ink font-bold"
                   style={{ fontSize: 13 }}
                 >
-                  おっとりサボロー
+                  {t("settings.personaCurrent")}
                 </p>
                 <p
                   className="text-saboru-ink-muted mt-0.5"
                   style={{ fontSize: 10 }}
                 >
-                  やさしくサボりを支援するキャラ · 全4種
+                  {t("settings.personaDescription")}
                 </p>
               </div>
               <ChevronRight
@@ -219,11 +240,11 @@ export function SettingsPage() {
           {/* プロダクト */}
           <section aria-labelledby="product-heading">
             <SectionLabel>
-              <span id="product-heading">プロダクト</span>
+              <span id="product-heading">{t("settings.product")}</span>
             </SectionLabel>
             <Link
               to="/roadmap"
-              aria-label="プロダクトロードマップへ"
+              aria-label={t("settings.roadmap")}
               className="card-brutal flex items-center gap-3 p-3.5"
               style={{ textDecoration: "none" }}
             >
@@ -242,13 +263,13 @@ export function SettingsPage() {
                   className="text-saboru-ink font-bold"
                   style={{ fontSize: 13 }}
                 >
-                  プロダクトロードマップ
+                  {t("settings.roadmap")}
                 </p>
                 <p
                   className="text-saboru-ink-muted mt-0.5"
                   style={{ fontSize: 10 }}
                 >
-                  v1.0 → v3.0 の将来ビジョン
+                  {t("settings.roadmapDescription")}
                 </p>
               </div>
               <ChevronRight
@@ -263,12 +284,12 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={() => void signOut()}
-            aria-label="ログアウト"
+            aria-label={t("settings.logout")}
             className="card-brutal w-full p-3 mt-2 flex items-center justify-center gap-2 text-saboru-ink-soft hover:text-red-500"
             style={{ fontSize: 13, fontWeight: 600 }}
           >
             <LogOut size={16} aria-hidden="true" />
-            ログアウト
+            {t("settings.logout")}
           </button>
         </div>
       </div>

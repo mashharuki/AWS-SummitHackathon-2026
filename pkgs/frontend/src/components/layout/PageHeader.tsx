@@ -6,6 +6,7 @@
  */
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface PageHeaderProps {
   title: string;
@@ -20,6 +21,8 @@ export function PageHeader({
   onBack,
   right,
 }: PageHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <header
       className="bg-saboru-paper flex items-center gap-2 px-4 pt-3.5 pb-3"
@@ -29,7 +32,7 @@ export function PageHeader({
         <button
           type="button"
           onClick={onBack}
-          aria-label="戻る"
+          aria-label={t("common.back")}
           className="text-saboru-ink-soft hover:text-saboru-ink p-1 -ml-1"
         >
           <ChevronLeft size={20} aria-hidden="true" />

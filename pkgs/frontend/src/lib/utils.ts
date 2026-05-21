@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import i18n from "@/i18n";
 
 /** Tailwind CSS クラス名マージ */
 export function cn(...inputs: ClassValue[]) {
@@ -43,17 +44,27 @@ export function toUserMessage(error: unknown): string {
       error.message.includes("401") ||
       error.message.includes("Unauthorized")
     ) {
-      return "セッションが切れました。再ログインしてください";
+      return i18n.language.startsWith("ja")
+        ? "セッションが切れました。再ログインしてください"
+        : "Session expired. Please sign in again.";
     }
     if (error.message.includes("404") || error.message.includes("Not Found")) {
-      return "データが見つかりませんでした";
+      return i18n.language.startsWith("ja")
+        ? "データが見つかりませんでした"
+        : "Data was not found.";
     }
     if (error.message.includes("5")) {
-      return "サーバーエラーが発生しました。再試行してください";
+      return i18n.language.startsWith("ja")
+        ? "サーバーエラーが発生しました。再試行してください"
+        : "Server error occurred. Please retry.";
     }
   }
   if (error instanceof TypeError) {
-    return "接続できませんでした。再試行してください";
+    return i18n.language.startsWith("ja")
+      ? "接続できませんでした。再試行してください"
+      : "Connection failed. Please retry.";
   }
-  return "予期しないエラーが発生しました";
+  return i18n.language.startsWith("ja")
+    ? "予期しないエラーが発生しました"
+    : "An unexpected error occurred.";
 }

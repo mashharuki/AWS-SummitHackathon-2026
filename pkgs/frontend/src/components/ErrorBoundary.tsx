@@ -1,5 +1,6 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
+import i18n from "@/i18n";
 
 interface Props {
   children: ReactNode;
@@ -35,13 +36,10 @@ export class ErrorBoundary extends Component<Props, State> {
             style={{ background: "#FFF7ED" }}
           >
             <p className="font-bold text-saboru-ink" style={{ fontSize: 16 }}>
-              予期しないエラーが発生しました
+              {i18n.t("app.errorUnexpected")}
             </p>
-            <p
-              className="text-saboru-ink-muted mt-2"
-              style={{ fontSize: 13 }}
-            >
-              ページを再読み込みしてください
+            <p className="text-saboru-ink-muted mt-2" style={{ fontSize: 13 }}>
+              {i18n.t("app.errorReload")}
             </p>
             <button
               type="button"
@@ -54,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 fontSize: 13,
               }}
             >
-              再読み込み
+              {i18n.t("app.reload")}
             </button>
           </div>
         </div>

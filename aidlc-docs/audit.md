@@ -2,6 +2,29 @@
 
 ---
 
+## OPERATIONS — フロントエンド i18n 多言語対応（日本語/英語）
+**Timestamp**: 2026-05-21T14:16:36Z
+**User Input**: "<current_datetime>2026-05-21T23:05:05.488+09:00</current_datetime>
+
+ありがとうございます！！ローカルではPWA化できることを確認しました！！
+
+続けて i18n を使って日本語と英語の多言語対応をお願いします！！！
+的確な実装計画を立てて実装・テストまで完遂させてください！！"
+**AI Response**: フロントエンドへ i18n 基盤を追加し、主要画面・主要コンポーネントを日本語/英語で切り替え可能に実装。`i18next` / `react-i18next` を導入し、`pkgs/frontend/src/i18n.ts` を新規作成。`main.tsx` と `test-setup.ts` で初期化。Settings 画面に言語セレクタを追加して `ja/en` を切替可能にし、ロケールを localStorage 永続化。Task 系・Chat 系・Verdict 系・Header/Nav・AuthCallback/ErrorBoundary/Toast などの文言を翻訳キー化。`staticContent.ts` をローカライズ対応型へ拡張し、Manual/Persona/Roadmap で言語別テキスト表示に対応。テストとビルドを実行し、frontend test 126/126 pass・frontend build 成功を確認。
+**Context**: OPERATIONS（既存機能拡張）/ i18n localization / 実装＋テスト完了
+
+---
+
+## OPERATIONS — フロントエンドPWA化（専用ブランチ）
+**Timestamp**: 2026-05-21T13:56:05Z
+**User Input**: "<current_datetime>2026-05-21T22:48:16.073+09:00</current_datetime>
+
+このプロジェクトのフロントエンドをPWA化させたいです！！専用のブランチをmainブランチから作成してそこでまずPWA化させる作業計画を立案し、PWA化させてください！！よろしうお願いします"
+**AI Response**: セッション名を PWA implementation に設定後、作業ブランチを `mashharuki/pwa-implementation` に変更。フロントエンドの PWA 化計画を実行し、`vite-plugin-pwa` 導入、`manifest.webmanifest`/`sw.js` 生成設定、`src/main.tsx` で Service Worker 自動登録、`index.html` への PWA メタタグ追加、CloudFront で `/sw.js` と `/manifest.webmanifest` を非キャッシュ配信に更新。`frontend` テストは 126/126 パス、PWA 生成を含む `frontend` ビルド成功、`cdk` は変更対象の `frontend-stack.test.ts` を実行して 5/5 パス。
+**Context**: OPERATIONS（既存プロジェクト拡張）/ フロントエンド PWA enablement / 専用ブランチで実施
+
+---
+
 ## U-06-ui-redesign — Functional Design 設計書作成
 **Timestamp**: 2026-05-20T00:00:00Z
 **User Input**: "SABOROUプロジェクトのフロントエンド UI を、チームメンバー共有の `~/Downloads/SABOROU Standalone (1).html` のデザインに寄せて改修するための**設計書**を作成してほしい。実装はせず、設計書のみ。\n\n## 背景と前提（既に調査済み）\n\n### チームメンバー共有HTMLの実態\n- 9.3MBのStandalone bundler形式HTML。実コードを展開済み（`/tmp/saborou_src/10_49e19093.js` = saborou-screens.jsx 974行 / `/tmp/saborou_src/08_16ee81b3.js` = saborou-extras.jsx 530行）\n- 画面: `LoginScreen` / `TaskListScreen` / `TaskDetailScreen` / `ManualScreen` / `SettingsScreen` / `PersonaScreen` / `RoadmapScreen` の7画面\n- データは全てハードコード。API連携・ルーティングなし。iPhoneデバイス枠内表示前提\n- デザイン言語: **ネオブルータリズム風**（太い黒枠 `3px solid #2B1E16` + ハードシャドウ `0 5px 0 #2B1E16` + 丸み大 `borderRadius: 18-22`）\n- カラー: `#F97316`オレンジ / クリーム `#FFFAF5` / ink `#1F2937`\n- フォント: Space Grotesk + Nunito + Noto Sans JP\n- 2D SVG の `SaborouCharacter`（verdict連動の表情変化）\n\n### 現状フロント\n- `pkgs/frontend/src/` 配下、React + Vite + Tailwind + Shadcn/ui\n- 既存ページ: LoginPage / AuthCallbackPage / TaskListPage / TaskDetailPage / SettingsPage\n- 既存コンポーネント: AppShell, TaskCard, TaskAddModal, ChatPane, VerdictBox, EvidenceList, SaborouCanvas (Three.js), SaborouCharacter (Three.js)\n- apiClient / useTasks / useProposalStream / Cognito認証 など配線は完成済み\n\n### API契約（OpenAPI: `pkgs/backend/openapi.yaml`、shared型）\n- **verdict 値**: `can_saboru` / `borderline` / `must_do`（共有HTMLの `caution`/`danger` ではない）\n- **QuickReply**: `truly_tired` / `actually_important` / `agree_with_ai` / `disagree_with_ai` の固定4値\n- **reasoning**: `string[]`（HTMLの `{text, theory, source}` 構造化はAPI未対応）\n- 取説・ペルソナ・ロードマップ用 API は **存在しない**（静的UIで対応）\n- 認証は Cognito Hosted UI（Google IdP は削除済み = メール/パスワードのみ）\n\n## ユーザー確定の方針\n\n1. **キャラ表現**: HTMLの 2D SVG（`SaborouCharacter`）に寄せる。Three.js 実装（SaborouCanvas / SaborouCharacter）は廃止\n2. **デバイスフレーム**: iPhone枠なし、レスポンシブ。`max-w-md` 程度でモバイル幅維持しつつデスクトップ対応\n3. **追加画面**: 取説（Manual）/ ペルソナ（Persona）/ ロードマップ（Roadmap）の3画面を新規追加\n4. **API契約はAPI側を正とする**: HTMLの `caution`/`danger` は `borderline`/`must_do` にマッピング\n5. **進め方**: 今回は**設計書のみ作成**。実装はユーザー承認後"

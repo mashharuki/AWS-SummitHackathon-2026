@@ -8,18 +8,20 @@ import type { DynamoTaskRepository } from "../../repositories/DynamoTaskReposito
 import type { AppEnv } from "../../types.js";
 
 vi.mock("hono/streaming", () => ({
-  streamSSE: vi.fn(async (c: { header: (name: string, value: string) => void }, fn) => {
-    c.header("content-type", "text/event-stream");
-    const stream = {
-      onAbort: (cb: () => void) => cb(),
-      writeSSE: vi.fn(async () => undefined),
-    };
-    await fn(stream);
-    return new Response("", {
-      status: 200,
-      headers: { "content-type": "text/event-stream" },
-    });
-  }),
+  streamSSE: vi.fn(
+    async (c: { header: (name: string, value: string) => void }, fn) => {
+      c.header("content-type", "text/event-stream");
+      const stream = {
+        onAbort: (cb: () => void) => cb(),
+        writeSSE: vi.fn(async () => undefined),
+      };
+      await fn(stream);
+      return new Response("", {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      });
+    },
+  ),
 }));
 
 const MOCK_USER_ID = "user-proposal-test";
@@ -38,18 +40,20 @@ function buildTestApp(
     };
     await next();
   });
-  return import("../../routes/proposals.js").then(({ createProposalsRoute }) => {
-    app.route(
-      "/tasks",
-      createProposalsRoute(
-        taskRepo as DynamoTaskRepository,
-        proposalRepo as DynamoProposalRepository,
-        agent as SaboriProposerAgent,
-      ),
-    );
-    app.onError(errorHandler);
-    return app;
-  });
+  return import("../../routes/proposals.js").then(
+    ({ createProposalsRoute }) => {
+      app.route(
+        "/tasks",
+        createProposalsRoute(
+          taskRepo as DynamoTaskRepository,
+          proposalRepo as DynamoProposalRepository,
+          agent as SaboriProposerAgent,
+        ),
+      );
+      app.onError(errorHandler);
+      return app;
+    },
+  );
 }
 
 const sampleTask: Task = {

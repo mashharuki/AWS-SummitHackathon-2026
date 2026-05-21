@@ -1,4 +1,3 @@
-import { QUICK_REPLY_LABELS } from "@/lib/verdictMeta";
 /**
  * QuickReplyButtons — クイックリプライ
  * U-06-ui-redesign Phase 5 改修版（ネオブルータリズム）
@@ -6,15 +5,14 @@ import { QUICK_REPLY_LABELS } from "@/lib/verdictMeta";
  * API 固定 4 値（QuickReplyType）を UI 表示文言にマッピング
  */
 import type { QuickReplyType } from "@saboru/shared";
+import { useTranslation } from "react-i18next";
 
-const QUICK_REPLIES: { type: QuickReplyType; label: string }[] = (
-  [
-    "truly_tired",
-    "actually_important",
-    "agree_with_ai",
-    "disagree_with_ai",
-  ] as const
-).map((t) => ({ type: t, label: QUICK_REPLY_LABELS[t] }));
+const QUICK_REPLIES: QuickReplyType[] = [
+  "truly_tired",
+  "actually_important",
+  "agree_with_ai",
+  "disagree_with_ai",
+];
 
 interface QuickReplyButtonsProps {
   onSelect: (type: QuickReplyType, label: string) => void;
@@ -25,17 +23,19 @@ export function QuickReplyButtons({
   onSelect,
   disabled = false,
 }: QuickReplyButtonsProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       role="group"
-      aria-label="クイックリプライ"
+      aria-label={t("chat.quickReplies")}
       className="flex flex-wrap gap-1.5 py-2"
     >
       {QUICK_REPLIES.map((reply) => (
         <button
-          key={reply.type}
+          key={reply}
           type="button"
-          onClick={() => onSelect(reply.type, reply.label)}
+          onClick={() => onSelect(reply, t(`quickReply.${reply}`))}
           disabled={disabled}
           className="hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed transition-transform"
           style={{
@@ -51,7 +51,7 @@ export function QuickReplyButtons({
             fontFamily: "Nunito, 'Noto Sans JP', system-ui, sans-serif",
           }}
         >
-          {reply.label}
+          {t(`quickReply.${reply}`)}
         </button>
       ))}
     </div>

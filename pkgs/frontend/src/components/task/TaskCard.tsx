@@ -9,6 +9,7 @@ import { VERDICT_META } from "@/lib/verdictMeta";
  */
 import type { Task, TaskCandidate, Verdict } from "@saboru/shared";
 import { Clock, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 /* ─── PendingCard（候補タスク）─────────────────────── */
@@ -23,6 +24,7 @@ export function CandidateCard({
   onApprove,
   onReject,
 }: CandidateCardProps) {
+  const { t } = useTranslation();
   const overdue = isOverdue(candidate.deadline);
 
   return (
@@ -46,10 +48,10 @@ export function CandidateCard({
             borderRadius: 4,
           }}
         >
-          AI抽出
+          {t("tasks.aiExtracted")}
         </span>
         <span className="text-saboru-ink-muted" style={{ fontSize: 10 }}>
-          {candidate.sourceType === "slack" ? "Slack" : "手動"}
+          {candidate.sourceType === "slack" ? "Slack" : t("tasks.manual")}
         </span>
         {overdue && (
           <span
@@ -66,7 +68,7 @@ export function CandidateCard({
             }}
           >
             <Clock size={9} aria-hidden="true" />
-            期限切れ
+            {t("tasks.overdue")}
           </span>
         )}
       </div>
@@ -78,7 +80,7 @@ export function CandidateCard({
       </p>
       <p className="text-saboru-ink-muted mt-0.5" style={{ fontSize: 10 }}>
         {candidate.requester && `${candidate.requester} · `}
-        期限 {formatDateJa(candidate.deadline)}
+        {t("tasks.candidateDuePrefix")} {formatDateJa(candidate.deadline)}
       </p>
       <div className="flex gap-1.5 mt-2.5">
         <button
@@ -86,14 +88,14 @@ export function CandidateCard({
           onClick={() => onApprove(candidate.candidateId)}
           className="btn-brutal-primary flex-1"
           style={{ fontSize: 12, padding: "9px 12px" }}
-          aria-label={`${candidate.title} を承認`}
+          aria-label={t("tasks.approve")}
         >
-          承認する
+          {t("tasks.approve")}
         </button>
         <button
           type="button"
           onClick={() => onReject(candidate.candidateId)}
-          aria-label={`${candidate.title} を却下`}
+          aria-label={t("tasks.reject")}
           className="text-saboru-ink-muted p-2.5 rounded-xl hover:bg-saboru-line transition-colors"
           style={{
             background: "#FFFFFF",
@@ -115,13 +117,14 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, verdict, summaryText }: TaskCardProps) {
+  const { t } = useTranslation();
   const overdue = isOverdue(task.deadline);
   const meta = verdict ? VERDICT_META[verdict] : null;
 
   return (
     <Link
       to={`/tasks/${task.taskId}`}
-      aria-label={`${task.title} の詳細を見る`}
+      aria-label={t("tasks.viewDetails", { title: task.title })}
       className="block card-brutal hover:translate-y-[-1px] hover:shadow-hard-lg transition-transform"
       style={{ padding: "12px 14px", textDecoration: "none" }}
     >
@@ -135,7 +138,7 @@ export function TaskCard({ task, verdict, summaryText }: TaskCardProps) {
           </p>
           <p className="text-saboru-ink-muted mt-1" style={{ fontSize: 10 }}>
             {task.requester && `${task.requester} · `}
-            締切 {formatDateJa(task.deadline)}
+            {t("tasks.duePrefix")} {formatDateJa(task.deadline)}
           </p>
         </div>
         {/* verdict 連動の 2D アバター（憲法2: 36px は 2D） */}
@@ -182,7 +185,7 @@ export function TaskCard({ task, verdict, summaryText }: TaskCardProps) {
           className="mt-1 flex items-center gap-1"
           style={{ fontSize: 10, color: "#EF4444" }}
         >
-          <Clock size={11} aria-hidden="true" /> 期限切れ
+          <Clock size={11} aria-hidden="true" /> {t("tasks.overdue")}
         </p>
       )}
     </Link>

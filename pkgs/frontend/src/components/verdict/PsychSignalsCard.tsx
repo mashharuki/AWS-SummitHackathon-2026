@@ -8,6 +8,7 @@ import { VERDICT_META } from "@/lib/verdictMeta";
  * ハッカソンの説得力を高める "見せ場" 要素。
  */
 import type { Verdict } from "@saboru/shared";
+import { useTranslation } from "react-i18next";
 
 interface PsychTheory {
   key: keyof typeof PSYCH_SIGNAL_PRESETS.can_saboru;
@@ -93,6 +94,7 @@ export interface PsychSignalsCardProps {
 }
 
 export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
+  const { t } = useTranslation();
   const signals = PSYCH_SIGNAL_PRESETS[verdict];
   const meta = VERDICT_META[verdict];
 
@@ -107,15 +109,15 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
       <div className="flex items-start justify-between mb-2.5">
         <div>
           <h3 className="text-saboru-ink font-bold" style={{ fontSize: 11 }}>
-            🧠 心理学的シグナル
+            {t("verdict.psychTitle")}
           </h3>
           <p className="text-saboru-ink-muted mt-0.5" style={{ fontSize: 9 }}>
-            4 理論からの判定スコア
+            {t("verdict.psychSubtitle")}
           </p>
         </div>
         <div className="text-right">
           <p className="text-saboru-ink-muted" style={{ fontSize: 9 }}>
-            サボリ妥当性
+            {t("verdict.validity")}
           </p>
           <p
             className="font-extrabold leading-none"

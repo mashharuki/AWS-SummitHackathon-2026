@@ -10,12 +10,16 @@ import { PERSONAS } from "@/lib/staticContent";
  * MVP では選択状態を localStorage に保存（API 未対応のため）
  */
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 const STORAGE_KEY = "saboru_persona_selected";
 const DEFAULT_PERSONA_ID = "saboru_ottori";
 
 export function PersonaPage() {
+  const { i18n } = useTranslation();
+  const locale = i18n.language.startsWith("ja") ? "ja" : "en";
+  const isJa = locale === "ja";
   const navigate = useNavigate();
   const [selected, setSelected] = useState<string>(DEFAULT_PERSONA_ID);
 
@@ -40,8 +44,12 @@ export function PersonaPage() {
     <AppShell>
       <div className="flex flex-col h-full">
         <PageHeader
-          title="AI ペルソナ"
-          subtitle="同じ判定を、違う口調で受け取る"
+          title={isJa ? "AI ペルソナ" : "AI Persona"}
+          subtitle={
+            isJa
+              ? "同じ判定を、違う口調で受け取る"
+              : "Same verdict, different tone"
+          }
           onBack={() => navigate("/settings")}
         />
 
@@ -58,9 +66,11 @@ export function PersonaPage() {
               <SaborouAvatar size={32} />
               <div>
                 <p className="font-extrabold" style={{ fontSize: 13 }}>
-                  {current.name}
+                  {current.name[locale]}
                 </p>
-                <p style={{ fontSize: 10, opacity: 0.7 }}>{current.tag}</p>
+                <p style={{ fontSize: 10, opacity: 0.7 }}>
+                  {current.tag[locale]}
+                </p>
               </div>
             </div>
             <div
@@ -80,18 +90,22 @@ export function PersonaPage() {
                     : "inherit",
               }}
             >
-              {current.sample}
+              {current.sample[locale]}
             </div>
             <p
               className="mt-2 text-right"
               style={{ fontSize: 9, opacity: 0.6 }}
             >
-              同じ判定「サボれる」のサンプル
+              {isJa
+                ? "同じ判定「サボれる」のサンプル"
+                : 'Sample text for the same verdict "Can slack off"'}
             </p>
           </div>
 
           {/* セレクター */}
-          <SectionLabel>ペルソナを選択</SectionLabel>
+          <SectionLabel>
+            {isJa ? "ペルソナを選択" : "Select a persona"}
+          </SectionLabel>
           <div className="flex flex-col gap-2">
             {PERSONAS.map((p) => {
               const isSelected = selected === p.id;
@@ -126,7 +140,7 @@ export function PersonaPage() {
                         className="font-bold text-saboru-ink"
                         style={{ fontSize: 13 }}
                       >
-                        {p.name}
+                        {p.name[locale]}
                       </span>
                       {!p.available && (
                         <span
@@ -139,7 +153,7 @@ export function PersonaPage() {
                             borderRadius: 3,
                           }}
                         >
-                          v2.0
+                          {isJa ? "v2.0" : "v2.0"}
                         </span>
                       )}
                     </div>
@@ -147,7 +161,7 @@ export function PersonaPage() {
                       className="text-saboru-ink-soft mt-0.5"
                       style={{ fontSize: 10 }}
                     >
-                      {p.desc}
+                      {p.desc[locale]}
                     </p>
                   </div>
                   <div
@@ -176,10 +190,12 @@ export function PersonaPage() {
             }}
           >
             <p style={{ fontSize: 10, color: "#92400E", lineHeight: 1.5 }}>
-              <strong>v2.0 で実装予定:</strong>{" "}
-              気分や案件に応じて人格を切り替え。
+              <strong>{isJa ? "v2.0 で実装予定:" : "Planned for v2.0:"}</strong>{" "}
+              {isJa
+                ? "気分や案件に応じて人格を切り替え。"
+                : "Switch personas based on mood and workload."}
               <br />
-              現在は{" "}
+              {isJa ? "現在は" : "Currently fixed to"}{" "}
               <code
                 style={{
                   background: "#FFF7ED",
@@ -190,7 +206,7 @@ export function PersonaPage() {
               >
                 saboru_ottori
               </code>{" "}
-              固定。
+              {isJa ? "固定。" : "."}
             </p>
           </div>
         </div>

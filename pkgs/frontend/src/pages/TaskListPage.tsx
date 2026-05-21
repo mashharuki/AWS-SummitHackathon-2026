@@ -16,8 +16,10 @@ import { useTasks } from "@/hooks/useTasks";
 import type { Verdict } from "@saboru/shared";
 import { Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export function TaskListPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const {
     tasks,
@@ -37,8 +39,8 @@ export function TaskListPage() {
   const bannerVerdict: Verdict = "can_saboru";
   const bannerMessage =
     activeTasks.length === 0
-      ? "今日はサボり放題！何もないのが一番の贅沢だよぉ ☁️"
-      : `${activeTasks.length}件あるけど、今日も無理しなくていいんだよぉ ☁️`;
+      ? t("tasks.noTaskBanner")
+      : t("tasks.hasTaskBanner", { count: activeTasks.length });
 
   return (
     <AppShell>
@@ -58,7 +60,7 @@ export function TaskListPage() {
                 fontWeight: 700,
                 fontSize: 12,
               }}
-              aria-label={`${user.name} のアカウント`}
+              aria-label={user.name}
             >
               {user.name.charAt(0).toUpperCase()}
             </div>
@@ -83,7 +85,7 @@ export function TaskListPage() {
                   letterSpacing: "0.05em",
                 }}
               >
-                今日のサボロー
+                {t("tasks.todaySaborou")}
               </p>
               <p
                 className="text-saboru-ink font-semibold mt-0.5"
@@ -100,8 +102,12 @@ export function TaskListPage() {
           {/* 候補タスク */}
           {candidates.length > 0 && (
             <section aria-labelledby="candidates-heading" className="pt-4">
-              <SectionLabel hint={`AI抽出 · ${candidates.length}件`}>
-                <span id="candidates-heading">承認待ちタスク</span>
+              <SectionLabel
+                hint={t("tasks.aiExtractedWithCount", {
+                  count: candidates.length,
+                })}
+              >
+                <span id="candidates-heading">{t("tasks.pendingTasks")}</span>
               </SectionLabel>
               <div className="flex flex-col gap-2">
                 {candidates.map((c) => (
@@ -124,7 +130,7 @@ export function TaskListPage() {
                 className="text-saboru-ink-soft font-bold"
                 style={{ fontSize: 10, letterSpacing: "0.1em" }}
               >
-                承認済みタスク
+                {t("tasks.approvedTasks")}
                 <span
                   className="ml-2 text-saboru-ink-muted"
                   style={{ fontWeight: 500 }}
@@ -136,7 +142,7 @@ export function TaskListPage() {
                 type="button"
                 onClick={() => void refresh()}
                 disabled={isLoading}
-                aria-label="タスクを更新"
+                aria-label={t("tasks.refreshTasks")}
                 className="text-saboru-ink-soft hover:text-saboru-ink p-1"
               >
                 <RefreshCw
@@ -160,13 +166,13 @@ export function TaskListPage() {
             ) : activeTasks.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-saboru-ink-muted" style={{ fontSize: 13 }}>
-                  タスクがありません
+                  {t("tasks.noTasks")}
                 </p>
                 <p
                   className="text-saboru-ink-muted mt-1"
                   style={{ fontSize: 11 }}
                 >
-                  今日はサボり放題です！
+                  {t("tasks.noTasksHint")}
                 </p>
               </div>
             ) : (
@@ -183,7 +189,7 @@ export function TaskListPage() {
         <button
           type="button"
           onClick={() => setIsAddModalOpen(true)}
-          aria-label="タスクを追加"
+          aria-label={t("tasks.addTask")}
           className="fixed bottom-24 right-4 flex items-center justify-center"
           style={{
             width: 56,

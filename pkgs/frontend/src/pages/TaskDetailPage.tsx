@@ -21,6 +21,7 @@ import type { ChatMessage as ChatMessageType } from "@/types/ui";
 import type { Proposal, QuickReplyType, Task } from "@saboru/shared";
 import { Edit2, Trash2 } from "lucide-react";
 import { Suspense, lazy, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 
 // 3D ヒーロー（憲法: lazy で別チャンク）
@@ -36,6 +37,7 @@ const ChatPane = lazy(() =>
 );
 
 export function TaskDetailPage() {
+  const { i18n, t } = useTranslation();
   const { id: taskId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tasks, updateTask, deleteTask } = useTasks();
@@ -109,7 +111,7 @@ export function TaskDetailPage() {
       : 1;
 
   const handleDelete = async () => {
-    if (!taskId || !window.confirm("このタスクを削除しますか？")) return;
+    if (!taskId || !window.confirm(t("tasks.deleteConfirm"))) return;
     setIsDeleting(true);
     try {
       await deleteTask(taskId);
@@ -135,7 +137,7 @@ export function TaskDetailPage() {
           <div
             className="w-8 h-8 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
             role="status"
-            aria-label="読み込み中"
+            aria-label={t("common.loading")}
           />
         </div>
       </AppShell>
@@ -148,7 +150,7 @@ export function TaskDetailPage() {
     <AppShell>
       <div className="flex flex-col h-full">
         <PageHeader
-          title="タスク詳細"
+          title={t("tasks.detailTitle")}
           subtitle={`${task.requester ?? ""} ${task.sourceType === "slack" ? "· Slack" : ""}`}
           onBack={() => navigate("/tasks")}
           right={
@@ -157,7 +159,7 @@ export function TaskDetailPage() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  aria-label="タスクを編集"
+                  aria-label={t("tasks.editTask")}
                   className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
                 >
                   <Edit2 size={15} aria-hidden="true" />
@@ -166,7 +168,7 @@ export function TaskDetailPage() {
                   type="button"
                   onClick={() => void handleDelete()}
                   disabled={isDeleting}
-                  aria-label="タスクを削除"
+                  aria-label={t("tasks.deleteTask")}
                   className="p-1.5 text-red-500 hover:bg-red-50 rounded"
                 >
                   <Trash2 size={15} aria-hidden="true" />
@@ -241,12 +243,15 @@ export function TaskDetailPage() {
               summaryText={proposal.summaryText}
               evaluatedAt={
                 proposal.evaluatedAt
-                  ? new Date(proposal.evaluatedAt).toLocaleString("ja-JP", {
-                      month: "numeric",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                  ? new Date(proposal.evaluatedAt).toLocaleString(
+                      i18n.language.startsWith("ja") ? "ja-JP" : "en-US",
+                      {
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    )
                   : undefined
               }
             />
@@ -273,7 +278,7 @@ export function TaskDetailPage() {
                   <div
                     className="w-6 h-6 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
                     role="status"
-                    aria-label="読み込み中"
+                    aria-label={t("common.loading")}
                   />
                 </div>
               }

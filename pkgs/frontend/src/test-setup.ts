@@ -1,9 +1,14 @@
 import "@testing-library/jest-dom";
 import { afterAll, afterEach, beforeAll } from "vitest";
+import "./i18n";
+import i18n from "./i18n";
 import { server } from "./mocks/server";
 
 // MSW サーバー起動
-beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+beforeAll(() => {
+  void i18n.changeLanguage("ja");
+  server.listen({ onUnhandledRequest: "bypass" });
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

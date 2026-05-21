@@ -5,6 +5,7 @@
  * 現在のルートに応じてアクティブ表示を切り替える。
  */
 import { BookOpen, ListChecks, Settings } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 interface NavItem {
@@ -14,31 +15,32 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    id: "tasks",
-    label: "タスク",
-    to: "/tasks",
-    icon: <ListChecks size={20} aria-hidden="true" />,
-  },
-  {
-    id: "manual",
-    label: "取説",
-    to: "/manual",
-    icon: <BookOpen size={20} aria-hidden="true" />,
-  },
-  {
-    id: "settings",
-    label: "設定",
-    to: "/settings",
-    icon: <Settings size={20} aria-hidden="true" />,
-  },
-];
-
 export function BottomNav() {
+  const { t } = useTranslation();
+  const NAV_ITEMS: NavItem[] = [
+    {
+      id: "tasks",
+      label: t("nav.tasks"),
+      to: "/tasks",
+      icon: <ListChecks size={20} aria-hidden="true" />,
+    },
+    {
+      id: "manual",
+      label: t("nav.manual"),
+      to: "/manual",
+      icon: <BookOpen size={20} aria-hidden="true" />,
+    },
+    {
+      id: "settings",
+      label: t("nav.settings"),
+      to: "/settings",
+      icon: <Settings size={20} aria-hidden="true" />,
+    },
+  ];
+
   return (
     <nav
-      aria-label="ボトムナビゲーション"
+      aria-label={t("nav.bottomNav")}
       className="bg-saboru-paper flex justify-around"
       style={{
         borderTop: "3px solid #2B1E16",
