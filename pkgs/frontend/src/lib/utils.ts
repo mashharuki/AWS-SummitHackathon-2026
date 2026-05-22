@@ -1,6 +1,6 @@
+import i18n from "@/i18n";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import i18n from "@/i18n";
 
 /** Tailwind CSS クラス名マージ */
 export function cn(...inputs: ClassValue[]) {
@@ -35,6 +35,23 @@ export function formatDeadlineDisplay(isoString: string | null): string {
 export function isOverdue(isoString: string | null): boolean {
   if (!isoString) return false;
   return new Date(isoString) < new Date();
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * UUID形式の name をメールアドレスのプレフィックスで補完して表示名を返す
+ * Cognito 初回ログイン時に name が未設定だと userId (UUID) が保存されてしまうケースを補正する
+ */
+export function getDisplayName(user: {
+  name: string;
+  email: string;
+}): string {
+  if (UUID_PATTERN.test(user.name)) {
+    return user.email ? user.email.split("@")[0] : "ユーザー";
+  }
+  return user.name;
 }
 
 /** APIエラーメッセージをユーザー向けに変換 */

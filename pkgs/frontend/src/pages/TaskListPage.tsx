@@ -6,6 +6,7 @@ import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/hooks/useAuth";
 import { useTasks } from "@/hooks/useTasks";
+import { getDisplayName } from "@/lib/utils";
 /**
  * タスク一覧ページ — U-06-ui-redesign Phase 5 改修版
  *
@@ -60,9 +61,9 @@ export function TaskListPage() {
                 fontWeight: 700,
                 fontSize: 12,
               }}
-              aria-label={user.name}
+              aria-label={getDisplayName(user)}
             >
-              {user.name.charAt(0).toUpperCase()}
+              {getDisplayName(user).charAt(0).toUpperCase()}
             </div>
           )}
         </header>
