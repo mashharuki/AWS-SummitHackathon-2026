@@ -29,7 +29,7 @@ export class SaborouCognitoStack extends cdk.Stack {
       autoVerify: { email: true },
       standardAttributes: {
         email: { required: true, mutable: true },
-        fullname: { required: false, mutable: true },
+        fullname: { required: true, mutable: true },
       },
       mfa: cognito.Mfa.OFF,
       passwordPolicy: {
