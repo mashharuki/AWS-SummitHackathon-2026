@@ -22,7 +22,7 @@ import {
  * AP クロスリージョン推論プロファイル ID (ap-northeast-1 から AP 内の利用可能リージョンへルーティング)
  * Claude Sonnet 4.6 はサーバーレス＋クロスリージョン推論のみ提供。
  */
-const MODEL_ID = "ap.anthropic.claude-sonnet-4-6";
+const MODEL_ID = "jp.anthropic.claude-sonnet-4-6";
 
 /** タスク抽出の結果型 */
 export type ExtractionResult =

@@ -1,4 +1,5 @@
 import * as cdk from "aws-cdk-lib";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
@@ -68,8 +69,40 @@ export class SaborouApiStack extends cdk.Stack {
           "/saborou/oauth/state-secret",
         ),
         // 注: EVENT_BUS_NAME は API Lambda では不要 (webhook Lambda のみが使用)
+        // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出すため us-east-1 を指定
+        BEDROCK_REGION: "ap-northeast-1",
       },
     });
+
+    // --- Bedrock 権限付与 (SaboriProposerAgent が API Lambda から直接呼び出す) ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+        resources: [
+          // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (inference-profile ARN にはアカウント ID が必要)
+          `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,
+          `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6`,
+          `arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6`,
+          // Claude Haiku 3.5 (PersonaRenderer): inference-profile ARN にはアカウント ID が必要
+          `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/ap.anthropic.claude-3-5-haiku-20241022-v1:0`,
+          `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0`,
+        ],
+      }),
+    );
+
+    // --- AWS Marketplace 権限付与 (Bedrock モデルアクセス確認に必要) ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "aws-marketplace:ViewSubscriptions",
+          "aws-marketplace:Subscribe",
+          "aws-marketplace:Unsubscribe",
+        ],
+        resources: ["*"],
+      }),
+    );
 
     // --- DynamoDB 権限付与 ---
     props.data.tables.users.grantReadWriteData(honoFn);
@@ -77,7 +110,7 @@ export class SaborouApiStack extends cdk.Stack {
     // 変更: grantReadData → grantReadWriteData (ITaskCandidateRepository.delete が書き込み権限を必要とするため)
     props.data.tables.taskCandidates.grantReadWriteData(honoFn);
     props.data.tables.tasks.grantReadWriteData(honoFn);
-    props.data.tables.proposals.grantReadData(honoFn);
+    props.data.tables.proposals.grantReadWriteData(honoFn);
     props.data.tables.honneData.grantReadWriteData(honoFn);
     props.data.tables.personas.grantReadData(honoFn);
 

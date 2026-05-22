@@ -49,7 +49,7 @@ import type {
  * IAM リソース ARN には ap-northeast-1 の inference-profile ARN と
  * ベースモデル ARN (ワイルドカードリージョン) の両方が必要。
  */
-const SONNET_MODEL_ID = "ap.anthropic.claude-sonnet-4-6";
+const SONNET_MODEL_ID = "jp.anthropic.claude-sonnet-4-6";
 
 export class SaboriProposerAgent {
   constructor(

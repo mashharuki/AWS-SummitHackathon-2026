@@ -44,14 +44,10 @@ export class SaborouAgentStack extends cdk.Stack {
       effect: iam.Effect.ALLOW,
       actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       resources: [
-        // AP クロスリージョン推論プロファイル (ap-northeast-1 から呼び出し)
-        `arn:aws:bedrock:ap-northeast-1::inference-profile/ap.anthropic.claude-sonnet-4-6`,
-        `arn:aws:bedrock:ap-northeast-1::inference-profile/ap.anthropic.claude-3-5-haiku-20241022-v1:0`,
-        // 推論がルーティングされる先のベースモデル (ワイルドカードリージョン)
-        `arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-6`,
-        // U-03b: PersonaRenderer 用 Claude Haiku 3.5 (Phase 3 トーン変換)
-        `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0`,
-        `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-20240307-v1:0`,
+        // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (ap-northeast-1 → ap-northeast-3)
+        `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,
+        // U-03b: PersonaRenderer 用
+        `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/ap.anthropic.claude-sonnet-4-6`,
       ],
     });
 
@@ -96,7 +92,19 @@ export class SaborouAgentStack extends cdk.Stack {
       },
     });
 
+    // --- AWS Marketplace 権限 (Bedrock モデルアクセス確認に必要) ---
+    const marketplacePolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "aws-marketplace:ViewSubscriptions",
+        "aws-marketplace:Subscribe",
+        "aws-marketplace:Unsubscribe",
+      ],
+      resources: ["*"],
+    });
+
     taskExtractorFn.addToRolePolicy(bedrockPolicy);
+    taskExtractorFn.addToRolePolicy(marketplacePolicy);
     props.data.tables.taskCandidates.grantReadWriteData(taskExtractorFn);
     props.data.tables.tasks.grantReadData(taskExtractorFn);
     props.data.secrets.slackClientSecret.grantRead(taskExtractorFn);
@@ -144,6 +152,7 @@ export class SaborouAgentStack extends cdk.Stack {
     });
 
     saboriProposerFn.addToRolePolicy(bedrockPolicy);
+    saboriProposerFn.addToRolePolicy(marketplacePolicy);
     props.data.tables.proposals.grantReadWriteData(saboriProposerFn);
     props.data.tables.tasks.grantReadData(saboriProposerFn);
     // personas テーブルの権限付与を削除 (MVP スコープ)

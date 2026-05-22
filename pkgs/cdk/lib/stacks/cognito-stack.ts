@@ -29,8 +29,6 @@ export class SaborouCognitoStack extends cdk.Stack {
       autoVerify: { email: true },
       standardAttributes: {
         email: { required: true, mutable: true },
-        // name 属性を追加: Hosted UI のサインアップ画面に「名前」入力欄が表示される
-        // JWT claims に name クレームが含まれるようになり、バックエンドのユーザー名解決が正しく機能する
         fullname: { required: false, mutable: true },
       },
       mfa: cognito.Mfa.OFF,
@@ -68,9 +66,9 @@ export class SaborouCognitoStack extends cdk.Stack {
             : []),
         ],
         logoutUrls: [
-          "http://localhost:5173",
+          "http://localhost:5173/login",
           ...(props?.frontendDomainName
-            ? [`https://${props.frontendDomainName}`]
+            ? [`https://${props.frontendDomainName}/login`]
             : []),
         ],
       },
