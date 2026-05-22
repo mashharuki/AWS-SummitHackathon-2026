@@ -38,16 +38,19 @@ export class SaborouAgentStack extends cdk.Stack {
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
     // --- Bedrock IAM ポリシー (共通) ---
-    // us.anthropic.* model IDs use cross-region inference profiles that route through US regions;
-    // wildcard region is required so the IAM ARN matches the actual invocation path.
+    // ap. プレフィックスの AP クロスリージョン推論プロファイルを使用するため、
+    // 推論プロファイル ARN (呼び出しリージョン固定) とベースモデル ARN (ワイルドカードリージョン) の両方が必要。
     const bedrockPolicy = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       resources: [
-        `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0`,
-        `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-sonnet-20240620-v1:0`,
-        // U-03b: PersonaRenderer 用 Claude Haiku (Phase 3 トーン変換)
-        `arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-3-5-20241022-v1:0`,
+        // AP クロスリージョン推論プロファイル (ap-northeast-1 から呼び出し)
+        `arn:aws:bedrock:ap-northeast-1::inference-profile/ap.anthropic.claude-sonnet-4-6`,
+        `arn:aws:bedrock:ap-northeast-1::inference-profile/ap.anthropic.claude-3-5-haiku-20241022-v1:0`,
+        // 推論がルーティングされる先のベースモデル (ワイルドカードリージョン)
+        `arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-6`,
+        // U-03b: PersonaRenderer 用 Claude Haiku 3.5 (Phase 3 トーン変換)
+        `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0`,
         `arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-20240307-v1:0`,
       ],
     });
