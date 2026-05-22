@@ -394,6 +394,128 @@ echo "デモ用タスクデータ投入完了"
 
 ---
 
+## STEP 8: 動作確認チェックリスト
+
+STEP 7 の E2E テスト完了後、以下のチェックを実施して全フローの正常性を確認する。
+
+### 8-1. DLQ（エラーキュー）の確認
+
+```bash
+# TaskExtractor DLQ
+aws sqs get-queue-attributes \
+  --queue-url $(aws sqs get-queue-url --queue-name saborou-task-extractor-dlq-dev --region ap-northeast-1 --query 'QueueUrl' --output text) \
+  --attribute-names ApproximateNumberOfMessages \
+  --region ap-northeast-1 \
+  --query 'Attributes.ApproximateNumberOfMessages'
+
+# SaboriProposer DLQ
+aws sqs get-queue-attributes \
+  --queue-url $(aws sqs get-queue-url --queue-name saborou-task-extractor-dlq-dev --region ap-northeast-1 --query 'QueueUrl' --output text) \
+  --attribute-names ApproximateNumberOfMessages \
+  --region ap-northeast-1 \
+  --query 'Attributes.ApproximateNumberOfMessages'
+```
+
+両方 `"0"` であれば問題なし。`"0"` 以外の場合はトラブルシューティングを参照。
+
+### 8-2. SaboriProposer Lambda の動作確認
+
+SaboriProposer は `POST /api/tasks/:taskId/propose` から Lambda 直接呼び出しされる。  
+DynamoDB に保存されたタスク候補を使ってテスト呼び出しを行う。
+
+```bash
+# ① DynamoDB から保存済みタスク候補を取得
+aws dynamodb scan \
+  --table-name saborou-task-candidates-dev \
+  --region ap-northeast-1 \
+  --output json \
+  --query 'Items[0]'
+```
+
+> DLQを整理したい場合は以下を実行
+
+```bash
+# TaskExtractor DLQ を削除
+aws sqs purge-queue \
+  --queue-url $(aws sqs get-queue-url --queue-name saborou-task-extractor-dlq-dev --region ap-northeast-1 --query 'QueueUrl' --output text) \
+  --region ap-northeast-1
+
+# SaboriProposer DLQ を削除
+aws sqs purge-queue \
+  --queue-url $(aws sqs get-queue-url --queue-name saborou-sabori-proposer-dlq-dev --region ap-northeast-1 --query 'QueueUrl' --output text) \
+  --region ap-northeast-1
+```
+
+取得した `candidateId` を使って Lambda を直接呼び出す:
+
+```bash
+export CANDIDATE_ID="<上で取得した candidateId の値>"
+
+aws lambda invoke \
+  --function-name saborou-sabori-proposer-dev \
+  --region ap-northeast-1 \
+  --payload "{
+    \"taskId\": \"${CANDIDATE_ID}\",
+    \"userId\": \"test-user\",
+    \"task\": {
+      \"PK\": \"USER#test-user\",
+      \"SK\": \"TASK#${CANDIDATE_ID}\",
+      \"taskId\": \"${CANDIDATE_ID}\",
+      \"userId\": \"test-user\",
+      \"status\": \"approved\",
+      \"title\": \"テストタスク\",
+      \"deadline\": null,
+      \"requester\": \"山田\",
+      \"description\": \"テスト内容\",
+      \"sourceType\": \"slack\",
+      \"approvedAt\": \"2026-05-22T00:00:00Z\",
+      \"updatedAt\": \"2026-05-22T00:00:00Z\"
+    }
+  }" \
+  --cli-binary-format raw-in-base64-out \
+  /tmp/sabori-response.json && cat /tmp/sabori-response.json
+```
+
+`statusCode: 200` かつ `verdict` フィールドが含まれていれば正常動作。
+
+> **注**: `slackMessageRef` を省略した場合、Slack コンテキスト収集はスキップされる（MVP スタブのため Bot Token 不要）。
+
+### 8-3. API Gateway ヘルスチェック
+
+```bash
+# API Gateway URL を取得
+export API_URL=$(aws cloudformation describe-stacks \
+  --stack-name SaborouApiStack \
+  --region ap-northeast-1 \
+  --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+  --output text)
+
+# ヘルスチェック
+curl "${API_URL}/health"
+```
+
+### 8-4. Slack Bot Token の設定（SaboriProposer 本番連携時）
+
+> **現時点では不要**: MVP スコープでは Slack コンテキスト収集がスタブのため、Bot Token がなくても SaboriProposer は動作する。  
+> U-04（Slack API 連携）実装時に以下の手順で設定する。
+
+Slack App をワークスペースにインストールすると **Bot User OAuth Token（`xoxb-` で始まる）** が発行される。  
+このトークンを Client Secret と同じシークレット名に上書き保存する:
+
+```bash
+export BOT_TOKEN="xoxb-..."   # OAuth & Permissions の Bot User OAuth Token
+
+aws secretsmanager put-secret-value \
+  --secret-id "/saborou/slack/client-secret-dev" \
+  --secret-string "${BOT_TOKEN}" \
+  --region ap-northeast-1
+```
+
+> **注意**: Slack の `Client Secret`（OAuth 認証フロー用）と `Bot User OAuth Token`（API 呼び出し用）は別物。  
+> ContextCollector が Slack API を呼び出すためには Bot Token（`xoxb-...`）が必要。
+
+---
+
 ## トラブルシューティング
 
 ### ❌ Request URL が「Verified」にならない
@@ -481,8 +603,87 @@ aws logs filter-log-events \
 ```
 
 よくある原因:
-1. **Bedrock モデルアクセス未申請**: ap-northeast-1 で `claude-3-5-sonnet-20241022-v2:0` のモデルアクセスが有効化されているか確認
+1. **Bedrock モデルアクセス未申請**: Bedrock コンソール → Model access で `jp.anthropic.claude-sonnet-4-6` クロスリージョン推論プロファイルが有効化されているか確認
 2. **DynamoDB テーブル名の不一致**: `DYNAMODB_TABLE_TASK_CANDIDATES` 環境変数が CDK 出力と一致しているか確認
+3. **`PSEUDONYMIZE_SALT` 未設定**: SSM Parameter Store に `/saborou/pseudonymize-salt-dev` が存在するか確認
+
+```bash
+aws ssm get-parameter \
+  --name "/saborou/pseudonymize-salt-dev" \
+  --region ap-northeast-1 \
+  --query 'Parameter.Name'
+# パラメータ名が返れば OK
+```
+
+未作成の場合は以下で作成:
+```bash
+aws ssm put-parameter \
+  --name "/saborou/pseudonymize-salt-dev" \
+  --value "$(openssl rand -hex 16)" \
+  --type "String" \
+  --region ap-northeast-1
+```
+
+---
+
+### ❌ TaskExtractor で `AccessDeniedException` (Bedrock)
+
+```
+User is not authorized to perform: bedrock:InvokeModel on resource: arn:aws:bedrock:ap-northeast-3::foundation-model/...
+```
+
+クロスリージョン推論プロファイル (`jp.`) がリクエストを大阪 (`ap-northeast-3`) 等にルーティングするため、  
+**推論プロファイル ARN だけでなくベースモデル ARN（全ターゲットリージョン）も IAM 許可が必要**。
+
+`pkgs/cdk/lib/stacks/agent-stack.ts` の `bedrockPolicy` に以下が含まれているか確認:
+
+```typescript
+"arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6",
+"arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6",
+```
+
+---
+
+### ❌ `Cannot use import statement outside a module` (TaskExtractor 起動失敗)
+
+`pkgs/agent/tsup.config.ts` に `outExtension` が設定されているか確認:
+
+```typescript
+outExtension({ format }) {
+  return { js: format === "cjs" ? ".js" : ".mjs" };
+},
+```
+
+`"type": "module"` が `package.json` にある場合、tsup はデフォルトで ESM を `.js` に出力する。  
+Lambda は `.js` を CommonJS として解釈するためクラッシュする。上記の設定で CJS → `.js`、ESM → `.mjs` に変更する。
+
+---
+
+### ❌ `Cannot find module '@saboru/shared'` (TaskExtractor 起動失敗)
+
+`pkgs/agent/tsup.config.ts` の `noExternal` を確認:
+
+```typescript
+noExternal: [/.*/],  // 全依存をバンドル（@saboru/shared を含む）
+```
+
+`/^(?!@saboru\/shared$).*/` のような否定先読み正規表現になっている場合、`@saboru/shared` がバンドルから除外されてしまう。
+
+---
+
+### ❌ `PSEUDONYMIZE_SALT must be at least 16 characters`
+
+SSM Parameter Store にソルト値を登録して CDK を再デプロイする:
+
+```bash
+aws ssm put-parameter \
+  --name "/saborou/pseudonymize-salt-dev" \
+  --value "$(openssl rand -hex 16)" \
+  --type "String" \
+  --region ap-northeast-1
+
+pnpm cdk run deploy SaborouAgentStack --require-approval never
+```
 
 ---
 
