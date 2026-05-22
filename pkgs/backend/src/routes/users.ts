@@ -33,7 +33,8 @@ export function createUsersRoute(userRepository: DynamoUserRepository) {
     const lambdaEvent = (c.env as unknown as CognitoLambdaEvent) ?? {};
     const claims = lambdaEvent?.requestContext?.authorizer?.jwt?.claims ?? {};
     const resolvedName =
-      claims.name ?? claims["cognito:username"] ?? claims.email ?? "";
+      // cognito:username は Cognito 内部生成の UUID なのでフォールバックに使わない
+      claims.name ?? claims.email ?? "";
 
     const existing = await userRepository.findById(userId);
     if (existing) {
