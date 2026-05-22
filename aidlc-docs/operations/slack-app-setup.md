@@ -127,39 +127,11 @@ CDK が作成したシークレットプレースホルダーに実際の値を�
 
 ```bash
 # 環境変数設定
-export ENV=dev   # 本番デプロイ時は prod に変更
-export AWS_REGION=ap-northeast-1
+export SIGNING_SECRET="ここにSlackのSigning Secretを貼り付ける"
+export CLIENT_SECRET="ここにSlackのClient Secretを貼り付ける"
 
-# Signing Secret の登録
-aws secretsmanager put-secret-value \
-  --secret-id "/saborou/slack/signing-secret-${ENV}" \
-  --secret-string "ここにSlackのSigning Secretを貼り付ける" \
-  --region ${AWS_REGION}
-
-# Client Secret の登録
-aws secretsmanager put-secret-value \
-  --secret-id "/saborou/slack/client-secret-${ENV}" \
-  --secret-string "ここにSlackのClient Secretを貼り付ける" \
-  --region ${AWS_REGION}
+pnpm run register:secret
 ```
-
-### 3-5. 登録確認
-
-```bash
-# Signing Secret が登録されているか確認（値は表示しない）
-aws secretsmanager describe-secret \
-  --secret-id "/saborou/slack/signing-secret-${ENV}" \
-  --region ${AWS_REGION} \
-  --query 'Name'
-
-# Client Secret が登録されているか確認
-aws secretsmanager describe-secret \
-  --secret-id "/saborou/slack/client-secret-${ENV}" \
-  --region ${AWS_REGION} \
-  --query 'Name'
-```
-
-両方とも `/saborou/slack/signing-secret-dev` と `/saborou/slack/client-secret-dev` が返れば成功。
 
 ---
 

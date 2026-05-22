@@ -13,9 +13,8 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   splitting: false,
-  // Bundle all dependencies for Lambda deployment (exclude nothing)
-  // @saboru/shared is a workspace package — include it via its dist
-  noExternal: [/^(?!@saboru\/shared$).*/],
+  // Bundle all dependencies for Lambda deployment (including @saboru/shared)
+  noExternal: [/.*/],
   // Target Node.js 22 (Lambda runtime)
   target: "node22",
   platform: "node",

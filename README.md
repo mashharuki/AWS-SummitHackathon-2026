@@ -452,11 +452,23 @@ graph TD
 	pnpm cdk run deploy --require-approval never --all
 	```
 
+	その後SSMパラメータを作成する
+
+	```bash
+	aws ssm put-parameter \
+	--name "/saborou/pseudonymize-salt-dev" \
+	--value "$(openssl rand -hex 16)" \
+	--type "String" \
+	--region ap-northeast-1
+	```
+
 - AWSからリソースをアンデプロイ
 
 	```bash
 	pnpm cdk run destroy --all --force
 	```
+
+	> SSMやSecret Managerの一部の値は手動での削除が必要
 
 ### バックエンド
 

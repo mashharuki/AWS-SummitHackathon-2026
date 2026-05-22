@@ -3,6 +3,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
 import type { DataStackExports } from "./data-stack";
@@ -37,6 +38,12 @@ export class SaborouAgentStack extends cdk.Stack {
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
+    // --- 仮名化ソルト (SSM Parameter Store から取得) ---
+    const pseudonymizeSalt = ssm.StringParameter.valueForStringParameter(
+      this,
+      `/saborou/pseudonymize-salt-${environment}`,
+    );
+
     // --- Bedrock IAM ポリシー (共通) ---
     // ap. プレフィックスの AP クロスリージョン推論プロファイルを使用するため、
     // 推論プロファイル ARN (呼び出しリージョン固定) とベースモデル ARN (ワイルドカードリージョン) の両方が必要。
@@ -44,10 +51,16 @@ export class SaborouAgentStack extends cdk.Stack {
       effect: iam.Effect.ALLOW,
       actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
       resources: [
-        // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (ap-northeast-1 → ap-northeast-3)
+        // 推論プロファイル ARN (呼び出しリージョン: ap-northeast-1 固定)
         `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,
-        // U-03b: PersonaRenderer 用
         `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/ap.anthropic.claude-sonnet-4-6`,
+        // ベースモデル ARN — クロスリージョン推論がルーティングする全リージョンを許可
+        // jp. プロファイル: ap-northeast-1 (Tokyo) / ap-northeast-3 (Osaka)
+        // ap. プロファイル: AP リージョン全般 → ワイルドカードで対応
+        "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6",
+        "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6",
+        "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-sonnet-4-6",
+        "arn:aws:bedrock:ap-southeast-2::foundation-model/anthropic.claude-sonnet-4-6",
       ],
     });
 
@@ -89,6 +102,7 @@ export class SaborouAgentStack extends cdk.Stack {
         BEDROCK_REGION: "ap-northeast-1",
         SLACK_TOKEN_SECRET_NAME:
           props.data.secrets.slackClientSecret.secretName,
+        PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
     });
 
@@ -148,6 +162,7 @@ export class SaborouAgentStack extends cdk.Stack {
         SLACK_TOKEN_SECRET_NAME:
           props.data.secrets.slackClientSecret.secretName,
         // DYNAMODB_TABLE_PERSONAS: 削除 (MVP スコープ — U-03b では未使用)
+        PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
     });
 

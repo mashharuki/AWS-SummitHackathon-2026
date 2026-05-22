@@ -1,6 +1,9 @@
 import { BedrockClientAdapter } from "../bedrock/BedrockClientAdapter.js";
 import { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
-import { SlackEventPayloadSchema } from "../types/events.js";
+import {
+  EventBridgeSlackEventSchema,
+  type SlackEventPayload,
+} from "../types/events.js";
 import { logError, logInfo } from "../utils/logger.js";
 import { TaskExtractorAgent } from "./TaskExtractorAgent.js";
 
@@ -27,8 +30,8 @@ const bedrockClient = new BedrockClientAdapter(
 const repository = new DynamoTaskCandidateRepository();
 
 export const handler = async (event: unknown): Promise<void> => {
-  // [1] EventBridge ペイロードを検証 (DP-03: 入力側)
-  const parsed = SlackEventPayloadSchema.safeParse(event);
+  // [1] EventBridge エンベロープを検証 (DP-03: 入力側)
+  const parsed = EventBridgeSlackEventSchema.safeParse(event);
   if (!parsed.success) {
     logError({
       action: "invalid_input",
@@ -38,7 +41,34 @@ export const handler = async (event: unknown): Promise<void> => {
     return;
   }
 
-  const payload = parsed.data;
+  const { detail } = parsed.data;
+  const rawEvent = detail.event;
+
+  // ボットメッセージ・サブタイプ付きメッセージはスキップ (無限ループ防止)
+  if (rawEvent.bot_id || rawEvent.subtype) {
+    logInfo({ action: "skipped_bot_or_subtype", subtype: rawEvent.subtype });
+    return;
+  }
+
+  // ユーザー・テキスト・チャンネルが揃っていない場合はスキップ
+  if (!rawEvent.user || !rawEvent.text || !rawEvent.channel) {
+    logInfo({ action: "skipped_incomplete_fields" });
+    return;
+  }
+
+  // EventBridge エンベロープ → ドメイン型に変換
+  const payload: SlackEventPayload = {
+    source: "slack",
+    userId: rawEvent.user,
+    message: {
+      text: rawEvent.text,
+      channelId: rawEvent.channel,
+      messageTs: rawEvent.ts,
+      teamId: detail.teamId,
+      userId: rawEvent.user,
+      ...(rawEvent.thread_ts ? { threadTs: rawEvent.thread_ts } : {}),
+    },
+  };
 
   // [2] タスクを抽出
   const agent = new TaskExtractorAgent(bedrockClient, repository);
