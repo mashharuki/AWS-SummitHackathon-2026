@@ -445,11 +445,7 @@ graph TD
 	> 事前にAWSへのログインが必要
 
 	```bash
-	# 1. フロントエンドビルド（先に実行）
-	pnpm frontend run build   
-	# 2. バックエンドビルド（先に実行）
-  pnpm backend run build    
-	pnpm cdk run deploy --require-approval never --all
+	pnpm run deploy:all
 	```
 
 	その後SSMパラメータを作成する

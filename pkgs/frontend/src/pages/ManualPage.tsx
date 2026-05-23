@@ -243,36 +243,6 @@ export function ManualPage() {
             </div>
           )}
 
-          {/* Future vision */}
-          <div
-            className="card-brutal p-3.5"
-            style={{
-              background: "linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%)",
-            }}
-          >
-            <p
-              className="font-bold tracking-wider"
-              style={{
-                fontSize: 10,
-                color: "#5B21B6",
-                letterSpacing: "0.05em",
-              }}
-            >
-              COMING SOON
-            </p>
-            <p
-              className="font-semibold mt-1"
-              style={{
-                fontSize: 12,
-                color: "#312E81",
-                lineHeight: 1.5,
-              }}
-            >
-              {isJa
-                ? "ChatGPT / Claude / Notion AI と MCP 連携。あなたの「サボり癖」を他の AI にも共有して、より自然なタスク管理を。"
-                : "MCP integration with ChatGPT / Claude / Notion AI. Share your slack patterns with external AIs for more natural task management."}
-            </p>
-          </div>
         </div>
       </div>
     </AppShell>

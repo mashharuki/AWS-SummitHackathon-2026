@@ -238,49 +238,6 @@ export function SettingsPage() {
             </Link>
           </section>
 
-          {/* プロダクト */}
-          <section aria-labelledby="product-heading">
-            <SectionLabel>
-              <span id="product-heading">{t("settings.product")}</span>
-            </SectionLabel>
-            <Link
-              to="/roadmap"
-              aria-label={t("settings.roadmap")}
-              className="card-brutal flex items-center gap-3 p-3.5"
-              style={{ textDecoration: "none" }}
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background: "linear-gradient(135deg, #FED7AA, #FB923C)",
-                  fontSize: 16,
-                }}
-                aria-hidden="true"
-              >
-                🗺
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  className="text-saboru-ink font-bold"
-                  style={{ fontSize: 13 }}
-                >
-                  {t("settings.roadmap")}
-                </p>
-                <p
-                  className="text-saboru-ink-muted mt-0.5"
-                  style={{ fontSize: 10 }}
-                >
-                  {t("settings.roadmapDescription")}
-                </p>
-              </div>
-              <ChevronRight
-                size={16}
-                className="text-saboru-ink-muted"
-                aria-hidden="true"
-              />
-            </Link>
-          </section>
-
           {/* ログアウト */}
           <button
             type="button"
