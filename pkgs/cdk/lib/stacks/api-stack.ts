@@ -68,8 +68,15 @@ export class SaborouApiStack extends cdk.Stack {
           this,
           "/saborou/oauth/state-secret",
         ),
-        // 注: EVENT_BUS_NAME は API Lambda では不要 (webhook Lambda のみが使用)
-        // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出すため us-east-1 を指定
+        // Slack 遡及取得 API (POST /api/slack/sync-messages) が EventBridge へ
+        // SlackBackfill イベントを publish するため必要。
+        // WebhookStack → ApiStack の依存方向のため循環回避で固定名を使う
+        // （WebhookStack の eventBusName と一致させること）。
+        EVENT_BUS_NAME: `saborou-event-bus-${environment}`,
+        // per-user の Slack Bot Token シークレット名プレフィックス
+        // （遡及取得 API が認証ユーザーの Bot Token を取得するため）
+        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
+        // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出す
         BEDROCK_REGION: "ap-northeast-1",
       },
     });
@@ -116,6 +123,28 @@ export class SaborouApiStack extends cdk.Stack {
 
     // --- Secrets Manager 権限付与 (追加: U-04 Slack OAuth) ---
     props.data.secrets.slackClientSecret.grantRead(honoFn);
+
+    // --- per-user Slack Bot Token 読み取り権限（遡及取得 API が使用） ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-bot-token/*`,
+        ],
+      }),
+    );
+
+    // --- EventBridge PutEvents 権限（遡及取得 API が SlackBackfill を publish） ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["events:PutEvents"],
+        resources: [
+          `arn:aws:events:${this.region}:${this.account}:event-bus/saborou-event-bus-${environment}`,
+        ],
+      }),
+    );
 
     // --- JWT オーソライザー ---
     const authorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer(

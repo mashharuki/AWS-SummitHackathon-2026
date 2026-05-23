@@ -274,4 +274,51 @@ describe("TaskExtractorLambdaHandler", () => {
     expect(mockFindCognitoSub).not.toHaveBeenCalled();
     expect(mockConverse).not.toHaveBeenCalled();
   });
+
+  // ── SlackBackfill 経路（遡及取得 API 由来・cognitoSub 直接） ──
+
+  const validBackfillEvent = {
+    source: "saborou.backend",
+    "detail-type": "SlackBackfill",
+    detail: {
+      userId: "cognito-user-abc",
+      message: {
+        text: "遡及取得した依頼です。",
+        channel: "C12345",
+        ts: "1234567890.123456",
+        user: "U99999",
+        team: "T12345",
+      },
+      receivedAt: "2026-05-23T00:00:00.000Z",
+    },
+  };
+
+  it("processes a backfill event without reverse lookup", async () => {
+    mockConverse.mockResolvedValueOnce(makeToolUseResponse());
+
+    const { handler } = await import("../TaskExtractorLambdaHandler.js");
+    await expect(handler(validBackfillEvent)).resolves.toBeUndefined();
+    // backfill は cognitoSub を直接持つので逆引きは呼ばれない
+    expect(mockFindCognitoSub).not.toHaveBeenCalled();
+    expect(mockConverse).toHaveBeenCalledOnce();
+  });
+
+  it("includes threadTs for backfill events with thread_ts", async () => {
+    mockConverse.mockResolvedValueOnce(makeToolUseResponse());
+
+    const threadedBackfill = {
+      ...validBackfillEvent,
+      detail: {
+        ...validBackfillEvent.detail,
+        message: {
+          ...validBackfillEvent.detail.message,
+          thread_ts: "1234567880.000000",
+        },
+      },
+    };
+
+    const { handler } = await import("../TaskExtractorLambdaHandler.js");
+    await expect(handler(threadedBackfill)).resolves.toBeUndefined();
+    expect(mockConverse).toHaveBeenCalledOnce();
+  });
 });

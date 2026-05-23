@@ -32,7 +32,17 @@ export type {
 } from "./sabori-proposer/types.js";
 
 // コンテキストコレクター (共有)
-export { ContextCollector } from "./context-collector/ContextCollector.js";
+export {
+  ContextCollector,
+  getSlackToken,
+} from "./context-collector/ContextCollector.js";
+
+// Slack Web API クライアント
+export {
+  SlackApiError,
+  SlackClient,
+  type SlackHistoryMessage,
+} from "./slack-client/SlackClient.js";
 
 // ユーティリティ
 export type { SlackEventPayload, SlackMessage } from "./types/events.js";

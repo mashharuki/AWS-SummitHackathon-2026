@@ -118,7 +118,7 @@ export const handler = async (event: unknown): Promise<LambdaResponse> => {
   let slackContext: SlackContext | undefined;
   if (payload.slackMessageRef) {
     try {
-      const token = await contextCollector.getSlackToken();
+      const token = await contextCollector.getSlackToken(payload.userId);
       // SlackContext 収集: 利用可能データから最小限のコンテキストを構築
       // 完全な Slack API 連携は U-04 で実装; ここでは基本コンテキストを構築
       slackContext = await collectMinimalSlackContext(

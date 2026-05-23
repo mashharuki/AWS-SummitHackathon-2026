@@ -35,6 +35,8 @@ const SLACK_OAUTH_SCOPES = [
   "im:history",
   "mpim:history",
   "users:read",
+  // chat:write: サボり提案を Slack スレッドに返信する（インタラクティブ化）
+  "chat:write",
 ].join(",");
 
 const SLACK_OAUTH_URL = "https://slack.com/oauth/v2/authorize";
