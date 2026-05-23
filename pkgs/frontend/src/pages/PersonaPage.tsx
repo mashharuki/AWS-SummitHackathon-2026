@@ -2,18 +2,20 @@ import { SaborouAvatar } from "@/components/character/SaborouAvatar";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
+import { updatePersona } from "@/lib/apiClient";
 import { PERSONAS } from "@/lib/staticContent";
 /**
  * AI ペルソナ選択ページ — 同じ判定を、違う口調で受け取る
  *
- * U-06-ui-redesign Phase 6 / 共有 HTML PersonaScreen 準拠
- * MVP では選択状態を localStorage に保存（API 未対応のため）
+ * 選択した personaId をバックエンド（PUT /api/users/me/persona）に永続化する。
+ * 以降のサボり提案がそのペルソナの口調で生成される。
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-const STORAGE_KEY = "saboru_persona_selected";
 const DEFAULT_PERSONA_ID = "saboru_ottori";
 
 export function PersonaPage() {
@@ -21,20 +23,40 @@ export function PersonaPage() {
   const locale = i18n.language.startsWith("ja") ? "ja" : "en";
   const isJa = locale === "ja";
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [selected, setSelected] = useState<string>(DEFAULT_PERSONA_ID);
+  const [saving, setSaving] = useState(false);
 
+  // 初期選択をユーザーの保存済みペルソナから復元
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && PERSONAS.some((p) => p.id === stored && p.available)) {
-      setSelected(stored);
+    if (
+      user?.preferredPersonaId &&
+      PERSONAS.some((p) => p.id === user.preferredPersonaId && p.available)
+    ) {
+      setSelected(user.preferredPersonaId);
     }
-  }, []);
+  }, [user?.preferredPersonaId]);
 
   const handleSelect = (id: string) => {
     const persona = PERSONAS.find((p) => p.id === id);
-    if (!persona?.available) return;
-    setSelected(id);
-    localStorage.setItem(STORAGE_KEY, id);
+    if (!persona?.available || saving || id === selected) return;
+
+    const previous = selected;
+    setSelected(id); // 楽観更新
+    setSaving(true);
+    updatePersona(id)
+      .then(() => {
+        showToast(isJa ? "ペルソナを変更したよ" : "Persona updated", "success");
+      })
+      .catch(() => {
+        setSelected(previous); // 失敗時はロールバック
+        showToast(
+          isJa ? "変更に失敗しました" : "Failed to update persona",
+          "error",
+        );
+      })
+      .finally(() => setSaving(false));
   };
 
   const current = PERSONAS.find((p) => p.id === selected) ?? PERSONAS[0];
@@ -182,7 +204,7 @@ export function PersonaPage() {
             })}
           </div>
 
-          {/* Future hint */}
+          {/* 説明 */}
           <div
             className="card-brutal p-3"
             style={{
@@ -190,23 +212,9 @@ export function PersonaPage() {
             }}
           >
             <p style={{ fontSize: 10, color: "#92400E", lineHeight: 1.5 }}>
-              <strong>{isJa ? "v2.0 で実装予定:" : "Planned for v2.0:"}</strong>{" "}
               {isJa
-                ? "気分や案件に応じて人格を切り替え。"
-                : "Switch personas based on mood and workload."}
-              <br />
-              {isJa ? "現在は" : "Currently fixed to"}{" "}
-              <code
-                style={{
-                  background: "#FFF7ED",
-                  padding: "1px 4px",
-                  borderRadius: 3,
-                  fontFamily: "Space Grotesk, monospace",
-                }}
-              >
-                saboru_ottori
-              </code>{" "}
-              {isJa ? "固定。" : "."}
+                ? "選んだ人格は即座に保存され、次のサボり判定からその口調で届くよ。判定（サボれる/微妙/やるべき）は変わらず、伝え方だけが変わる。"
+                : "Your choice is saved immediately and applied from the next verdict. The judgment itself stays the same — only the tone changes."}
             </p>
           </div>
         </div>

@@ -65,9 +65,14 @@ export class SaboriProposerAgent {
    *
    * @param taskId - Proposal PK キー用のタスク ID
    * @param context - task とオプションの slackContext を持つ TaskContext
+   * @param personaId - 口調変換に使うペルソナ ID（省略時 DEFAULT_PERSONA_ID）
    * @returns 永続化済み Proposal
    */
-  async propose(taskId: string, context: TaskContext): Promise<Proposal> {
+  async propose(
+    taskId: string,
+    context: TaskContext,
+    personaId: string = DEFAULT_PERSONA_ID,
+  ): Promise<Proposal> {
     const startMs = Date.now();
 
     // フェーズ 1: コンテキスト組み立て
@@ -90,7 +95,7 @@ export class SaboriProposerAgent {
       reasoning: judgment.reasoning,
       summaryText: judgment.summaryText,
       rawChatMessage: judgment.rawChatMessage,
-      personaId: DEFAULT_PERSONA_ID,
+      personaId,
     });
 
     // Final assembly
@@ -139,6 +144,7 @@ export class SaboriProposerAgent {
   async *proposeStream(
     taskId: string,
     context: TaskContext,
+    personaId: string = DEFAULT_PERSONA_ID,
   ): AsyncGenerator<ProposalDelta> {
     const startMs = Date.now();
 
@@ -233,7 +239,7 @@ export class SaboriProposerAgent {
       reasoning: judgment.reasoning,
       summaryText: judgment.summaryText,
       rawChatMessage: judgment.rawChatMessage,
-      personaId: DEFAULT_PERSONA_ID,
+      personaId,
     });
 
     // Final assembly and persist

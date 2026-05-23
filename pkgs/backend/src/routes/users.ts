@@ -5,7 +5,11 @@
  * DynamoDB に未登録の場合は初回ログイン扱いで upsert してから返す。
  */
 
+import { zValidator } from "@hono/zod-validator";
+import { isValidPersonaId } from "@saboru/shared";
 import { Hono } from "hono";
+import { z } from "zod";
+import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../types.js";
@@ -73,6 +77,65 @@ export function createUsersRoute(userRepository: DynamoUserRepository) {
 
     return c.json(user, 201);
   });
+
+  /**
+   * PUT /me/persona — 好みの AI ペルソナを更新する（D: ペルソナ切替）
+   * body: { personaId }
+   */
+  users.put(
+    "/me/persona",
+    authMiddleware,
+    zValidator(
+      "json",
+      z.object({ personaId: z.string().min(1) }),
+      (result, c) => {
+        if (!result.success) {
+          return c.json(
+            {
+              error: {
+                code: "VALIDATION_ERROR",
+                message: "Invalid request body",
+                details: result.error.flatten(),
+              },
+            },
+            400,
+          );
+        }
+      },
+    ),
+    async (c) => {
+      const userId = c.get("userId");
+      const { personaId } = c.req.valid("json");
+
+      if (!isValidPersonaId(personaId)) {
+        return c.json(
+          {
+            error: {
+              code: "INVALID_PERSONA",
+              message: `Unknown personaId: ${personaId}`,
+            },
+          },
+          400,
+        );
+      }
+
+      const existing = await userRepository.findById(userId);
+      if (!existing) throw new NotFoundError("User profile not found");
+
+      const updated = await userRepository.upsert({
+        cognitoSub: existing.cognitoSub,
+        email: existing.email,
+        name: existing.name,
+        ...(existing.slackUserId ? { slackUserId: existing.slackUserId } : {}),
+        ...(existing.slackTeamId ? { slackTeamId: existing.slackTeamId } : {}),
+        preferredPersonaId: personaId,
+        createdAt: existing.createdAt,
+        updatedAt: new Date().toISOString(),
+      });
+
+      return c.json(updated);
+    },
+  );
 
   return users;
 }

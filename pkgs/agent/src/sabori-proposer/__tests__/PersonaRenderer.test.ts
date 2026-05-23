@@ -287,4 +287,74 @@ describe("PersonaRenderer", () => {
       expect(result.verdictLabel).toBe("確認中");
     });
   });
+
+  describe("persona switching (D) + diversity (E)", () => {
+    // converse に渡された input をキャプチャするモック
+    class CapturingBedrock implements IBedrockClient {
+      public lastInput?: ConverseCommandInput;
+      async converse(
+        input: ConverseCommandInput,
+      ): Promise<ConverseCommandOutput> {
+        this.lastInput = input;
+        return makeHaikuResponse();
+      }
+      async converseStream(
+        _input: ConverseStreamCommandInput,
+      ): Promise<ConverseStreamCommandOutput> {
+        return {
+          $metadata: {},
+          stream: undefined as unknown as ConverseStreamCommandOutput["stream"],
+        };
+      }
+    }
+
+    it("selects the strict persona prompt and lower temperature", async () => {
+      const bedrock = new CapturingBedrock();
+      const r = new PersonaRenderer(bedrock);
+      await r.render({ ...CAN_SABORU_INPUT, personaId: "saboru_strict" });
+
+      const systemText = bedrock.lastInput?.system?.[0]?.text ?? "";
+      expect(systemText).toContain("鬼コーチ");
+      expect(bedrock.lastInput?.inferenceConfig?.temperature).toBe(0.2);
+    });
+
+    it("selects the psychologist persona prompt", async () => {
+      const bedrock = new CapturingBedrock();
+      const r = new PersonaRenderer(bedrock);
+      await r.render({ ...CAN_SABORU_INPUT, personaId: "saboru_psy" });
+
+      const systemText = bedrock.lastInput?.system?.[0]?.text ?? "";
+      expect(systemText).toContain("心理士");
+      expect(bedrock.lastInput?.inferenceConfig?.temperature).toBe(0.5);
+    });
+
+    it("selects the engineer persona prompt", async () => {
+      const bedrock = new CapturingBedrock();
+      const r = new PersonaRenderer(bedrock);
+      await r.render({ ...CAN_SABORU_INPUT, personaId: "saboru_hacker" });
+
+      const systemText = bedrock.lastInput?.system?.[0]?.text ?? "";
+      expect(systemText).toContain("エンジニア");
+    });
+
+    it("falls back to ottori prompt for an unknown personaId", async () => {
+      const bedrock = new CapturingBedrock();
+      const r = new PersonaRenderer(bedrock);
+      await r.render({ ...CAN_SABORU_INPUT, personaId: "nonexistent" });
+
+      const systemText = bedrock.lastInput?.system?.[0]?.text ?? "";
+      expect(systemText).toContain("おっとり");
+      expect(bedrock.lastInput?.inferenceConfig?.temperature).toBe(0.45);
+    });
+
+    it("preserves the requested personaId in the output", async () => {
+      const bedrock = new CapturingBedrock();
+      const r = new PersonaRenderer(bedrock);
+      const result = await r.render({
+        ...CAN_SABORU_INPUT,
+        personaId: "saboru_hacker",
+      });
+      expect(result.personaId).toBe("saboru_hacker");
+    });
+  });
 });

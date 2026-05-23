@@ -9,22 +9,31 @@
  */
 
 import type { SaboriProposerAgent, TaskContext } from "@saboru/agent";
+import { DEFAULT_PERSONA_ID } from "@saboru/shared";
 import { Hono } from "hono";
 import { stream, streamSSE } from "hono/streaming";
 import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
 import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../types.js";
 
 export function createProposalsRoute(
   taskRepository: DynamoTaskRepository,
   proposalRepository: DynamoProposalRepository,
   agent: SaboriProposerAgent,
+  userRepository: DynamoUserRepository,
 ): Hono<AppEnv> {
   const proposals = new Hono<AppEnv>();
 
   proposals.use("*", authMiddleware);
+
+  /** ユーザーの好みペルソナを取得（未設定はデフォルト） */
+  async function resolvePersonaId(userId: string): Promise<string> {
+    const user = await userRepository.findById(userId);
+    return user?.preferredPersonaId ?? DEFAULT_PERSONA_ID;
+  }
 
   /**
    * GET /tasks/:taskId/proposal
@@ -84,9 +93,11 @@ export function createProposalsRoute(
     // TaskContext を構築
     const context: TaskContext = { task };
 
+    const personaId = await resolvePersonaId(userId);
+
     if (!isStream) {
       // 同期生成
-      const proposal = await agent.propose(taskId, context);
+      const proposal = await agent.propose(taskId, context, personaId);
       return c.json(proposal);
     }
 
@@ -97,7 +108,11 @@ export function createProposalsRoute(
       });
 
       try {
-        for await (const delta of agent.proposeStream(taskId, context)) {
+        for await (const delta of agent.proposeStream(
+          taskId,
+          context,
+          personaId,
+        )) {
           await stream.writeSSE({
             event: delta.type,
             data: JSON.stringify(delta),
@@ -131,10 +146,11 @@ export function createProposalsRoute(
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
 
     const context: TaskContext = { task };
+    const personaId = await resolvePersonaId(userId);
 
     return stream(c, async (s) => {
       try {
-        const proposal = await agent.propose(taskId, context);
+        const proposal = await agent.propose(taskId, context, personaId);
         await s.write(proposal.chatMessage);
       } catch (err) {
         console.error("[Stream] POST proposal error", {

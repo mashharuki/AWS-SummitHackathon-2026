@@ -107,6 +107,14 @@ export async function getMe(): Promise<User> {
   return request<User>("/api/users/me");
 }
 
+/** PUT /api/users/me/persona — 好みの AI ペルソナを更新 */
+export async function updatePersona(personaId: string): Promise<User> {
+  return request<User>("/api/users/me/persona", {
+    method: "PUT",
+    body: JSON.stringify({ personaId }),
+  });
+}
+
 // --- タスク候補 ---
 
 /** GET /api/tasks/candidates */
@@ -223,6 +231,7 @@ export function buildProposalStreamUrl(taskId: string): string {
 
 export default {
   getMe,
+  updatePersona,
   getCandidates,
   approveCandidate,
   rejectCandidate,

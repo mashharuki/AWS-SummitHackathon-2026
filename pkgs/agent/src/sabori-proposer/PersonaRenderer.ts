@@ -4,8 +4,9 @@ import {
   PERSONA_RENDER_TOOL,
   PERSONA_RENDER_TOOL_NAME,
   RenderOutputSchema,
-  SABORU_OTTORI_SYSTEM_PROMPT,
   VERDICT_META,
+  getPersonaSystemPrompt,
+  getPersonaTemperature,
 } from "./personaRenderTool.js";
 import type { RenderInput, RenderOutput } from "./types.js";
 
@@ -41,10 +42,14 @@ export class PersonaRenderer {
 
     const startMs = Date.now();
 
+    // ペルソナごとに口調プロンプトと temperature を切り替える（D: 切替 / E: 多様化）
+    const systemPrompt = getPersonaSystemPrompt(input.personaId);
+    const temperature = getPersonaTemperature(input.personaId);
+
     try {
       const response = await this.bedrock.converse({
         modelId: HAIKU_MODEL_ID,
-        system: [{ text: SABORU_OTTORI_SYSTEM_PROMPT }],
+        system: [{ text: systemPrompt }],
         messages: [
           {
             role: "user",
@@ -76,7 +81,7 @@ export class PersonaRenderer {
         },
         inferenceConfig: {
           maxTokens: 256,
-          temperature: 0.3,
+          temperature,
         },
       });
 

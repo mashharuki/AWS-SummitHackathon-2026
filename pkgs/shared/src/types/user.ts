@@ -26,6 +26,12 @@ export interface User {
    * Combined with slackUserId to uniquely identify the Slack identity.
    */
   slackTeamId?: string;
+  /**
+   * Preferred AI persona ID (e.g., "saboru_ottori").
+   * Controls the tone of sabori proposals. Defaults to DEFAULT_PERSONA_ID
+   * when unset. Must be one of VALID_PERSONA_IDS.
+   */
+  preferredPersonaId?: string;
   /** Creation datetime (ISO 8601) */
   createdAt: string;
   /** Update datetime (ISO 8601) */

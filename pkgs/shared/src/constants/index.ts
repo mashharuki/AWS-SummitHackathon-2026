@@ -54,8 +54,27 @@ export const DDB_PREFIX = {
   HONNE: "HONNE#",
 } as const;
 
-/** MVP fixed persona ID */
+/** Default persona ID (used when a user has not chosen one) */
 export const DEFAULT_PERSONA_ID = "saboru_ottori";
+
+/**
+ * Selectable AI persona IDs.
+ * Must stay in sync with the frontend PERSONAS list (staticContent.ts) and
+ * the agent persona prompts (personaRenderTool.ts).
+ */
+export const VALID_PERSONA_IDS = [
+  "saboru_ottori", // おっとり（癒し系）
+  "saboru_strict", // 鬼コーチ（冷徹）
+  "saboru_psy", // 心理士（問いかけ）
+  "saboru_hacker", // エンジニア（論理・箇条書き）
+] as const;
+
+export type PersonaId = (typeof VALID_PERSONA_IDS)[number];
+
+/** persona ID が有効か判定する */
+export function isValidPersonaId(id: string): id is PersonaId {
+  return (VALID_PERSONA_IDS as readonly string[]).includes(id);
+}
 
 /** TaskCandidate TTL days (DynamoDB auto-delete, BR-13) */
 export const TASK_CANDIDATE_TTL_DAYS = 30;
