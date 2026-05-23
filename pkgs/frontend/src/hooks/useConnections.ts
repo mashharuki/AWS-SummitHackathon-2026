@@ -53,9 +53,23 @@ export function useConnections() {
     [connections],
   );
 
+  /**
+   * Slack 連携を開始する。
+   * 認証付きで OAuth 認可 URL を取得し、そのページへ遷移する。
+   */
+  const connectSlack = useCallback(async () => {
+    try {
+      const url = await apiClient.getSlackAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      showToast(toUserMessage(err), "error");
+    }
+  }, [showToast]);
+
   return {
     connections,
     isLoading,
+    connectSlack,
     disconnect,
     getConnection,
     refresh: fetchConnections,

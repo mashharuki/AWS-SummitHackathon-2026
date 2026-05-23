@@ -68,6 +68,12 @@ export class SaborouApiStack extends cdk.Stack {
           this,
           "/saborou/oauth/state-secret",
         ),
+        // --- Slack OAuth 開始用の client_id（GET /auth/slack で使用） ---
+        // 機密ではない公開IDだが、ハードコードを避け SSM 経由で注入する。
+        SLACK_CLIENT_ID: ssm.StringParameter.valueForStringParameter(
+          this,
+          "/saborou/slack/client-id",
+        ),
         // Slack 遡及取得 API (POST /api/slack/sync-messages) が EventBridge へ
         // SlackBackfill イベントを publish するため必要。
         // WebhookStack → ApiStack の依存方向のため循環回避で固定名を使う

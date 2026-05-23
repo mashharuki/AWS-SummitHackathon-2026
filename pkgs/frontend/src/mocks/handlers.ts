@@ -102,6 +102,13 @@ export const handlers = [
     });
   }),
 
+  // Slack OAuth 認可 URL 取得
+  http.get("*/api/auth/slack", () => {
+    return HttpResponse.json({
+      url: "https://slack.com/oauth/v2/authorize?client_id=test&state=xxx",
+    });
+  }),
+
   // タスク候補
   http.get("*/api/tasks/candidates", () => {
     return HttpResponse.json({ candidates: mockCandidates });
