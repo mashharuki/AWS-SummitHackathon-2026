@@ -6,6 +6,7 @@ import {
   getRefreshToken,
   refreshAccessToken,
   setAccessToken,
+  setIdToken,
   setRefreshToken,
 } from "@/lib/cognito";
 import type { User } from "@saboru/shared";
@@ -27,6 +28,7 @@ interface AuthContextValue extends AuthState {
   signOut: () => Promise<void>;
   handleCallback: (
     accessToken: string,
+    idToken: string,
     refreshToken: string,
     expiresIn: number,
   ) => Promise<void>;
@@ -101,8 +103,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleCallback = React.useCallback(
-    async (accessToken: string, refreshToken: string, expiresIn: number) => {
+    async (
+      accessToken: string,
+      idToken: string,
+      refreshToken: string,
+      expiresIn: number,
+    ) => {
       setAccessToken(accessToken, expiresIn);
+      // API 認証には id_token を使う（name/email クレームを含むため）
+      setIdToken(idToken);
       setRefreshToken(refreshToken);
       const user = await getMe();
       setState({ user, isAuthenticated: true, isLoading: false });

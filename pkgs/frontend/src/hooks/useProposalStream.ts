@@ -1,5 +1,5 @@
 import apiClient from "@/lib/apiClient";
-import { getAccessToken } from "@/lib/cognito";
+import { getApiAuthToken } from "@/lib/cognito";
 import type { Proposal, Verdict } from "@saboru/shared";
 /**
  * サボローチャット SSE ストリーミングフック
@@ -29,7 +29,7 @@ export function useProposalStream({
   const { messages, append, isLoading, error, setMessages } = useChat({
     api: apiClient.buildProposalStreamUrl(taskId),
     fetch: async (input, init) => {
-      const token = getAccessToken();
+      const token = getApiAuthToken();
       return fetch(input, {
         ...init,
         headers: {
