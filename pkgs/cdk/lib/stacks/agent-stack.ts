@@ -61,6 +61,11 @@ export class SaborouAgentStack extends cdk.Stack {
         "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6",
         "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-sonnet-4-6",
         "arn:aws:bedrock:ap-southeast-2::foundation-model/anthropic.claude-sonnet-4-6",
+        // Claude Haiku 4.5 (PersonaRenderer 口調変換): JP Geo 推論プロファイル
+        // ※ Haiku 3.5 は ap-northeast-1 に存在しないため 4.5 を使用
+        `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-haiku-4-5-20251001-v1:0`,
+        "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
       ],
     });
 
