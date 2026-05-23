@@ -12,7 +12,7 @@ import type {
 } from "@saboru/shared";
 import {
   clearTokens,
-  getAccessToken,
+  getApiAuthToken,
   refreshAccessToken,
   setAccessToken,
 } from "./cognito";
@@ -53,7 +53,8 @@ async function request<T>(
   options?: RequestInit,
   retry = true,
 ): Promise<T> {
-  const token = getAccessToken();
+  // API Gateway JWT オーソライザーには id_token を送る（name/email クレームを含む）
+  const token = getApiAuthToken();
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",

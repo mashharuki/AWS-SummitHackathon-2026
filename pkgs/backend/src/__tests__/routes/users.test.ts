@@ -101,4 +101,90 @@ describe("GET /api/users/me", () => {
     const res = await makeApp(repo).request("/api/users/me", { method: "GET" });
     expect(res.status).toBe(401);
   });
+
+  it("self-heals UUID-shaped name using id_token name claim", async () => {
+    // 過去に access_token 経由で name が UUID 保存されていたユーザー
+    const uuidNamedUser: User = {
+      ...existingUser,
+      name: mockUserId, // findById は UUID 形式の name を返す想定だが…
+    };
+    // mockUserId は UUID 形式ではないため、UUID 形式の sub に差し替える
+    const uuidSub = "12345678-1234-1234-1234-1234567890ab";
+    const env = {
+      requestContext: {
+        authorizer: {
+          jwt: {
+            claims: {
+              sub: uuidSub,
+              email: "real@example.com",
+              name: "Real Name",
+            },
+          },
+        },
+      },
+    };
+    vi.mocked(repo.findById).mockResolvedValue({
+      ...uuidNamedUser,
+      PK: `USER#${uuidSub}`,
+      cognitoSub: uuidSub,
+      name: uuidSub, // UUID 形式の name（フォールバック保存済み）
+    });
+    vi.mocked(repo.upsert).mockImplementation(async (u) => ({
+      PK: `USER#${u.cognitoSub}`,
+      SK: "PROFILE",
+      ...u,
+    }));
+
+    const app = makeApp(repo);
+    const res = await app.request("/api/users/me", { method: "GET" }, env);
+
+    expect(res.status).toBe(200);
+    // name は UUID から修復される。email は既存値（健全）が優先保持される。
+    expect(repo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Real Name", email: "test@example.com" }),
+    );
+  });
+
+  it("self-heals empty email using id_token email claim", async () => {
+    // 過去に access_token 経由で email が空保存されていたユーザー
+    vi.mocked(repo.findById).mockResolvedValue({
+      ...existingUser,
+      email: "", // 空の email（access_token には email クレームがないため）
+    });
+    vi.mocked(repo.upsert).mockImplementation(async (u) => ({
+      PK: `USER#${u.cognitoSub}`,
+      SK: "PROFILE",
+      ...u,
+    }));
+
+    const app = makeApp(repo);
+    const res = await app.request(
+      "/api/users/me",
+      { method: "GET" },
+      makeEnv({ email: "recovered@example.com" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(repo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "recovered@example.com" }),
+    );
+    // name は健全なのでそのまま保持される
+    expect(repo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Test User" }),
+    );
+  });
+
+  it("does not upsert when both name and email are already healthy", async () => {
+    vi.mocked(repo.findById).mockResolvedValue(existingUser);
+
+    const app = makeApp(repo);
+    const res = await app.request(
+      "/api/users/me",
+      { method: "GET" },
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(200);
+    expect(repo.upsert).not.toHaveBeenCalled();
+  });
 });

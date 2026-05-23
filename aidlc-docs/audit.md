@@ -1305,3 +1305,35 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 
 @update-plan-20260523.md にブラッシュアップ計画内容を記載。
 この内容を適用させました。
+
+---
+
+## 機能改修バックログ — 整合性分析と進め方の決定
+**Timestamp**: 2026-05-23T06:00:00Z
+**User Input**: "それぞれの機能でブランチを切りながら一つずつマージしていきながら進めたい。まずはこのプロジェクトでそれぞれのタスクを組み込むことがどれぐらい整合性が取れているか、確認して、良い改修内容であればどんどん一つずつ進めていきたい。どれだけ時間をかけても良いので、質を優先して下さい。"
+**AI Response**: 8タスクを実コード調査（Exploreサブエージェント＋主要ファイル読解）し、整合性分析レポートを `aidlc-docs/feature-analysis/2026-05-23-feature-integration-analysis.md` に作成。推奨実行順 A→B→C→D→E→F→G を提示。
+**Context**: 機能改修フェーズ開始。1機能=1ブランチ=1PR方針。
+
+---
+
+## 進行順・動作確認方針の決定
+**Timestamp**: 2026-05-23T06:05:00Z
+**User Input**: "推奨順で、進めましょう。" / 動作確認方法についての相談（都度デプロイ→破棄か、立てっぱなしか）
+**AI Response**: 動作確認は3層（フロントモック / Floci ローカルAWSエミュレータ / 実AWS）を提示。「Floci中心＋節目で実AWS」を推奨。FlociはAWS SDK呼び出しを localhost:4566 でエミュレートするが、Bedrock実応答・実OAuth・Cognitoパスキーは実AWS必須と整理。
+**Context**: 進行順 A→B→C→D→E→F→G で確定。
+
+---
+
+## タスクA: 設定画面のユーザー名・メール非表示バグ修正
+**Timestamp**: 2026-05-23T06:25:00Z
+**User Input**: タスクA修正方針の選択 = "frontendが id_token を送る（推奨・最小）"
+**AI Response**: 根本原因を特定 — フロントが API Gateway JWT オーソライザーに access_token を送っていたが、Cognito の access_token には name/email クレームが含まれない（id_token のみ）。そのため backend が name=UUID・email="" で保存し、設定画面で空表示になっていた（モックモードでは再現せず実AWSのみ）。
+修正内容（ブランチ `feature/fix-user-profile-display`）:
+- `cognito.ts`: id_token メモリ内ストア（setIdToken/getIdToken）と API認証用 getApiAuthToken() を追加。refreshAccessToken がリフレッシュレスポンスの id_token も更新。
+- `AuthProvider.tsx` / `AuthCallbackPage.tsx`: handleCallback に idToken 引数を追加し保存。
+- `apiClient.ts` / `useProposalStream.ts`: Authorization に getApiAuthToken()（id_token優先）を使用。
+- `backend/routes/users.ts`: 既存ユーザーの自己修復ロジックを強化（email 空も claims から補完）。
+品質確認: frontend 135件・backend 195件 全テストパス。新規テスト frontend 12件・backend 3件追加。型チェック通過。Biome エラー数は変更前12→変更後11（悪化なし）。
+**Context**: タスクA実装完了。コミット・PR待ち。
+
+---
