@@ -39,7 +39,7 @@ export function SettingsPage() {
           {/* プロフィール */}
           {user && (
             <div className="card-brutal p-3.5 flex items-center gap-3">
-              <SaborouAvatar size={48} />
+              <SaborouAvatar size={48} personaId={user.preferredPersonaId} />
               <div className="min-w-0">
                 <p
                   className="font-bold text-saboru-ink truncate"
