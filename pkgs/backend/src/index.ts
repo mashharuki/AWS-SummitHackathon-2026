@@ -48,6 +48,7 @@ import { createConnectionsRoute } from "./routes/connections.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
 import { createProposalsRoute } from "./routes/proposals.js";
+import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
 import { createUsersRoute } from "./routes/users.js";
 
@@ -126,6 +127,10 @@ export function createApp() {
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
+  app.route(
+    "/api/slack",
+    createSlackRoute(taskRepository, proposalRepository),
+  );
 
   // OpenAPI / Swagger UI
   app.get("/doc", (c) => c.json(openApiDoc));

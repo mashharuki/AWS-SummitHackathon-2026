@@ -1335,3 +1335,26 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 **Context**: タスクB実装完了。PR #25 作成済み。
 
 ---
+
+## タスクB マージとタスクC起点準備
+**Timestamp**: 2026-05-23T11:00:00Z
+**User Input**: "Bがコンフリクトが起きているのでそれを確認して、…マージして、その後マージしたmainからCを分岐させるのはどう思いますか"
+**AI Response**: PR #25 の audit.md コンフリクト（タスクA/Bの末尾追記衝突）を時系列順に統合して解決。マージ後の統合テスト（shared 103/backend 202/agent 155/frontend 135 全パス）を確認し PR #25 をマージ（main 8b58edd）。最新 main から `feature/slack-task-list-and-bot-token` を作成。
+**Context**: タスクA・Bマージ済み。タスクC着手。
+
+---
+
+## タスクC: Bot Token化 + Slackからタスク一覧取得 + インタラクティブ返信
+**Timestamp**: 2026-05-23T11:30:00Z
+**User Input**: タスクCスコープ選択 = "全てお願いします"（SlackClient・Bot Token不整合修正・遡及取得API・返信機構・ドキュメント）
+**AI Response**: 事前調査で Bot Token 取得の重大な不整合を発見 — ContextCollector が `SLACK_TOKEN_SECRET_NAME`(=OAuth Client Secret) を参照し、per-user Bot Token(`saborou/slack-bot-token/{userId}`)に届いていなかった。全部を1PRで実装（ブランチ `feature/slack-task-list-and-bot-token`）:
+- agent: SlackClient 新規（conversations.history / chat.postMessage、5sタイムアウト、ok:false エラー化）。ContextCollector を per-user Bot Token 取得に修正（getSlackToken(userId)・Mapキャッシュ・SLACK_BOT_TOKEN_SECRET_PREFIX）。TaskExtractorLambdaHandler を SlackEvent(逆引き)/SlackBackfill(userId直接) 両対応に分岐。events.ts に backfill スキーマ追加。
+- backend: POST /api/slack/sync-messages（履歴遡及→EventBridge backfill publish）と POST /api/slack/notify-task（判定を Slack 投稿）を新規。SLACK_OAUTH_SCOPES に chat:write 追加。
+- CDK: agent/api Lambda に per-user Bot Token(`saborou/slack-bot-token/*`) GetSecretValue 権限・SLACK_BOT_TOKEN_SECRET_PREFIX env を付与。誤った SLACK_TOKEN_SECRET_NAME=clientSecret を廃止。api に EVENT_BUS_NAME(固定名で循環回避)・events:PutEvents 権限を追加。
+- docs: slack-app-setup.md に Bot Token化手順（chat:write・per-user保存・再認可注意）を追記。slack-api-integration.md を新規作成。
+品質確認: shared 103 / backend 212 / agent 169 全テストパス（agent カバレッジ100%維持）。型チェック・CDK synth(Agent/Api)・ビルド OK。Biome エラー総数 変更前168→変更後165（悪化なし）。
+途中、Biome formatter が inline import type を壊しテストが全滅→トップレベル import type に修正（[[feedback-biome-unsafe-nodelete-risk]] に追記）。
+設計詳細は aidlc-docs/construction/slack-task-list-bot-token/design.md。
+**Context**: タスクC実装完了。コミット・PR待ち。
+
+---
