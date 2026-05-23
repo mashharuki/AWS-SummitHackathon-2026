@@ -38,16 +38,22 @@ export function createUsersRoute(userRepository: DynamoUserRepository) {
 
     const existing = await userRepository.findById(userId);
     if (existing) {
-      // 名前が UUID 形式（フォールバック保存済み）かつより良い名前が取れた場合は自動修復
-      if (
+      // 自己修復: 過去に access_token 経由で name/email が空（または UUID）保存された
+      // ユーザーを、id_token のクレームで補完する。
+      // - name が UUID 形式（フォールバック保存済み）でより良い名前が取れた
+      // - または email が空でクレームから補完できる
+      const claimEmail = claims.email ?? "";
+      const needsNameFix =
         UUID_PATTERN.test(existing.name) &&
-        resolvedName &&
-        resolvedName !== userId
-      ) {
+        resolvedName !== "" &&
+        resolvedName !== userId;
+      const needsEmailFix = existing.email === "" && claimEmail !== "";
+
+      if (needsNameFix || needsEmailFix) {
         const updated = await userRepository.upsert({
           cognitoSub: existing.cognitoSub,
-          email: existing.email || (claims.email ?? ""),
-          name: resolvedName,
+          email: existing.email || claimEmail,
+          name: needsNameFix ? resolvedName : existing.name,
           createdAt: existing.createdAt,
           updatedAt: new Date().toISOString(),
         });

@@ -4,10 +4,13 @@ import {
   clearTokens,
   exchangeCodeForTokens,
   getAccessToken,
+  getApiAuthToken,
+  getIdToken,
   getRefreshToken,
   parseIdToken,
   refreshAccessToken,
   setAccessToken,
+  setIdToken,
   setRefreshToken,
   validateOAuthState,
 } from "@/lib/cognito";
@@ -246,6 +249,43 @@ describe("refreshAccessToken — リフレッシュトークンでアクセス�
     expect(getAccessToken()).toBe("refreshed-access-token");
   });
 
+  it("正常系: レスポンスにid_tokenが含まれる場合はIDトークンも更新する", async () => {
+    setRefreshToken("valid-refresh-token");
+
+    server.use(
+      http.post("*/oauth2/token", () => {
+        return HttpResponse.json({
+          access_token: "refreshed-access-token",
+          id_token: "refreshed-id-token",
+          expires_in: 3600,
+        });
+      }),
+    );
+
+    await refreshAccessToken();
+    expect(getIdToken()).toBe("refreshed-id-token");
+    // API 認証トークンも id_token を優先して返す
+    expect(getApiAuthToken()).toBe("refreshed-id-token");
+  });
+
+  it("正常系: レスポンスにid_tokenが無ければIDトークンは更新されない", async () => {
+    setRefreshToken("valid-refresh-token");
+
+    server.use(
+      http.post("*/oauth2/token", () => {
+        return HttpResponse.json({
+          access_token: "refreshed-access-token",
+          expires_in: 3600,
+        });
+      }),
+    );
+
+    await refreshAccessToken();
+    expect(getIdToken()).toBeNull();
+    // フォールバックで access_token を返す
+    expect(getApiAuthToken()).toBe("refreshed-access-token");
+  });
+
   it("異常系: リフレッシュトークンなしでnullを返す", async () => {
     // リフレッシュトークンはない
     const token = await refreshAccessToken();
@@ -334,6 +374,53 @@ describe("parseIdToken — IDトークンのデコード", () => {
 
   it("異常系: ピリオドなしトークンでErrorをスロー", () => {
     expect(() => parseIdToken("onlyone")).toThrow("Invalid ID token");
+  });
+});
+
+describe("IDトークン管理 — setIdToken / getIdToken / getApiAuthToken", () => {
+  beforeEach(() => {
+    clearTokens();
+  });
+
+  it("IDトークンを設定・取得できる（有効期限内）", () => {
+    // getIdToken は _tokenExpiry を参照するため、setAccessToken で期限も設定する
+    setAccessToken("access", 3600);
+    setIdToken("id-token-value");
+    expect(getIdToken()).toBe("id-token-value");
+  });
+
+  it("有効期限が未設定（setAccessToken未呼び出し）ならnullを返す", () => {
+    setIdToken("id-token-no-expiry");
+    expect(getIdToken()).toBeNull();
+  });
+
+  it("期限切れ（expiresIn=0）のIDトークンはnullを返す", () => {
+    setAccessToken("access", 0);
+    setIdToken("expired-id-token");
+    expect(getIdToken()).toBeNull();
+  });
+
+  it("clearTokensでIDトークンも消える", () => {
+    setAccessToken("access", 3600);
+    setIdToken("id-token-value");
+    clearTokens();
+    expect(getIdToken()).toBeNull();
+  });
+
+  it("getApiAuthTokenはIDトークンを優先する", () => {
+    setAccessToken("access-token-value", 3600);
+    setIdToken("id-token-value");
+    expect(getApiAuthToken()).toBe("id-token-value");
+  });
+
+  it("getApiAuthTokenはIDトークンがなければaccessトークンにフォールバックする", () => {
+    setAccessToken("access-token-value", 3600);
+    // setIdToken は呼ばない
+    expect(getApiAuthToken()).toBe("access-token-value");
+  });
+
+  it("getApiAuthTokenは両方なければnullを返す", () => {
+    expect(getApiAuthToken()).toBeNull();
   });
 });
 
