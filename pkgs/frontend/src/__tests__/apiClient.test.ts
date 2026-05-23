@@ -13,6 +13,7 @@ import apiClient, {
   getProposal,
   submitHonne,
   getConnections,
+  getSlackAuthUrl,
   disconnectService,
   buildProposalStreamUrl,
 } from "@/lib/apiClient";
@@ -188,6 +189,11 @@ describe("apiClient — 正常系エンドポイント", () => {
   it("DELETE /api/connections/:service でサービス連携を解除できる（204）", async () => {
     const result = await apiClient.disconnectService("slack");
     expect(result).toBeUndefined();
+  });
+
+  it("GET /api/auth/slack で Slack OAuth 認可 URL を取得できる", async () => {
+    const url = await getSlackAuthUrl();
+    expect(url).toContain("slack.com/oauth/v2/authorize");
   });
 
   it("disconnectService 名前付きエクスポートでも動作する", async () => {

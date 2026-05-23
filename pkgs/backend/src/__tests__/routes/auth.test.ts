@@ -1,7 +1,7 @@
 /**
  * 認証ルートのテスト (最小限 — OAuth フローには外部 Slack API が必要)
  *
- * GET /auth/slack — リダイレクト開始
+ * GET /auth/slack — Slack OAuth 認可 URL を JSON で返す
  * GET /auth/slack/callback — エラーケース (無効なステート、パラメーター不足)
  */
 
@@ -58,14 +58,16 @@ function buildTestApp(
 }
 
 describe("GET /auth/slack", () => {
-  it("redirects (302) to Slack OAuth", async () => {
+  it("returns the Slack OAuth authorize URL as JSON", async () => {
     const connRepo = {};
     const app = buildTestApp(connRepo);
 
     const res = await app.request("/auth/slack");
-    expect(res.status).toBe(302);
-    const location = res.headers.get("location") ?? "";
-    expect(location).toContain("slack.com/oauth/v2/authorize");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.url).toContain("slack.com/oauth/v2/authorize");
+    expect(body.url).toContain("redirect_uri=");
+    expect(body.url).toContain("state=");
   });
 
   it("returns 401 when auth middleware rejects (no JWT claims)", async () => {

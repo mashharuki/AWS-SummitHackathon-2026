@@ -215,6 +215,15 @@ export async function getConnections(): Promise<ServiceConnection[]> {
   return data.connections;
 }
 
+/**
+ * GET /api/auth/slack — Slack OAuth 認可 URL を取得する
+ * （認証ヘッダ付き fetch。返ってきた url へフロントが遷移して連携を開始する）
+ */
+export async function getSlackAuthUrl(): Promise<string> {
+  const data = await request<{ url: string }>("/api/auth/slack");
+  return data.url;
+}
+
 /** DELETE /api/connections/:service */
 export async function disconnectService(service: string): Promise<void> {
   return request<void>(`/api/connections/${service}`, {
@@ -243,6 +252,7 @@ export default {
   getProposal,
   submitHonne,
   getConnections,
+  getSlackAuthUrl,
   disconnectService,
   buildProposalStreamUrl,
 };

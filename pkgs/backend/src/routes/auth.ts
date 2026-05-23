@@ -111,7 +111,10 @@ export function createAuthRoute(
       state,
     });
 
-    return c.redirect(`${SLACK_OAUTH_URL}?${params.toString()}`);
+    // 302 リダイレクトではなく Slack 認可 URL を JSON で返す。
+    // フロントは Authorization ヘッダ付き fetch でこれを取得し、
+    // 返ってきた URL へ window.location で遷移する（トークンを URL に載せない）。
+    return c.json({ url: `${SLACK_OAUTH_URL}?${params.toString()}` });
   });
 
   /**
