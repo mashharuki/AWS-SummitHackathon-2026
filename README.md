@@ -150,10 +150,10 @@ SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判�
 </details>
 
 📖 **詳細資料**:
-- 3フェーズ判定フロー詳細: [`aidlc-docs/inception/application-design/application-design.md`](./aidlc-docs/inception/application-design/application-design.md) §7.2（サボり提案生成シーケンス図）
-- サボり判定3状態・判定ロジック・next_check_at計算ルール: 同 §8.1〜8.4
+- 3フェーズ判定フロー詳細: [`aidlc-docs/inception/application-design/application-design.md`](./aidlc-docs/inception/application-design/application-design.md) 7.2（サボり提案生成シーケンス図）
+- サボり判定3状態・判定ロジック・next_check_at計算ルール: 同 8.1〜8.4
 - SaboriProposerAgent 実装メソッド・心理学フレームワーク実装マッピング: [`aidlc-docs/inception/application-design/component-methods/AG-02-sabori-proposer-agent.md`](./aidlc-docs/inception/application-design/component-methods/AG-02-sabori-proposer-agent.md)
-- 心理学根拠の要約（DOI付き）: [`requirements.md`](./aidlc-docs/inception/requirements/requirements.md) §1.1.2
+- 心理学根拠の要約（DOI付き）: [`requirements.md`](./aidlc-docs/inception/requirements/requirements.md) 1.1.2
 
 ---
 
