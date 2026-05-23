@@ -6,6 +6,7 @@ import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/hooks/useAuth";
 import { useTasks } from "@/hooks/useTasks";
+import { PERSONA_BANNERS } from "@/lib/staticContent";
 import { getDisplayName } from "@/lib/utils";
 /**
  * タスク一覧ページ — U-06-ui-redesign Phase 5 改修版
@@ -20,8 +21,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export function TaskListPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const locale = i18n.language.startsWith("ja") ? "ja" : "en";
   const {
     tasks,
     candidates,
@@ -38,8 +40,19 @@ export function TaskListPage() {
   // 今日バナーの verdict: タスクが無い or 全部 can_saboru なら "can_saboru"、
   // それ以外は最も重い verdict を採用（MVP では can_saboru 固定でも OK）
   const bannerVerdict: Verdict = "can_saboru";
-  const bannerMessage =
-    activeTasks.length === 0
+  // 挨拶文: ペルソナ別文言があればそれを使う（口調を一貫させる）。
+  // 無い/おっとりは既存の i18n デフォルト文言。
+  const personaBanner = user?.preferredPersonaId
+    ? PERSONA_BANNERS[user.preferredPersonaId]
+    : undefined;
+  const bannerMessage = personaBanner
+    ? activeTasks.length === 0
+      ? personaBanner.noTask[locale]
+      : personaBanner.hasTask[locale].replace(
+          "{{count}}",
+          String(activeTasks.length),
+        )
+    : activeTasks.length === 0
       ? t("tasks.noTaskBanner")
       : t("tasks.hasTaskBanner", { count: activeTasks.length });
 
@@ -91,7 +104,11 @@ export function TaskListPage() {
               background: "linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)",
             }}
           >
-            <SaborouCharacter2D verdict={bannerVerdict} size={56} />
+            <SaborouCharacter2D
+              verdict={bannerVerdict}
+              size={56}
+              personaId={user?.preferredPersonaId}
+            />
             <div className="flex-1 min-w-0">
               <p
                 className="font-bold tracking-wider"
