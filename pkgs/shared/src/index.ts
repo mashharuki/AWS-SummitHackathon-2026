@@ -14,6 +14,8 @@ export type {
   TaskCandidate,
   Task,
   Proposal,
+  PsychSignals,
+  SignalLevel,
   HonneData,
   Persona,
 } from "./types";

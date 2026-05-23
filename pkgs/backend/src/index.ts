@@ -106,7 +106,7 @@ export function createApp() {
   app.route("/health", healthRoute);
 
   // /api/* — フロントエンドの apiClient が期待するプレフィックス
-  app.route("/api/users", createUsersRoute(userRepository));
+  app.route("/api/users", createUsersRoute(userRepository, honneRepository));
   app.route("/api/auth", createAuthRoute(connectionRepository));
   app.route(
     "/api/tasks",

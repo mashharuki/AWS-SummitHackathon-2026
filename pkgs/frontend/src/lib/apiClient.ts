@@ -124,6 +124,22 @@ export async function decrementDependencyScore(
   );
 }
 
+export interface HonneSummary {
+  count: number;
+  quickReplyBreakdown: {
+    agree_with_ai: number;
+    truly_tired: number;
+    disagree_with_ai: number;
+    actually_important: number;
+  };
+  recentFreeTexts: string[];
+}
+
+/** GET /api/users/me/honne/summary */
+export async function getHonneSummary(): Promise<HonneSummary> {
+  return request<HonneSummary>("/api/users/me/honne/summary");
+}
+
 // --- タスク候補 ---
 
 /** GET /api/tasks/candidates */
@@ -242,6 +258,7 @@ export default {
   getMe,
   getDependencyScore,
   decrementDependencyScore,
+  getHonneSummary,
   getCandidates,
   approveCandidate,
   rejectCandidate,

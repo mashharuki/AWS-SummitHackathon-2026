@@ -4,14 +4,14 @@ import { VERDICT_META } from "@/lib/verdictMeta";
  *
  * U-06-ui-redesign Phase 5 / api-html-gap-analysis.md GAP-04 準拠
  *
- * API は心理学シグナルを返さないため、verdict 値から静的プリセットを引いて表示する。
- * ハッカソンの説得力を高める "見せ場" 要素。
+ * psychSignals が渡された場合は AI が実際に計算したシグナル値を表示する。
+ * 渡されない場合は verdict ベースのフォールバックプリセットを使用する。
  */
-import type { Verdict } from "@saboru/shared";
+import type { PsychSignals, SignalLevel, Verdict } from "@saboru/shared";
 import { useTranslation } from "react-i18next";
 
 interface PsychTheory {
-  key: keyof typeof PSYCH_SIGNAL_PRESETS.can_saboru;
+  key: keyof PsychSignals;
   label: string;
   jp: string;
   cite: string;
@@ -55,17 +55,8 @@ const PSYCH_THEORIES: PsychTheory[] = [
   },
 ];
 
-type SignalLevel = "low" | "high" | "unknown";
-
-const PSYCH_SIGNAL_PRESETS: Record<
-  Verdict,
-  {
-    taskIdentifiability: SignalLevel;
-    effortOutcomeExpectancy: SignalLevel;
-    perceivedPeerEffort: SignalLevel;
-    externalPressureLevel: SignalLevel;
-  }
-> = {
+/** verdict ベースのフォールバック（psychSignals が未保存の古い提案用） */
+const PSYCH_SIGNAL_FALLBACKS: Record<Verdict, PsychSignals> = {
   can_saboru: {
     taskIdentifiability: "low",
     effortOutcomeExpectancy: "high",
@@ -91,12 +82,18 @@ const scoreOf = (sig: SignalLevel): number =>
 
 export interface PsychSignalsCardProps {
   verdict: Verdict;
+  /** Real psychological signals from AI judgment. Falls back to verdict presets if absent. */
+  psychSignals?: PsychSignals;
 }
 
-export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
+export function PsychSignalsCard({
+  verdict,
+  psychSignals,
+}: PsychSignalsCardProps) {
   const { t } = useTranslation();
-  const signals = PSYCH_SIGNAL_PRESETS[verdict];
+  const signals = psychSignals ?? PSYCH_SIGNAL_FALLBACKS[verdict];
   const meta = VERDICT_META[verdict];
+  const isRealData = psychSignals != null;
 
   const totalScore =
     PSYCH_THEORIES.reduce((acc, t) => {
@@ -108,9 +105,26 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
     <div className="card-brutal p-3.5">
       <div className="flex items-start justify-between mb-2.5">
         <div>
-          <h3 className="text-saboru-ink font-bold" style={{ fontSize: 11 }}>
-            {t("verdict.psychTitle")}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-saboru-ink font-bold" style={{ fontSize: 11 }}>
+              {t("verdict.psychTitle")}
+            </h3>
+            {isRealData && (
+              <span
+                style={{
+                  fontSize: 7,
+                  fontWeight: 800,
+                  color: "#10B981",
+                  background: "#D1FAE5",
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  letterSpacing: "0.03em",
+                }}
+              >
+                LIVE
+              </span>
+            )}
+          </div>
           <p className="text-saboru-ink-muted mt-0.5" style={{ fontSize: 9 }}>
             {t("verdict.psychSubtitle")}
           </p>
@@ -144,7 +158,7 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
               ? "#9CA3AF"
               : "#EF4444";
           return (
-            <div key={theory.key}>
+            <div key={String(theory.key)}>
               <div className="flex items-baseline justify-between mb-1">
                 <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
                   <span

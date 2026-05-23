@@ -283,9 +283,12 @@ export function TaskDetailPage() {
               />
             )}
 
-            {/* PsychSignals（verdict 連動の静的プリセット表示） */}
+            {/* PsychSignals（AI が計算した実シグナル。なければ verdict フォールバック） */}
             {verdictForDisplay && (
-              <PsychSignalsCard verdict={verdictForDisplay} />
+              <PsychSignalsCard
+                verdict={verdictForDisplay}
+                psychSignals={proposal?.psychSignals}
+              />
             )}
 
             {/* reasoning リスト */}
