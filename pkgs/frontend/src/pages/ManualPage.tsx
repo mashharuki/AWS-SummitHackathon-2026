@@ -31,7 +31,10 @@ function deriveTraits(summary: HonneSummary): ManualTrait[] {
   }
   if (b.truly_tired >= 2) {
     traits.push({
-      title: { ja: "疲労感が高い時にサボりやすい", en: "Slacks off when fatigued" },
+      title: {
+        ja: "疲労感が高い時にサボりやすい",
+        en: "Slacks off when fatigued",
+      },
       body: {
         ja: "「本当に疲れているのでサボる」を選ぶ頻度が高い。疲れがサボり判断の主なトリガーになっている。",
         en: "Frequently selects 'truly tired'. Fatigue is the primary trigger for your slack-off decisions.",
@@ -53,7 +56,10 @@ function deriveTraits(summary: HonneSummary): ManualTrait[] {
   }
   if (b.actually_important >= 2) {
     traits.push({
-      title: { ja: "重要性を自ら見極める", en: "Self-assesses task importance" },
+      title: {
+        ja: "重要性を自ら見極める",
+        en: "Self-assesses task importance",
+      },
       body: {
         ja: "AIが「サボれる」と言っても「これは重要」と判断するケースが多い。責任感が強い。",
         en: "Even when AI says skip, you often decide it matters. Strong sense of responsibility.",
@@ -72,7 +78,10 @@ export function ManualPage() {
   const [summary, setSummary] = useState<HonneSummary | null>(null);
 
   useEffect(() => {
-    apiClient.getHonneSummary().then(setSummary).catch(() => {});
+    apiClient
+      .getHonneSummary()
+      .then(setSummary)
+      .catch(() => {});
   }, []);
 
   const collected = summary?.count ?? 0;
@@ -242,7 +251,6 @@ export function ManualPage() {
               ))}
             </div>
           )}
-
         </div>
       </div>
     </AppShell>
