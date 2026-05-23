@@ -14,18 +14,19 @@
  * 5. トークンを Secrets Manager に保存し、ARN を ServiceConnections DynamoDB に登録
  */
 
+import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   CreateSecretCommand,
   SecretsManagerClient,
   UpdateSecretCommand,
 } from "@aws-sdk/client-secrets-manager";
 import { toIsoString } from "@saboru/shared";
-import { createHmac, timingSafeEqual } from "crypto";
 import { Hono } from "hono";
 import { env } from "../config/env.js";
 import { getSlackClientSecret } from "../config/secrets.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoServiceConnectionRepository } from "../repositories/DynamoServiceConnectionRepository.js";
+import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../types.js";
 
 const SLACK_OAUTH_SCOPES = [
@@ -40,7 +41,7 @@ const SLACK_OAUTH_URL = "https://slack.com/oauth/v2/authorize";
 const SLACK_TOKEN_URL = "https://slack.com/api/oauth.v2.access";
 
 const smClient = new SecretsManagerClient({
-  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
 });
 
 function signState(payload: string, secret: string): string {
@@ -74,6 +75,7 @@ function verifyState(
 
 export function createAuthRoute(
   connectionRepository: DynamoServiceConnectionRepository,
+  userRepository: DynamoUserRepository,
 ): Hono<AppEnv> {
   const auth = new Hono<AppEnv>();
 
@@ -84,9 +86,10 @@ export function createAuthRoute(
    */
   auth.get("/slack", authMiddleware, (c) => {
     const userId = c.get("userId");
-    const clientId = env.COGNITO_CLIENT_ID; // 環境変数から取得する Slack クライアント ID
-    // 注: 本番環境では SLACK_CLIENT_ID を専用の環境変数にするべき。
-    // この実装ではコールバック時に Secrets Manager から取得する。
+    // Slack OAuth 開始用の client_id は専用の環境変数 SLACK_CLIENT_ID から取得する。
+    // （以前は誤って COGNITO_CLIENT_ID を参照する死にコードがあったため整理した。
+    //  コールバック時の token 交換は Secrets Manager の client_id/secret を使う。）
+    const slackClientId = process.env.SLACK_CLIENT_ID ?? "";
 
     const redirectUri = `${c.req.url.replace("/auth/slack", "/auth/slack/callback")}`;
 
@@ -100,7 +103,7 @@ export function createAuthRoute(
     );
 
     const params = new URLSearchParams({
-      client_id: process.env.SLACK_CLIENT_ID ?? "",
+      client_id: slackClientId,
       scope: SLACK_OAUTH_SCOPES,
       redirect_uri: redirectUri,
       state,
@@ -183,6 +186,8 @@ export function createAuthRoute(
       ok: boolean;
       access_token?: string;
       team?: { id: string; name: string };
+      // OAuth v2 はワークスペースにインストールした Slack ユーザーを authed_user で返す
+      authed_user?: { id: string };
       error?: string;
     };
 
@@ -226,14 +231,34 @@ export function createAuthRoute(
       }
     }
 
-    // Save connection record to DynamoDB
+    // Slack identity（ワークスペース・ユーザー）を取得して紐付けに使う
+    const slackTeamId = tokenData.team?.id;
+    const slackUserId = tokenData.authed_user?.id;
+
+    // Save connection record to DynamoDB（slack identity 付き → GSI-SlackLookup 用）
     await connectionRepository.saveForUser(userId, {
       service: "slack",
       status: "connected",
       secretArn,
+      ...(slackUserId ? { slackUserId } : {}),
+      ...(slackTeamId ? { slackTeamId } : {}),
       connectedAt: toIsoString(new Date()),
       expiresAt: null,
     });
+
+    // Cognito ユーザーのプロフィールにも Slack identity を保存する。
+    // これにより受信 Slack イベントを Cognito ユーザーに逆引きできる。
+    if (slackUserId && slackTeamId) {
+      const existing = await userRepository.findById(userId);
+      if (existing) {
+        await userRepository.upsert({
+          ...existing,
+          slackUserId,
+          slackTeamId,
+          updatedAt: toIsoString(new Date()),
+        });
+      }
+    }
 
     // Redirect to frontend with success
     return c.redirect(

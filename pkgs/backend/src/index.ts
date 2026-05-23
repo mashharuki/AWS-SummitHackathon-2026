@@ -53,7 +53,7 @@ import { createUsersRoute } from "./routes/users.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
-  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
 });
 
 // リポジトリを初期化
@@ -107,7 +107,7 @@ export function createApp() {
 
   // /api/* — フロントエンドの apiClient が期待するプレフィックス
   app.route("/api/users", createUsersRoute(userRepository));
-  app.route("/api/auth", createAuthRoute(connectionRepository));
+  app.route("/api/auth", createAuthRoute(connectionRepository, userRepository));
   app.route(
     "/api/tasks",
     createTasksRoute(taskRepository, candidateRepository),

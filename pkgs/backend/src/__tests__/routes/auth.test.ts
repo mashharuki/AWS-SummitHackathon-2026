@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
 import type { DynamoServiceConnectionRepository } from "../../repositories/DynamoServiceConnectionRepository.js";
+import type { DynamoUserRepository } from "../../repositories/DynamoUserRepository.js";
 import { createAuthRoute } from "../../routes/auth.js";
 import type { AppEnv } from "../../types.js";
 
@@ -32,7 +33,10 @@ vi.mock("../../config/env.js", () => ({
 
 const MOCK_USER_ID = "user-auth-test";
 
-function buildTestApp(connRepo: Partial<DynamoServiceConnectionRepository>) {
+function buildTestApp(
+  connRepo: Partial<DynamoServiceConnectionRepository>,
+  userRepo: Partial<DynamoUserRepository> = {},
+) {
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
     (c as unknown as { env: unknown }).env = {
@@ -44,7 +48,10 @@ function buildTestApp(connRepo: Partial<DynamoServiceConnectionRepository>) {
   });
   app.route(
     "/auth",
-    createAuthRoute(connRepo as DynamoServiceConnectionRepository),
+    createAuthRoute(
+      connRepo as DynamoServiceConnectionRepository,
+      userRepo as DynamoUserRepository,
+    ),
   );
   app.onError(errorHandler);
   return app;
@@ -67,7 +74,10 @@ describe("GET /auth/slack", () => {
     // Do NOT inject requestContext → authMiddleware throws 401
     app.route(
       "/auth",
-      createAuthRoute({} as DynamoServiceConnectionRepository),
+      createAuthRoute(
+        {} as DynamoServiceConnectionRepository,
+        {} as DynamoUserRepository,
+      ),
     );
     app.onError(errorHandler);
 

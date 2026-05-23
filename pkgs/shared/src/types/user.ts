@@ -15,6 +15,17 @@ export interface User {
   email: string;
   /** Display name */
   name: string;
+  /**
+   * Linked Slack user ID (e.g., "U12345678").
+   * Set when the user completes Slack OAuth. Used to map inbound Slack
+   * events back to this Cognito user.
+   */
+  slackUserId?: string;
+  /**
+   * Linked Slack workspace (team) ID (e.g., "T12345678").
+   * Combined with slackUserId to uniquely identify the Slack identity.
+   */
+  slackTeamId?: string;
   /** Creation datetime (ISO 8601) */
   createdAt: string;
   /** Update datetime (ISO 8601) */

@@ -1,8 +1,8 @@
 import * as cdk from "aws-cdk-lib";
-import * as cr from "aws-cdk-lib/custom-resources";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as cr from "aws-cdk-lib/custom-resources";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
 
@@ -80,6 +80,17 @@ export class SaborouDataStack extends cdk.Stack {
     });
 
     // --- GSI ---
+    // connections: Slack identity (<teamId>#<slackUserId>) から所有 Cognito ユーザーを逆引きする。
+    // KEYS_ONLY で十分（テーブル PK "USER#<cognitoSub>" が射影されるため cognitoSub を復元できる）。
+    connections.addGlobalSecondaryIndex({
+      indexName: "GSI-SlackLookup",
+      partitionKey: {
+        name: "slackLookupKey",
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.KEYS_ONLY,
+    });
+
     taskCandidates.addGlobalSecondaryIndex({
       indexName: "GSI-UserCreatedAt",
       partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING },
