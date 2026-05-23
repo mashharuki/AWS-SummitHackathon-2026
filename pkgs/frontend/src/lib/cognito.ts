@@ -10,8 +10,12 @@ const CLIENT_ID = () => getRuntimeConfig("VITE_COGNITO_CLIENT_ID");
 const REDIRECT_URI = () => getRuntimeConfig("VITE_OAUTH_REDIRECT_URI");
 const USER_POOL_ID = () => getRuntimeConfig("VITE_COGNITO_USER_POOL_ID");
 
-// NFR-DESIGN-1: アクセストークンをメモリ内に保持（XSS対策）
+// NFR-DESIGN-1: トークンをメモリ内に保持（XSS対策）
 let _accessToken: string | null = null;
+// id_token は API Gateway JWT オーソライザーへの認証に使う。
+// access_token と違い name/email クレームを含むため、バックエンドが
+// プロフィールを解決できる（GET /api/users/me の name/email 空欄バグの修正）。
+let _idToken: string | null = null;
 let _refreshToken: string | null = null;
 let _tokenExpiry: number | null = null;
 
@@ -25,6 +29,26 @@ export function getAccessToken(): string | null {
   // 5分前に期限切れとみなす
   if (Date.now() > _tokenExpiry - 5 * 60 * 1000) return null;
   return _accessToken;
+}
+
+export function setIdToken(token: string) {
+  _idToken = token;
+}
+
+export function getIdToken(): string | null {
+  if (!_idToken || !_tokenExpiry) return null;
+  // access_token と同じ有効期限ロジック（同一トークンリクエストで発行されるため）
+  if (Date.now() > _tokenExpiry - 5 * 60 * 1000) return null;
+  return _idToken;
+}
+
+/**
+ * API Gateway への認証に使うトークンを返す。
+ * id_token を優先する（name/email クレームを含むため）。
+ * 未取得時は access_token にフォールバックする。
+ */
+export function getApiAuthToken(): string | null {
+  return getIdToken() ?? getAccessToken();
 }
 
 export function setRefreshToken(token: string) {
@@ -48,6 +72,7 @@ export function getRefreshToken(): string | null {
 
 export function clearTokens() {
   _accessToken = null;
+  _idToken = null;
   _refreshToken = null;
   _tokenExpiry = null;
   try {
@@ -175,10 +200,16 @@ export async function refreshAccessToken(): Promise<string | null> {
 
     const data = (await res.json()) as {
       access_token: string;
+      id_token?: string;
       expires_in: number;
     };
 
     setAccessToken(data.access_token, data.expires_in);
+    // refresh_token grant のレスポンスには id_token も含まれる（Cognito 標準）。
+    // API 認証に id_token を使うため、リフレッシュ時も更新する。
+    if (data.id_token) {
+      setIdToken(data.id_token);
+    }
     return data.access_token;
   } catch {
     clearTokens();

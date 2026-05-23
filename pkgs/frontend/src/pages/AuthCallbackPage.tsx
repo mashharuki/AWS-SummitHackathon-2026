@@ -48,8 +48,8 @@ export function AuthCallbackPage() {
     sessionStorage.removeItem("pkce_verifier");
 
     exchangeCodeForTokens(code, codeVerifier)
-      .then(async ({ accessToken, refreshToken, expiresIn }) => {
-        await handleCallback(accessToken, refreshToken, expiresIn);
+      .then(async ({ accessToken, idToken, refreshToken, expiresIn }) => {
+        await handleCallback(accessToken, idToken, refreshToken, expiresIn);
         void navigate("/tasks", { replace: true });
       })
       .catch(() => {
