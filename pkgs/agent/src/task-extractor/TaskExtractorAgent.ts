@@ -19,11 +19,10 @@ import {
 } from "./extractTaskTool.js";
 
 /**
- * クロスリージョン推論のモデル ID (ap-northeast-1 → us-east-1 フォールバック)
- * IAM リソース ARN には "us." プレフィックスなしのベースモデル ID を使用する。
- * この AWS 固有の動作はインフラ設計 sec.4 に記載。
+ * AP クロスリージョン推論プロファイル ID (ap-northeast-1 から AP 内の利用可能リージョンへルーティング)
+ * Claude Sonnet 4.6 はサーバーレス＋クロスリージョン推論のみ提供。
  */
-const MODEL_ID = "us.anthropic.claude-3-5-sonnet-20241022-v2:0";
+const MODEL_ID = "jp.anthropic.claude-sonnet-4-6";
 
 /** タスク抽出の結果型 */
 export type ExtractionResult =

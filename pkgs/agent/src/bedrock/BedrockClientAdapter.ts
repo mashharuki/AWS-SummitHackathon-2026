@@ -26,7 +26,7 @@ import type { IBedrockClient } from "./IBedrockClient.js";
 export class BedrockClientAdapter implements IBedrockClient {
   private readonly client: BedrockRuntimeClient;
 
-  constructor(region = "ap-northeast-1") {
+  constructor(region = process.env["BEDROCK_REGION"] ?? "ap-northeast-1") {
     this.client = new BedrockRuntimeClient({
       region,
       maxAttempts: 5,

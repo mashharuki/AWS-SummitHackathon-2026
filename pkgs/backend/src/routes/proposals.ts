@@ -10,7 +10,7 @@
 
 import type { SaboriProposerAgent, TaskContext } from "@saboru/agent";
 import { Hono } from "hono";
-import { streamSSE } from "hono/streaming";
+import { stream, streamSSE } from "hono/streaming";
 import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
@@ -112,6 +112,34 @@ export function createProposalsRoute(
             type: "error",
             message: "Proposal generation failed",
           }),
+        });
+      }
+    });
+  });
+
+  /**
+   * POST /tasks/:taskId/proposal
+   *
+   * Vercel AI SDK useChat (streamProtocol: "text") 向けエンドポイント。
+   * agent.propose() を実行し、chatMessage をプレーンテキストストリームで返す。
+   */
+  proposals.post("/:taskId/proposal", async (c) => {
+    const userId = c.get("userId");
+    const taskId = c.req.param("taskId");
+
+    const task = await taskRepository.findById(userId, taskId);
+    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+
+    const context: TaskContext = { task };
+
+    return stream(c, async (s) => {
+      try {
+        const proposal = await agent.propose(taskId, context);
+        await s.write(proposal.chatMessage);
+      } catch (err) {
+        console.error("[Stream] POST proposal error", {
+          taskId,
+          error: String(err),
         });
       }
     });

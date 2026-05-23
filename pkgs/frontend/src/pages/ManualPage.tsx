@@ -25,8 +25,12 @@ export function ManualPage() {
           title={isJa ? "あなたの取扱説明書" : "Your Personal Manual"}
           subtitle={
             isJa
-              ? `本音データから生成 · ${MANUAL_PROGRESS.collected}件のサンプル`
-              : `Generated from honne data · ${MANUAL_PROGRESS.collected} samples`
+              ? MANUAL_PROGRESS.collected > 0
+                ? `本音データから生成 · ${MANUAL_PROGRESS.collected}件のサンプル`
+                : "本音データを蓄積してあなたの傾向を発見"
+              : MANUAL_PROGRESS.collected > 0
+                ? `Generated from honne data · ${MANUAL_PROGRESS.collected} samples`
+                : "Collect honne data to discover your tendencies"
           }
         />
 
@@ -118,42 +122,65 @@ export function ManualPage() {
           <SectionLabel>
             {isJa ? "発見されたあなたの傾向" : "Detected tendencies"}
           </SectionLabel>
-          <div className="flex flex-col gap-2">
-            {MANUAL_TRAITS.map((t, i) => (
-              <div
-                key={i}
-                className="card-brutal p-3"
-                style={{ borderLeft: `6px solid ${t.color}` }}
+          {MANUAL_TRAITS.length === 0 ? (
+            <div
+              className="card-brutal p-4 flex flex-col items-center gap-2"
+              style={{ background: "#FFFAF5" }}
+            >
+              <p style={{ fontSize: 28 }}>🌱</p>
+              <p
+                className="font-bold text-saboru-ink text-center"
+                style={{ fontSize: 13 }}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p
-                    className="font-bold text-saboru-ink flex-1"
-                    style={{ fontSize: 13, lineHeight: 1.3 }}
-                  >
-                    {t.title[locale]}
-                  </p>
-                  <span
-                    className="font-bold flex-shrink-0"
-                    style={{
-                      fontSize: 9,
-                      color: t.color,
-                      background: `${t.color}15`,
-                      padding: "2px 6px",
-                      borderRadius: 4,
-                    }}
-                  >
-                    n={t.count}
-                  </span>
-                </div>
-                <p
-                  className="text-saboru-ink-soft mt-1.5"
-                  style={{ fontSize: 11, lineHeight: 1.5 }}
+                {isJa ? "まだデータがありません" : "No data yet"}
+              </p>
+              <p
+                className="text-saboru-ink-muted text-center"
+                style={{ fontSize: 11, lineHeight: 1.5 }}
+              >
+                {isJa
+                  ? "タスク詳細でサボり提案に本音リアクションを送ると、あなたの傾向が蓄積されていきます。"
+                  : "Send honne reactions to slack-off proposals on the task detail page to build up your personal tendencies."}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {MANUAL_TRAITS.map((t, i) => (
+                <div
+                  key={i}
+                  className="card-brutal p-3"
+                  style={{ borderLeft: `6px solid ${t.color}` }}
                 >
-                  {t.body[locale]}
-                </p>
-              </div>
-            ))}
-          </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <p
+                      className="font-bold text-saboru-ink flex-1"
+                      style={{ fontSize: 13, lineHeight: 1.3 }}
+                    >
+                      {t.title[locale]}
+                    </p>
+                    <span
+                      className="font-bold flex-shrink-0"
+                      style={{
+                        fontSize: 9,
+                        color: t.color,
+                        background: `${t.color}15`,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      n={t.count}
+                    </span>
+                  </div>
+                  <p
+                    className="text-saboru-ink-soft mt-1.5"
+                    style={{ fontSize: 11, lineHeight: 1.5 }}
+                  >
+                    {t.body[locale]}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Future vision */}
           <div

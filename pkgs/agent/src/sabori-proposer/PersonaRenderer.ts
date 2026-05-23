@@ -22,7 +22,7 @@ import type { RenderInput, RenderOutput } from "./types.js";
  * フォールバック: Haiku 呼び出し失敗時は rawChatMessage をそのまま使用 (NFR: グレースフルデグレード)
  */
 
-const HAIKU_MODEL_ID = "anthropic.claude-haiku-3-5-20241022-v1:0";
+const HAIKU_MODEL_ID = "anthropic.claude-3-5-haiku-20241022-v1:0";
 
 export class PersonaRenderer {
   constructor(private readonly bedrock: IBedrockClient) {}

@@ -29,6 +29,7 @@ export class SaborouCognitoStack extends cdk.Stack {
       autoVerify: { email: true },
       standardAttributes: {
         email: { required: true, mutable: true },
+        fullname: { required: true, mutable: true },
       },
       mfa: cognito.Mfa.OFF,
       passwordPolicy: {
@@ -65,9 +66,9 @@ export class SaborouCognitoStack extends cdk.Stack {
             : []),
         ],
         logoutUrls: [
-          "http://localhost:5173",
+          "http://localhost:5173/login",
           ...(props?.frontendDomainName
-            ? [`https://${props.frontendDomainName}`]
+            ? [`https://${props.frontendDomainName}/login`]
             : []),
         ],
       },

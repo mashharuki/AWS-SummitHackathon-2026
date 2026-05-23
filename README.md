@@ -1,6 +1,6 @@
 # SABOROU（サボロー） - 何んだって先延ばしにできるサービス
 
-![AWS Summit 2026](https://img.shields.io/badge/AWS%20Summit%20Japan-2026-orange)
+![](./docs/imgs/banner.svg)
 
 ## 概要
 
@@ -150,10 +150,10 @@ SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判�
 </details>
 
 📖 **詳細資料**:
-- 3フェーズ判定フロー詳細: [`aidlc-docs/inception/application-design/application-design.md`](./aidlc-docs/inception/application-design/application-design.md) §7.2（サボり提案生成シーケンス図）
-- サボり判定3状態・判定ロジック・next_check_at計算ルール: 同 §8.1〜8.4
+- 3フェーズ判定フロー詳細: [`aidlc-docs/inception/application-design/application-design.md`](./aidlc-docs/inception/application-design/application-design.md) 7.2（サボり提案生成シーケンス図）
+- サボり判定3状態・判定ロジック・next_check_at計算ルール: 同 8.1〜8.4
 - SaboriProposerAgent 実装メソッド・心理学フレームワーク実装マッピング: [`aidlc-docs/inception/application-design/component-methods/AG-02-sabori-proposer-agent.md`](./aidlc-docs/inception/application-design/component-methods/AG-02-sabori-proposer-agent.md)
-- 心理学根拠の要約（DOI付き）: [`requirements.md`](./aidlc-docs/inception/requirements/requirements.md) §1.1.2
+- 心理学根拠の要約（DOI付き）: [`requirements.md`](./aidlc-docs/inception/requirements/requirements.md) 1.1.2
 
 ---
 
@@ -452,11 +452,23 @@ graph TD
 	pnpm cdk run deploy --require-approval never --all
 	```
 
+	その後SSMパラメータを作成する
+
+	```bash
+	aws ssm put-parameter \
+	--name "/saborou/pseudonymize-salt-dev" \
+	--value "$(openssl rand -hex 16)" \
+	--type "String" \
+	--region ap-northeast-1
+	```
+
 - AWSからリソースをアンデプロイ
 
 	```bash
 	pnpm cdk run destroy --all --force
 	```
+
+	> SSMやSecret Managerの一部の値は手動での削除が必要
 
 ### バックエンド
 

@@ -16,59 +16,10 @@ export interface ManualTrait {
   color: string;
 }
 
-export const MANUAL_TRAITS: ManualTrait[] = [
-  {
-    title: {
-      ja: "依頼者の温度感に敏感",
-      en: "Sensitive to requester urgency",
-    },
-    body: {
-      ja: "「至急」キーワード検出時のみ着手率が3倍。普段は寝かせる傾向。",
-      en: "Start rate is 3x only when urgent keywords are detected; otherwise tends to defer.",
-    },
-    count: 14,
-    color: "#F97316",
-  },
-  {
-    title: {
-      ja: "リマインドがあると動く",
-      en: "Moves after reminders",
-    },
-    body: {
-      ja: "1回目のリマインド受信後、平均48分で着手。逆にリマインドなしだと締切24時間前まで動かない。",
-      en: "Starts on average 48 minutes after the first reminder; without reminders, waits until 24h before deadline.",
-    },
-    count: 23,
-    color: "#EA580C",
-  },
-  {
-    title: {
-      ja: "クライアント案件は早め、社内案件は寝かせ",
-      en: "Client tasks start earlier, internal tasks are deferred",
-    },
-    body: {
-      ja: "社内タスクの平均着手タイミングは締切まで残り18%。外部案件は残り42%。",
-      en: "Average start timing: internal tasks at 18% remaining time, external tasks at 42%.",
-    },
-    count: 9,
-    color: "#10B981",
-  },
-  {
-    title: {
-      ja: "金曜午後は動かない",
-      en: "Rarely moves on Friday afternoon",
-    },
-    body: {
-      ja: "金曜15時以降のタスクは99%が月曜朝に持ち越し。",
-      en: "99% of tasks arriving after 3pm on Friday are postponed to Monday morning.",
-    },
-    count: 7,
-    color: "#6366F1",
-  },
-];
+export const MANUAL_TRAITS: ManualTrait[] = [];
 
 export const MANUAL_PROGRESS = {
-  collected: 53,
+  collected: 0,
   total: 100,
 };
 

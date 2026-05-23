@@ -25,7 +25,7 @@ export function PageHeader({
 
   return (
     <header
-      className="bg-saboru-paper flex items-center gap-2 px-4 pt-3.5 pb-3"
+      className="bg-saboru-paper flex items-center gap-2 px-4 md:px-6 pt-3.5 pb-3 md:pt-4 md:pb-4"
       style={{ borderBottom: "3px solid #2B1E16" }}
     >
       {onBack && (
@@ -40,15 +40,14 @@ export function PageHeader({
       )}
       <div className="flex-1 min-w-0">
         <h1
-          className="font-bold text-saboru-ink truncate"
-          style={{ fontSize: 16, letterSpacing: "-0.02em" }}
+          className="font-bold text-saboru-ink truncate text-base md:text-lg"
+          style={{ letterSpacing: "-0.02em" }}
         >
           {title}
         </h1>
         {subtitle && (
           <p
-            className="text-saboru-ink-muted mt-0.5 truncate"
-            style={{ fontSize: 11 }}
+            className="text-saboru-ink-muted mt-0.5 truncate text-xs md:text-sm"
           >
             {subtitle}
           </p>

@@ -9,6 +9,7 @@ import { useConnections } from "@/hooks/useConnections";
  * 設定ページ — U-06-ui-redesign Phase 5 改修版
  * 共有 HTML SettingsScreen 準拠（ネオブルータリズム）
  */
+import { getDisplayName } from "@/lib/utils";
 import { ChevronRight, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -44,7 +45,7 @@ export function SettingsPage() {
                   className="font-bold text-saboru-ink truncate"
                   style={{ fontSize: 14 }}
                 >
-                  {user.name}
+                  {getDisplayName(user)}
                 </p>
                 <p
                   className="text-saboru-ink-muted truncate"

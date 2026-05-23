@@ -44,10 +44,12 @@ import type {
  */
 
 /**
- * クロスリージョン推論のモデル ID (ap-northeast-1 → us-east-1 フォールバック)
- * IAM リソース ARN には "us." プレフィックスなしのベースモデル ID を使用する。
+ * AP クロスリージョン推論プロファイル ID (ap-northeast-1 から AP 内の利用可能リージョンへルーティング)
+ * Claude Sonnet 4.6 はサーバーレス＋クロスリージョン推論のみ提供。
+ * IAM リソース ARN には ap-northeast-1 の inference-profile ARN と
+ * ベースモデル ARN (ワイルドカードリージョン) の両方が必要。
  */
-const SONNET_MODEL_ID = "us.anthropic.claude-3-5-sonnet-20241022-v2:0";
+const SONNET_MODEL_ID = "jp.anthropic.claude-sonnet-4-6";
 
 export class SaboriProposerAgent {
   constructor(

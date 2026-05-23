@@ -12,14 +12,14 @@ test.describe("ログインページ", () => {
     await page.goto(`${BASE_URL}/login`);
     await expect(page).toHaveTitle(/SABOROU/i);
     await expect(page.getByText("SABOROU")).toBeVisible();
-    await expect(page.getByText("Googleでログイン")).toBeVisible({
+    await expect(page.getByText("ログイン / 新規登録")).toBeVisible({
       timeout: 10000,
     });
   });
 
   test("特徴リストが表示される", async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    await expect(page.getByText("タスクを自動で把握")).toBeVisible();
+    await expect(page.getByText("Slack 自動連携で文脈を読解")).toBeVisible();
     await expect(page.getByText("安心してサボれる")).toBeVisible();
   });
 
@@ -39,8 +39,8 @@ test.describe("アクセシビリティ", () => {
 
   test("ログインボタンがフォーカス可能", async ({ page }) => {
     await page.goto(`${BASE_URL}/login`);
-    // aria-label="Googleアカウントでログイン" でボタンを特定
-    const loginBtn = page.getByRole("button", { name: /Google/ });
+    // aria-label="ログインまたは新規登録" でボタンを特定
+    const loginBtn = page.getByRole("button", { name: /ログイン/ });
     await loginBtn.focus();
     await expect(loginBtn).toBeFocused();
   });

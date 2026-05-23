@@ -11,7 +11,8 @@
     "agent": "pnpm --filter @saboru/agent",
     "cdk": "pnpm --filter cdk",
     "frontend": "pnpm --filter frontend",
-    "backend": "pnpm --filter backend"
+    "backend": "pnpm --filter backend",
+    "register:secret": "./scripts/register_slack_secret.sh"
   },
   "keywords": [],
   "author": "",
