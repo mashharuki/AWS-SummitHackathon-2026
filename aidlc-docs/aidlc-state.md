@@ -97,6 +97,32 @@
   - Phase 6: `ManualPage` (取扱説明書) / `PersonaPage` (ペルソナ選択 + localStorage 永続化) / `RoadmapPage` (タイムライン UI) 新規、`staticContent.ts` (MANUAL_TRAITS/PERSONAS/ROADMAP_ITEMS) 集約、App.tsx に /manual /settings/persona /roadmap ルート追加
   - Phase 7: 全テスト 126/126 パス / typecheck エラーゼロ / build 成功 / Three.js は別チャンク (919KB / gzip 249KB) に分離・初期バンドル 219KB / shared 103 + backend 172 + cdk 35 + frontend 126 = 全436テストパス
 
+#### U-07: gamification（フロントエンドゲーミフィケーション強化）
+- [ ] Functional Design — スキップ（gamification-strategy-20260523.md が要件ドキュメントとして機能）
+- [ ] NFR Requirements — スキップ（既存フロント NFR を流用）
+- [ ] NFR Design — スキップ（既存フロント NFR を流用）
+- [ ] Infrastructure Design — スキップ（フロントエンドのみ変更、インフラ変更なし）
+- [x] Code Generation — **完了**（2026-05-23T08:30:00Z）。Tier 1〜2 施策 + Tier 4 A/B 施策実装。成果物:
+  - `pkgs/frontend/src/lib/gamificationUtils.ts` — 称号・フェーズ・グレード・コンボ計算ロジック
+  - `pkgs/frontend/src/hooks/useSaboriGamification.ts` — ゲーミフィケーション状態管理フック
+  - `pkgs/frontend/src/components/ui/DependencyScoreDisplay.tsx` — 称号表示・フェーズ色対応（育成ゲーム型 0→100）
+  - `pkgs/frontend/src/components/verdict/SaboriScoreCard.tsx` — A〜Eグレード即時フィードバック
+  - `pkgs/frontend/src/components/ui/GrowthJourneyBanner.tsx` — 称号解除演出 + TitleDisplayCard
+  - `pkgs/frontend/src/components/ui/ComboCounter.tsx` — コンボカウンター表示
+  - `pkgs/frontend/src/components/ui/JackpotOverlay.tsx` — A+ジャックポット全画面演出
+  - `pkgs/frontend/src/pages/TaskDetailPage.tsx` — 全要素統合改修
+  - `pkgs/frontend/src/__tests__/gamification.test.ts` — 27テスト追加（162/162 全パス）
+  - ビルド成功（tsc エラーゼロ / vite build 成功）
+
+  **Tier 2 追加実装（2026-05-23T17:50:00Z）**:
+  - `pkgs/frontend/src/components/ui/SaboriStreakBadge.tsx` — 連続サボり記録（施策3）。ストリーク状態管理・3/7/14日マイルストーン・損失回避メッセージ・StreakDetailCard
+  - `pkgs/frontend/src/components/ui/ManualProgressCard.tsx` — 本音取扱説明書の完成度ゲージ（施策4）。5ステージ（0/30/60/90/100%）・アニメーション増加・useManualProgress フック・ManualProgressInline
+  - `pkgs/frontend/src/lib/achievementSystem.ts` — サボり実績システム（施策5）。9種実績（common/uncommon/rare/legendary）・checkNewAchievements・unlockAchievement
+  - `pkgs/frontend/src/components/ui/AchievementBadge.tsx` — 実績バッジ・トースト通知・コレクション一覧（施策5）。useAchievements フック
+  - `pkgs/frontend/src/hooks/useSaboriGamification.ts` — streak・manualProgress 状態・recordHonneSubmit を追加
+  - `pkgs/frontend/src/__tests__/gamification-tier2.test.ts` — 49テスト追加
+  - 合計テスト: 211/211 全パス / tsc エラーゼロ / vite build 成功
+
 ### OPERATIONS フェーズ
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
 - [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）

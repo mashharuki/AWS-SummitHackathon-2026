@@ -1,122 +1,117 @@
 /**
- * DependencyScoreDisplay — AI依存度スコアの表示コンポーネント（強化版）
+ * DependencyScoreDisplay — AI依存度スコアの育成ゲーム表示コンポーネント（強化版）
  *
- * 「自己判断力: 残り XX%」をリアルタイムで表示する。
- * スコアが下がるたびに shake + pulse + フラッシュアニメーションで
- * 「人をダメにしている」感を演出する。
+ * 「AI依存度: XX%」を称号付きでリアルタイム表示する。
+ * スコアが上がるたびに shake + pulse + フラッシュアニメーションで
+ * 「人をダメになっていく」感を演出する。
  *
- * カラーロジック:
- *   80%以上 → 緑（安心）
- *   60-79%  → 黄（注意）
- *   40-59%  → オレンジ（危険）
- *   39%以下 → 赤（末期）
+ * スコア設計（0から上がる育成ゲーム型）:
+ *   [0〜20]  "AI見習い"     → 水色
+ *   [21〜40] "サボり常習者"  → 黄色
+ *   [41〜60] "依存気味"     → オレンジ
+ *   [61〜80] "AI奴隷"       → 赤紫
+ *   [81〜100] "存在する怠惰" → 金色
  */
+import { getTitleInfo } from "@/lib/gamificationUtils";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface DependencyScoreDisplayProps {
+  /** AI依存度スコア（0〜100）*/
   score: number;
-  justDecremented: boolean;
+  /** スコアが増加した直後か（アニメーション用） */
+  justIncremented?: boolean;
+  /** 後方互換: 旧 justDecremented prop もサポート（deprecated） */
+  justDecremented?: boolean;
   className?: string;
 }
 
-function getScoreColor(score: number): string {
-  if (score >= 80) return "#10B981";
-  if (score >= 60) return "#F59E0B";
-  if (score >= 40) return "#F97316";
-  return "#EF4444";
-}
-
 function getScoreEmoji(score: number): string {
-  if (score >= 80) return "🧠";
-  if (score >= 60) return "😅";
-  if (score >= 40) return "😰";
-  return "🫠";
+  if (score >= 81) return "👑";
+  if (score >= 61) return "🤖";
+  if (score >= 41) return "😴";
+  if (score >= 21) return "😅";
+  return "🧠";
 }
 
 export function DependencyScoreDisplay({
   score,
-  justDecremented,
+  justIncremented = false,
+  justDecremented = false,
   className = "",
 }: DependencyScoreDisplayProps) {
   const { t } = useTranslation();
   const displayScore = Math.max(0, Math.round(score));
-  const color = getScoreColor(displayScore);
+  const titleInfo = getTitleInfo(displayScore);
   const emoji = getScoreEmoji(displayScore);
-  const fillPct = displayScore;
+  const isAnimating = justIncremented || justDecremented;
   const [showFlash, setShowFlash] = useState(false);
 
-  const statusLabel =
-    displayScore >= 80
-      ? t("dependencyScore.statusLabels.healthy")
-      : displayScore >= 60
-        ? t("dependencyScore.statusLabels.warning")
-        : displayScore >= 40
-          ? t("dependencyScore.statusLabels.danger")
-          : t("dependencyScore.statusLabels.critical");
-
   useEffect(() => {
-    if (justDecremented) {
+    if (isAnimating) {
       setShowFlash(true);
-      const t = setTimeout(() => setShowFlash(false), 1400);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setShowFlash(false), 1400);
+      return () => clearTimeout(timer);
     }
-  }, [justDecremented, score]);
+  }, [isAnimating, score]);
 
-  const isCritical = displayScore < 40;
+  const isUltimate = displayScore >= 81;
 
   return (
     <div
       className={`relative flex items-center gap-1.5 ${className}`}
       style={{
-        animation: justDecremented
+        animation: isAnimating
           ? "saboru-shake-pulse 0.6s ease-in-out"
-          : isCritical
+          : isUltimate
             ? "saboru-pulse 2s ease-in-out infinite"
             : undefined,
       }}
     >
-      {/* 判断を手放しました フラッシュ */}
+      {/* 称号解除フラッシュ */}
       {showFlash && (
         <span
           style={{
             position: "absolute",
-            top: -20,
+            top: -22,
             left: "50%",
             transform: "translateX(-50%)",
             whiteSpace: "nowrap",
             fontSize: 9,
             fontWeight: 800,
-            color: "#EF4444",
-            background: "#FEF2F2",
+            color: titleInfo.color,
+            background: titleInfo.bg,
             padding: "2px 6px",
             borderRadius: 4,
-            border: "1.5px solid #EF4444",
+            border: `1.5px solid ${titleInfo.color}`,
             animation: "saboru-fade-up 1.4s ease-out forwards",
             pointerEvents: "none",
             zIndex: 10,
           }}
         >
-          {t("dependencyScore.flashText")}
+          {t("dependencyScore.flashText", "AI依存度UP！")}
         </span>
       )}
+
+      {/* 称号バッジ（ヘッダー表示用コンパクト版） */}
       <span style={{ fontSize: 13 }}>{emoji}</span>
       <div className="flex flex-col items-end">
+        {/* 称号名 */}
         <span
           style={{
-            fontSize: 9,
+            fontSize: 8,
             fontWeight: 800,
-            color,
+            color: titleInfo.color,
             fontFamily: "Nunito, 'Noto Sans JP', system-ui, sans-serif",
             letterSpacing: "-0.01em",
             lineHeight: 1,
             whiteSpace: "nowrap",
           }}
         >
-          {statusLabel}
+          {titleInfo.title}
         </span>
         <div className="flex items-center gap-1">
-          {/* プログレスバー（逆向き：右から減る） */}
+          {/* プログレスバー（AI依存度が右に伸びる） */}
           <div
             style={{
               width: 48,
@@ -129,9 +124,11 @@ export function DependencyScoreDisplay({
           >
             <div
               style={{
-                width: `${fillPct}%`,
+                width: `${displayScore}%`,
                 height: "100%",
-                background: color,
+                background: isUltimate
+                  ? "linear-gradient(90deg, #F59E0B, #EF4444)"
+                  : titleInfo.color,
                 borderRadius: 9999,
                 transition: "width 0.4s ease-out, background 0.3s",
               }}
@@ -141,7 +138,7 @@ export function DependencyScoreDisplay({
             style={{
               fontSize: 11,
               fontWeight: 900,
-              color,
+              color: titleInfo.color,
               fontFamily: "Nunito, 'Noto Sans JP', system-ui, sans-serif",
               minWidth: 28,
               textAlign: "right",
