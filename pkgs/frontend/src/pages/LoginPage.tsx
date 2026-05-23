@@ -119,6 +119,25 @@ export function LoginPage() {
             </span>
           </div>
         </div>
+
+        {/* 特徴リスト */}
+        <ul
+          aria-label={t("login.featuresAria")}
+          className="flex flex-col gap-2"
+          style={{ listStyle: "none", padding: 0, margin: 0 }}
+        >
+          {(t("login.features", { returnObjects: true }) as string[]).map(
+            (feature) => (
+              <li
+                key={feature}
+                className="text-saboru-ink-soft text-center"
+                style={{ fontSize: 12 }}
+              >
+                {feature}
+              </li>
+            ),
+          )}
+        </ul>
       </div>
     </div>
   );
