@@ -12,6 +12,7 @@
  *   39%以下 → 赤（末期）
  */
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface DependencyScoreDisplayProps {
   score: number;
@@ -33,23 +34,26 @@ function getScoreEmoji(score: number): string {
   return "🫠";
 }
 
-function getStatusLabel(score: number): string {
-  if (score >= 80) return "自己判断力";
-  if (score >= 60) return "依存が始まっています";
-  if (score >= 40) return "AIに支配されています";
-  return "判断力を失っています";
-}
-
 export function DependencyScoreDisplay({
   score,
   justDecremented,
   className = "",
 }: DependencyScoreDisplayProps) {
+  const { t } = useTranslation();
   const displayScore = Math.max(0, Math.round(score));
   const color = getScoreColor(displayScore);
   const emoji = getScoreEmoji(displayScore);
   const fillPct = displayScore;
   const [showFlash, setShowFlash] = useState(false);
+
+  const statusLabel =
+    displayScore >= 80
+      ? t("dependencyScore.statusLabels.healthy")
+      : displayScore >= 60
+        ? t("dependencyScore.statusLabels.warning")
+        : displayScore >= 40
+          ? t("dependencyScore.statusLabels.danger")
+          : t("dependencyScore.statusLabels.critical");
 
   useEffect(() => {
     if (justDecremented) {
@@ -93,7 +97,7 @@ export function DependencyScoreDisplay({
             zIndex: 10,
           }}
         >
-          判断を手放しました
+          {t("dependencyScore.flashText")}
         </span>
       )}
       <span style={{ fontSize: 13 }}>{emoji}</span>
@@ -109,7 +113,7 @@ export function DependencyScoreDisplay({
             whiteSpace: "nowrap",
           }}
         >
-          {getStatusLabel(displayScore)}
+          {statusLabel}
         </span>
         <div className="flex items-center gap-1">
           {/* プログレスバー（逆向き：右から減る） */}

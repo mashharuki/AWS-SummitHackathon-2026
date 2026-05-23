@@ -179,6 +179,15 @@ const resources = {
         agree_with_ai: "15分だけやってみる",
         disagree_with_ai: "完全に無視したい",
       },
+      dependencyScore: {
+        statusLabels: {
+          healthy: "自己判断力",
+          warning: "依存が始まっています",
+          danger: "AIに支配されています",
+          critical: "判断力を失っています",
+        },
+        flashText: "判断を手放しました",
+      },
       status: { current: "現在地", next: "次", planned: "計画中" },
     },
   },
@@ -347,6 +356,15 @@ const resources = {
         actually_important: "This might actually be urgent...",
         agree_with_ai: "I'll do only 15 minutes",
         disagree_with_ai: "I want to ignore this completely",
+      },
+      dependencyScore: {
+        statusLabels: {
+          healthy: "Self-judgment",
+          warning: "Dependency starting",
+          danger: "Controlled by AI",
+          critical: "Lost judgment",
+        },
+        flashText: "Judgment surrendered",
       },
       status: { current: "Current", next: "Next", planned: "Planned" },
     },
