@@ -32,6 +32,8 @@ interface AuthContextValue extends AuthState {
     refreshToken: string,
     expiresIn: number,
   ) => Promise<void>;
+  /** ログイン中ユーザーの一部フィールドを更新する（例: ペルソナ変更の即時反映） */
+  updateUser: (patch: Partial<User>) => void;
 }
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -119,11 +121,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const updateUser = React.useCallback((patch: Partial<User>) => {
+    setState((prev) =>
+      prev.user ? { ...prev, user: { ...prev.user, ...patch } } : prev,
+    );
+  }, []);
+
   const value: AuthContextValue = {
     ...state,
     signIn,
     signOut,
     handleCallback,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

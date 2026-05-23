@@ -23,7 +23,7 @@ export function PersonaPage() {
   const locale = i18n.language.startsWith("ja") ? "ja" : "en";
   const isJa = locale === "ja";
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { showToast } = useToast();
   const [selected, setSelected] = useState<string>(DEFAULT_PERSONA_ID);
   const [saving, setSaving] = useState(false);
@@ -47,6 +47,8 @@ export function PersonaPage() {
     setSaving(true);
     updatePersona(id)
       .then(() => {
+        // AuthProvider の user も更新して、再訪時・他画面に即同期させる
+        updateUser({ preferredPersonaId: id });
         showToast(isJa ? "ペルソナを変更したよ" : "Persona updated", "success");
       })
       .catch(() => {
@@ -85,7 +87,7 @@ export function PersonaPage() {
             }}
           >
             <div className="flex items-center gap-2.5 mb-2.5">
-              <SaborouAvatar size={32} />
+              <SaborouAvatar size={32} personaId={current.id} />
               <div>
                 <p className="font-extrabold" style={{ fontSize: 13 }}>
                   {current.name[locale]}
@@ -154,7 +156,7 @@ export function PersonaPage() {
                       background: p.bg,
                     }}
                   >
-                    <SaborouAvatar size={26} />
+                    <SaborouAvatar size={26} personaId={p.id} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
