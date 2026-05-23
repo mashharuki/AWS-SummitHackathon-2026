@@ -1317,7 +1317,21 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 - `AuthProvider.tsx` / `AuthCallbackPage.tsx`: handleCallback に idToken 引数を追加し保存。
 - `apiClient.ts` / `useProposalStream.ts`: Authorization に getApiAuthToken()（id_token優先）を使用。
 - `backend/routes/users.ts`: 既存ユーザーの自己修復ロジックを強化（email 空も claims から補完）。
-品質確認: frontend 135件・backend 195件 全テストパス。新規テスト frontend 12件・backend 3件追加。型チェック通過。Biome エラー数は変更前12→変更後11（悪化なし）。
-**Context**: タスクA実装完了。コミット・PR待ち。
+品質確認: frontend 135件・backend 195件 全テストパス。新規テスト frontend 12件・backend 3件追加。型チェック通過。Biome エラー数は変更前12→変更後11（悪化なし）。**PR #24 として 2026-05-23T07:58 に main へマージ済み。**
+**Context**: タスクA実装完了・マージ済み。
+
+---
+
+## タスクB: Slack↔Cognito ユーザーIDミスマッチ解消（逆引きまで含む完全版）
+**Timestamp**: 2026-05-23T08:20:00Z
+**User Input**: タスクBスコープ選択 = "逆引きまで含める（GSI＋Webhook＋Agent）"
+**AI Response**: ミスマッチの根本原因を特定 — TaskExtractorLambdaHandler が Slack の user ID を Cognito userId として誤って代入していた（teamId+SlackユーザーID→Cognitoユーザーの逆引き機構が存在しなかった）。完全版で解消（ブランチ `feature/slack-cognito-user-linking`）:
+- shared: User/ServiceConnection 型に slackUserId/slackTeamId（+ slackLookupKey）追加。IServiceConnectionRepository に findCognitoSubBySlackIdentity 追加。
+- CDK: connections テーブルに GSI-SlackLookup（PK=slackLookupKey, KEYS_ONLY）追加。TaskExtractor Lambda に connections Read 権限・テーブル名env追加。
+- backend: DynamoServiceConnectionRepository に slackLookupKey 書き込み＋逆引き実装。auth.ts コールバックで authed_user.id/team.id を取得し User/ServiceConnection に保存。client_id 誤用バグ（COGNITO_CLIENT_ID 死にコード）を整理。
+- agent: DynamoSlackUserLookupRepository を新規作成。TaskExtractorLambdaHandler で逆引きし payload.userId に Cognito sub を設定。未連携 Slack ユーザーは安全にスキップ。
+品質確認: shared 103 / backend 199 / agent 155 全テストパス（agent カバレッジ100%維持）。型チェック・CDK synth・ビルド OK。Biome エラー総数 変更前179→変更後168（悪化なし）。
+設計詳細は aidlc-docs/construction/slack-cognito-linking/design.md。
+**Context**: タスクB実装完了。PR #25 作成済み。
 
 ---

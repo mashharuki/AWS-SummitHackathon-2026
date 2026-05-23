@@ -1,4 +1,5 @@
 import { BedrockClientAdapter } from "../bedrock/BedrockClientAdapter.js";
+import { DynamoSlackUserLookupRepository } from "../repositories/DynamoSlackUserLookupRepository.js";
 import { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
 import {
   EventBridgeSlackEventSchema,
@@ -25,9 +26,10 @@ import { TaskExtractorAgent } from "./TaskExtractorAgent.js";
 
 // モジュールレベルシングルトン (ウォーム呼び出し間で再利用)
 const bedrockClient = new BedrockClientAdapter(
-  process.env["BEDROCK_REGION"] ?? "ap-northeast-1",
+  process.env.BEDROCK_REGION ?? "ap-northeast-1",
 );
 const repository = new DynamoTaskCandidateRepository();
+const slackUserLookup = new DynamoSlackUserLookupRepository();
 
 export const handler = async (event: unknown): Promise<void> => {
   // [1] EventBridge エンベロープを検証 (DP-03: 入力側)
@@ -56,10 +58,26 @@ export const handler = async (event: unknown): Promise<void> => {
     return;
   }
 
+  // Slack identity (teamId + Slack user) から所有 Cognito ユーザーを逆引きする。
+  // 連携していない Slack ユーザーのメッセージはスキップ（こちらの管理対象外）。
+  const cognitoSub = await slackUserLookup.findCognitoSubBySlackIdentity(
+    detail.teamId,
+    rawEvent.user,
+  );
+  if (!cognitoSub) {
+    logInfo({
+      action: "skipped_unlinked_slack_user",
+      teamId: detail.teamId,
+    });
+    return;
+  }
+
   // EventBridge エンベロープ → ドメイン型に変換
+  // userId は Cognito sub（逆引き結果）。message.userId は Slack user ID
+  // （TaskExtractorAgent が依頼者の仮名化に使用）。
   const payload: SlackEventPayload = {
     source: "slack",
-    userId: rawEvent.user,
+    userId: cognitoSub,
     message: {
       text: rawEvent.text,
       channelId: rawEvent.channel,

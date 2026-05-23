@@ -58,7 +58,7 @@ describe("DynamoServiceConnectionRepository.findByUserAndService", () => {
 
     const conn = await repo.findByUserAndService("user1", "slack");
     expect(conn).not.toBeNull();
-    expect(conn!.service).toBe("slack");
+    expect(conn?.service).toBe("slack");
   });
 
   it("returns null when not found", async () => {
@@ -100,6 +100,74 @@ describe("DynamoServiceConnectionRepository.saveForUser", () => {
     });
 
     expect(saved.connectedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe("DynamoServiceConnectionRepository.saveForUser — slack identity", () => {
+  it("derives slackLookupKey when both slackTeamId and slackUserId are present", async () => {
+    let captured: { Item?: Record<string, unknown> } = {};
+    const client = mockClient((command: unknown) => {
+      captured = (command as { input: typeof captured }).input;
+      return {};
+    });
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const saved = await repo.saveForUser("user1", {
+      service: "slack",
+      status: "connected",
+      secretArn: "arn:test:secret",
+      slackUserId: "U999",
+      slackTeamId: "T999",
+      expiresAt: null,
+    });
+
+    expect(saved.slackLookupKey).toBe("T999#U999");
+    // marshall された Item にも slackLookupKey が含まれる
+    expect(captured.Item?.slackLookupKey).toEqual({ S: "T999#U999" });
+  });
+
+  it("does not set slackLookupKey when slack identity is absent", async () => {
+    const client = mockClient(() => ({}));
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const saved = await repo.saveForUser("user1", {
+      service: "slack",
+      status: "connected",
+      secretArn: "arn:test:secret",
+      expiresAt: null,
+    });
+
+    expect(saved.slackLookupKey).toBeUndefined();
+  });
+});
+
+describe("DynamoServiceConnectionRepository.findCognitoSubBySlackIdentity", () => {
+  it("returns cognitoSub from GSI lookup hit", async () => {
+    const client = mockClient(() => ({
+      Items: [{ PK: { S: "USER#cognito-abc" }, SK: { S: "CONN#slack" } }],
+    }));
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const sub = await repo.findCognitoSubBySlackIdentity("T999", "U999");
+    expect(sub).toBe("cognito-abc");
+  });
+
+  it("returns null when no item matches", async () => {
+    const client = mockClient(() => ({ Items: [] }));
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const sub = await repo.findCognitoSubBySlackIdentity("T999", "U-unknown");
+    expect(sub).toBeNull();
+  });
+
+  it("returns null when PK is not in USER# form", async () => {
+    const client = mockClient(() => ({
+      Items: [{ PK: { S: "WEIRD#x" }, SK: { S: "CONN#slack" } }],
+    }));
+    const repo = new DynamoServiceConnectionRepository(client, TABLE);
+
+    const sub = await repo.findCognitoSubBySlackIdentity("T999", "U999");
+    expect(sub).toBeNull();
   });
 });
 

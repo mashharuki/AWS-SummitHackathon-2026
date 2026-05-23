@@ -99,6 +99,8 @@ export class SaborouAgentStack extends cdk.Stack {
         DYNAMODB_TABLE_TASK_CANDIDATES:
           props.data.tables.taskCandidates.tableName,
         DYNAMODB_TABLE_TASKS: props.data.tables.tasks.tableName,
+        // Slack identity → Cognito user 逆引き用（GSI-SlackLookup を引く）
+        DYNAMODB_TABLE_CONNECTIONS: props.data.tables.connections.tableName,
         BEDROCK_REGION: "ap-northeast-1",
         SLACK_TOKEN_SECRET_NAME:
           props.data.secrets.slackClientSecret.secretName,
@@ -121,6 +123,8 @@ export class SaborouAgentStack extends cdk.Stack {
     taskExtractorFn.addToRolePolicy(marketplacePolicy);
     props.data.tables.taskCandidates.grantReadWriteData(taskExtractorFn);
     props.data.tables.tasks.grantReadData(taskExtractorFn);
+    // Slack identity → Cognito user 逆引き（GSI-SlackLookup を含む読み取り）
+    props.data.tables.connections.grantReadData(taskExtractorFn);
     props.data.secrets.slackClientSecret.grantRead(taskExtractorFn);
 
     // --- SaboriProposer DLQ ---
