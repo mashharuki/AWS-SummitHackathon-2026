@@ -106,6 +106,24 @@ export async function getMe(): Promise<User> {
   return request<User>("/api/users/me");
 }
 
+/** GET /api/users/me/dependency-score */
+export async function getDependencyScore(): Promise<{ score: number }> {
+  return request<{ score: number }>("/api/users/me/dependency-score");
+}
+
+/** POST /api/users/me/dependency-score/decrement */
+export async function decrementDependencyScore(
+  delta: number,
+): Promise<{ score: number }> {
+  return request<{ score: number }>(
+    "/api/users/me/dependency-score/decrement",
+    {
+      method: "POST",
+      body: JSON.stringify({ delta }),
+    },
+  );
+}
+
 // --- タスク候補 ---
 
 /** GET /api/tasks/candidates */
@@ -222,6 +240,8 @@ export function buildProposalStreamUrl(taskId: string): string {
 
 export default {
   getMe,
+  getDependencyScore,
+  decrementDependencyScore,
   getCandidates,
   approveCandidate,
   rejectCandidate,

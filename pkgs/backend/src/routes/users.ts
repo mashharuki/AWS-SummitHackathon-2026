@@ -68,5 +68,27 @@ export function createUsersRoute(userRepository: DynamoUserRepository) {
     return c.json(user, 201);
   });
 
+  // GET /api/users/me/dependency-score — 現在のAI依存度スコアを返す
+  users.get("/me/dependency-score", authMiddleware, async (c) => {
+    const userId = c.get("userId");
+    const score = await userRepository.getDependencyScore(userId);
+    return c.json({ score });
+  });
+
+  // POST /api/users/me/dependency-score/decrement — スコアを減少させる
+  users.post("/me/dependency-score/decrement", authMiddleware, async (c) => {
+    const userId = c.get("userId");
+    let rawDelta = 1;
+    try {
+      const body = await c.req.json<{ delta?: number }>();
+      rawDelta = body.delta ?? 1;
+    } catch {
+      // body が空の場合はデフォルト値を使用
+    }
+    const delta = Math.min(Math.max(1, rawDelta), 10);
+    const score = await userRepository.decrementDependencyScore(userId, delta);
+    return c.json({ score });
+  });
+
   return users;
 }

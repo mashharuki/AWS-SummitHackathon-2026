@@ -4,12 +4,14 @@
  * アクセスパターン:
  * - GetItem PK=USER#<cognitoSub> SK=PROFILE — findById
  * - PutItem PK=USER#<cognitoSub> SK=PROFILE — upsert
+ * - UpdateItem PK=USER#<cognitoSub> SK=PROFILE — decrementDependencyScore
  */
 
 import {
   type DynamoDBClient,
   GetItemCommand,
   PutItemCommand,
+  UpdateItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type { IUserRepository, User } from "@saboru/shared";
@@ -57,5 +59,29 @@ export class DynamoUserRepository implements IUserRepository {
     );
 
     return item;
+  }
+
+  async getDependencyScore(cognitoSub: string): Promise<number> {
+    const user = await this.findById(cognitoSub);
+    return user?.dependencyScore ?? 100;
+  }
+
+  async decrementDependencyScore(
+    cognitoSub: string,
+    delta: number,
+  ): Promise<number> {
+    const current = await this.getDependencyScore(cognitoSub);
+    const newScore = Math.max(0, current - delta);
+
+    await this.client.send(
+      new UpdateItemCommand({
+        TableName: this.tableName,
+        Key: marshall({ PK: `USER#${cognitoSub}`, SK: "PROFILE" }),
+        UpdateExpression: "SET dependencyScore = :score",
+        ExpressionAttributeValues: marshall({ ":score": newScore }),
+      }),
+    );
+
+    return newScore;
   }
 }

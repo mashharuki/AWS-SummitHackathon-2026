@@ -3,8 +3,10 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Logo } from "@/components/layout/Logo";
 import { TaskAddModal } from "@/components/task/TaskAddModal";
 import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
+import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAuth } from "@/hooks/useAuth";
+import { useDependencyScore } from "@/hooks/useDependencyScore";
 import { useTasks } from "@/hooks/useTasks";
 import { getDisplayName } from "@/lib/utils";
 /**
@@ -22,6 +24,7 @@ import { useTranslation } from "react-i18next";
 export function TaskListPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { score, justDecremented } = useDependencyScore();
   const {
     tasks,
     candidates,
@@ -67,20 +70,26 @@ export function TaskListPage() {
           >
             タスク一覧
           </span>
-          {user && (
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{
-                background: "#FED7AA",
-                color: "#EA580C",
-                fontWeight: 700,
-                fontSize: 12,
-              }}
-              aria-label={getDisplayName(user)}
-            >
-              {getDisplayName(user).charAt(0).toUpperCase()}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <DependencyScoreDisplay
+              score={score}
+              justDecremented={justDecremented}
+            />
+            {user && (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: "#FED7AA",
+                  color: "#EA580C",
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
+                aria-label={getDisplayName(user)}
+              >
+                {getDisplayName(user).charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
         </header>
 
         {/* 今日バナー */}

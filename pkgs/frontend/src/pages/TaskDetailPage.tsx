@@ -2,10 +2,12 @@ import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
+import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
+import { useDependencyScore } from "@/hooks/useDependencyScore";
 import { useProposalStream } from "@/hooks/useProposalStream";
 import { useTasks } from "@/hooks/useTasks";
 import apiClient from "@/lib/apiClient";
@@ -46,6 +48,11 @@ export function TaskDetailPage() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const {
+    score,
+    justDecremented,
+    decrement: decrementScore,
+  } = useDependencyScore();
 
   // タスク取得
   useEffect(() => {
@@ -121,6 +128,13 @@ export function TaskDetailPage() {
     }
   };
 
+  const QUICK_REPLY_DELTA: Record<QuickReplyType, number> = {
+    agree_with_ai: 3, // AIに完全同意 → 自己判断力 -3%
+    truly_tired: 2, // 疲れているのでサボる → -2%
+    disagree_with_ai: 0, // AIに反論 → 自己判断力は保持
+    actually_important: 0, // 重要と判断 → 自己判断力は保持
+  };
+
   const handleQuickReply = (type: QuickReplyType, label: string) => {
     void sendQuickReply(label);
     void apiClient
@@ -128,6 +142,8 @@ export function TaskDetailPage() {
       .catch(() => {
         // 非致命的
       });
+    const delta = QUICK_REPLY_DELTA[type];
+    if (delta > 0) void decrementScore(delta);
   };
 
   if (!task) {
@@ -154,27 +170,33 @@ export function TaskDetailPage() {
           subtitle={`${task.requester ?? ""} ${task.sourceType === "slack" ? "· Slack" : ""}`}
           onBack={() => navigate("/tasks")}
           right={
-            !isEditing ? (
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  aria-label={t("tasks.editTask")}
-                  className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
-                >
-                  <Edit2 size={15} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={isDeleting}
-                  aria-label={t("tasks.deleteTask")}
-                  className="p-1.5 text-red-500 hover:bg-red-50 rounded"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                </button>
-              </div>
-            ) : undefined
+            <div className="flex items-center gap-2">
+              <DependencyScoreDisplay
+                score={score}
+                justDecremented={justDecremented}
+              />
+              {!isEditing && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    aria-label={t("tasks.editTask")}
+                    className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
+                  >
+                    <Edit2 size={15} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete()}
+                    disabled={isDeleting}
+                    aria-label={t("tasks.deleteTask")}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                  </button>
+                </>
+              )}
+            </div>
           }
         />
 
@@ -208,9 +230,7 @@ export function TaskDetailPage() {
                   >
                     {task.title}
                   </h1>
-                  <p
-                    className="text-saboru-ink-muted mt-1.5 text-xs md:text-sm"
-                  >
+                  <p className="text-saboru-ink-muted mt-1.5 text-xs md:text-sm">
                     📅 {formatDeadlineDisplay(task.deadline)}
                   </p>
                 </>
@@ -218,10 +238,7 @@ export function TaskDetailPage() {
             </div>
 
             {/* 3D 判定ヒーロー（憲法2: 320px / 憲法4: brutal-3d-container で外枠） */}
-            <div
-              className="brutal-3d-container"
-              style={{ height: 280 }}
-            >
+            <div className="brutal-3d-container" style={{ height: 280 }}>
               <Suspense
                 fallback={
                   <div className="w-full h-full flex items-center justify-center">
@@ -241,7 +258,9 @@ export function TaskDetailPage() {
             </div>
 
             {/* ストリーミング中: ContextCollectingAnim を表示 */}
-            {isStreaming && !proposal && <ContextCollectingAnim phase={phase} />}
+            {isStreaming && !proposal && (
+              <ContextCollectingAnim phase={phase} />
+            )}
 
             {/* VerdictBox */}
             {verdictForDisplay && proposal && (
