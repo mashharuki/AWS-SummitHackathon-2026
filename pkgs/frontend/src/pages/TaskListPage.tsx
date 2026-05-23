@@ -1,10 +1,15 @@
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { AppShell } from "@/components/layout/AppShell";
 import { Logo } from "@/components/layout/Logo";
+import { OnboardingModal, useOnboarding } from "@/components/OnboardingModal";
 import { TaskAddModal } from "@/components/task/TaskAddModal";
 import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import {
+  VerdictHistory,
+  loadVerdictHistory,
+} from "@/components/verdict/VerdictHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { useDependencyScore } from "@/hooks/useDependencyScore";
 import { useTasks } from "@/hooks/useTasks";
@@ -35,6 +40,9 @@ export function TaskListPage() {
     createTask,
   } = useTasks();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const verdictHistory = loadVerdictHistory();
+  const { shouldShow: showOnboarding, markDone: completeOnboarding } =
+    useOnboarding();
 
   const activeTasks = tasks.filter((t) => t.status === "approved");
 
@@ -91,6 +99,20 @@ export function TaskListPage() {
             )}
           </div>
         </header>
+
+        {/* ポジショニングタグライン */}
+        <div className="px-4 pt-2" style={{ textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: "#D97706",
+              letterSpacing: "0.04em",
+            }}
+          >
+            AIに、サボっていいと言わせよう
+          </p>
+        </div>
 
         {/* 今日バナー */}
         <div className="px-4 pt-3 pb-2">
@@ -211,6 +233,13 @@ export function TaskListPage() {
               </div>
             )}
           </section>
+
+          {/* 判定履歴セクション */}
+          {verdictHistory.length > 0 && (
+            <section className="pt-5 pb-2">
+              <VerdictHistory entries={verdictHistory} />
+            </section>
+          )}
         </div>
 
         {/* FAB: タスク追加
@@ -246,6 +275,9 @@ export function TaskListPage() {
             await createTask(data);
           }}
         />
+
+        {/* 初回オンボーディングモーダル */}
+        {showOnboarding && <OnboardingModal onComplete={completeOnboarding} />}
       </div>
     </AppShell>
   );

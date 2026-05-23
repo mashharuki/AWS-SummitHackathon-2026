@@ -28,4 +28,10 @@ export interface ServiceConnection {
   connectedAt: string;
   /** Token expiration (ISO 8601 / null: no expiration) */
   expiresAt: string | null;
+  /**
+   * Slack user ID of the authorizing user (e.g. U12345AB).
+   * Stored at OAuth time from authed_user.id.
+   * Used to resolve Cognito sub from webhook events.
+   */
+  slackUserId?: string;
 }

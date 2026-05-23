@@ -183,8 +183,16 @@ export function ManualPage() {
             </div>
             <p className="text-saboru-ink-muted mt-2" style={{ fontSize: 10 }}>
               {isJa
-                ? `あと ${TOTAL_GOAL - collected} 件の本音データで、外部 AI に渡せる完全版が完成します`
-                : `${TOTAL_GOAL - collected} more samples to complete the full manual for external AI`}
+                ? collected === 0
+                  ? "タスク詳細でサボりに「本音リアクション」を送ると、あなたの傾向が蓄積されます"
+                  : collected < 10
+                    ? `データが溜まり始めました。あと ${TOTAL_GOAL - collected} 件で傾向が見えてきます`
+                    : collected < 50
+                      ? `傾向が見えてきました！あと ${TOTAL_GOAL - collected} 件でさらに精度が上がります`
+                      : `あと ${TOTAL_GOAL - collected} 件の本音データで、外部 AI に渡せる完全版が完成します`
+                : collected === 0
+                  ? "Send honne reactions on task detail pages to start building your profile"
+                  : `${TOTAL_GOAL - collected} more samples to complete the full manual`}
             </p>
           </div>
 

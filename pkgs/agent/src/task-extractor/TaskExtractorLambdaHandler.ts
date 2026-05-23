@@ -1,3 +1,5 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { BedrockClientAdapter } from "../bedrock/BedrockClientAdapter.js";
 import { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
 import {
@@ -29,6 +31,52 @@ const bedrockClient = new BedrockClientAdapter(
 );
 const repository = new DynamoTaskCandidateRepository();
 
+const dynamoDocClient = DynamoDBDocumentClient.from(
+  new DynamoDBClient({ region: process.env["AWS_REGION"] ?? "ap-northeast-1" }),
+);
+
+/**
+ * Slack user ID から cognitoSub (DynamoDB の userId) を解決する。
+ *
+ * ServiceConnections テーブルを scan し、slackUserId が一致するレコードの
+ * PK から `USER#` プレフィックスを除いた cognitoSub を返す。
+ * 見つからない場合は null を返す (不正イベントとしてスキップ)。
+ *
+ * MVP スコープ: ユーザー数は少ないため scan で対応。
+ * 将来的には slackUserId GSI を追加して query に切り替える。
+ */
+async function resolveUserIdBySlackUserId(
+  slackUserId: string,
+): Promise<string | null> {
+  const tableName = process.env["DYNAMODB_TABLE_CONNECTIONS"];
+  if (!tableName) return null;
+
+  try {
+    const result = await dynamoDocClient.send(
+      new ScanCommand({
+        TableName: tableName,
+        FilterExpression: "slackUserId = :slackId",
+        ExpressionAttributeValues: { ":slackId": slackUserId },
+        ProjectionExpression: "PK",
+        Limit: 1,
+      }),
+    );
+
+    if (!result.Items || result.Items.length === 0) return null;
+
+    const item = result.Items[0] as { PK: string };
+    // PK format: USER#<cognitoSub>
+    return item.PK.replace(/^USER#/, "");
+  } catch (err) {
+    logError({
+      action: "resolve_user_id_failed",
+      slackUserId,
+      error: String(err),
+    });
+    return null;
+  }
+}
+
 export const handler = async (event: unknown): Promise<void> => {
   // [1] EventBridge エンベロープを検証 (DP-03: 入力側)
   const parsed = EventBridgeSlackEventSchema.safeParse(event);
@@ -56,16 +104,30 @@ export const handler = async (event: unknown): Promise<void> => {
     return;
   }
 
+  // Slack user ID (rawEvent.user) を cognitoSub に変換する
+  // ServiceConnections テーブルで slackUserId が一致するレコードを検索する
+  const slackUserId = rawEvent.user;
+  const resolvedUserId = await resolveUserIdBySlackUserId(slackUserId);
+
+  if (!resolvedUserId) {
+    logInfo({
+      action: "skipped_unmapped_slack_user",
+      slackUserId,
+      hint: "User may not have connected Slack yet, or authed_user.id was not captured during OAuth",
+    });
+    return;
+  }
+
   // EventBridge エンベロープ → ドメイン型に変換
   const payload: SlackEventPayload = {
     source: "slack",
-    userId: rawEvent.user,
+    userId: resolvedUserId, // cognitoSub (not Slack user ID)
     message: {
       text: rawEvent.text,
       channelId: rawEvent.channel,
       messageTs: rawEvent.ts,
       teamId: detail.teamId,
-      userId: rawEvent.user,
+      userId: slackUserId, // message.userId はSlack IDのまま（ログ用）
       ...(rawEvent.thread_ts ? { threadTs: rawEvent.thread_ts } : {}),
     },
   };

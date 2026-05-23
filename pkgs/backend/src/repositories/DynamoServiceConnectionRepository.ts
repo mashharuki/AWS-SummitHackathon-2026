@@ -73,7 +73,9 @@ export class DynamoServiceConnectionRepository
    */
   async saveForUser(
     userId: string,
-    connection: Omit<ServiceConnection, "PK" | "SK">,
+    connection: Omit<ServiceConnection, "PK" | "SK" | "connectedAt"> & {
+      connectedAt?: string;
+    },
   ): Promise<ServiceConnection> {
     const item: ServiceConnection = {
       PK: `USER#${userId}`,

@@ -4,9 +4,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
+import { DeferralCountdown } from "@/components/verdict/DeferralCountdown";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
+import { saveVerdictEntry } from "@/components/verdict/VerdictHistory";
 import { useDependencyScore } from "@/hooks/useDependencyScore";
 import { useProposalStream } from "@/hooks/useProposalStream";
 import { useTasks } from "@/hooks/useTasks";
@@ -94,6 +96,21 @@ export function TaskDetailPage() {
     onProposalReady: (p) => setProposal(p),
   });
 
+  // 判定履歴をlocalStorageに保存（task + proposal 両方が揃ったとき）
+  useEffect(() => {
+    if (task && proposal) {
+      saveVerdictEntry({
+        taskId: proposal.taskId,
+        taskTitle: task.title,
+        verdict: proposal.verdict,
+        summaryText: proposal.summaryText,
+        evaluatedAt: proposal.evaluatedAt,
+      });
+    }
+    // proposal.evaluatedAt を依存にすることで新しい提案が来るたびに保存する
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposal?.evaluatedAt]);
+
   // 初回ロード時にストリーミング開始
   useEffect(() => {
     if (taskId && !proposal) {
@@ -129,8 +146,8 @@ export function TaskDetailPage() {
   };
 
   const QUICK_REPLY_DELTA: Record<QuickReplyType, number> = {
-    agree_with_ai: 3, // AIに完全同意 → 自己判断力 -3%
-    truly_tired: 2, // 疲れているのでサボる → -2%
+    agree_with_ai: 8, // AIに完全同意 → 自己判断力 -8%（デモ即時体験）
+    truly_tired: 5, // 疲れているのでサボる → -5%
     disagree_with_ai: 0, // AIに反論 → 自己判断力は保持
     actually_important: 0, // 重要と判断 → 自己判断力は保持
   };
@@ -280,6 +297,14 @@ export function TaskDetailPage() {
                       )
                     : undefined
                 }
+              />
+            )}
+
+            {/* DeferralCountdown — サボれ判定時に「X分後に再判定」を表示（競合差別化） */}
+            {proposal?.verdict === "can_saboru" && proposal.nextCheckAt && (
+              <DeferralCountdown
+                nextCheckAt={proposal.nextCheckAt}
+                onRecheck={() => void startProposal()}
               />
             )}
 

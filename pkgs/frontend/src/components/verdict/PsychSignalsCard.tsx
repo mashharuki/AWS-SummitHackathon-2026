@@ -18,6 +18,10 @@ interface PsychTheory {
   desc: string;
   /** true: 低いほど can_saboru 方向 */
   inverted: boolean;
+  /** サボれる根拠のナチュラル説明（signal=low かつ inverted=true、または signal=high かつ inverted=false のとき） */
+  saboruExplanation: string;
+  /** やるべき根拠のナチュラル説明 */
+  doExplanation: string;
 }
 
 const PSYCH_THEORIES: PsychTheory[] = [
@@ -28,6 +32,9 @@ const PSYCH_THEORIES: PsychTheory[] = [
     cite: "Williams et al. (1981)",
     desc: "依頼者から貢献が見えるか",
     inverted: true,
+    saboruExplanation:
+      "あなたの貢献は依頼者から見えていません — 動いても評価されない状況です",
+    doExplanation: "あなたの貢献は依頼者からはっきり見えています",
   },
   {
     key: "effortOutcomeExpectancy",
@@ -36,6 +43,8 @@ const PSYCH_THEORIES: PsychTheory[] = [
     cite: "Vroom (1964)",
     desc: "今努力する報酬期待",
     inverted: false,
+    saboruExplanation: "この努力が成果につながる期待値が低い状態です",
+    doExplanation: "今動けば確実に成果につながる高期待値の状況です",
   },
   {
     key: "perceivedPeerEffort",
@@ -44,6 +53,9 @@ const PSYCH_THEORIES: PsychTheory[] = [
     cite: "Kerr (1983)",
     desc: "他者も動いていないか",
     inverted: true,
+    saboruExplanation:
+      "周囲のメンバーも動いていません — あなただけが損をする状況です",
+    doExplanation: "周囲が動いている中、あなたも動く必要があります",
   },
   {
     key: "externalPressureLevel",
@@ -52,6 +64,9 @@ const PSYCH_THEORIES: PsychTheory[] = [
     cite: "Ryan & Deci (2000)",
     desc: "リマインドの強さ",
     inverted: true,
+    saboruExplanation:
+      "外発的なプレッシャーが弱く、今は自律的に休んでいい状態です",
+    doExplanation: "強い外発的プレッシャーがかかっています",
   },
 ];
 
@@ -208,10 +223,25 @@ export function PsychSignalsCard({
                 />
               </div>
               <p
-                className="text-saboru-ink-muted italic mt-0.5"
+                className="mt-0.5"
+                style={{
+                  fontSize: 9,
+                  color: barColor,
+                  lineHeight: 1.4,
+                  fontStyle: "italic",
+                }}
+              >
+                {supports
+                  ? theory.saboruExplanation
+                  : s === "unknown"
+                    ? `${theory.cite} · ${theory.desc}`
+                    : theory.doExplanation}
+              </p>
+              <p
+                className="text-saboru-ink-muted mt-0.5"
                 style={{ fontSize: 8 }}
               >
-                {theory.cite} · {theory.desc}
+                {theory.cite}
               </p>
             </div>
           );

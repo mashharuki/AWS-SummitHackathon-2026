@@ -183,6 +183,7 @@ export function createAuthRoute(
       ok: boolean;
       access_token?: string;
       team?: { id: string; name: string };
+      authed_user?: { id: string };
       error?: string;
     };
 
@@ -227,12 +228,16 @@ export function createAuthRoute(
     }
 
     // Save connection record to DynamoDB
+    // authed_user.id = Slack user ID of the authorizing user — stored for webhook→cognitoSub mapping
     await connectionRepository.saveForUser(userId, {
       service: "slack",
       status: "connected",
       secretArn,
       connectedAt: toIsoString(new Date()),
       expiresAt: null,
+      ...(tokenData.authed_user?.id
+        ? { slackUserId: tokenData.authed_user.id }
+        : {}),
     });
 
     // Redirect to frontend with success
