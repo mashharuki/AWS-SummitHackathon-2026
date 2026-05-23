@@ -10,64 +10,24 @@ import { VERDICT_META } from "@/lib/verdictMeta";
 import type { PsychSignals, SignalLevel, Verdict } from "@saboru/shared";
 import { useTranslation } from "react-i18next";
 
-interface PsychTheory {
+interface PsychTheoryConfig {
   key: keyof PsychSignals;
-  label: string;
-  jp: string;
-  cite: string;
-  desc: string;
   /** true: 低いほど can_saboru 方向 */
   inverted: boolean;
-  /** サボれる根拠のナチュラル説明（signal=low かつ inverted=true、または signal=high かつ inverted=false のとき） */
+}
+
+interface PsychTheoryI18n {
+  label: string;
+  jp: string;
   saboruExplanation: string;
-  /** やるべき根拠のナチュラル説明 */
   doExplanation: string;
 }
 
-const PSYCH_THEORIES: PsychTheory[] = [
-  {
-    key: "taskIdentifiability",
-    label: "Identifiability",
-    jp: "識別可能性",
-    cite: "Williams et al. (1981)",
-    desc: "依頼者から貢献が見えるか",
-    inverted: true,
-    saboruExplanation:
-      "あなたの貢献は依頼者から見えていません — 動いても評価されない状況です",
-    doExplanation: "あなたの貢献は依頼者からはっきり見えています",
-  },
-  {
-    key: "effortOutcomeExpectancy",
-    label: "Expectancy",
-    jp: "期待値（締切余裕）",
-    cite: "Vroom (1964)",
-    desc: "今努力する報酬期待",
-    inverted: false,
-    saboruExplanation: "この努力が成果につながる期待値が低い状態です",
-    doExplanation: "今動けば確実に成果につながる高期待値の状況です",
-  },
-  {
-    key: "perceivedPeerEffort",
-    label: "Sucker Effect",
-    jp: "ピア努力知覚",
-    cite: "Kerr (1983)",
-    desc: "他者も動いていないか",
-    inverted: true,
-    saboruExplanation:
-      "周囲のメンバーも動いていません — あなただけが損をする状況です",
-    doExplanation: "周囲が動いている中、あなたも動く必要があります",
-  },
-  {
-    key: "externalPressureLevel",
-    label: "SDT",
-    jp: "外発的プレッシャー",
-    cite: "Ryan & Deci (2000)",
-    desc: "リマインドの強さ",
-    inverted: true,
-    saboruExplanation:
-      "外発的なプレッシャーが弱く、今は自律的に休んでいい状態です",
-    doExplanation: "強い外発的プレッシャーがかかっています",
-  },
+const PSYCH_THEORY_CONFIGS: PsychTheoryConfig[] = [
+  { key: "taskIdentifiability", inverted: true },
+  { key: "effortOutcomeExpectancy", inverted: false },
+  { key: "perceivedPeerEffort", inverted: true },
+  { key: "externalPressureLevel", inverted: true },
 ];
 
 /** verdict ベースのフォールバック（psychSignals が未保存の古い提案用） */
@@ -110,11 +70,25 @@ export function PsychSignalsCard({
   const meta = VERDICT_META[verdict];
   const isRealData = psychSignals != null;
 
+  const theoriesI18n = t("verdict.psychTheories", {
+    returnObjects: true,
+  }) as PsychTheoryI18n[];
+  const scoreLabels = t("verdict.scoreLabels", {
+    returnObjects: true,
+  }) as { canSaboru: string; borderline: string; mustDo: string };
+
   const totalScore =
-    PSYCH_THEORIES.reduce((acc, t) => {
-      const s = scoreOf(signals[t.key]);
-      return acc + (t.inverted ? 1 - s : s);
-    }, 0) / PSYCH_THEORIES.length;
+    PSYCH_THEORY_CONFIGS.reduce((acc, cfg) => {
+      const s = scoreOf(signals[cfg.key]);
+      return acc + (cfg.inverted ? 1 - s : s);
+    }, 0) / PSYCH_THEORY_CONFIGS.length;
+
+  const scoreLabel =
+    totalScore >= 0.67
+      ? scoreLabels.mustDo
+      : totalScore >= 0.34
+        ? scoreLabels.borderline
+        : scoreLabels.canSaboru;
 
   return (
     <div className="card-brutal p-3.5">
@@ -159,21 +133,39 @@ export function PsychSignalsCard({
             {Math.round(totalScore * 100)}
             <span style={{ fontSize: 10, fontWeight: 600 }}>/100</span>
           </p>
+          <p
+            className="font-bold mt-0.5"
+            style={{ fontSize: 9, color: meta.color }}
+          >
+            {scoreLabel}
+          </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        {PSYCH_THEORIES.map((theory) => {
-          const s = signals[theory.key];
+        {PSYCH_THEORY_CONFIGS.map((cfg, i) => {
+          const labels = theoriesI18n[i] ?? {
+            label: "",
+            jp: "",
+            saboruExplanation: "",
+            doExplanation: "",
+          };
+          const s = signals[cfg.key];
           const score = scoreOf(s);
-          const supports = theory.inverted ? s === "low" : s === "high";
+          const supports = cfg.inverted ? s === "low" : s === "high";
           const barColor = supports
             ? "#10B981"
             : s === "unknown"
               ? "#9CA3AF"
               : "#EF4444";
+          const levelLabel =
+            s === "low"
+              ? t("verdict.levelLow")
+              : s === "high"
+                ? t("verdict.levelHigh")
+                : t("verdict.levelUnknown");
           return (
-            <div key={String(theory.key)}>
+            <div key={String(cfg.key)}>
               <div className="flex items-baseline justify-between mb-1">
                 <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
                   <span
@@ -183,13 +175,13 @@ export function PsychSignalsCard({
                       fontSize: 10,
                     }}
                   >
-                    {theory.label}
+                    {labels.label}
                   </span>
                   <span
                     className="text-saboru-ink-soft truncate"
                     style={{ fontSize: 9 }}
                   >
-                    {theory.jp}
+                    {labels.jp}
                   </span>
                 </div>
                 <span
@@ -202,7 +194,7 @@ export function PsychSignalsCard({
                     borderRadius: 4,
                   }}
                 >
-                  {s === "low" ? "LOW" : s === "high" ? "HIGH" : "—"}
+                  {levelLabel}
                 </span>
               </div>
               <div
@@ -232,16 +224,10 @@ export function PsychSignalsCard({
                 }}
               >
                 {supports
-                  ? theory.saboruExplanation
+                  ? labels.saboruExplanation
                   : s === "unknown"
-                    ? `${theory.cite} · ${theory.desc}`
-                    : theory.doExplanation}
-              </p>
-              <p
-                className="text-saboru-ink-muted mt-0.5"
-                style={{ fontSize: 8 }}
-              >
-                {theory.cite}
+                    ? t("verdict.levelUnknownDesc")
+                    : labels.doExplanation}
               </p>
             </div>
           );
