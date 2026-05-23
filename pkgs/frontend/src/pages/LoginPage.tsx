@@ -119,22 +119,6 @@ export function LoginPage() {
             </span>
           </div>
         </div>
-
-        {/* フィーチャーリスト */}
-        <ul className="space-y-1.5" aria-label={t("login.featuresAria")}>
-          {(["🔗", "🧠", "☁️"] as const).map((ic, i) => (
-            <li
-              key={ic}
-              className="flex items-center gap-2 px-2"
-              style={{ fontSize: 11 }}
-            >
-              <span>{ic}</span>
-              <span className="text-saboru-ink-soft">
-                {t(`login.features.${i}`)}
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
