@@ -1358,3 +1358,25 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 **Context**: タスクC実装完了。コミット・PR待ち。
 
 ---
+
+## タスクC マージとタスクD+E起点準備・動作確認方針
+**Timestamp**: 2026-05-23T11:45:00Z
+**User Input**: 動作確認のタイミング相談 → "Dまで進めてからまとめて確認"
+**AI Response**: B/C はSlack実OAuth・実Slack投稿が絡み実環境必須。D（ペルソナ）も実Bedrock口調生成が絡むため、**D完了後に B+C+D をまとめて実AWSでE2E確認**する方針で合意。PR #26 をマージ（main d3b749f）し、最新 main から D ブランチ作成。
+**Context**: タスクA・B・Cマージ済み。D+E着手。
+
+---
+
+## タスクD+E: AIペルソナ切り替え + AI応答の柔軟化
+**Timestamp**: 2026-05-23T12:30:00Z
+**User Input**: D/E統合スコープ選択 = "D+E を一括で"
+**AI Response**: D（ペルソナ切替）とE（応答多様化）は「ペルソナ別プロンプト＝口調の多様化」で実装が重なるため一括実装（ブランチ `feature/persona-switching-and-flexible-ai`）。「UIは4ペルソナ完成済み、配線が未接続」状態を解消:
+- shared: User.preferredPersonaId 追加。VALID_PERSONA_IDS / isValidPersonaId / PersonaId を constants に追加し index から re-export。
+- agent: personaRenderTool.ts に4ペルソナのシステムプロンプト（ottori/strict/psy/hacker）と PERSONA_TEMPERATURE（E: 0.2〜0.5の多様化）を定義。PersonaRenderer が input.personaId でプロンプト/temperature を選択（不明はottoriフォールバック）。SaboriProposerAgent.propose/proposeStream が personaId 引数を受け取り伝播。判定（Sonnet）は決定論のまま、口調レイヤのみ多様化。
+- backend: PUT /api/users/me/persona（無効ID 400）。proposals ルートが User.preferredPersonaId を解決して propose に渡す。SaboriProposerLambdaHandler も payload.personaId 対応。
+- frontend: PersonaPage を localStorage から API 連携へ（updatePersona・初期復元・楽観更新・ロールバック）。4ペルソナ全て available:true 化。MSW handlers に persona 更新追加。
+品質確認: shared 103 / backend 217 / agent 174 / frontend 136 全テストパス（agent/shared カバレッジ100%維持）。型チェック・CDK synth(Agent/Api)・ビルド OK。Biome エラー総数 起点165→変更後165（悪化なし）。
+設計詳細は aidlc-docs/construction/persona-switching/design.md。
+**Context**: タスクD+E実装完了。コミット・PR待ち。
+
+---

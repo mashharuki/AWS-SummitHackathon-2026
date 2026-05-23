@@ -1,6 +1,7 @@
 import apiClient, {
   ApiError,
   getMe,
+  updatePersona,
   getCandidates,
   approveCandidate,
   rejectCandidate,
@@ -40,6 +41,11 @@ describe("apiClient — 正常系エンドポイント", () => {
   it("getMe 名前付きエクスポートでも動作する", async () => {
     const user = await getMe();
     expect(user.cognitoSub).toBe("test-sub");
+  });
+
+  it("PUT /api/users/me/persona でペルソナを更新できる", async () => {
+    const user = await updatePersona("saboru_hacker");
+    expect(user.preferredPersonaId).toBe("saboru_hacker");
   });
 
   it("GET /api/tasks で一覧を取得できる", async () => {

@@ -67,7 +67,7 @@ export const PERSONAS: Persona[] = [
     },
     bg: "linear-gradient(135deg, #1F2937 0%, #374151 100%)",
     color: "#9CA3AF",
-    available: false,
+    available: true,
   },
   {
     id: "saboru_psy",
@@ -83,7 +83,7 @@ export const PERSONAS: Persona[] = [
     },
     bg: "linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)",
     color: "#6366F1",
-    available: false,
+    available: true,
   },
   {
     id: "saboru_hacker",
@@ -99,7 +99,7 @@ export const PERSONAS: Persona[] = [
     },
     bg: "linear-gradient(135deg, #064E3B 0%, #065F46 100%)",
     color: "#34D399",
-    available: false,
+    available: true,
   },
 ];
 

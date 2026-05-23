@@ -93,6 +93,15 @@ export const handlers = [
     return HttpResponse.json(mockUser);
   }),
 
+  // ペルソナ更新
+  http.put("*/api/users/me/persona", async ({ request }) => {
+    const body = (await request.json()) as { personaId: string };
+    return HttpResponse.json({
+      ...mockUser,
+      preferredPersonaId: body.personaId,
+    });
+  }),
+
   // タスク候補
   http.get("*/api/tasks/candidates", () => {
     return HttpResponse.json({ candidates: mockCandidates });

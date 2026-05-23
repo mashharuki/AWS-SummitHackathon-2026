@@ -49,6 +49,8 @@ const ProposalLambdaEventSchema = z.object({
     updatedAt: z.string(),
   }),
   slackMessageRef: z.string().optional(),
+  // 口調変換に使うペルソナ ID（未指定時は SaboriProposerAgent のデフォルト）
+  personaId: z.string().optional(),
 });
 
 /** EventBridge Scheduler からのバックグラウンドリフレッシュイベント */
@@ -141,7 +143,11 @@ export const handler = async (event: unknown): Promise<LambdaResponse> => {
     slackContext,
   };
 
-  const proposal = await agent.propose(payload.taskId, taskContext);
+  const proposal = await agent.propose(
+    payload.taskId,
+    taskContext,
+    payload.personaId,
+  );
 
   logInfo({
     action: "sabori_proposer_complete",

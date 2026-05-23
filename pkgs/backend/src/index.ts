@@ -120,6 +120,7 @@ export function createApp() {
       taskRepository,
       proposalRepository,
       saboriProposerAgent,
+      userRepository,
     ),
   );
   app.route(

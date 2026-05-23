@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
 import type { DynamoProposalRepository } from "../../repositories/DynamoProposalRepository.js";
 import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
+import type { DynamoUserRepository } from "../../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../../types.js";
 
 vi.mock("hono/streaming", () => ({
@@ -30,6 +31,9 @@ function buildTestApp(
   taskRepo: Partial<DynamoTaskRepository>,
   proposalRepo: Partial<DynamoProposalRepository>,
   agent: Partial<SaboriProposerAgent>,
+  userRepo: Partial<DynamoUserRepository> = {
+    findById: vi.fn().mockResolvedValue(null),
+  },
 ) {
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
@@ -48,6 +52,7 @@ function buildTestApp(
           taskRepo as DynamoTaskRepository,
           proposalRepo as DynamoProposalRepository,
           agent as SaboriProposerAgent,
+          userRepo as DynamoUserRepository,
         ),
       );
       app.onError(errorHandler);
