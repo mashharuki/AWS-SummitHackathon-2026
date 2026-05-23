@@ -46,12 +46,27 @@ export function TaskListPage() {
   return (
     <AppShell>
       <div className="flex flex-col h-full">
-        {/* ヘッダー（Logo + アバター） */}
+        {/* ヘッダー（Logo + アバター）
+            md+: Logo は SideNav に表示されるため非表示 */}
         <header
-          className="bg-saboru-paper px-4 py-3.5 flex items-center justify-between"
+          className="bg-saboru-paper px-4 md:px-6 py-3.5 flex items-center justify-between"
           style={{ borderBottom: "3px solid #2B1E16" }}
         >
-          <Logo size={30} />
+          {/* モバイルのみ Logo を表示 */}
+          <span className="md:hidden">
+            <Logo size={30} />
+          </span>
+          {/* md+: ページタイトルを表示 */}
+          <span
+            className="hidden md:block font-extrabold text-saboru-ink"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 18,
+              letterSpacing: "-0.03em",
+            }}
+          >
+            タスク一覧
+          </span>
           {user && (
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center"
@@ -99,7 +114,7 @@ export function TaskListPage() {
         </div>
 
         {/* タスクリスト本体 */}
-        <div className="flex-1 overflow-y-auto px-4 pb-24">
+        <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-24 md:pb-8">
           {/* 候補タスク */}
           {candidates.length > 0 && (
             <section aria-labelledby="candidates-heading" className="pt-4">
@@ -110,7 +125,8 @@ export function TaskListPage() {
               >
                 <span id="candidates-heading">{t("tasks.pendingTasks")}</span>
               </SectionLabel>
-              <div className="flex flex-col gap-2">
+              {/* md+: 2カラムグリッド */}
+              <div className="flex flex-col gap-2 md:grid md:grid-cols-2 md:gap-3">
                 {candidates.map((c) => (
                   <CandidateCard
                     key={c.candidateId}
@@ -155,7 +171,8 @@ export function TaskListPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex flex-col gap-2">
+              /* md+: 2カラムスケルトン */
+              <div className="flex flex-col gap-2 md:grid md:grid-cols-2 md:gap-3">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
@@ -177,7 +194,8 @@ export function TaskListPage() {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              /* md+: 2カラムグリッド */
+              <div className="flex flex-col gap-2 md:grid md:grid-cols-2 md:gap-3">
                 {activeTasks.map((task) => (
                   <TaskCard key={task.taskId} task={task} />
                 ))}
@@ -186,12 +204,14 @@ export function TaskListPage() {
           </section>
         </div>
 
-        {/* FAB: タスク追加 */}
+        {/* FAB: タスク追加
+            Mobile: BottomNav の上（bottom-24）
+            md+: BottomNav 非表示なので bottom-8 に変更 */}
         <button
           type="button"
           onClick={() => setIsAddModalOpen(true)}
           aria-label={t("tasks.addTask")}
-          className="fixed bottom-24 right-4 flex items-center justify-center"
+          className="fixed bottom-24 right-4 md:bottom-8 md:right-8 flex items-center justify-center"
           style={{
             width: 56,
             height: 56,
