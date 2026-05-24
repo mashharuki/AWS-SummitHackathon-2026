@@ -68,6 +68,17 @@ export function createSlackRoute(
   const slack = new Hono<AppEnv>();
   slack.use("*", authMiddleware);
 
+  /** GET /api/slack/channels — Bot が参加しているチャンネル一覧（UI のドロップダウン用） */
+  slack.get("/channels", async (c) => {
+    const userId = c.get("userId");
+    const botToken = await getSlackToken(userId);
+    const client = new SlackClient(botToken);
+    const channels = await client.conversationsList();
+    return c.json({
+      channels: channels.map((ch) => ({ id: ch.id, name: ch.name })),
+    });
+  });
+
   /** POST /api/slack/sync-messages — Slack 履歴を遡及取得してタスク化キューへ投入 */
   slack.post(
     "/sync-messages",

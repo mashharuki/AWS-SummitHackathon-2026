@@ -14,6 +14,9 @@ import apiClient, {
   submitHonne,
   getConnections,
   getSlackAuthUrl,
+  getSlackChannels,
+  syncSlackMessages,
+  notifyTaskToSlack,
   disconnectService,
   buildProposalStreamUrl,
 } from "@/lib/apiClient";
@@ -194,6 +197,22 @@ describe("apiClient — 正常系エンドポイント", () => {
   it("GET /api/auth/slack で Slack OAuth 認可 URL を取得できる", async () => {
     const url = await getSlackAuthUrl();
     expect(url).toContain("slack.com/oauth/v2/authorize");
+  });
+
+  it("GET /api/slack/channels でチャンネル一覧を取得できる", async () => {
+    const channels = await getSlackChannels();
+    expect(channels).toHaveLength(2);
+    expect(channels[0].name).toBe("all-saborou");
+  });
+
+  it("POST /api/slack/sync-messages で遡及取得できる", async () => {
+    const result = await syncSlackMessages("C1");
+    expect(result.queued).toBe(3);
+  });
+
+  it("POST /api/slack/notify-task で判定を Slack に投稿できる", async () => {
+    const result = await notifyTaskToSlack("t1", "C1");
+    expect(result.posted).toBe(true);
   });
 
   it("disconnectService 名前付きエクスポートでも動作する", async () => {

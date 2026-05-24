@@ -14,18 +14,24 @@ import type { DynamoProposalRepository } from "../../repositories/DynamoProposal
 import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
 import type { AppEnv } from "../../types.js";
 
-const { mockGetSlackToken, mockConversationsHistory, mockPostMessage } =
-  vi.hoisted(() => ({
-    mockGetSlackToken: vi.fn(),
-    mockConversationsHistory: vi.fn(),
-    mockPostMessage: vi.fn(),
-  }));
+const {
+  mockGetSlackToken,
+  mockConversationsHistory,
+  mockPostMessage,
+  mockConversationsList,
+} = vi.hoisted(() => ({
+  mockGetSlackToken: vi.fn(),
+  mockConversationsHistory: vi.fn(),
+  mockPostMessage: vi.fn(),
+  mockConversationsList: vi.fn(),
+}));
 
 vi.mock("@saboru/agent", () => ({
   getSlackToken: mockGetSlackToken,
   SlackClient: class {
     conversationsHistory = mockConversationsHistory;
     postMessage = mockPostMessage;
+    conversationsList = mockConversationsList;
   },
 }));
 
@@ -279,5 +285,30 @@ describe("POST /api/slack/notify-task", () => {
       body: JSON.stringify({ channelId: "C1" }),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+describe("GET /api/slack/channels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSlackToken.mockResolvedValue("xoxb-test");
+  });
+
+  it("returns the bot's channels (id, name)", async () => {
+    mockConversationsList.mockResolvedValueOnce([
+      { id: "C1", name: "all-saborou", is_channel: true },
+      { id: "C2", name: "dev", is_channel: true },
+    ]);
+
+    const app = await buildApp(vi.fn());
+    const res = await app.request("/api/slack/channels", { method: "GET" });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.channels).toEqual([
+      { id: "C1", name: "all-saborou" },
+      { id: "C2", name: "dev" },
+    ]);
+    expect(mockGetSlackToken).toHaveBeenCalledWith(MOCK_USER_ID);
   });
 });
