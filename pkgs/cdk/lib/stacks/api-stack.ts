@@ -82,6 +82,11 @@ export class SaborouApiStack extends cdk.Stack {
         // per-user の Slack Bot Token シークレット名プレフィックス
         // （遡及取得 API が認証ユーザーの Bot Token を取得するため）
         SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
+        // Slack OAuth コールバック成功後のフロント（CloudFront）リダイレクト先。
+        // 未設定だと localhost:5173 にフォールバックしてしまう。
+        ...(props.frontendDomainName
+          ? { FRONTEND_URL: `https://${props.frontendDomainName}` }
+          : {}),
         // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出す
         BEDROCK_REGION: "ap-northeast-1",
       },
