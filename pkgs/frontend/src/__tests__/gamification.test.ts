@@ -1,7 +1,7 @@
 /**
  * gamificationUtils — ゲーミフィケーション計算ユーティリティ ユニットテスト
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   calcSaboriGrade,
   getComboLabel,
@@ -128,6 +128,30 @@ describe("calcSaboriGrade", () => {
   it("can_saboru + シグナル未指定はBを返す（デフォルト）", () => {
     expect(calcSaboriGrade({ verdict: "can_saboru" })).toBe("B");
   });
+
+  it("A+条件を満たしMath.randomが0.05未満のときA+を返す", () => {
+    const mockRandom = vi.spyOn(Math, "random").mockReturnValueOnce(0.01);
+    const grade = calcSaboriGrade({
+      verdict: "can_saboru",
+      signalCount: 4,
+      dependencyScore: 60,
+      isComboActive: true,
+    });
+    expect(grade).toBe("A+");
+    mockRandom.mockRestore();
+  });
+
+  it("A+条件を満たしMath.randomが0.05以上のときAを返す", () => {
+    const mockRandom = vi.spyOn(Math, "random").mockReturnValueOnce(0.5);
+    const grade = calcSaboriGrade({
+      verdict: "can_saboru",
+      signalCount: 4,
+      dependencyScore: 60,
+      isComboActive: true,
+    });
+    expect(grade).toBe("A");
+    mockRandom.mockRestore();
+  });
 });
 
 // ===== getComboMultiplier =====
@@ -168,5 +192,9 @@ describe("getComboLabel", () => {
 
   it("コンボ5は'先延ばし無敵モード！'を返す", () => {
     expect(getComboLabel(5)).toBe("先延ばし無敵モード！");
+  });
+
+  it("コンボ0はnullを返す（最終return）", () => {
+    expect(getComboLabel(0)).toBeNull();
   });
 });

@@ -1,24 +1,27 @@
 import apiClient, {
   ApiError,
-  getMe,
-  updatePersona,
-  getCandidates,
   approveCandidate,
-  rejectCandidate,
-  getTasks,
-  getTask,
-  updateTask,
-  deleteTask,
+  buildProposalStreamUrl,
   createTask,
-  getProposal,
-  submitHonne,
+  decrementDependencyScore,
+  deleteTask,
+  disconnectService,
+  getCandidates,
   getConnections,
+  getDependencyScore,
+  getHonneSummary,
+  getMe,
+  getProposal,
   getSlackAuthUrl,
   getSlackChannels,
-  syncSlackMessages,
+  getTask,
+  getTasks,
   notifyTaskToSlack,
-  disconnectService,
-  buildProposalStreamUrl,
+  rejectCandidate,
+  submitHonne,
+  syncSlackMessages,
+  updatePersona,
+  updateTask,
 } from "@/lib/apiClient";
 import { clearTokens, setAccessToken, setRefreshToken } from "@/lib/cognito";
 import { server } from "@/mocks/server";
@@ -455,6 +458,57 @@ describe("ApiError クラス", () => {
     const err = new ApiError(400, null);
     expect(err).toBeInstanceOf(Error);
     expect(err.message).toBe("API Error: 400");
+  });
+});
+
+describe("依存度スコアAPI", () => {
+  beforeEach(() => {
+    setAccessToken("test-access-token", 3600);
+  });
+
+  afterEach(() => {
+    clearTokens();
+  });
+
+  it("GET /api/users/me/dependency-score でスコアを取得できる", async () => {
+    server.use(
+      http.get("*/api/users/me/dependency-score", () => {
+        return HttpResponse.json({ score: 42 });
+      }),
+    );
+    const result = await getDependencyScore();
+    expect(result.score).toBe(42);
+  });
+
+  it("POST /api/users/me/dependency-score/decrement でスコアを減算できる", async () => {
+    let receivedBody: unknown = null;
+    server.use(
+      http.post(
+        "*/api/users/me/dependency-score/decrement",
+        async ({ request }) => {
+          receivedBody = await request.json();
+          return HttpResponse.json({ score: 35 });
+        },
+      ),
+    );
+    const result = await decrementDependencyScore(5);
+    expect(result.score).toBe(35);
+    expect(receivedBody).toEqual({ delta: 5 });
+  });
+
+  it("GET /api/users/me/honne/summary でサマリーを取得できる", async () => {
+    server.use(
+      http.get("*/api/users/me/honne/summary", () => {
+        return HttpResponse.json({
+          count: 3,
+          quickReplyBreakdown: { work_overload: 2, unclear_purpose: 1 },
+          recentFreeTexts: ["忙しい", "意味不明"],
+        });
+      }),
+    );
+    const result = await getHonneSummary();
+    expect(result.count).toBe(3);
+    expect(result.recentFreeTexts).toHaveLength(2);
   });
 });
 

@@ -397,4 +397,14 @@ describe("loadUnlockedAchievements", () => {
   it("未保存のとき空配列を返す", () => {
     expect(loadUnlockedAchievements()).toEqual([]);
   });
+
+  it("保存済みデータがある場合はそれを返す", () => {
+    const data = [
+      { id: "first_sabori" as const, unlockedAt: "2026-05-23T00:00:00Z" },
+    ];
+    localStorageMock.setItem("saborou_achievements", JSON.stringify(data));
+    const result = loadUnlockedAchievements();
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("first_sabori");
+  });
 });

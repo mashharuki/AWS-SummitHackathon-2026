@@ -7,6 +7,7 @@ import {
   getApiAuthToken,
   getIdToken,
   getRefreshToken,
+  getUserPoolId,
   parseIdToken,
   refreshAccessToken,
   setAccessToken,
@@ -456,5 +457,46 @@ describe("clearTokens — 全トークンのクリア", () => {
     localStorage.setItem("saboru_rt", "stored-refresh");
     clearTokens();
     expect(localStorage.getItem("saboru_rt")).toBeNull();
+  });
+});
+
+describe("getUserPoolId — ユーザープールID取得", () => {
+  it("設定されたユーザープールIDを返す", () => {
+    const id = getUserPoolId();
+    expect(id).toBe("ap-northeast-1_test");
+  });
+});
+
+describe("getRefreshToken — localStorage例外ハンドリング", () => {
+  beforeEach(() => {
+    clearTokens();
+  });
+
+  it("localStorageアクセスが失敗した場合nullを返す", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
+      throw new Error("Storage access denied");
+    });
+    const result = getRefreshToken();
+    expect(result).toBeNull();
+    vi.restoreAllMocks();
+  });
+});
+
+describe("exchangeCodeForTokens — codeVerifier付き", () => {
+  it("codeVerifierを渡してトークン交換できる", async () => {
+    server.use(
+      http.post("*/oauth2/token", async ({ request }) => {
+        const body = await request.text();
+        expect(body).toContain("code_verifier=verifier123");
+        return HttpResponse.json({
+          access_token: "new-access-token",
+          refresh_token: "new-refresh-token",
+          id_token: "new-id-token",
+          expires_in: 3600,
+        });
+      }),
+    );
+    const result = await exchangeCodeForTokens("auth-code", "verifier123");
+    expect(result.accessToken).toBe("new-access-token");
   });
 });
