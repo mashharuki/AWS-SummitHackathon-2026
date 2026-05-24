@@ -24,6 +24,22 @@ export interface ServiceConnection {
    * Token itself is not stored here — managed by Secrets Manager
    */
   secretArn: string;
+  /**
+   * Slack user ID captured at OAuth time (e.g., "U12345678").
+   * Only present for Slack connections.
+   */
+  slackUserId?: string;
+  /**
+   * Slack workspace (team) ID captured at OAuth time (e.g., "T12345678").
+   * Only present for Slack connections.
+   */
+  slackTeamId?: string;
+  /**
+   * Composite lookup key "<slackTeamId>#<slackUserId>" used as the partition
+   * key of GSI-SlackLookup. Lets inbound Slack events resolve back to the
+   * owning Cognito user. Only present for Slack connections.
+   */
+  slackLookupKey?: string;
   /** Connection datetime (ISO 8601) */
   connectedAt: string;
   /** Token expiration (ISO 8601 / null: no expiration) */

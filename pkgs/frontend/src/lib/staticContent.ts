@@ -67,7 +67,7 @@ export const PERSONAS: Persona[] = [
     },
     bg: "linear-gradient(135deg, #1F2937 0%, #374151 100%)",
     color: "#9CA3AF",
-    available: false,
+    available: true,
   },
   {
     id: "saboru_psy",
@@ -83,7 +83,7 @@ export const PERSONAS: Persona[] = [
     },
     bg: "linear-gradient(135deg, #DBEAFE 0%, #E0E7FF 100%)",
     color: "#6366F1",
-    available: false,
+    available: true,
   },
   {
     id: "saboru_hacker",
@@ -99,9 +99,51 @@ export const PERSONAS: Persona[] = [
     },
     bg: "linear-gradient(135deg, #064E3B 0%, #065F46 100%)",
     color: "#34D399",
-    available: false,
+    available: true,
   },
 ];
+
+/* ─── ペルソナ別 トップ挨拶文 ──────────────────────────
+ * 「今日のサボロー」バナーの口調をペルソナごとに変える。
+ * 未設定・おっとりは i18n のデフォルト文言を使う（ここには含めない）。
+ */
+type BannerText = {
+  hasTask: { ja: string; en: string };
+  noTask: { ja: string; en: string };
+};
+
+export const PERSONA_BANNERS: Record<string, BannerText> = {
+  saboru_strict: {
+    hasTask: {
+      ja: "未完了 {{count}} 件。今やる必要はない。後回しで支障なし。",
+      en: "{{count}} open. No need to act now. Deferring is fine.",
+    },
+    noTask: {
+      ja: "タスクなし。やることがないなら休め。以上。",
+      en: "No tasks. Nothing to do—rest. That's all.",
+    },
+  },
+  saboru_psy: {
+    hasTask: {
+      ja: "{{count}} 件、気になっていますか？ 今は少し手放してみてもいいかもしれません。",
+      en: "{{count}} on your mind? It might be okay to set them down for now.",
+    },
+    noTask: {
+      ja: "今日は何もありませんね。その余白を、どう感じていますか？",
+      en: "Nothing today. How does that openness feel to you?",
+    },
+  },
+  saboru_hacker: {
+    hasTask: {
+      ja: "[pending] {{count}} 件 / [judgment] 後回し可 / [action] 今は放置で最適",
+      en: "[pending] {{count}} / [judgment] deferrable / [action] optimal to leave",
+    },
+    noTask: {
+      ja: "[pending] 0 件 / [action] 休息が最適解",
+      en: "[pending] 0 / [action] resting is optimal",
+    },
+  },
+};
 
 /* ─── ロードマップ定義 ───────────────────────────── */
 

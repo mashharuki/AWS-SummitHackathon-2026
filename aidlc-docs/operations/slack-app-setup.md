@@ -81,8 +81,11 @@ URL に含まれる App ID（例: `A0XXXXXXXX`）をメモしておく。
 | `im:history` | DM（ダイレクトメッセージ）取得 |
 | `mpim:history` | グループ DM のメッセージ取得 |
 | `users:read` | ユーザーステータス・プロフィール取得（サボり判定に使用） |
+| `chat:write` | サボり判定を Slack スレッドに投稿（インタラクティブ返信 / `POST /api/slack/notify-task`） |
 
 > **注**: これらは `routes/auth.ts` の `SLACK_OAUTH_SCOPES` 定数で定義されているスコープと完全に一致させること。
+>
+> ⚠️ **スコープ変更後の再認可**: 既に Slack 連携済みのユーザーは、スコープを追加しても古い Bot Token のままでは新スコープ（`chat:write` など）が有効にならない。設定画面から **一度連携を解除して再連携**するよう案内すること。
 
 ### 2-2. Redirect URLs を追加
 
@@ -250,11 +253,28 @@ Lambda は `routes/webhooks.ts` 内で `url_verification` タイプを検出し�
 左メニュー **「OAuth & Permissions」** → **「Install to Workspace」** をクリック。  
 権限確認ダイアログで **「許可する」** をクリック。
 
-### 6-2. Bot User OAuth Token を取得
+### 6-2. Bot User OAuth Token の扱い（重要）
 
-インストール後、**「Bot User OAuth Token」** が表示される（`xoxb-` で始まる）。  
-このトークンは後続の Slack API 呼び出しで必要になる場合があるが、  
-**SABOROU では Webhook 受信のみのため現時点では不要**。
+インストール後、**「Bot User OAuth Token」**（`xoxb-` で始まる）が表示される。
+
+**SABOROU は管理者が手動でこのトークンを設定する必要はない。** Bot Token は
+**ユーザーごとに OAuth フロー（`GET /auth/slack` → コールバック）経由で自動取得**され、
+Secrets Manager に **per-user** で保存される:
+
+| 項目 | 値 |
+|------|----|
+| 保存先（per-user） | `saborou/slack-bot-token/<cognitoSub>` |
+| 取得側の環境変数 | `SLACK_BOT_TOKEN_SECRET_PREFIX`（= `saborou/slack-bot-token/`） |
+| 取得実装 | `ContextCollector.getSlackToken(userId)`（agent） |
+| API 呼び出し | `SlackClient`（conversations.history / chat.postMessage） |
+
+> **アーキテクチャ補足**: 旧実装では ContextCollector が単一の Client Secret を
+> 参照しており Bot Token を取得できなかった（不整合）。タスクC でこれを
+> per-user Bot Token 取得に修正済み。CDK は agent / api Lambda に
+> `saborou/slack-bot-token/*` への `secretsmanager:GetSecretValue` 権限を付与している。
+
+つまり、管理者がやるべきことは **OAuth スコープ（STEP 2）と Redirect URL の設定だけ**で、
+実際の Bot Token は各ユーザーが「Slack と連携」したときに自動で保存・利用される。
 
 ### 6-3. App がワークスペースに追加されたことを確認
 

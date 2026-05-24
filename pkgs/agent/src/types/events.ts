@@ -50,3 +50,32 @@ export const EventBridgeSlackEventSchema = z.object({
 });
 
 export type EventBridgeSlackEvent = z.infer<typeof EventBridgeSlackEventSchema>;
+
+// ---- 遡及取得 (backfill) エンベロープ ----
+// 認証済みユーザーが自分のチャンネル履歴を同期する際に backend が publish する。
+// Webhook 経路と違い cognitoSub を直接持つため逆引きは不要。
+
+export const SlackBackfillDetailSchema = z.object({
+  // 同期を要求した Cognito ユーザー (cognitoSub)
+  userId: z.string().min(1),
+  // 取り込む 1 件の Slack メッセージ
+  message: z.object({
+    text: z.string().min(1),
+    channel: z.string().min(1),
+    ts: z.string().min(1),
+    thread_ts: z.string().optional(),
+    user: z.string().optional().default(""),
+    team: z.string().optional().default(""),
+  }),
+  receivedAt: z.string(),
+});
+
+export const EventBridgeSlackBackfillSchema = z.object({
+  source: z.literal("saborou.backend"),
+  "detail-type": z.literal("SlackBackfill"),
+  detail: SlackBackfillDetailSchema,
+});
+
+export type EventBridgeSlackBackfill = z.infer<
+  typeof EventBridgeSlackBackfillSchema
+>;

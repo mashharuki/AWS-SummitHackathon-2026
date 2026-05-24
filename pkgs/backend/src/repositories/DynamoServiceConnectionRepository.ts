@@ -6,7 +6,16 @@
  * - GetItem PK=USER#<userId> SK=CONN#<service> — findByUserAndService
  * - PutItem — save
  * - UpdateItem status=disconnected — disconnect
+ * - Query GSI-SlackLookup PK=<teamId>#<slackUserId> — findCognitoSubBySlackIdentity
  */
+
+/** Slack identity を GSI-SlackLookup の合成パーティションキーに変換する */
+export function buildSlackLookupKey(
+  slackTeamId: string,
+  slackUserId: string,
+): string {
+  return `${slackTeamId}#${slackUserId}`;
+}
 
 import {
   type DynamoDBClient,
@@ -77,10 +86,18 @@ export class DynamoServiceConnectionRepository
       connectedAt?: string;
     },
   ): Promise<ServiceConnection> {
+    // Slack identity が揃っていれば GSI-SlackLookup 用の合成キーを導出する。
+    // 既存呼び出し（slackUserId/slackTeamId 未指定）との互換のため、揃った場合のみ付与。
+    const slackLookupKey =
+      connection.slackTeamId && connection.slackUserId
+        ? buildSlackLookupKey(connection.slackTeamId, connection.slackUserId)
+        : connection.slackLookupKey;
+
     const item: ServiceConnection = {
       PK: `USER#${userId}`,
       SK: `CONN#${connection.service}`,
       ...connection,
+      ...(slackLookupKey ? { slackLookupKey } : {}),
       connectedAt: connection.connectedAt ?? toIsoString(new Date()),
     };
 
@@ -92,6 +109,35 @@ export class DynamoServiceConnectionRepository
     );
 
     return item;
+  }
+
+  /**
+   * Slack identity から所有 Cognito ユーザー (cognitoSub) を逆引きする。
+   * GSI-SlackLookup (PK=slackLookupKey, KEYS_ONLY) を引き、ヒットした
+   * テーブル PK "USER#<cognitoSub>" から cognitoSub を復元する。
+   *
+   * @returns cognitoSub。連携済みユーザーが見つからなければ null。
+   */
+  async findCognitoSubBySlackIdentity(
+    slackTeamId: string,
+    slackUserId: string,
+  ): Promise<string | null> {
+    const lookupKey = buildSlackLookupKey(slackTeamId, slackUserId);
+    const result = await this.client.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        IndexName: "GSI-SlackLookup",
+        KeyConditionExpression: "slackLookupKey = :k",
+        ExpressionAttributeValues: marshall({ ":k": lookupKey }),
+        Limit: 1,
+      }),
+    );
+
+    const item = result.Items?.[0];
+    if (!item) return null;
+    const { PK } = unmarshall(item) as { PK: string };
+    // PK 形式: "USER#<cognitoSub>"
+    return PK.startsWith("USER#") ? PK.slice("USER#".length) : null;
   }
 
   async disconnect(userId: string, service: ServiceType): Promise<void> {

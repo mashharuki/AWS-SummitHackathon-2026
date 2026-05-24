@@ -1,5 +1,6 @@
 import { SaborouAvatar } from "@/components/character/SaborouAvatar";
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
+import { SlackSyncControl } from "@/components/features/SlackSyncControl";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionLabel } from "@/components/ui/SectionLabel";
@@ -26,7 +27,7 @@ const FUTURE_SERVICES = [
 export function SettingsPage() {
   const { i18n, t } = useTranslation();
   const { user, signOut } = useAuth();
-  const { connections, disconnect, isLoading } = useConnections();
+  const { connections, connectSlack, disconnect, isLoading } = useConnections();
 
   const slackConnection = connections.find((c) => c.service === "slack");
 
@@ -39,7 +40,7 @@ export function SettingsPage() {
           {/* プロフィール */}
           {user && (
             <div className="card-brutal p-3.5 flex items-center gap-3">
-              <SaborouAvatar size={48} />
+              <SaborouAvatar size={48} personaId={user.preferredPersonaId} />
               <div className="min-w-0">
                 <p
                   className="font-bold text-saboru-ink truncate"
@@ -120,20 +121,27 @@ export function SettingsPage() {
                     </button>
                   </div>
                 ) : (
-                  <span
-                    className="font-bold"
+                  <button
+                    type="button"
+                    onClick={() => void connectSlack()}
+                    aria-label={t("settings.connect")}
+                    className="font-bold hover:opacity-80"
                     style={{
                       fontSize: 10,
-                      color: "#9CA3AF",
-                      background: "#F3F4F6",
-                      padding: "3px 8px",
+                      color: "#FFFFFF",
+                      background: "#4A154B",
+                      padding: "4px 12px",
                       borderRadius: 4,
+                      cursor: "pointer",
                     }}
                   >
-                    {t("settings.disconnected")}
-                  </span>
+                    {t("settings.connect")}
+                  </button>
                 )}
               </div>
+
+              {/* C-1: 連携済みなら過去メッセージの遡及取り込み UI を表示 */}
+              {slackConnection?.status === "connected" && <SlackSyncControl />}
 
               {FUTURE_SERVICES.map((svc, i) => (
                 <div

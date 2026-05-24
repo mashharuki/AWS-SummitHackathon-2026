@@ -1,4 +1,5 @@
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
+import { SlackShareControl } from "@/components/features/SlackShareControl";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
@@ -372,15 +373,7 @@ export function TaskDetailPage() {
               )}
             </div>
 
-            {/* 成長ジャーニー表示カード（称号・プログレスバー） */}
-            <TitleDisplayCard dependencyScore={dependencyScore} />
-
-            {/* サボりスコアカード（A〜Eグレード即時フィードバック） */}
-            {currentGrade && (
-              <SaboriScoreCard grade={currentGrade} animate={true} />
-            )}
-
-            {/* 3D 判定ヒーロー（憲法2: 280px / 憲法4: brutal-3d-container で外枠） */}
+            {/* 3D 判定ヒーロー（憲法2: 320px / 憲法4: brutal-3d-container で外枠） */}
             <div className="brutal-3d-container" style={{ height: 280 }}>
               <Suspense
                 fallback={
@@ -426,15 +419,10 @@ export function TaskDetailPage() {
               />
             )}
 
-            {/* DeferralCountdown — サボれ判定時に「X分後に再判定」を表示（競合差別化） */}
-            {proposal?.verdict === "can_saboru" && proposal.nextCheckAt && (
-              <DeferralCountdown
-                nextCheckAt={proposal.nextCheckAt}
-                onRecheck={() => void startProposal()}
-              />
-            )}
+            {/* C-2: 判定を Slack に共有（連携済み時のみ表示） */}
+            {proposal && taskId && <SlackShareControl taskId={taskId} />}
 
-            {/* PsychSignals（AI が計算した実シグナル。なければ verdict フォールバック） */}
+            {/* PsychSignals（verdict 連動の静的プリセット表示） */}
             {verdictForDisplay && (
               <PsychSignalsCard
                 verdict={verdictForDisplay}

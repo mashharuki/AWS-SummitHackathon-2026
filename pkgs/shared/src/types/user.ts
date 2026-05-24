@@ -15,6 +15,23 @@ export interface User {
   email: string;
   /** Display name */
   name: string;
+  /**
+   * Linked Slack user ID (e.g., "U12345678").
+   * Set when the user completes Slack OAuth. Used to map inbound Slack
+   * events back to this Cognito user.
+   */
+  slackUserId?: string;
+  /**
+   * Linked Slack workspace (team) ID (e.g., "T12345678").
+   * Combined with slackUserId to uniquely identify the Slack identity.
+   */
+  slackTeamId?: string;
+  /**
+   * Preferred AI persona ID (e.g., "saboru_ottori").
+   * Controls the tone of sabori proposals. Defaults to DEFAULT_PERSONA_ID
+   * when unset. Must be one of VALID_PERSONA_IDS.
+   */
+  preferredPersonaId?: string;
   /** Creation datetime (ISO 8601) */
   createdAt: string;
   /** Update datetime (ISO 8601) */

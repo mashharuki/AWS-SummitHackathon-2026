@@ -48,12 +48,13 @@ import { createConnectionsRoute } from "./routes/connections.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
 import { createProposalsRoute } from "./routes/proposals.js";
+import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
 import { createUsersRoute } from "./routes/users.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
-  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
 });
 
 // リポジトリを初期化
@@ -106,8 +107,8 @@ export function createApp() {
   app.route("/health", healthRoute);
 
   // /api/* — フロントエンドの apiClient が期待するプレフィックス
-  app.route("/api/users", createUsersRoute(userRepository, honneRepository));
-  app.route("/api/auth", createAuthRoute(connectionRepository));
+  app.route("/api/users", createUsersRoute(userRepository));
+  app.route("/api/auth", createAuthRoute(connectionRepository, userRepository));
   app.route(
     "/api/tasks",
     createTasksRoute(taskRepository, candidateRepository),
@@ -119,6 +120,7 @@ export function createApp() {
       taskRepository,
       proposalRepository,
       saboriProposerAgent,
+      userRepository,
     ),
   );
   app.route(
@@ -126,6 +128,10 @@ export function createApp() {
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
+  app.route(
+    "/api/slack",
+    createSlackRoute(taskRepository, proposalRepository),
+  );
 
   // OpenAPI / Swagger UI
   app.get("/doc", (c) => c.json(openApiDoc));

@@ -1386,8 +1386,67 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 - `AuthProvider.tsx` / `AuthCallbackPage.tsx`: handleCallback に idToken 引数を追加し保存。
 - `apiClient.ts` / `useProposalStream.ts`: Authorization に getApiAuthToken()（id_token優先）を使用。
 - `backend/routes/users.ts`: 既存ユーザーの自己修復ロジックを強化（email 空も claims から補完）。
-品質確認: frontend 135件・backend 195件 全テストパス。新規テスト frontend 12件・backend 3件追加。型チェック通過。Biome エラー数は変更前12→変更後11（悪化なし）。
-**Context**: タスクA実装完了。コミット・PR待ち。
+品質確認: frontend 135件・backend 195件 全テストパス。新規テスト frontend 12件・backend 3件追加。型チェック通過。Biome エラー数は変更前12→変更後11（悪化なし）。**PR #24 として 2026-05-23T07:58 に main へマージ済み。**
+**Context**: タスクA実装完了・マージ済み。
+
+---
+
+## タスクB: Slack↔Cognito ユーザーIDミスマッチ解消（逆引きまで含む完全版）
+**Timestamp**: 2026-05-23T08:20:00Z
+**User Input**: タスクBスコープ選択 = "逆引きまで含める（GSI＋Webhook＋Agent）"
+**AI Response**: ミスマッチの根本原因を特定 — TaskExtractorLambdaHandler が Slack の user ID を Cognito userId として誤って代入していた（teamId+SlackユーザーID→Cognitoユーザーの逆引き機構が存在しなかった）。完全版で解消（ブランチ `feature/slack-cognito-user-linking`）:
+- shared: User/ServiceConnection 型に slackUserId/slackTeamId（+ slackLookupKey）追加。IServiceConnectionRepository に findCognitoSubBySlackIdentity 追加。
+- CDK: connections テーブルに GSI-SlackLookup（PK=slackLookupKey, KEYS_ONLY）追加。TaskExtractor Lambda に connections Read 権限・テーブル名env追加。
+- backend: DynamoServiceConnectionRepository に slackLookupKey 書き込み＋逆引き実装。auth.ts コールバックで authed_user.id/team.id を取得し User/ServiceConnection に保存。client_id 誤用バグ（COGNITO_CLIENT_ID 死にコード）を整理。
+- agent: DynamoSlackUserLookupRepository を新規作成。TaskExtractorLambdaHandler で逆引きし payload.userId に Cognito sub を設定。未連携 Slack ユーザーは安全にスキップ。
+品質確認: shared 103 / backend 199 / agent 155 全テストパス（agent カバレッジ100%維持）。型チェック・CDK synth・ビルド OK。Biome エラー総数 変更前179→変更後168（悪化なし）。
+設計詳細は aidlc-docs/construction/slack-cognito-linking/design.md。
+**Context**: タスクB実装完了。PR #25 作成済み。
+
+---
+
+## タスクB マージとタスクC起点準備
+**Timestamp**: 2026-05-23T11:00:00Z
+**User Input**: "Bがコンフリクトが起きているのでそれを確認して、…マージして、その後マージしたmainからCを分岐させるのはどう思いますか"
+**AI Response**: PR #25 の audit.md コンフリクト（タスクA/Bの末尾追記衝突）を時系列順に統合して解決。マージ後の統合テスト（shared 103/backend 202/agent 155/frontend 135 全パス）を確認し PR #25 をマージ（main 8b58edd）。最新 main から `feature/slack-task-list-and-bot-token` を作成。
+**Context**: タスクA・Bマージ済み。タスクC着手。
+
+---
+
+## タスクC: Bot Token化 + Slackからタスク一覧取得 + インタラクティブ返信
+**Timestamp**: 2026-05-23T11:30:00Z
+**User Input**: タスクCスコープ選択 = "全てお願いします"（SlackClient・Bot Token不整合修正・遡及取得API・返信機構・ドキュメント）
+**AI Response**: 事前調査で Bot Token 取得の重大な不整合を発見 — ContextCollector が `SLACK_TOKEN_SECRET_NAME`(=OAuth Client Secret) を参照し、per-user Bot Token(`saborou/slack-bot-token/{userId}`)に届いていなかった。全部を1PRで実装（ブランチ `feature/slack-task-list-and-bot-token`）:
+- agent: SlackClient 新規（conversations.history / chat.postMessage、5sタイムアウト、ok:false エラー化）。ContextCollector を per-user Bot Token 取得に修正（getSlackToken(userId)・Mapキャッシュ・SLACK_BOT_TOKEN_SECRET_PREFIX）。TaskExtractorLambdaHandler を SlackEvent(逆引き)/SlackBackfill(userId直接) 両対応に分岐。events.ts に backfill スキーマ追加。
+- backend: POST /api/slack/sync-messages（履歴遡及→EventBridge backfill publish）と POST /api/slack/notify-task（判定を Slack 投稿）を新規。SLACK_OAUTH_SCOPES に chat:write 追加。
+- CDK: agent/api Lambda に per-user Bot Token(`saborou/slack-bot-token/*`) GetSecretValue 権限・SLACK_BOT_TOKEN_SECRET_PREFIX env を付与。誤った SLACK_TOKEN_SECRET_NAME=clientSecret を廃止。api に EVENT_BUS_NAME(固定名で循環回避)・events:PutEvents 権限を追加。
+- docs: slack-app-setup.md に Bot Token化手順（chat:write・per-user保存・再認可注意）を追記。slack-api-integration.md を新規作成。
+品質確認: shared 103 / backend 212 / agent 169 全テストパス（agent カバレッジ100%維持）。型チェック・CDK synth(Agent/Api)・ビルド OK。Biome エラー総数 変更前168→変更後165（悪化なし）。
+途中、Biome formatter が inline import type を壊しテストが全滅→トップレベル import type に修正（[[feedback-biome-unsafe-nodelete-risk]] に追記）。
+設計詳細は aidlc-docs/construction/slack-task-list-bot-token/design.md。
+**Context**: タスクC実装完了。コミット・PR待ち。
+
+---
+
+## タスクC マージとタスクD+E起点準備・動作確認方針
+**Timestamp**: 2026-05-23T11:45:00Z
+**User Input**: 動作確認のタイミング相談 → "Dまで進めてからまとめて確認"
+**AI Response**: B/C はSlack実OAuth・実Slack投稿が絡み実環境必須。D（ペルソナ）も実Bedrock口調生成が絡むため、**D完了後に B+C+D をまとめて実AWSでE2E確認**する方針で合意。PR #26 をマージ（main d3b749f）し、最新 main から D ブランチ作成。
+**Context**: タスクA・B・Cマージ済み。D+E着手。
+
+---
+
+## タスクD+E: AIペルソナ切り替え + AI応答の柔軟化
+**Timestamp**: 2026-05-23T12:30:00Z
+**User Input**: D/E統合スコープ選択 = "D+E を一括で"
+**AI Response**: D（ペルソナ切替）とE（応答多様化）は「ペルソナ別プロンプト＝口調の多様化」で実装が重なるため一括実装（ブランチ `feature/persona-switching-and-flexible-ai`）。「UIは4ペルソナ完成済み、配線が未接続」状態を解消:
+- shared: User.preferredPersonaId 追加。VALID_PERSONA_IDS / isValidPersonaId / PersonaId を constants に追加し index から re-export。
+- agent: personaRenderTool.ts に4ペルソナのシステムプロンプト（ottori/strict/psy/hacker）と PERSONA_TEMPERATURE（E: 0.2〜0.5の多様化）を定義。PersonaRenderer が input.personaId でプロンプト/temperature を選択（不明はottoriフォールバック）。SaboriProposerAgent.propose/proposeStream が personaId 引数を受け取り伝播。判定（Sonnet）は決定論のまま、口調レイヤのみ多様化。
+- backend: PUT /api/users/me/persona（無効ID 400）。proposals ルートが User.preferredPersonaId を解決して propose に渡す。SaboriProposerLambdaHandler も payload.personaId 対応。
+- frontend: PersonaPage を localStorage から API 連携へ（updatePersona・初期復元・楽観更新・ロールバック）。4ペルソナ全て available:true 化。MSW handlers に persona 更新追加。
+品質確認: shared 103 / backend 217 / agent 174 / frontend 136 全テストパス（agent/shared カバレッジ100%維持）。型チェック・CDK synth(Agent/Api)・ビルド OK。Biome エラー総数 起点165→変更後165（悪化なし）。
+設計詳細は aidlc-docs/construction/persona-switching/design.md。
+**Context**: タスクD+E実装完了。コミット・PR待ち。
 
 ---
 

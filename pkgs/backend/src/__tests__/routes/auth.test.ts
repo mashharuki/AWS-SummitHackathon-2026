@@ -1,7 +1,7 @@
 /**
  * 認証ルートのテスト (最小限 — OAuth フローには外部 Slack API が必要)
  *
- * GET /auth/slack — リダイレクト開始
+ * GET /auth/slack — Slack OAuth 認可 URL を JSON で返す
  * GET /auth/slack/callback — エラーケース (無効なステート、パラメーター不足)
  */
 
@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
 import type { DynamoServiceConnectionRepository } from "../../repositories/DynamoServiceConnectionRepository.js";
+import type { DynamoUserRepository } from "../../repositories/DynamoUserRepository.js";
 import { createAuthRoute } from "../../routes/auth.js";
 import type { AppEnv } from "../../types.js";
 
@@ -32,7 +33,10 @@ vi.mock("../../config/env.js", () => ({
 
 const MOCK_USER_ID = "user-auth-test";
 
-function buildTestApp(connRepo: Partial<DynamoServiceConnectionRepository>) {
+function buildTestApp(
+  connRepo: Partial<DynamoServiceConnectionRepository>,
+  userRepo: Partial<DynamoUserRepository> = {},
+) {
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
     (c as unknown as { env: unknown }).env = {
@@ -44,21 +48,26 @@ function buildTestApp(connRepo: Partial<DynamoServiceConnectionRepository>) {
   });
   app.route(
     "/auth",
-    createAuthRoute(connRepo as DynamoServiceConnectionRepository),
+    createAuthRoute(
+      connRepo as DynamoServiceConnectionRepository,
+      userRepo as DynamoUserRepository,
+    ),
   );
   app.onError(errorHandler);
   return app;
 }
 
 describe("GET /auth/slack", () => {
-  it("redirects (302) to Slack OAuth", async () => {
+  it("returns the Slack OAuth authorize URL as JSON", async () => {
     const connRepo = {};
     const app = buildTestApp(connRepo);
 
     const res = await app.request("/auth/slack");
-    expect(res.status).toBe(302);
-    const location = res.headers.get("location") ?? "";
-    expect(location).toContain("slack.com/oauth/v2/authorize");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.url).toContain("slack.com/oauth/v2/authorize");
+    expect(body.url).toContain("redirect_uri=");
+    expect(body.url).toContain("state=");
   });
 
   it("returns 401 when auth middleware rejects (no JWT claims)", async () => {
@@ -67,7 +76,10 @@ describe("GET /auth/slack", () => {
     // Do NOT inject requestContext → authMiddleware throws 401
     app.route(
       "/auth",
-      createAuthRoute({} as DynamoServiceConnectionRepository),
+      createAuthRoute(
+        {} as DynamoServiceConnectionRepository,
+        {} as DynamoUserRepository,
+      ),
     );
     app.onError(errorHandler);
 

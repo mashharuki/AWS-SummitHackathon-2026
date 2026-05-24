@@ -93,6 +93,42 @@ export const handlers = [
     return HttpResponse.json(mockUser);
   }),
 
+  // ペルソナ更新
+  http.put("*/api/users/me/persona", async ({ request }) => {
+    const body = (await request.json()) as { personaId: string };
+    return HttpResponse.json({
+      ...mockUser,
+      preferredPersonaId: body.personaId,
+    });
+  }),
+
+  // Slack OAuth 認可 URL 取得
+  http.get("*/api/auth/slack", () => {
+    return HttpResponse.json({
+      url: "https://slack.com/oauth/v2/authorize?client_id=test&state=xxx",
+    });
+  }),
+
+  // Slack チャンネル一覧
+  http.get("*/api/slack/channels", () => {
+    return HttpResponse.json({
+      channels: [
+        { id: "C1", name: "all-saborou" },
+        { id: "C2", name: "dev" },
+      ],
+    });
+  }),
+
+  // Slack 履歴遡及取得
+  http.post("*/api/slack/sync-messages", () => {
+    return HttpResponse.json({ scanned: 10, queued: 3 });
+  }),
+
+  // タスク判定を Slack に投稿
+  http.post("*/api/slack/notify-task", () => {
+    return HttpResponse.json({ posted: true, verdict: "can_saboru" });
+  }),
+
   // タスク候補
   http.get("*/api/tasks/candidates", () => {
     return HttpResponse.json({ candidates: mockCandidates });

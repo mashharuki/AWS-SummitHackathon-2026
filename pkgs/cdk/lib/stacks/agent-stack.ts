@@ -61,6 +61,11 @@ export class SaborouAgentStack extends cdk.Stack {
         "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6",
         "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-sonnet-4-6",
         "arn:aws:bedrock:ap-southeast-2::foundation-model/anthropic.claude-sonnet-4-6",
+        // Claude Haiku 4.5 (PersonaRenderer 口調変換): JP Geo 推論プロファイル
+        // ※ Haiku 3.5 は ap-northeast-1 に存在しないため 4.5 を使用
+        `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-haiku-4-5-20251001-v1:0`,
+        "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+        "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
       ],
     });
 
@@ -102,10 +107,20 @@ export class SaborouAgentStack extends cdk.Stack {
         // Slack user ID → cognitoSub マッピング解決に使用（Slack/Cognito IDミスマッチ修正）
         DYNAMODB_TABLE_CONNECTIONS: props.data.tables.connections.tableName,
         BEDROCK_REGION: "ap-northeast-1",
-        SLACK_TOKEN_SECRET_NAME:
-          props.data.secrets.slackClientSecret.secretName,
+        // per-user の Slack Bot Token シークレット名プレフィックス。
+        // ContextCollector が `${prefix}${cognitoSub}` で個別トークンを取得する。
+        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
         PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
+    });
+
+    // --- per-user Slack Bot Token への読み取り権限（OAuth で saborou/slack-bot-token/<sub> に保存される） ---
+    const slackBotTokenReadPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ["secretsmanager:GetSecretValue"],
+      resources: [
+        `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-bot-token/*`,
+      ],
     });
 
     // --- AWS Marketplace 権限 (Bedrock モデルアクセス確認に必要) ---
@@ -121,12 +136,13 @@ export class SaborouAgentStack extends cdk.Stack {
 
     taskExtractorFn.addToRolePolicy(bedrockPolicy);
     taskExtractorFn.addToRolePolicy(marketplacePolicy);
+    taskExtractorFn.addToRolePolicy(slackBotTokenReadPolicy);
     props.data.tables.taskCandidates.grantReadWriteData(taskExtractorFn);
     props.data.tables.tasks.grantReadData(taskExtractorFn);
     // 接続テーブル読み取り権限（Slack user ID → cognitoSub マッピング解決用）
     props.data.tables.connections.grantReadData(taskExtractorFn);
     props.data.secrets.slackClientSecret.grantRead(taskExtractorFn);
-
+    
     // --- SaboriProposer DLQ ---
     const saboriProposerDlq = new sqs.Queue(this, "SaboriProposerDlq", {
       queueName: `saborou-sabori-proposer-dlq-${environment}`,
@@ -162,9 +178,8 @@ export class SaborouAgentStack extends cdk.Stack {
         DYNAMODB_TABLE_PROPOSALS: props.data.tables.proposals.tableName,
         DYNAMODB_TABLE_TASKS: props.data.tables.tasks.tableName,
         BEDROCK_REGION: "ap-northeast-1",
-        // U-03b: ARN ではなく secretName を使用 — ContextCollector が SLACK_TOKEN_SECRET_NAME を参照するため
-        SLACK_TOKEN_SECRET_NAME:
-          props.data.secrets.slackClientSecret.secretName,
+        // per-user の Slack Bot Token シークレット名プレフィックス（ContextCollector が参照）
+        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
         // DYNAMODB_TABLE_PERSONAS: 削除 (MVP スコープ — U-03b では未使用)
         PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
@@ -172,10 +187,12 @@ export class SaborouAgentStack extends cdk.Stack {
 
     saboriProposerFn.addToRolePolicy(bedrockPolicy);
     saboriProposerFn.addToRolePolicy(marketplacePolicy);
+    saboriProposerFn.addToRolePolicy(slackBotTokenReadPolicy);
     props.data.tables.proposals.grantReadWriteData(saboriProposerFn);
     props.data.tables.tasks.grantReadData(saboriProposerFn);
     // personas テーブルの権限付与を削除 (MVP スコープ)
-    props.data.secrets.slackClientSecret.grantRead(saboriProposerFn);
+    // Slack Bot Token は per-user シークレットのため slackBotTokenReadPolicy で付与済み
+    // （旧: slackClientSecret.grantRead は OAuth Client Secret 用で Bot Token とは無関係だったため削除）
 
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "TaskExtractorFnArn", {

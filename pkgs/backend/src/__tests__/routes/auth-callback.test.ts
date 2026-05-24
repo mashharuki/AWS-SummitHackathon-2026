@@ -10,7 +10,7 @@
  * 全ての外部呼び出しはモック — AWS 課金なし、ネットワーク呼び出しなし。
  */
 
-import { createHmac } from "crypto";
+import { createHmac } from "node:crypto";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
@@ -64,7 +64,13 @@ vi.stubGlobal("fetch", mockFetch);
 
 const MOCK_USER_ID = "user-callback-test";
 
-async function buildTestApp(connRepo: Record<string, unknown> = {}) {
+async function buildTestApp(
+  connRepo: Record<string, unknown> = {},
+  userRepo: Record<string, unknown> = {
+    findById: vi.fn().mockResolvedValue(null),
+    upsert: vi.fn().mockResolvedValue({}),
+  },
+) {
   const { createAuthRoute } = await import("../../routes/auth.js");
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
@@ -79,6 +85,7 @@ async function buildTestApp(connRepo: Record<string, unknown> = {}) {
     "/auth",
     createAuthRoute(
       connRepo as unknown as Parameters<typeof createAuthRoute>[0],
+      userRepo as unknown as Parameters<typeof createAuthRoute>[1],
     ),
   );
   app.onError(errorHandler);
@@ -282,6 +289,89 @@ describe("GET /auth/slack/callback — success path (new secret)", () => {
         secretArn: "saborou/slack-bot-token/user-callback-test",
       }),
     );
+  });
+
+  it("saves slack identity to connection and links it to the Cognito user (authed_user present)", async () => {
+    mockGetSlackClientSecret.mockResolvedValue(
+      JSON.stringify({
+        clientId: "slack-client-id",
+        clientSecret: "slack-client-secret",
+      }),
+    );
+    mockFetch.mockResolvedValue({
+      json: async () => ({
+        ok: true,
+        access_token: "xoxb-token",
+        team: { id: "T999", name: "LinkedTeam" },
+        authed_user: { id: "U999" },
+      }),
+    });
+    mockSend.mockResolvedValue({
+      ARN: "arn:aws:secretsmanager:ap-northeast-1:123:secret/token",
+    });
+
+    const saveForUser = vi.fn().mockResolvedValue({});
+    const existingUser = {
+      PK: `USER#${MOCK_USER_ID}`,
+      SK: "PROFILE",
+      cognitoSub: MOCK_USER_ID,
+      email: "u@example.com",
+      name: "U",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      updatedAt: "2024-01-01T00:00:00.000Z",
+    };
+    const findById = vi.fn().mockResolvedValue(existingUser);
+    const upsert = vi.fn().mockResolvedValue(existingUser);
+
+    const app = await buildTestApp({ saveForUser }, { findById, upsert });
+
+    const res = await app.request(
+      `/auth/slack/callback?code=test-code&state=${validState}`,
+    );
+
+    expect(res.status).toBe(302);
+    // connection に slack identity が保存される
+    expect(saveForUser).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ slackUserId: "U999", slackTeamId: "T999" }),
+    );
+    // User プロフィールにも slack identity が紐付けられる
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ slackUserId: "U999", slackTeamId: "T999" }),
+    );
+  });
+
+  it("does not link slack identity to user when authed_user is absent", async () => {
+    mockGetSlackClientSecret.mockResolvedValue(
+      JSON.stringify({
+        clientId: "slack-client-id",
+        clientSecret: "slack-client-secret",
+      }),
+    );
+    mockFetch.mockResolvedValue({
+      json: async () => ({
+        ok: true,
+        access_token: "xoxb-token",
+        team: { id: "T123", name: "Team" },
+        // authed_user なし
+      }),
+    });
+    mockSend.mockResolvedValue({
+      ARN: "arn:aws:secretsmanager:ap-northeast-1:123:secret/token",
+    });
+
+    const saveForUser = vi.fn().mockResolvedValue({});
+    const findById = vi.fn().mockResolvedValue(null);
+    const upsert = vi.fn().mockResolvedValue({});
+    const app = await buildTestApp({ saveForUser }, { findById, upsert });
+
+    const res = await app.request(
+      `/auth/slack/callback?code=test-code&state=${validState}`,
+    );
+
+    expect(res.status).toBe(302);
+    // authed_user が無いので User の紐付けは行われない
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it("rethrows unexpected error from CreateSecretCommand (not ResourceExistsException)", async () => {

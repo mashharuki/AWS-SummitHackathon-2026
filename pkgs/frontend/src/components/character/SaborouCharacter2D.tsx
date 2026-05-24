@@ -12,6 +12,19 @@ import { VERDICT_SVG_CONFIG } from "@/lib/verdictMeta";
  */
 import type { Verdict } from "@saboru/shared";
 
+/**
+ * ペルソナ別の体色オーバーライド。
+ * verdict は天気・表情で表現し続け、体の色だけ人格カラーにする
+ * （判定＝天気/表情、人格＝体色、と役割分担して両方を視認可能にする）。
+ */
+const PERSONA_BODY: Record<string, { bodyColor: string; bodyShadow: string }> =
+  {
+    saboru_ottori: { bodyColor: "#F97316", bodyShadow: "#EA580C" },
+    saboru_strict: { bodyColor: "#6B7280", bodyShadow: "#374151" },
+    saboru_psy: { bodyColor: "#6366F1", bodyShadow: "#4F46E5" },
+    saboru_hacker: { bodyColor: "#10B981", bodyShadow: "#065F46" },
+  };
+
 export interface SaborouCharacter2DProps {
   /** Sabori verdict（デフォルト: "can_saboru"） */
   verdict?: Verdict;
@@ -23,6 +36,8 @@ export interface SaborouCharacter2DProps {
   sleeping?: boolean;
   /** className 追加用 */
   className?: string;
+  /** ペルソナ ID。指定時は体色を人格カラーで上書きする（天気・表情は verdict 由来のまま） */
+  personaId?: string;
 }
 
 export function SaborouCharacter2D({
@@ -31,8 +46,12 @@ export function SaborouCharacter2D({
   animated = true,
   sleeping = false,
   className,
+  personaId,
 }: SaborouCharacter2DProps) {
-  const config = VERDICT_SVG_CONFIG[verdict];
+  const baseConfig = VERDICT_SVG_CONFIG[verdict];
+  const personaBody = personaId ? PERSONA_BODY[personaId] : undefined;
+  // 体色のみペルソナで上書き（その他は verdict 由来を維持）
+  const config = personaBody ? { ...baseConfig, ...personaBody } : baseConfig;
 
   return (
     <div

@@ -188,3 +188,95 @@ describe("GET /api/users/me", () => {
     expect(repo.upsert).not.toHaveBeenCalled();
   });
 });
+
+describe("PUT /api/users/me/persona", () => {
+  let repo: DynamoUserRepository;
+
+  beforeEach(() => {
+    repo = {
+      findById: vi.fn(),
+      upsert: vi.fn(),
+    } as unknown as DynamoUserRepository;
+  });
+
+  it("updates preferredPersonaId for a valid persona", async () => {
+    vi.mocked(repo.findById).mockResolvedValue(existingUser);
+    vi.mocked(repo.upsert).mockImplementation(async (u) => ({
+      PK: `USER#${u.cognitoSub}`,
+      SK: "PROFILE",
+      ...u,
+    }));
+
+    const app = makeApp(repo);
+    const res = await app.request(
+      "/api/users/me/persona",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personaId: "saboru_hacker" }),
+      },
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(200);
+    expect(repo.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ preferredPersonaId: "saboru_hacker" }),
+    );
+  });
+
+  it("returns 400 for an invalid persona ID", async () => {
+    const app = makeApp(repo);
+    const res = await app.request(
+      "/api/users/me/persona",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personaId: "not_a_persona" }),
+      },
+      makeEnv(),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("INVALID_PERSONA");
+    expect(repo.upsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when personaId is missing", async () => {
+    const app = makeApp(repo);
+    const res = await app.request(
+      "/api/users/me/persona",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+      makeEnv(),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when the user profile does not exist", async () => {
+    vi.mocked(repo.findById).mockResolvedValue(null);
+    const app = makeApp(repo);
+    const res = await app.request(
+      "/api/users/me/persona",
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personaId: "saboru_ottori" }),
+      },
+      makeEnv(),
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 401 without JWT claims", async () => {
+    const res = await makeApp(repo).request("/api/users/me/persona", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personaId: "saboru_ottori" }),
+    });
+    expect(res.status).toBe(401);
+  });
+});

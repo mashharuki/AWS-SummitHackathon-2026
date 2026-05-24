@@ -4,8 +4,9 @@ import {
   PERSONA_RENDER_TOOL,
   PERSONA_RENDER_TOOL_NAME,
   RenderOutputSchema,
-  SABORU_OTTORI_SYSTEM_PROMPT,
   VERDICT_META,
+  getPersonaSystemPrompt,
+  getPersonaTemperature,
 } from "./personaRenderTool.js";
 import type { RenderInput, RenderOutput } from "./types.js";
 
@@ -15,14 +16,15 @@ import type { RenderInput, RenderOutput } from "./types.js";
  * Claude Haiku (短文変換にコスト最適化) を使用して、中立的な LLM の
  * rawChatMessage をサボロー口調に変換する。
  *
- * モデル: anthropic.claude-haiku-3-5-20241022-v1:0
+ * モデル: jp.anthropic.claude-haiku-4-5-20251001-v1:0（JP クロスリージョン推論プロファイル）
+ *   ※ Haiku 3.5 は ap-northeast-1 に存在しないため Haiku 4.5 を使用
  * maxTokens: 256 (口調変換は出力が短い)
- * temperature: 0.3 (自然に聞こえる口調のためわずかな創造性)
+ * temperature: ペルソナごとに切替 (自然に聞こえる口調のためわずかな創造性)
  *
  * フォールバック: Haiku 呼び出し失敗時は rawChatMessage をそのまま使用 (NFR: グレースフルデグレード)
  */
 
-const HAIKU_MODEL_ID = "anthropic.claude-3-5-haiku-20241022-v1:0";
+const HAIKU_MODEL_ID = "jp.anthropic.claude-haiku-4-5-20251001-v1:0";
 
 export class PersonaRenderer {
   constructor(private readonly bedrock: IBedrockClient) {}
@@ -41,10 +43,14 @@ export class PersonaRenderer {
 
     const startMs = Date.now();
 
+    // ペルソナごとに口調プロンプトと temperature を切り替える（D: 切替 / E: 多様化）
+    const systemPrompt = getPersonaSystemPrompt(input.personaId);
+    const temperature = getPersonaTemperature(input.personaId);
+
     try {
       const response = await this.bedrock.converse({
         modelId: HAIKU_MODEL_ID,
-        system: [{ text: SABORU_OTTORI_SYSTEM_PROMPT }],
+        system: [{ text: systemPrompt }],
         messages: [
           {
             role: "user",
@@ -76,7 +82,7 @@ export class PersonaRenderer {
         },
         inferenceConfig: {
           maxTokens: 256,
-          temperature: 0.3,
+          temperature,
         },
       });
 

@@ -49,6 +49,8 @@ const ProposalLambdaEventSchema = z.object({
     updatedAt: z.string(),
   }),
   slackMessageRef: z.string().optional(),
+  // 口調変換に使うペルソナ ID（未指定時は SaboriProposerAgent のデフォルト）
+  personaId: z.string().optional(),
 });
 
 /** EventBridge Scheduler からのバックグラウンドリフレッシュイベント */
@@ -118,7 +120,7 @@ export const handler = async (event: unknown): Promise<LambdaResponse> => {
   let slackContext: SlackContext | undefined;
   if (payload.slackMessageRef) {
     try {
-      const token = await contextCollector.getSlackToken();
+      const token = await contextCollector.getSlackToken(payload.userId);
       // SlackContext 収集: 利用可能データから最小限のコンテキストを構築
       // 完全な Slack API 連携は U-04 で実装; ここでは基本コンテキストを構築
       slackContext = await collectMinimalSlackContext(
@@ -141,7 +143,11 @@ export const handler = async (event: unknown): Promise<LambdaResponse> => {
     slackContext,
   };
 
-  const proposal = await agent.propose(payload.taskId, taskContext);
+  const proposal = await agent.propose(
+    payload.taskId,
+    taskContext,
+    payload.personaId,
+  );
 
   logInfo({
     action: "sabori_proposer_complete",
