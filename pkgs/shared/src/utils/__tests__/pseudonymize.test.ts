@@ -6,10 +6,12 @@ describe("pseudonymize", () => {
   const testSalt = "test-salt-for-unit-testing-32chars!!";
 
   beforeEach(() => {
+    // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
     process.env["PSEUDONYMIZE_SALT"] = testSalt;
   });
 
   afterEach(() => {
+    // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
     delete process.env["PSEUDONYMIZE_SALT"];
   });
 
@@ -34,6 +36,7 @@ describe("pseudonymize", () => {
 
     it("should return different hashes for different salts", () => {
       const result1 = pseudonymize("U12345678");
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["PSEUDONYMIZE_SALT"] = "different-salt-value-32chars!!!!";
       const result2 = pseudonymize("U12345678");
       expect(result1).not.toBe(result2);
@@ -58,6 +61,7 @@ describe("pseudonymize", () => {
 
   describe("error handling (BR-06)", () => {
     it("should throw AppError when PSEUDONYMIZE_SALT is not set", () => {
+      // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
       delete process.env["PSEUDONYMIZE_SALT"];
       expect(() => pseudonymize("U12345678")).toThrow();
 
@@ -73,6 +77,7 @@ describe("pseudonymize", () => {
     });
 
     it("should throw AppError when PSEUDONYMIZE_SALT is empty string", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["PSEUDONYMIZE_SALT"] = "";
       expect(() => pseudonymize("U12345678")).toThrow();
 
@@ -84,6 +89,7 @@ describe("pseudonymize", () => {
     });
 
     it("should throw AppError when PSEUDONYMIZE_SALT is shorter than 16 chars (Phase 1-E-1 fix)", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["PSEUDONYMIZE_SALT"] = "short";
       expect(() => pseudonymize("U12345678")).toThrow();
 
@@ -103,9 +109,11 @@ describe("pseudonymize", () => {
       // 旧実装 SHA256(salt+name) では以下が衝突する:
       // SHA256("abc" + "def") = SHA256("abcd" + "ef") = SHA256("abcdef")
       // HMAC-SHA256 はソルトをキーとして扱うため衝突しない
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["PSEUDONYMIZE_SALT"] = "abc_valid_salt_16";
       const hash1 = pseudonymize("def");
 
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["PSEUDONYMIZE_SALT"] = "abcd_valid_salt_1";
       const hash2 = pseudonymize("ef");
 
@@ -113,6 +121,7 @@ describe("pseudonymize", () => {
     });
 
     it("should return a non-empty hash for empty string input", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["PSEUDONYMIZE_SALT"] = testSalt;
       const result = pseudonymize("");
       expect(result).toHaveLength(64);

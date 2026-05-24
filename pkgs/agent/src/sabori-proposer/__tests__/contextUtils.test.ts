@@ -285,7 +285,9 @@ describe("deriveContextSignals", () => {
     expect(signals.deadlineMinutes).toBeDefined();
     expect(typeof signals.deadlineMinutes).toBe("number");
     // 約 30 時間 * 60 = 約 1800 分 (許容誤差 ±5 分)
+    // biome-ignore lint/style/noNonNullAssertion: test assertion requires non-null access after toBeDefined() check
     expect(signals.deadlineMinutes!).toBeGreaterThan(1700);
+    // biome-ignore lint/style/noNonNullAssertion: test assertion requires non-null access after toBeDefined() check
     expect(signals.deadlineMinutes!).toBeLessThan(1900);
   });
 

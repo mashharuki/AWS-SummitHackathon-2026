@@ -44,8 +44,10 @@ export function countTokens(text: string): number {
  * @returns トークン制限内に収まるようトリミングされたプロンプト
  */
 export function guardTokenLimit(prompt: string, limit?: number): string {
-  const parsedEnvLimit = process.env["MAX_TOKEN_LIMIT"]
-    ? Number.parseInt(process.env["MAX_TOKEN_LIMIT"], 10)
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
+  const rawMaxToken = process.env["MAX_TOKEN_LIMIT"];
+  const parsedEnvLimit = rawMaxToken
+    ? Number.parseInt(rawMaxToken, 10)
     : Number.NaN;
   const effectiveLimit =
     limit ??

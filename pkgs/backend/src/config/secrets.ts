@@ -21,7 +21,8 @@ import {
 } from "../types/google.js";
 
 const client = new SecretsManagerClient({
-  region: process.env.AWS_REGION ?? "ap-northeast-1",
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
+  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
 });
 
 const CACHE_TTL_MS = 5 * 60 * 1000;

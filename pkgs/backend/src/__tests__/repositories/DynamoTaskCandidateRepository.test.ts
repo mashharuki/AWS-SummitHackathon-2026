@@ -68,6 +68,7 @@ describe("DynamoTaskCandidateRepository.findById", () => {
 
     const cand = await repo.findById("user1", "01CAND");
     expect(cand).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: non-null asserted after not.toBeNull() check
     expect(cand!.candidateId).toBe("01CAND");
   });
 

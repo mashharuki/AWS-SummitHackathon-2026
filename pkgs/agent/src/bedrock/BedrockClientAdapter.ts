@@ -26,6 +26,7 @@ import type { IBedrockClient } from "./IBedrockClient.js";
 export class BedrockClientAdapter implements IBedrockClient {
   private readonly client: BedrockRuntimeClient;
 
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   constructor(region = process.env["BEDROCK_REGION"] ?? "ap-northeast-1") {
     this.client = new BedrockRuntimeClient({
       region,

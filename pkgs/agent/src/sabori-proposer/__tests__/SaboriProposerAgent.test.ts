@@ -539,6 +539,7 @@ describe("SaboriProposerAgent", () => {
         async converseStream() {
           return {
             $metadata: {},
+            // biome-ignore lint/correctness/useYield: generator intentionally throws without yielding to simulate stream error
             stream: (async function* () {
               throw new Error("Stream interrupted");
             })() as unknown as ConverseStreamCommandOutput["stream"],

@@ -139,6 +139,7 @@ describe("countTokens", () => {
 
 describe("guardTokenLimit", () => {
   afterEach(() => {
+    // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
     delete process.env["MAX_TOKEN_LIMIT"];
   });
 
@@ -203,6 +204,7 @@ describe("guardTokenLimit", () => {
 
   describe("environment variable handling (BR-12)", () => {
     it("should use DEFAULT_MAX_TOKEN_LIMIT when env var not set", () => {
+      // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
       delete process.env["MAX_TOKEN_LIMIT"];
       const text = "short text";
       const result = guardTokenLimit(text); // no explicit limit
@@ -210,6 +212,7 @@ describe("guardTokenLimit", () => {
     });
 
     it("should use MAX_TOKEN_LIMIT env var when set", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["MAX_TOKEN_LIMIT"] = "5";
       const longText =
         "hello world this is a test sentence for token testing purposes";
@@ -218,6 +221,7 @@ describe("guardTokenLimit", () => {
     });
 
     it("should use explicit limit over env var", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["MAX_TOKEN_LIMIT"] = "5";
       const shortText = "hi";
       // Explicit limit of 1000 overrides env var of 5
@@ -234,10 +238,12 @@ describe("guardTokenLimit", () => {
 
   describe("NaN/zero/negative env var guard (Phase 1-E-2 fix)", () => {
     afterEach(() => {
+      // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
       delete process.env["MAX_TOKEN_LIMIT"];
     });
 
     it("should use DEFAULT_MAX_TOKEN_LIMIT when MAX_TOKEN_LIMIT is NaN string", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["MAX_TOKEN_LIMIT"] = "invalid";
       const text = "a";
       const result = guardTokenLimit(text);
@@ -245,6 +251,7 @@ describe("guardTokenLimit", () => {
     });
 
     it("should use DEFAULT_MAX_TOKEN_LIMIT when MAX_TOKEN_LIMIT is zero", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["MAX_TOKEN_LIMIT"] = "0";
       const text = "hello world";
       const result = guardTokenLimit(text);
@@ -252,6 +259,7 @@ describe("guardTokenLimit", () => {
     });
 
     it("should use DEFAULT_MAX_TOKEN_LIMIT when MAX_TOKEN_LIMIT is negative", () => {
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["MAX_TOKEN_LIMIT"] = "-100";
       const text = "テストテキスト";
       const result = guardTokenLimit(text);

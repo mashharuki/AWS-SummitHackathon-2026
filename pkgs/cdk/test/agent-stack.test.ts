@@ -26,6 +26,7 @@ describe("SaborouAgentStack", () => {
   test("Both Lambda functions use ARM_64 architecture", () => {
     const fns = template.findResources("AWS::Lambda::Function");
     const fnList = Object.values(fns);
+    // biome-ignore lint/complexity/noForEach: forEach is idiomatic in this test helper context
     fnList.forEach((fn: any) => {
       expect(fn.Properties.Architectures).toContain("arm64");
     });
