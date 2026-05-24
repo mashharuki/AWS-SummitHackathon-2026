@@ -2,6 +2,14 @@
 
 ---
 
+## CONSTRUCTION — U-08 passkey-auth 設計・実装
+**Timestamp**: 2026-05-24T05:30:00Z
+**User Input**: "SABOROU の機能改修バックログ **項目8（G: パスキー認証）** を、AI-DLC の新 Unit **U-08: passkey-auth** として設計・実装してください。**現在のブランチ `feature/google-integration`（PR #39）にそのまま追加コミットする**（Fと同じPRに乗せる）。[確定方針: パスキーを追加し、パスワード認証はフォールバックとして残す。技術制約: Cognito Essentials フィーチャープラン必須、choice-based 認証 + マネージドログイン、WebAuthn RP ID = CloudFront ドメイン。CDK synth 成功・全テスト維持が必須条件。まだコミットはしない。]"
+**AI Response**: U-08 passkey-auth を設計・実装。設計ドキュメント（functional-design.md / nfr-requirements.md / infrastructure-design.md / code-generation-summary.md）を aidlc-docs/construction/passkey-auth/ に作成。CDK 実装: cognito-stack.ts に featurePlan(ESSENTIALS)/passkey/passkeyRelyingPartyId/passkeyUserVerification/authFlows.user/ManagedLoginVersion.NEWER_MANAGED_LOGIN を追加。cdk.ts に passkeyRelyingPartyId=CloudFrontDomain を注入。cognito-stack.test.ts に新設定検証テスト4件追加。フロントエンド変更なし（マネージドログインでもエンドポイント同一）。品質ゲート全通過: CDK 47/47（+4件）/ agent 196 / shared 103 / frontend 140 / backend 307 / typecheck 全パス / Biome 悪化なし / CDK synth 成功。
+**Context**: CONSTRUCTION / passkey-auth / U-08 / Functional Design + NFR Requirements + Infrastructure Design + Code Generation 完了
+
+---
+
 ## CONSTRUCTION — U-07 google-integration 設計整合性修正 + Unit分割 + U-07a実装着手
 **Timestamp**: 2026-05-24T00:00:00Z
 **User Input**: "SABOROU の新機能 F: Google連携（U-07: google-integration）について、親エージェントが既存実コードを精読して整合性検証を行い、設計と実装の差分を発見しました。これを設計に反映し、Unit分割して U-07a（OAuth基盤）から実装に進めてください。[差分1〜6および整合性確認済み点の詳細、作業手順、制約を含む完全な指示]"

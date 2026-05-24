@@ -97,6 +97,13 @@
   - Phase 6: `ManualPage` (取扱説明書) / `PersonaPage` (ペルソナ選択 + localStorage 永続化) / `RoadmapPage` (タイムライン UI) 新規、`staticContent.ts` (MANUAL_TRAITS/PERSONAS/ROADMAP_ITEMS) 集約、App.tsx に /manual /settings/persona /roadmap ルート追加
   - Phase 7: 全テスト 126/126 パス / typecheck エラーゼロ / build 成功 / Three.js は別チャンク (919KB / gzip 249KB) に分離・初期バンドル 219KB / shared 103 + backend 172 + cdk 35 + frontend 126 = 全436テストパス
 
+#### U-08: passkey-auth
+- [x] Functional Design — 完了（2026-05-24T05:30:00Z）。functional-design.md 生成済み。方針: パスキー追加・パスワードフォールバック維持。コスト注記（Essentials MAU 1,000 まで無料）。ユーザー承認済み（確定方針として指示済み）。
+- [x] NFR Requirements — 完了（2026-05-24T05:30:00Z）。nfr-requirements.md 生成済み。NFR-PK-S1〜S4（セキュリティ）/ P1（CDK synth）/ T1〜T2（テスト）定義。
+- [ ] NFR Design — スキップ（既存 CDK NFR パターンを流用。新規パターンなし）
+- [x] Infrastructure Design — 完了（2026-05-24T05:30:00Z）。infrastructure-design.md 生成済み。使用 L2 API 確認（aws-cdk-lib 2.232.1 実在確認済み）・デプロイ手順・RP ID 注意点・E2E テスト前提。
+- [x] Code Generation — 完了（2026-05-24T05:30:00Z）。変更ファイル: cognito-stack.ts（featurePlan/passkey/authFlows/ManagedLogin）/ cdk.ts（passkeyRelyingPartyId注入）/ cognito-stack.test.ts（4件追加）。フロントエンド変更なし。CDK 47/47 / 全パッケージテスト維持 / CDK synth 成功。
+
 #### U-07: google-integration
 - [x] Functional Design — 完了（2026-05-24T02:00:00Z）。functional-design.md / component-design.md / sequence-diagrams.md 生成済み。データモデル（GoogleCalendarCache / ServiceConnection拡張 / enums拡張）・ビジネスロジック（BR-G-01〜06: OAuth / トークンリフレッシュ / Calendar取り込み / Gmail取り込み / SaboriProposerへのContext注入 / ナラティブ生成）・エンドポイント6件・Mermaidシーケンス図5件。ユーザー承認待ち。
 - [x] NFR Requirements — 完了（2026-05-24T02:00:00Z）。nfr-requirements.md 生成済み。NFR-G-P1〜P2（パフォーマンス）/ S1〜S4（セキュリティ）/ R1〜R2（信頼性）/ C1〜C2（コスト）/ T1〜T2（テスト）/ O1（可観測性）全11件定義。ユーザー承認待ち。
