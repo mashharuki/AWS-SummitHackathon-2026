@@ -1437,3 +1437,31 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 **Context**: U-07 google-integration の Functional Design / NFR Requirements / NFR Design / Infrastructure Design 完了。ユーザー承認待ち。
 
 ---
+
+## CodeRabbit PR#39 指摘対応（16件）
+**Timestamp**: 2026-05-24T14:50:00Z
+**User Input**: "SABOROU の PR #39（`feature/google-integration` ブランチ、F: Google連携 + G: パスキー認証）に対して CodeRabbit が **16件のレビュー指摘**を出した。ユーザーは「**Major+Minor 全部修正**」を希望。各指摘を現コードに照らして検証し、修正してほしい。"
+**AI Response**: 16件すべてを検証し、有効な15件を修正（1件skip）。テスト322件グリーン・agent 196件グリーン・CDK 47件グリーン・Biome エラーなし・CDK synth 成功。
+**Context**: feature/google-integration ブランチの CodeRabbit 指摘対応。
+
+### 対応結果サマリー
+| # | 種別 | 対象 | 対応 |
+|---|------|------|------|
+| 1 | Major | TaskExtractorAgent.ts:82,99 | 修正: requesterHint を safeRequesterHint にサニタイズ（改行/山括弧除去・160文字制限） |
+| 2 | Major | secrets.ts:123 | 修正: GoogleTokenSecretSchema.parse() でバリデーション後にキャッシュ |
+| 3 | Major | DynamoGoogleCalendarCacheRepository.ts:67 | 修正: ...data 展開後に userId を上書きして PK 不一致を防止 |
+| 4 | Major | google-auth.ts:142 | 修正: fetchWithTimeout 共通ヘルパーを使用（10秒タイムアウト） |
+| 5 | Major | google.ts:125 | 修正: fetchWithTimeout を Calendar/Gmail/detail の全 fetch に適用 |
+| 6 | Major | google.ts:314 | 修正: URLSearchParams.set → append（3つの metadataHeaders が正しく送信される） |
+| 7 | Major | GoogleTokenService.ts:91 | 修正: fetchWithTimeout 共通ヘルパーを使用 |
+| 8 | Major | oauthState.ts:29 | 修正: issuedAt フィールド追加・10分有効期限チェック・Slack/Google 両 callback のテストも更新 |
+| 9 | Major | google-auth.ts:219 | 修正: DELETE /auth/google で Secrets Manager のトークンシークレットも削除 |
+| 10 | Major | cdk.ts:60 | 修正: passkeyRelyingPartyId を CloudFront ドメインから Cognito Managed Login ドメインに変更 |
+| 11 | Minor | GoogleTokenService.test.ts:185 | 修正: インライン vi.unstubAllGlobals() を afterEach に移動 |
+| 12 | Minor | index.ts:18 | 修正: コメントの `/auth/google*` → `/api/auth/google*` |
+| 13 | Minor | SettingsPage.tsx:50 | skip: .claude/rules/japanese-output.md によりプロジェクト全体が日本語ハードコード方針。i18n 基盤なし。既存他UIテキストも同方針。 |
+| 14 | Minor | code-generation-summary.md:94 | 修正: fenced block に `text` 識別子追加 |
+| 15 | Minor | infrastructure-design.md:37 | 修正: `bin/app.ts` → `pkgs/cdk/bin/cdk.ts` |
+| 16 | Minor | infrastructure-design.md:109 | 修正: fenced block に `text` 識別子追加 |
+
+---

@@ -49,15 +49,18 @@ const frontendStack = new SaborouFrontendStack(
 );
 
 // Step 2: CognitoStack — CloudFront ドメインを callbackUrls / logoutUrls に使用
-// U-08: passkeyRelyingPartyId に CloudFront ドメインを指定することで WebAuthn RP ID を設定。
-// CloudFront ドメインが変わった場合（destroy 後の再デプロイなど）はスタックを再デプロイして RP ID を更新する。
+// U-08: passkeyRelyingPartyId は Cognito Managed Login ドメインを指定する。
+// WebAuthn の RP ID はパスキー UI が提供されるページの origin と一致する必要があり、
+// Managed Login (v2) ではそれは Cognito のホスト型ドメインになる。
+// CloudFront ドメインをここに使うと RP ID mismatch エラーが発生する。
+const cognitoDomainHostname = `saborou-auth-${environment}.auth.ap-northeast-1.amazoncognito.com`;
 const cognitoStack = new SaborouCognitoStack(
   app,
   `SaborouCognito-${environment}`,
   {
     env,
     frontendDomainName: frontendStack.exports.distributionDomainName,
-    passkeyRelyingPartyId: frontendStack.exports.distributionDomainName,
+    passkeyRelyingPartyId: cognitoDomainHostname,
   },
 );
 

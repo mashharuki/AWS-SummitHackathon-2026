@@ -46,6 +46,17 @@ vi.mock("../../config/secrets.js", () => ({
   _resetSecretsCache: vi.fn(),
 }));
 
+// @aws-sdk/client-secrets-manager をモック（DELETE /auth/google でシークレット削除に使用）
+const { mockSmSend } = vi.hoisted(() => ({ mockSmSend: vi.fn() }));
+vi.mock("@aws-sdk/client-secrets-manager", () => ({
+  SecretsManagerClient: class {
+    send = mockSmSend;
+  },
+  DeleteSecretCommand: class {
+    constructor(public input: unknown) {}
+  },
+}));
+
 import {
   getGoogleClientSecret,
   saveGoogleToken,
@@ -334,17 +345,56 @@ describe("GET /auth/google/callback", () => {
 });
 
 describe("DELETE /auth/google", () => {
-  it("連携解除を呼び出して 200 success: true を返す", async () => {
+  beforeEach(() => {
+    mockSmSend.mockReset();
+  });
+
+  it("連携解除を呼び出して Secrets Manager のシークレットも削除し 200 success: true を返す", async () => {
     const connRepo: Partial<DynamoServiceConnectionRepository> = {
       disconnect: vi.fn().mockResolvedValue(undefined),
     };
     const app = buildTestApp(connRepo);
+    // DeleteSecretCommand が成功する
+    mockSmSend.mockResolvedValue({});
 
     const res = await app.request("/auth/google", { method: "DELETE" });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { success: boolean };
     expect(body.success).toBe(true);
     expect(connRepo.disconnect).toHaveBeenCalledWith(MOCK_USER_ID, "google");
+    expect(mockSmSend).toHaveBeenCalledOnce();
+  });
+
+  it("シークレットが存在しない（ResourceNotFoundException）場合でも 200 を返す", async () => {
+    const connRepo: Partial<DynamoServiceConnectionRepository> = {
+      disconnect: vi.fn().mockResolvedValue(undefined),
+    };
+    const app = buildTestApp(connRepo);
+    // シークレット削除が ResourceNotFoundException を返す（連携前に解除した場合など）
+    const notFoundErr = Object.assign(new Error("Secret not found"), {
+      name: "ResourceNotFoundException",
+    });
+    mockSmSend.mockRejectedValue(notFoundErr);
+
+    const res = await app.request("/auth/google", { method: "DELETE" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean };
+    expect(body.success).toBe(true);
+  });
+
+  it("シークレット削除で予期しないエラーが発生した場合は 500 を返す", async () => {
+    const connRepo: Partial<DynamoServiceConnectionRepository> = {
+      disconnect: vi.fn().mockResolvedValue(undefined),
+    };
+    const app = buildTestApp(connRepo);
+    // ResourceNotFoundException 以外のエラー（例: AccessDeniedException）
+    const accessDeniedErr = Object.assign(new Error("Access Denied"), {
+      name: "AccessDeniedException",
+    });
+    mockSmSend.mockRejectedValue(accessDeniedErr);
+
+    const res = await app.request("/auth/google", { method: "DELETE" });
+    expect(res.status).toBe(500);
   });
 
   it("JWT がない場合は 401 を返す", async () => {

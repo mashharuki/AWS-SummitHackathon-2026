@@ -89,7 +89,7 @@ CloudFront ドメインが変わるたびにパスキー RP ID の更新と再�
 
 ### マネージドログイン URL
 
-```
+```text
 https://saborou-auth-dev.auth.ap-northeast-1.amazoncognito.com/oauth2/authorize?...
 ```
 

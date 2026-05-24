@@ -8,11 +8,11 @@
  *
  * ルートレイアウト:
  * GET    /health                         — 認証なし
- * GET    /auth/slack                     — Slack OAuth 開始 (認証必要)
- * GET    /auth/slack/callback            — Slack OAuth コールバック
- * GET    /auth/google                    — Google OAuth 開始 (認証必要)
- * GET    /auth/google/callback           — Google OAuth コールバック
- * DELETE /auth/google                    — Google 連携解除
+ * GET    /api/auth/slack                 — Slack OAuth 開始 (認証必要)
+ * GET    /api/auth/slack/callback        — Slack OAuth コールバック
+ * GET    /api/auth/google                — Google OAuth 開始 (認証必要)
+ * GET    /api/auth/google/callback       — Google OAuth コールバック
+ * DELETE /api/auth/google                — Google 連携解除
  * POST   /api/google/calendar/fetch      — Google Calendar 手動取り込み (認証必要)
  * GET    /api/google/calendar/status     — Calendar キャッシュ状態確認 (認証必要)
  * POST   /api/google/gmail/fetch         — Gmail 手動取り込み (認証必要)
@@ -150,10 +150,7 @@ export function createApp() {
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
-  app.route(
-    "/api/slack",
-    createSlackRoute(taskRepository, proposalRepository),
-  );
+  app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
   // Google Calendar/Gmail 取り込みルート（U-07b）
   app.route(
     "/api/google",

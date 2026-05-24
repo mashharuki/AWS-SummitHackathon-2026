@@ -12,6 +12,10 @@
  * 差分3: トークンは JSON 形式で Secrets Manager に保存
  */
 
+import {
+  DeleteSecretCommand,
+  SecretsManagerClient,
+} from "@aws-sdk/client-secrets-manager";
 import { toIsoString } from "@saboru/shared";
 import { Hono } from "hono";
 import { env } from "../config/env.js";
@@ -22,7 +26,12 @@ import { GoogleTokenService } from "../services/GoogleTokenService.js";
 import type { AppEnv } from "../types.js";
 import type { GoogleTokenSecret } from "../types/google.js";
 import { GoogleTokenResponseSchema } from "../types/google.js";
+import { fetchWithTimeout } from "../utils/fetchWithTimeout.js";
 import { encodeState, verifyState } from "../utils/oauthState.js";
+
+const smClient = new SecretsManagerClient({
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
+});
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -128,8 +137,8 @@ export function createGoogleAuthRoute(
     // redirect_uri: コールバック URL から query を除いたベース（差分4）
     const redirectUri = c.req.url.split("?")[0];
 
-    // code → トークン交換
-    const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
+    // code → トークン交換（タイムアウト: 10秒）
+    const tokenResponse = await fetchWithTimeout(GOOGLE_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -214,7 +223,24 @@ export function createGoogleAuthRoute(
   googleAuth.delete("/google", authMiddleware, async (c) => {
     const userId = c.get("userId");
 
+    // DynamoDB の接続レコードを disconnected に更新
     await connectionRepository.disconnect(userId, "google");
+
+    // Secrets Manager の Google トークンシークレットを削除（長期トークンの残留を防ぐ）
+    const secretName = GoogleTokenService.buildSecretName(userId);
+    try {
+      await smClient.send(
+        new DeleteSecretCommand({
+          SecretId: secretName,
+          ForceDeleteWithoutRecovery: true,
+        }),
+      );
+    } catch (err) {
+      // シークレットが存在しない場合（連携前に解除操作など）は無視する
+      if ((err as { name?: string }).name !== "ResourceNotFoundException") {
+        throw err;
+      }
+    }
 
     return c.json({ success: true });
   });

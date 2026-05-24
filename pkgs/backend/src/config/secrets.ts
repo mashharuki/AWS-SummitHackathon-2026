@@ -15,7 +15,10 @@ import {
   SecretsManagerClient,
   UpdateSecretCommand,
 } from "@aws-sdk/client-secrets-manager";
-import type { GoogleTokenSecret } from "../types/google.js";
+import {
+  type GoogleTokenSecret,
+  GoogleTokenSecretSchema,
+} from "../types/google.js";
 
 const client = new SecretsManagerClient({
   region: process.env.AWS_REGION ?? "ap-northeast-1",
@@ -114,7 +117,8 @@ export async function getGoogleToken(
   secretName: string,
 ): Promise<GoogleTokenSecret> {
   const raw = await fetchSecret(secretName);
-  const parsed = JSON.parse(raw) as GoogleTokenSecret;
+  // Zod でバリデーションしてから使用する（malformed な secret がキャッシュに入るのを防ぐ）
+  const parsed = GoogleTokenSecretSchema.parse(JSON.parse(raw));
   // Update in-memory cache
   googleTokenCache.set(userId, {
     accessToken: parsed.accessToken,

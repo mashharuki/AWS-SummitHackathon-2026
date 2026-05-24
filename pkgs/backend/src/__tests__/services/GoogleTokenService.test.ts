@@ -133,6 +133,10 @@ describe("GoogleTokenService.getValidAccessToken — Secrets Manager からの�
     MOCK_CACHED.mockReturnValue(null); // キャッシュなし
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("Secrets Manager のトークンが有効な場合はリフレッシュせずに返す", async () => {
     MOCK_GET_TOKEN.mockResolvedValue(makeTokenData(60 * 60 * 1000)); // 1時間先
 
@@ -180,8 +184,6 @@ describe("GoogleTokenService.getValidAccessToken — Secrets Manager からの�
 
     expect(token).toBe("new-access-token");
     expect(MOCK_SAVE_TOKEN).toHaveBeenCalledOnce();
-
-    vi.unstubAllGlobals();
   });
 });
 

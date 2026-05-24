@@ -64,6 +64,8 @@ export class DynamoGoogleCalendarCacheRepository {
       PK: `USER#${userId}`,
       SK: "CACHE#calendar",
       ...data,
+      // data.userId を上書きして PK と userId の不一致を防ぐ
+      userId,
     };
 
     // nextEventStartsInMinutes: null は DynamoDB に保存できないため除外して別属性で管理

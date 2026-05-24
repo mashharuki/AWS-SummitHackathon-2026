@@ -92,10 +92,14 @@ async function buildTestApp(
   return app;
 }
 
-// Build a valid HMAC-signed state (matching the new implementation)
+// Build a valid HMAC-signed state (matching the new implementation with issuedAt)
 const TEST_OAUTH_SECRET = "test-oauth-state-secret-32chars!!";
 function buildSignedState(userId: string): string {
-  const payload = JSON.stringify({ userId, nonce: "test-nonce" });
+  const payload = JSON.stringify({
+    userId,
+    nonce: "test-nonce",
+    issuedAt: Date.now(),
+  });
   const mac = createHmac("sha256", TEST_OAUTH_SECRET)
     .update(payload)
     .digest("hex");

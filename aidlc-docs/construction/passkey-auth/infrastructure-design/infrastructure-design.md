@@ -33,7 +33,8 @@ COG8 の `reason` を「Essentials tier is required for passkey（WebAuthn）aut
 ## 2. パラメータ設計
 
 `CognitoStackProps` に `passkeyRelyingPartyId?: string` を追加。  
-デプロイ時に CloudFront ドメインを渡す（bin/app.ts 側で設定）。
+WebAuthn の RP ID は Cognito Managed Login ドメイン（`saborou-auth-{env}.auth.ap-northeast-1.amazoncognito.com`）を指定する（pkgs/cdk/bin/cdk.ts 側で設定）。  
+Managed Login v2 ではパスキー UI が Cognito ドメインから提供されるため、CloudFront ドメインではなく Cognito ドメインを RP ID とする必要がある。
 
 フォールバック（未設定時）: パスキー RP ID を設定せず、Cognito のデフォルト動作を使用。  
 > ただし RP ID なしだと一部環境でパスキー登録が失敗するため、デプロイ手順で RP ID の設定を明示する。
@@ -104,7 +105,7 @@ CloudFront ドメインが変わると RP ID も変わる。新しいドメイ�
 
 ### マネージドログインの URL 形式
 
-```
+```text
 https://<domain-prefix>.auth.ap-northeast-1.amazoncognito.com/oauth2/authorize?...
 ```
 

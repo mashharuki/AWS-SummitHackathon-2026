@@ -20,6 +20,7 @@ import {
 } from "../config/secrets.js";
 import type { GoogleTokenSecret } from "../types/google.js";
 import { GoogleTokenResponseSchema } from "../types/google.js";
+import { fetchWithTimeout } from "../utils/fetchWithTimeout.js";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
@@ -79,7 +80,7 @@ export class GoogleTokenService {
     clientId: string,
     clientSecret: string,
   ): Promise<string> {
-    const response = await fetch(GOOGLE_TOKEN_URL, {
+    const response = await fetchWithTimeout(GOOGLE_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({

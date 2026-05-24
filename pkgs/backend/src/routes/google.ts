@@ -23,6 +23,7 @@ import type { DynamoServiceConnectionRepository } from "../repositories/DynamoSe
 import type { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
 import { GoogleTokenService } from "../services/GoogleTokenService.js";
 import type { AppEnv } from "../types.js";
+import { fetchWithTimeout } from "../utils/fetchWithTimeout.js";
 
 function logInfo(data: Record<string, unknown>): void {
   console.log(JSON.stringify({ level: "INFO", ...data }));
@@ -120,7 +121,7 @@ export function createGoogleRoute(
     calendarUrl.searchParams.set("singleEvents", "true");
     calendarUrl.searchParams.set("orderBy", "startTime");
 
-    const calResponse = await fetch(calendarUrl.toString(), {
+    const calResponse = await fetchWithTimeout(calendarUrl.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -272,7 +273,7 @@ export function createGoogleRoute(
     listUrl.searchParams.set("q", "newer_than:7d is:unread");
     listUrl.searchParams.set("maxResults", "50");
 
-    const listResponse = await fetch(listUrl.toString(), {
+    const listResponse = await fetchWithTimeout(listUrl.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
@@ -309,11 +310,12 @@ export function createGoogleRoute(
       try {
         const detailUrl = new URL(`${GMAIL_BASE}/messages/${msg.id}`);
         detailUrl.searchParams.set("format", "metadata");
-        detailUrl.searchParams.set("metadataHeaders", "Subject");
-        detailUrl.searchParams.set("metadataHeaders", "From");
-        detailUrl.searchParams.set("metadataHeaders", "Date");
+        // set() は同一キーの値を上書きするため、複数の metadataHeaders には append() を使う
+        detailUrl.searchParams.append("metadataHeaders", "Subject");
+        detailUrl.searchParams.append("metadataHeaders", "From");
+        detailUrl.searchParams.append("metadataHeaders", "Date");
 
-        const detailResponse = await fetch(detailUrl.toString(), {
+        const detailResponse = await fetchWithTimeout(detailUrl.toString(), {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
