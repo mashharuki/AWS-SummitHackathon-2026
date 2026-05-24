@@ -42,13 +42,12 @@ function PageLoader() {
   const { t } = useTranslation();
 
   return (
-    <div
+    <output
       className="min-h-screen bg-saboru-cream flex items-center justify-center"
-      role="status"
       aria-label={t("app.pageLoading")}
     >
       <div className="w-8 h-8 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin" />
-    </div>
+    </output>
   );
 }
 

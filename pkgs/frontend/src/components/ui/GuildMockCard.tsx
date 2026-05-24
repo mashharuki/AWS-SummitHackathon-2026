@@ -149,6 +149,7 @@ export function GuildMockCard({ className = "" }: GuildMockCardProps) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {MOCK_GUILD_MEMBERS.map((member, idx) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static member list
             <div
               key={`guild-member-${idx}`}
               style={{
@@ -224,6 +225,7 @@ export function GuildMockCard({ className = "" }: GuildMockCardProps) {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {MOCK_FEED.map((item, idx) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static feed list
             <div
               key={`feed-${idx}`}
               style={{

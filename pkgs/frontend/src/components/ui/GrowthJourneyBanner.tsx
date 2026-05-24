@@ -60,6 +60,7 @@ export function GrowthJourneyBanner({
     <div
       aria-live="assertive"
       role="alert"
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -77,6 +78,12 @@ export function GrowthJourneyBanner({
         setVisible(false);
         setTimeout(onClose, 300);
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          setVisible(false);
+          setTimeout(onClose, 300);
+        }
+      }}
     >
       <div
         style={{
@@ -92,6 +99,7 @@ export function GrowthJourneyBanner({
             "gj-pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
         }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         {/* 称号アイコン */}
         <div

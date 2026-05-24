@@ -224,6 +224,7 @@ export function ManualPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {traits.map((t, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static traits array
                 <div
                   key={i}
                   className="card-brutal p-3"

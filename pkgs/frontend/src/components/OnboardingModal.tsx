@@ -326,6 +326,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           {/* クイズ進捗 */}
           <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
             {QUIZ_QUESTIONS.map((_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: quiz dots
               <div
                 key={`dot-${i}`}
                 style={{
@@ -441,6 +442,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
         {/* ドットインジケーター */}
         <div className="flex gap-1.5 justify-center mb-5">
           {SLIDES.map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: slide dots
             <div
               key={`slide-dot-${i}`}
               style={{

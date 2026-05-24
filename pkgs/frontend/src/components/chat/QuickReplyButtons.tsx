@@ -26,10 +26,10 @@ export function QuickReplyButtons({
   const { t } = useTranslation();
 
   return (
-    <div
-      role="group"
+    <fieldset
       aria-label={t("chat.quickReplies")}
       className="flex flex-wrap gap-1.5 py-2"
+      style={{ border: "none", padding: 0, margin: 0 }}
     >
       {QUICK_REPLIES.map((reply) => (
         <button
@@ -54,6 +54,6 @@ export function QuickReplyButtons({
           {t(`quickReply.${reply}`)}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }

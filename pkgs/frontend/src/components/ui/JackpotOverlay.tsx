@@ -38,6 +38,7 @@ export function JackpotOverlay({ isActive, onClose }: JackpotOverlayProps) {
       aria-live="assertive"
       role="alert"
       aria-label={t("gamification.jackpotAriaLabel")}
+      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,
@@ -55,6 +56,12 @@ export function JackpotOverlay({ isActive, onClose }: JackpotOverlayProps) {
       onClick={() => {
         setVisible(false);
         setTimeout(onClose, 300);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          setVisible(false);
+          setTimeout(onClose, 300);
+        }
       }}
     >
       {/* コンフェッティ */}

@@ -30,11 +30,10 @@ export function ChatPane({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [isStreaming]);
+  }, [messages]);
 
   return (
-    <div
-      role="region"
+    <section
       aria-label={t("chat.paneAria")}
       className="card-brutal flex flex-col h-full overflow-hidden"
     >
@@ -90,6 +89,6 @@ export function ChatPane({
         disabled={isStreaming}
         placeholder={t("chat.messagePlaceholder")}
       />
-    </div>
+    </section>
   );
 }

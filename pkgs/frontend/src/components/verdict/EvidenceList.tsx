@@ -27,8 +27,9 @@ export function EvidenceList({ items, title }: EvidenceListProps) {
       >
         {resolvedTitle}
       </h3>
-      <ul className="flex flex-col gap-1.5" role="list">
+      <ul className="flex flex-col gap-1.5">
         {items.map((item, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static evidence array
           <li
             key={i}
             className="flex items-start gap-2 text-saboru-ink"

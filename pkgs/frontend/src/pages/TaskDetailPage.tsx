@@ -147,18 +147,16 @@ export function TaskDetailPage() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on proposal update
   }, [proposal?.evaluatedAt]);
-
-  // 初回ロード時にストリーミング開始
   useEffect(() => {
     if (taskId && !proposal) {
       void startProposal();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskId]);
-
-  // proposal が新しく届いたとき: Tier 1〜2 ゲーミフィケーション結果を記録
-  useEffect(() => {
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional run-once on taskId
+  }, [taskId]);: Tier 1〜2 ゲーミフィケーション結果を記録
+  useEffect(() => 
     if (proposal?.verdict) {
       const signals = proposal.psychSignals;
       const signalCount = signals
@@ -183,9 +181,7 @@ export function TaskDetailPage() {
           nowHour: new Date().getHours(),
         });
       }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- proposal.evaluatedAt を依存キーとして使う意図的な設計
-  }, [proposal?.evaluatedAt]);
+    }, [proposal?.evaluatedAt]);
 
   // チャットメッセージを型変換
   const chatMessages: ChatMessageType[] = streamMessages.map((m) => ({

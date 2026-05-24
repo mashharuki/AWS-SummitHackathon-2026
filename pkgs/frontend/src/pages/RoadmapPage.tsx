@@ -167,6 +167,7 @@ export function RoadmapPage() {
                     }}
                   >
                     {m.features.map((f, fi) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: static features array
                       <div
                         key={fi}
                         className="flex items-start gap-2 py-1.5"

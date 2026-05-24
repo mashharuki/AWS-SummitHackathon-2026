@@ -267,6 +267,7 @@ function CloudGroup({
   return (
     <>
       {positions.slice(0, count).map((pos, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: 3D position array
         <mesh key={i} position={pos} scale={[1, 0.55, 0.8]}>
           <sphereGeometry args={[0.16, 16, 16]} />
           <meshStandardMaterial

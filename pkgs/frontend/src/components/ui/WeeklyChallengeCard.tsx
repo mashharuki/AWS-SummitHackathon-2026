@@ -233,6 +233,7 @@ export function WeeklyChallengeCard({
           marginBottom: 5,
         }}
         role="progressbar"
+        tabIndex={0}
         aria-valuenow={progress.current}
         aria-valuemin={0}
         aria-valuemax={challenge.target}

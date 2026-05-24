@@ -146,7 +146,7 @@ export async function exchangeCodeForTokens(
     redirect_uri: REDIRECT_URI(),
   };
   if (codeVerifier) {
-    paramsObj["code_verifier"] = codeVerifier;
+    paramsObj.code_verifier = codeVerifier;
   }
   const params = new URLSearchParams(paramsObj);
 

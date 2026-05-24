@@ -18,7 +18,7 @@ async function loadRuntimeConfig(): Promise<void> {
 
 loadRuntimeConfig().then(() => {
   registerSW({ immediate: true });
-  createRoot(document.getElementById("root")!).render(
+  createRoot(document.getElementById("root") as HTMLElement).render(
     <StrictMode>
       <App />
     </StrictMode>,

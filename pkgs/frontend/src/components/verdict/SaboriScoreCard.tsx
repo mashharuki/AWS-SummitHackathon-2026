@@ -79,9 +79,8 @@ export function SaboriScoreCard({
   }
 
   return (
-    <div
+    <section
       className={`relative overflow-hidden ${className}`}
-      role="region"
       aria-label={t("gamification.gradeAriaLabel", {
         grade: info.grade,
         label: info.label,
@@ -211,6 +210,6 @@ export function SaboriScoreCard({
           100% { transform: translateY(-4px) scale(1.05); }
         }
       `}</style>
-    </div>
+    </section>
   );
 }

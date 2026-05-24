@@ -23,8 +23,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       }}
     >
       {isAssistant && <SaborouAvatar size={28} />}
-      <div
-        role="article"
+      <article
         aria-label={
           isAssistant ? t("chat.assistantMessage") : t("chat.userMessage")
         }
@@ -49,7 +48,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </p>
         )}
         {message.content}
-      </div>
+      </article>
     </div>
   );
 }

@@ -209,7 +209,7 @@ export function useSaboriGamification(): GamificationState &
         }
       }
     },
-    [combo, dependencyScore],
+    [combo, dependencyScore, streak],
   );
 
   const clearTitleUnlockEvent = useCallback(() => {
