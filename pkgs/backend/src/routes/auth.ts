@@ -35,6 +35,10 @@ const SLACK_OAUTH_SCOPES = [
   "im:history",
   "mpim:history",
   "users:read",
+  // channels:read / groups:read: Bot 参加チャンネル一覧の取得（users.conversations）
+  // UI のチャンネル選択ドロップダウン（C-1/C-2）に必要
+  "channels:read",
+  "groups:read",
   // chat:write: サボり提案を Slack スレッドに返信する（インタラクティブ化）
   "chat:write",
 ].join(",");
