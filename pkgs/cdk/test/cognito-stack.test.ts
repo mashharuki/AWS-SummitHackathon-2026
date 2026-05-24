@@ -70,6 +70,15 @@ describe("SaborouCognitoStack", () => {
     });
   });
 
+  // U-08: マネージドログイン v2 にはブランディングが必須
+  // （無いと "Login pages unavailable" になる）
+  test("ManagedLoginBranding is created with Cognito provided values", () => {
+    template.resourceCountIs("AWS::Cognito::ManagedLoginBranding", 1);
+    template.hasResourceProperties("AWS::Cognito::ManagedLoginBranding", {
+      UseCognitoProvidedValues: true,
+    });
+  });
+
   // U-08: Choice-based 認証フロー（USER_AUTH / ALLOW_USER_AUTH）のテスト
   test("UserPoolClient has ALLOW_USER_AUTH explicit auth flow for choice-based authentication", () => {
     template.hasResourceProperties("AWS::Cognito::UserPoolClient", {

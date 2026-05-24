@@ -127,6 +127,22 @@ export class SaborouCognitoStack extends cdk.Stack {
       managedLoginVersion: cognito.ManagedLoginVersion.NEWER_MANAGED_LOGIN,
     });
 
+    // --- マネージドログイン ブランディング ---
+    // U-08: managedLoginVersion v2 はブランディングスタイルが存在しないと
+    // ログインページが "Login pages unavailable" になり表示できない。
+    // Cognito 提供のデフォルト値（useCognitoProvidedValues）でスタイルを作成する。
+    const managedLoginBranding = new cognito.CfnManagedLoginBranding(
+      this,
+      "ManagedLoginBranding",
+      {
+        userPoolId: userPool.userPoolId,
+        clientId: userPoolClient.userPoolClientId,
+        useCognitoProvidedValues: true,
+      },
+    );
+    // UserPoolDomain（v2 ドメイン）の後に作成されるよう依存を明示する。
+    managedLoginBranding.node.addDependency(userPoolDomain);
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "UserPoolId", {
       value: userPool.userPoolId,
