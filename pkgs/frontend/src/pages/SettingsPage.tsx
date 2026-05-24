@@ -1,5 +1,6 @@
 import { SaborouAvatar } from "@/components/character/SaborouAvatar";
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
+import { SlackSyncControl } from "@/components/features/SlackSyncControl";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionLabel } from "@/components/ui/SectionLabel";
@@ -138,6 +139,9 @@ export function SettingsPage() {
                   </button>
                 )}
               </div>
+
+              {/* C-1: 連携済みなら過去メッセージの遡及取り込み UI を表示 */}
+              {slackConnection?.status === "connected" && <SlackSyncControl />}
 
               {FUTURE_SERVICES.map((svc, i) => (
                 <div

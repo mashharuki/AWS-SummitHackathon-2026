@@ -161,3 +161,39 @@ describe("SlackClient timeout", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("SlackClient.conversationsList", () => {
+  it("returns channels on success", async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse({
+        channels: [
+          { id: "C1", name: "all-saborou", is_channel: true },
+          { id: "C2", name: "dev", is_channel: true },
+        ],
+      }),
+    );
+
+    const client = new SlackClient("xoxb-test");
+    const channels = await client.conversationsList();
+
+    expect(channels).toHaveLength(2);
+    expect(channels[0].name).toBe("all-saborou");
+    const [url] = mockFetch.mock.calls[0];
+    expect(url).toBe("https://slack.com/api/users.conversations");
+  });
+
+  it("returns empty array when channels is absent", async () => {
+    mockFetch.mockResolvedValueOnce(okResponse({}));
+    const client = new SlackClient("xoxb-test");
+    expect(await client.conversationsList()).toEqual([]);
+  });
+
+  it("throws SlackApiError on ok:false", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ok: false, error: "missing_scope" }),
+    });
+    const client = new SlackClient("xoxb-test");
+    await expect(client.conversationsList()).rejects.toThrow("missing_scope");
+  });
+});

@@ -109,6 +109,26 @@ export const handlers = [
     });
   }),
 
+  // Slack チャンネル一覧
+  http.get("*/api/slack/channels", () => {
+    return HttpResponse.json({
+      channels: [
+        { id: "C1", name: "all-saborou" },
+        { id: "C2", name: "dev" },
+      ],
+    });
+  }),
+
+  // Slack 履歴遡及取得
+  http.post("*/api/slack/sync-messages", () => {
+    return HttpResponse.json({ scanned: 10, queued: 3 });
+  }),
+
+  // タスク判定を Slack に投稿
+  http.post("*/api/slack/notify-task", () => {
+    return HttpResponse.json({ posted: true, verdict: "can_saboru" });
+  }),
+
   // タスク候補
   http.get("*/api/tasks/candidates", () => {
     return HttpResponse.json({ candidates: mockCandidates });

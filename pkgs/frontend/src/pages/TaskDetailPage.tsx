@@ -1,4 +1,5 @@
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
+import { SlackShareControl } from "@/components/features/SlackShareControl";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
@@ -208,9 +209,7 @@ export function TaskDetailPage() {
                   >
                     {task.title}
                   </h1>
-                  <p
-                    className="text-saboru-ink-muted mt-1.5 text-xs md:text-sm"
-                  >
+                  <p className="text-saboru-ink-muted mt-1.5 text-xs md:text-sm">
                     📅 {formatDeadlineDisplay(task.deadline)}
                   </p>
                 </>
@@ -218,10 +217,7 @@ export function TaskDetailPage() {
             </div>
 
             {/* 3D 判定ヒーロー（憲法2: 320px / 憲法4: brutal-3d-container で外枠） */}
-            <div
-              className="brutal-3d-container"
-              style={{ height: 280 }}
-            >
+            <div className="brutal-3d-container" style={{ height: 280 }}>
               <Suspense
                 fallback={
                   <div className="w-full h-full flex items-center justify-center">
@@ -241,7 +237,9 @@ export function TaskDetailPage() {
             </div>
 
             {/* ストリーミング中: ContextCollectingAnim を表示 */}
-            {isStreaming && !proposal && <ContextCollectingAnim phase={phase} />}
+            {isStreaming && !proposal && (
+              <ContextCollectingAnim phase={phase} />
+            )}
 
             {/* VerdictBox */}
             {verdictForDisplay && proposal && (
@@ -263,6 +261,9 @@ export function TaskDetailPage() {
                 }
               />
             )}
+
+            {/* C-2: 判定を Slack に共有（連携済み時のみ表示） */}
+            {proposal && taskId && <SlackShareControl taskId={taskId} />}
 
             {/* PsychSignals（verdict 連動の静的プリセット表示） */}
             {verdictForDisplay && (

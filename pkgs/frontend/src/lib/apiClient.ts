@@ -224,6 +224,41 @@ export async function getSlackAuthUrl(): Promise<string> {
   return data.url;
 }
 
+/** Bot が参加している Slack チャンネル */
+export interface SlackChannelOption {
+  id: string;
+  name: string;
+}
+
+/** GET /api/slack/channels — Bot 参加チャンネル一覧 */
+export async function getSlackChannels(): Promise<SlackChannelOption[]> {
+  const data = await request<{ channels: SlackChannelOption[] }>(
+    "/api/slack/channels",
+  );
+  return data.channels;
+}
+
+/** POST /api/slack/sync-messages — Slack 履歴を遡及取得してタスク化 */
+export async function syncSlackMessages(
+  channelId: string,
+): Promise<{ scanned: number; queued: number }> {
+  return request("/api/slack/sync-messages", {
+    method: "POST",
+    body: JSON.stringify({ channelId }),
+  });
+}
+
+/** POST /api/slack/notify-task — タスクの判定を Slack に投稿 */
+export async function notifyTaskToSlack(
+  taskId: string,
+  channelId: string,
+): Promise<{ posted: boolean; verdict: string }> {
+  return request("/api/slack/notify-task", {
+    method: "POST",
+    body: JSON.stringify({ taskId, channelId }),
+  });
+}
+
 /** DELETE /api/connections/:service */
 export async function disconnectService(service: string): Promise<void> {
   return request<void>(`/api/connections/${service}`, {
@@ -253,6 +288,9 @@ export default {
   submitHonne,
   getConnections,
   getSlackAuthUrl,
+  getSlackChannels,
+  syncSlackMessages,
+  notifyTaskToSlack,
   disconnectService,
   buildProposalStreamUrl,
 };

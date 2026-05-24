@@ -33,6 +33,14 @@ export interface ConversationsHistoryParams {
   limit?: number;
 }
 
+/** Bot が参加しているチャンネル（必要フィールドのみ） */
+export interface SlackChannel {
+  id: string;
+  name: string;
+  is_channel?: boolean;
+  is_private?: boolean;
+}
+
 export interface PostMessageParams {
   channel: string;
   text: string;
@@ -74,6 +82,24 @@ export class SlackClient {
       body,
     );
     return data.messages ?? [];
+  }
+
+  /**
+   * Bot が参加しているチャンネル一覧を取得する（users.conversations）。
+   * 必要スコープ: channels:read 等（history 系で概ねカバー）。
+   * UI のチャンネル選択ドロップダウン用。
+   */
+  async conversationsList(): Promise<SlackChannel[]> {
+    const body = new URLSearchParams({
+      types: "public_channel,private_channel",
+      exclude_archived: "true",
+      limit: "200",
+    });
+    const data = await this.call<{ channels?: SlackChannel[] }>(
+      "users.conversations",
+      body,
+    );
+    return data.channels ?? [];
   }
 
   /**

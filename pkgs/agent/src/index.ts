@@ -40,6 +40,7 @@ export {
 // Slack Web API クライアント
 export {
   SlackApiError,
+  type SlackChannel,
   SlackClient,
   type SlackHistoryMessage,
 } from "./slack-client/SlackClient.js";
