@@ -184,11 +184,31 @@ Cloudflare に登録（**Proxy OFF / DNS only**）:
 - Redirect URI: `https://saborou-api.agentic-jp.com/api/auth/google/callback`
 
 ### G-2. Slack（Slack 連携を使う場合）
-- Slack アプリ → OAuth & Permissions → Redirect URLs:
+
+#### Slack シークレットを Secrets Manager に登録（本デプロイ後・⚠️ client-secret は JSON 形式）
+> CDK が空の Secret を作る。`auth.ts` は client-secret を `JSON.parse` で `{clientId, clientSecret}` として読む（**Google と同じく値のみだと OAuth 失敗**）。signing-secret は値のみ。
+
+```bash
+export ENV=dev AWS_REGION=ap-northeast-1
+# Client Secret（JSON 形式: clientId は Slack アプリの Client ID）
+aws secretsmanager put-secret-value \
+  --secret-id "/saborou/slack/client-secret-${ENV}" \
+  --secret-string '{"clientId":"<SlackのClient ID>","clientSecret":"<SlackのClient Secret>"}' \
+  --region ${AWS_REGION}
+# Signing Secret（値のみ）
+aws secretsmanager put-secret-value \
+  --secret-id "/saborou/slack/signing-secret-${ENV}" \
+  --secret-string "<SlackのSigning Secret>" \
+  --region ${AWS_REGION}
+```
+
+#### Slack アプリの URL 設定
+- OAuth & Permissions → Redirect URLs:
   ```
   https://saborou-api.agentic-jp.com/api/auth/slack/callback
   ```
 - Event Subscriptions の Request URL は Webhook Lambda Function URL（CfnOutput `WebhookUrl`）。
+  （Webhook は Lambda Function URL のため自動ドメイン。Slack の Event 購読 URL は再デプロイで変わる点に注意。OAuth callback は固定ドメインで不変）
 
 ---
 
