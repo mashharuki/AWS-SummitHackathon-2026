@@ -33,9 +33,9 @@ export const EXTRACT_TASK_TOOL: Tool = {
           },
           title: {
             type: "string",
-            maxLength: 50,
+            maxLength: 100,
             description:
-              "Short task title (max 50 chars). Empty string if is_task is false.",
+              "Short task title (max 100 chars). Empty string if is_task is false.",
           },
           deadline: {
             type: ["string", "null"],
@@ -51,9 +51,9 @@ export const EXTRACT_TASK_TOOL: Tool = {
           },
           description: {
             type: "string",
-            maxLength: 100,
+            maxLength: 300,
             description:
-              "Brief summary of the task content (max 100 chars). " +
+              "Brief summary of the task content (max 300 chars). " +
               "Empty string if is_task is false.",
           },
         },
@@ -71,10 +71,12 @@ export const EXTRACT_TASK_TOOL: Tool = {
  */
 export const ExtractedTaskSchema = z.object({
   is_task: z.boolean(),
-  title: z.string().max(50),
+  // title/description は Bedrock の maxLength 指示と一致させる。
+  // Slack の短文だけでなく Gmail（やや長文）にも対応するため余裕を持たせる。
+  title: z.string().max(100),
   deadline: z.string().nullable(),
   requester: z.string(),
-  description: z.string().max(100),
+  description: z.string().max(300),
 });
 
 export type ExtractedTask = z.infer<typeof ExtractedTaskSchema>;
