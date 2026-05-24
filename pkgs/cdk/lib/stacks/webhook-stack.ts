@@ -102,8 +102,9 @@ export class SaborouWebhookStack extends cdk.Stack {
       ruleName: `saborou-slack-to-task-extractor-${environment}`,
       description: "Route Slack events to TaskExtractor Lambda",
       eventPattern: {
-        source: ["saborou.webhook"],
-        detailType: ["SlackEvent"],
+        // SlackEvent: Webhook 由来（リアルタイム）／SlackBackfill: 遡及取得 API 由来（C-1）
+        source: ["saborou.webhook", "saborou.backend"],
+        detailType: ["SlackEvent", "SlackBackfill"],
       },
       targets: [
         new eventsTargets.LambdaFunction(props.agents.taskExtractorFn, {
