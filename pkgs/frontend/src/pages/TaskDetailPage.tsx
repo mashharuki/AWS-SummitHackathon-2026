@@ -288,7 +288,7 @@ export function TaskDetailPage() {
       )}
 
       {/* === メインコンテンツ === */}
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 min-h-0">
         <PageHeader
           title={t("tasks.detailTitle")}
           subtitle={`${task.requester ?? ""} ${task.sourceType === "slack" ? "· Slack" : ""}`}
@@ -333,9 +333,9 @@ export function TaskDetailPage() {
           Mobile: 単一カラム + スクロール
           lg+: 2カラム（左: タスク情報/3D/判定、右: チャット）
         */}
-        <div className="flex-1 flex flex-col lg:flex-row lg:overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row lg:overflow-hidden">
           {/* 左カラム: タスク情報・3Dヒーロー・判定結果 */}
-          <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-24 md:pb-8 lg:pb-6 flex flex-col gap-3 pt-3 lg:max-w-lg lg:border-r-[3px] lg:border-[#2B1E16]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pb-24 md:pb-8 lg:pb-6 flex flex-col gap-3 pt-3 lg:max-w-lg lg:border-r-[3px] lg:border-[#2B1E16]">
             {/* タスク情報 */}
             <div className="card-brutal p-3.5">
               {isEditing ? (
@@ -489,7 +489,7 @@ export function TaskDetailPage() {
           </div>
 
           {/* 右カラム: チャット（lg+ のみ） */}
-          <div className="hidden lg:flex lg:flex-col lg:flex-1 p-4 lg:p-6">
+          <div className="hidden lg:flex lg:flex-col lg:flex-1 min-h-0 p-4 lg:p-6">
             <Suspense
               fallback={
                 <div

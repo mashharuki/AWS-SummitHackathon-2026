@@ -71,7 +71,7 @@ export function TaskListPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col flex-1 min-h-0">
         {/* ヘッダー（Logo + アバター）
             md+: Logo は SideNav に表示されるため非表示 */}
         <header
