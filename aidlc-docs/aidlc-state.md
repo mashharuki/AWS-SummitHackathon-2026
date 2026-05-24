@@ -116,6 +116,44 @@
   - `pkgs/frontend`: SettingsPage.tsxにカレンダー/Gmail取り込みボタンUI追加（連携済み時のみ表示・最終取得件数表示）
   - 全品質ゲート通過（typecheck・Biome・全テスト）
 
+#### U-09: gamification（フロントエンドゲーミフィケーション強化・PR#23 由来。元 U-07 表記だが google-integration と番号衝突のため U-09 に振り直し）
+- [ ] Functional Design — スキップ（gamification-strategy-20260523.md が要件ドキュメントとして機能）
+- [ ] NFR Requirements — スキップ（既存フロント NFR を流用）
+- [ ] NFR Design — スキップ（既存フロント NFR を流用）
+- [ ] Infrastructure Design — スキップ（フロントエンドのみ変更、インフラ変更なし）
+- [x] Code Generation — **完了**（2026-05-23T08:30:00Z）。Tier 1〜2 施策 + Tier 4 A/B 施策実装。成果物:
+  - `pkgs/frontend/src/lib/gamificationUtils.ts` — 称号・フェーズ・グレード・コンボ計算ロジック
+  - `pkgs/frontend/src/hooks/useSaboriGamification.ts` — ゲーミフィケーション状態管理フック
+  - `pkgs/frontend/src/components/ui/DependencyScoreDisplay.tsx` — 称号表示・フェーズ色対応（育成ゲーム型 0→100）
+  - `pkgs/frontend/src/components/verdict/SaboriScoreCard.tsx` — A〜Eグレード即時フィードバック
+  - `pkgs/frontend/src/components/ui/GrowthJourneyBanner.tsx` — 称号解除演出 + TitleDisplayCard
+  - `pkgs/frontend/src/components/ui/ComboCounter.tsx` — コンボカウンター表示
+  - `pkgs/frontend/src/components/ui/JackpotOverlay.tsx` — A+ジャックポット全画面演出
+  - `pkgs/frontend/src/pages/TaskDetailPage.tsx` — 全要素統合改修
+  - `pkgs/frontend/src/__tests__/gamification.test.ts` — 27テスト追加（162/162 全パス）
+  - ビルド成功（tsc エラーゼロ / vite build 成功）
+
+  **Tier 2 追加実装（2026-05-23T17:50:00Z）**:
+  - `pkgs/frontend/src/components/ui/SaboriStreakBadge.tsx` — 連続サボり記録（施策3）。ストリーク状態管理・3/7/14日マイルストーン・損失回避メッセージ・StreakDetailCard
+  - `pkgs/frontend/src/components/ui/ManualProgressCard.tsx` — 本音取扱説明書の完成度ゲージ（施策4）。5ステージ（0/30/60/90/100%）・アニメーション増加・useManualProgress フック・ManualProgressInline
+  - `pkgs/frontend/src/lib/achievementSystem.ts` — サボり実績システム（施策5）。9種実績（common/uncommon/rare/legendary）・checkNewAchievements・unlockAchievement
+  - `pkgs/frontend/src/components/ui/AchievementBadge.tsx` — 実績バッジ・トースト通知・コレクション一覧（施策5）。useAchievements フック
+  - `pkgs/frontend/src/hooks/useSaboriGamification.ts` — streak・manualProgress 状態・recordHonneSubmit を追加
+  - `pkgs/frontend/src/__tests__/gamification-tier2.test.ts` — 49テスト追加
+  - 合計テスト: 211/211 全パス / tsc エラーゼロ / vite build 成功
+
+  **Tier 4 残施策 + Tier 5 実装（2026-05-24T01:02:00Z）**:
+  - `pkgs/frontend/src/lib/soundManager.ts` — Web Audio API 音響設計（施策D）。7種SoundType（tap/scoreUp/jackpot/titleUnlock/comboUp/streakLoss/honneSend）・SoundManagerConfig・localStorage設定永続化
+  - `pkgs/frontend/src/components/ui/WeeklyChallengeCard.tsx` — 週次チャレンジUI（施策E）。5種チャレンジ・週番号ローテーション・進捗バー・達成演出・localStorage永続化
+  - `pkgs/frontend/src/components/ui/SeasonBanner.tsx` — シーズンテーマ表示（施策E）。12ヶ月シーズン定義・限定称号チャレンジ表示
+  - `pkgs/frontend/src/components/ui/GuildMockCard.tsx` — サボりギルドUIモック（施策C-1）。メンバーリスト・アクティビティフィード・リアクションボタン・COMING SOONバッジ
+  - `pkgs/frontend/src/components/ui/PvPMockCard.tsx` — PvP対決モックUI（施策C-2）。チャレンジ通知・対決内容・受諾/拒否UX・COMING SOONバッジ
+  - `pkgs/frontend/src/components/OnboardingModal.tsx` — サボり適性クイズ追加（施策F）。5問クイズ・スコア計算（0〜100%）・平均比較テキスト・既存スライドと統合
+  - `pkgs/frontend/src/pages/TaskListPage.tsx` — SeasonBanner・WeeklyChallengeCard 統合（施策E）
+  - `pkgs/frontend/src/__tests__/gamification-tier4.test.ts` — 35テスト追加（WeeklyChallengeCard/SeasonBanner/SoundManager）
+  - `pkgs/frontend/src/__tests__/gamification-tier5.test.ts` — 37テスト追加（OnboardingModal クイズ/統合テスト）
+  - 合計テスト: 283/283 全パス / tsc エラーゼロ / vite build 成功
+
 ### OPERATIONS フェーズ
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
 - [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）

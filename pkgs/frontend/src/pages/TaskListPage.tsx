@@ -1,10 +1,19 @@
+import { OnboardingModal, useOnboarding } from "@/components/OnboardingModal";
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { AppShell } from "@/components/layout/AppShell";
 import { Logo } from "@/components/layout/Logo";
 import { TaskAddModal } from "@/components/task/TaskAddModal";
 import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
+import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
+import { SeasonBanner } from "@/components/ui/SeasonBanner";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { WeeklyChallengeCard } from "@/components/ui/WeeklyChallengeCard";
+import {
+  VerdictHistory,
+  loadVerdictHistory,
+} from "@/components/verdict/VerdictHistory";
 import { useAuth } from "@/hooks/useAuth";
+import { useDependencyScore } from "@/hooks/useDependencyScore";
 import { useTasks } from "@/hooks/useTasks";
 import { PERSONA_BANNERS } from "@/lib/staticContent";
 import { getDisplayName } from "@/lib/utils";
@@ -34,6 +43,10 @@ export function TaskListPage() {
     createTask,
   } = useTasks();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const verdictHistory = loadVerdictHistory();
+  const { shouldShow: showOnboarding, markDone: completeOnboarding } =
+    useOnboarding();
+  const { score, justDecremented } = useDependencyScore();
 
   const activeTasks = tasks.filter((t) => t.status === "approved");
 
@@ -80,21 +93,47 @@ export function TaskListPage() {
           >
             タスク一覧
           </span>
-          {user && (
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{
-                background: "#FED7AA",
-                color: "#EA580C",
-                fontWeight: 700,
-                fontSize: 12,
-              }}
-              aria-label={getDisplayName(user)}
-            >
-              {getDisplayName(user).charAt(0).toUpperCase()}
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <DependencyScoreDisplay
+              score={score}
+              justDecremented={justDecremented}
+            />
+            {user && (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: "#FED7AA",
+                  color: "#EA580C",
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
+                aria-label={getDisplayName(user)}
+              >
+                {getDisplayName(user).charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
         </header>
+
+        {/* ポジショニングタグライン */}
+        <div className="px-4 pt-2" style={{ textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: "#D97706",
+              letterSpacing: "0.04em",
+            }}
+          >
+            AIに、サボっていいと言わせよう
+          </p>
+        </div>
+
+        {/* シーズンバナー + 週次チャレンジ */}
+        <div className="px-4 pt-2 flex flex-col gap-2">
+          <SeasonBanner />
+          <WeeklyChallengeCard />
+        </div>
 
         {/* 今日バナー */}
         <div className="px-4 pt-3 pb-2">
@@ -219,6 +258,13 @@ export function TaskListPage() {
               </div>
             )}
           </section>
+
+          {/* 判定履歴セクション */}
+          {verdictHistory.length > 0 && (
+            <section className="pt-5 pb-2">
+              <VerdictHistory entries={verdictHistory} />
+            </section>
+          )}
         </div>
 
         {/* FAB: タスク追加
@@ -254,6 +300,9 @@ export function TaskListPage() {
             await createTask(data);
           }}
         />
+
+        {/* 初回オンボーディングモーダル */}
+        {showOnboarding && <OnboardingModal onComplete={completeOnboarding} />}
       </div>
     </AppShell>
   );

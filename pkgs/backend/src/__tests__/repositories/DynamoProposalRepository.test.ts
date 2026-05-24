@@ -2,8 +2,8 @@
  * Tests for DynamoProposalRepository
  */
 
-import { describe, it, expect, vi } from "vitest";
 import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { describe, expect, it, vi } from "vitest";
 import { DynamoProposalRepository } from "../../repositories/DynamoProposalRepository.js";
 
 const TABLE = "proposals-test";

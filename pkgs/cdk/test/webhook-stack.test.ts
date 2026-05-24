@@ -1,9 +1,9 @@
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
+import { SaborouAgentStack } from "../lib/stacks/agent-stack";
+import { SaborouApiStack } from "../lib/stacks/api-stack";
 import { SaborouCognitoStack } from "../lib/stacks/cognito-stack";
 import { SaborouDataStack } from "../lib/stacks/data-stack";
-import { SaborouApiStack } from "../lib/stacks/api-stack";
-import { SaborouAgentStack } from "../lib/stacks/agent-stack";
 import { SaborouWebhookStack } from "../lib/stacks/webhook-stack";
 
 function buildTemplate(): Template {

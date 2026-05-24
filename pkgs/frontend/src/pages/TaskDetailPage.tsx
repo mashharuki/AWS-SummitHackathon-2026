@@ -3,21 +3,45 @@ import { SlackShareControl } from "@/components/features/SlackShareControl";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
+import {
+  AchievementToast,
+  useAchievements,
+} from "@/components/ui/AchievementBadge";
+import { ComboCounter } from "@/components/ui/ComboCounter";
+import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
+import { GrowthJourneyBanner } from "@/components/ui/GrowthJourneyBanner";
+import { JackpotOverlay } from "@/components/ui/JackpotOverlay";
+import {
+  ManualProgressCard,
+  useManualProgress,
+} from "@/components/ui/ManualProgressCard";
+import { PositioningCard } from "@/components/ui/PositioningCard";
+import {
+  SaboriStreakBadge,
+  loadStreakState,
+  updateStreak,
+} from "@/components/ui/SaboriStreakBadge";
+import { ShareButton } from "@/components/ui/ShareCard";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
+import { DeferralCountdown } from "@/components/verdict/DeferralCountdown";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
+import { saveVerdictEntry } from "@/components/verdict/VerdictHistory";
 import { useProposalStream } from "@/hooks/useProposalStream";
+import { useSaboriGamification } from "@/hooks/useSaboriGamification";
 import { useTasks } from "@/hooks/useTasks";
 import apiClient from "@/lib/apiClient";
+import { getTitleInfo } from "@/lib/gamificationUtils";
 import { formatDeadlineDisplay } from "@/lib/utils";
 import type { ChatMessage as ChatMessageType } from "@/types/ui";
 /**
- * タスク詳細ページ — U-06-ui-redesign Phase 5 改修版
+ * タスク詳細ページ — U-07-gamification Tier 1〜3 統合版
  *
- * 共有 HTML TaskDetailScreen 準拠（ネオブルータリズム）
- * 構成: PageHeader / タスクヘッダー / 3Dヒーロー（判定の主役）/ VerdictBox /
- *       PsychSignalsCard / EvidenceList / ContextCollectingAnim / ChatPane
+ * ゲーミフィケーション要素を全面統合:
+ * - Tier 1: AI依存度スコア育成ゲーム化、A〜E評価、コンボ、ジャックポット
+ * - Tier 2: ストリーク、取扱説明書完成度ゲージ、実績システム
+ * - Tier 3: サボりシェアカード、競合対比ポジショニングUI
  */
 import type { Proposal, QuickReplyType, Task } from "@saboru/shared";
 import { Edit2, Trash2 } from "lucide-react";
@@ -47,6 +71,29 @@ export function TaskDetailPage() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // ゲーミフィケーション統合フック（Tier 1）
+  const {
+    dependencyScore,
+    justIncremented,
+    combo,
+    currentGrade,
+    titleUnlockEvent,
+    isJackpot,
+    recordSaboriResult,
+    clearTitleUnlockEvent,
+    clearJackpot,
+  } = useSaboriGamification();
+
+  // Tier 2: 取扱説明書完成度
+  const { progress: manualProgress, onHonneSubmit: onManualHonneSubmit } =
+    useManualProgress();
+
+  // Tier 2: 実績システム
+  const { pendingToast, dismissToast, checkAndUnlock } = useAchievements();
+
+  // ストリーク状態（localStorage から読み込み、更新はサボり実行時）
+  const [streakState, setStreakState] = useState(() => loadStreakState());
 
   // タスク取得
   useEffect(() => {
@@ -88,6 +135,20 @@ export function TaskDetailPage() {
     onProposalReady: (p) => setProposal(p),
   });
 
+  // 判定履歴をlocalStorageに保存（task + proposal 両方が揃ったとき）
+  useEffect(() => {
+    if (task && proposal) {
+      saveVerdictEntry({
+        taskId: proposal.taskId,
+        taskTitle: task.title,
+        verdict: proposal.verdict,
+        summaryText: proposal.summaryText,
+        evaluatedAt: proposal.evaluatedAt,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposal?.evaluatedAt]);
+
   // 初回ロード時にストリーミング開始
   useEffect(() => {
     if (taskId && !proposal) {
@@ -95,6 +156,36 @@ export function TaskDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
+
+  // proposal が新しく届いたとき: Tier 1〜2 ゲーミフィケーション結果を記録
+  useEffect(() => {
+    if (proposal?.verdict) {
+      const signals = proposal.psychSignals;
+      const signalCount = signals
+        ? Object.values(signals).filter((v) => v === "high").length
+        : undefined;
+
+      void recordSaboriResult({ verdict: proposal.verdict, signalCount });
+
+      // Tier 2: ストリーク更新（サボれ判定時のみ）
+      if (proposal.verdict === "can_saboru") {
+        const nextStreak = updateStreak(streakState);
+        setStreakState(nextStreak);
+
+        // Tier 2: 実績チェック
+        checkAndUnlock({
+          verdict: proposal.verdict,
+          dependencyScore,
+          comboCount: combo.count,
+          streakDays: nextStreak.days,
+          manualProgress,
+          isJackpot,
+          nowHour: new Date().getHours(),
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- proposal.evaluatedAt を依存キーとして使う意図的な設計
+  }, [proposal?.evaluatedAt]);
 
   // チャットメッセージを型変換
   const chatMessages: ChatMessageType[] = streamMessages.map((m) => ({
@@ -122,6 +213,13 @@ export function TaskDetailPage() {
     }
   };
 
+  const QUICK_REPLY_DELTA: Record<QuickReplyType, number> = {
+    agree_with_ai: 8, // AIに完全同意 → AI依存度 +8%
+    truly_tired: 5, // 疲れているのでサボる → +5%
+    disagree_with_ai: 0,
+    actually_important: 0,
+  };
+
   const handleQuickReply = (type: QuickReplyType, label: string) => {
     void sendQuickReply(label);
     void apiClient
@@ -129,6 +227,33 @@ export function TaskDetailPage() {
       .catch(() => {
         // 非致命的
       });
+
+    // ゲーミフィケーション: agree_with_ai / truly_tired のときスコア更新
+    const delta = QUICK_REPLY_DELTA[type];
+    if (delta > 0 && proposal?.verdict) {
+      void recordSaboriResult({
+        verdict: proposal.verdict,
+        signalCount: proposal.psychSignals
+          ? Object.values(proposal.psychSignals).filter((v) => v === "high")
+              .length
+          : undefined,
+      });
+
+      // Tier 2: 取扱説明書完成度 +3%
+      onManualHonneSubmit();
+
+      // Tier 2: 実績チェック
+      const newProgress = Math.min(100, manualProgress + 3);
+      checkAndUnlock({
+        verdict: proposal.verdict,
+        dependencyScore,
+        comboCount: combo.count,
+        streakDays: streakState.days,
+        manualProgress: newProgress,
+        isJackpot,
+        nowHour: new Date().getHours(),
+      });
+    }
   };
 
   if (!task) {
@@ -149,33 +274,61 @@ export function TaskDetailPage() {
 
   return (
     <AppShell>
+      {/* === ゲーミフィケーション演出レイヤー === */}
+
+      {/* 称号解除バナー（Tier 1） */}
+      <GrowthJourneyBanner
+        titleInfo={titleUnlockEvent}
+        onClose={clearTitleUnlockEvent}
+      />
+
+      {/* A+ ジャックポット全画面演出（Tier 1） */}
+      <JackpotOverlay isActive={isJackpot} onClose={clearJackpot} />
+
+      {/* 実績解除トースト通知（Tier 2） */}
+      {pendingToast && (
+        <AchievementToast achievement={pendingToast} onClose={dismissToast} />
+      )}
+
+      {/* === メインコンテンツ === */}
       <div className="flex flex-col h-full">
         <PageHeader
           title={t("tasks.detailTitle")}
           subtitle={`${task.requester ?? ""} ${task.sourceType === "slack" ? "· Slack" : ""}`}
           onBack={() => navigate("/tasks")}
           right={
-            !isEditing ? (
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  aria-label={t("tasks.editTask")}
-                  className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
-                >
-                  <Edit2 size={15} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={isDeleting}
-                  aria-label={t("tasks.deleteTask")}
-                  className="p-1.5 text-red-500 hover:bg-red-50 rounded"
-                >
-                  <Trash2 size={15} aria-hidden="true" />
-                </button>
-              </div>
-            ) : undefined
+            <div className="flex items-center gap-2">
+              {/* コンボカウンター */}
+              <ComboCounter combo={combo} />
+
+              {/* AI依存度スコア（育成ゲーム型） */}
+              <DependencyScoreDisplay
+                score={dependencyScore}
+                justIncremented={justIncremented}
+              />
+
+              {!isEditing && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    aria-label={t("tasks.editTask")}
+                    className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
+                  >
+                    <Edit2 size={15} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete()}
+                    disabled={isDeleting}
+                    aria-label={t("tasks.deleteTask")}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 size={15} aria-hidden="true" />
+                  </button>
+                </>
+              )}
+            </div>
           }
         />
 
@@ -262,18 +415,54 @@ export function TaskDetailPage() {
               />
             )}
 
+            {/* 時間軸付き先延ばし可視化 — 競合との決定的差別化要素 */}
+            {proposal?.nextCheckAt && verdictForDisplay === "can_saboru" && (
+              <DeferralCountdown
+                nextCheckAt={proposal.nextCheckAt}
+                onRecheck={startProposal}
+              />
+            )}
+
             {/* C-2: 判定を Slack に共有（連携済み時のみ表示） */}
             {proposal && taskId && <SlackShareControl taskId={taskId} />}
 
             {/* PsychSignals（verdict 連動の静的プリセット表示） */}
             {verdictForDisplay && (
-              <PsychSignalsCard verdict={verdictForDisplay} />
+              <PsychSignalsCard
+                verdict={verdictForDisplay}
+                psychSignals={proposal?.psychSignals}
+              />
             )}
 
             {/* reasoning リスト */}
             {proposal?.reasoning && proposal.reasoning.length > 0 && (
               <EvidenceList items={proposal.reasoning} />
             )}
+
+            {/* シェアボタン（Tier 3 施策6）: 判定結果がある場合のみ表示 */}
+            {proposal?.verdict && currentGrade && (
+              <ShareButton
+                verdict={proposal.verdict}
+                taskTitle={task.title}
+                dependencyScore={dependencyScore}
+                grade={currentGrade}
+                titleName={getTitleInfo(dependencyScore).title}
+              />
+            )}
+
+            {/* ストリークバッジ（Tier 2 施策3） */}
+            {streakState.days > 0 && (
+              <SaboriStreakBadge
+                streakDays={streakState.days}
+                showLossWarning
+              />
+            )}
+
+            {/* 取扱説明書完成度（Tier 2 施策4） */}
+            <ManualProgressCard progress={manualProgress} />
+
+            {/* 競合対比ポジショニングUI（Tier 3 施策7） */}
+            <PositioningCard />
 
             {/* チャット: モバイル/タブレットのみここに表示（lg+ は右カラムへ） */}
             <div className="lg:hidden" style={{ height: 480 }}>

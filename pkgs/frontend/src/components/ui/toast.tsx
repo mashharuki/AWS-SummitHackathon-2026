@@ -1,7 +1,7 @@
+import i18n from "@/i18n";
 import { cn } from "@/lib/utils";
 import type { ToastMessage } from "@/types/ui";
 import { X } from "lucide-react";
-import i18n from "@/i18n";
 
 interface ToastItemProps {
   toast: ToastMessage;

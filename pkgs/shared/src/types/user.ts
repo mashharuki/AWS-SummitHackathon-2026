@@ -36,4 +36,6 @@ export interface User {
   createdAt: string;
   /** Update datetime (ISO 8601) */
   updatedAt: string;
+  /** AI dependency score (0-100). Starts at 100, decreases as user relies on AI judgements. */
+  dependencyScore?: number;
 }

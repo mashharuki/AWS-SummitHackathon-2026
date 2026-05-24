@@ -1,8 +1,8 @@
 import * as cdk from "aws-cdk-lib";
-import * as iam from "aws-cdk-lib/aws-iam";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ssm from "aws-cdk-lib/aws-ssm";
@@ -105,7 +105,10 @@ export class SaborouApiStack extends cdk.Stack {
     honoFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+        actions: [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream",
+        ],
         resources: [
           // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (inference-profile ARN にはアカウント ID が必要)
           `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,

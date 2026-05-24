@@ -2,8 +2,8 @@
  * Tests for DynamoUserRepository
  */
 
-import { describe, it, expect, vi } from "vitest";
 import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { describe, expect, it, vi } from "vitest";
 import { DynamoUserRepository } from "../../repositories/DynamoUserRepository.js";
 
 const TABLE = "users-test";

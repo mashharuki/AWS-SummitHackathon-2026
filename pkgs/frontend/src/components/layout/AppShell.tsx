@@ -50,7 +50,11 @@ export function AppShell({ children, hideBottomNav = false }: AppShellProps) {
           md+: 制約なし（SideNav の隣にフル幅で展開）
         */}
         <div className="w-full max-w-md mx-auto md:max-w-none md:mx-0 flex-1 flex flex-col">
-          <main className="flex-1 flex flex-col" id="main-content" tabIndex={-1}>
+          <main
+            className="flex-1 flex flex-col"
+            id="main-content"
+            tabIndex={-1}
+          >
             {children}
           </main>
           {/* BottomNav: モバイルのみ */}

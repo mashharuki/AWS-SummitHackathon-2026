@@ -113,12 +113,10 @@ export class SaboriProposerAgent {
       personaId: rendered.personaId,
       evaluatedAt,
       nextCheckAt,
-      tokenCount: 0, // 下記の使用量からリポジトリ保存後に設定
+      tokenCount: 0,
+      psychSignals: contextSignals.psychSignals,
     };
 
-    // tokenCount はフェーズ 2+3 の使用量が必要なためリポジトリ保存後に設定
-    // MVP ではフェーズ 2 のみのおよそのカウントを設定
-    // (フェーズ 3 Haiku のトークンは少量でログで個別追跡)
     const proposal = await this.proposalRepository.save(proposalInput);
 
     const totalMs = Date.now() - startMs;
@@ -258,6 +256,7 @@ export class SaboriProposerAgent {
       evaluatedAt,
       nextCheckAt,
       tokenCount: 0,
+      psychSignals: contextSignals.psychSignals,
     };
 
     const proposal = await this.proposalRepository.save(proposalInput);
