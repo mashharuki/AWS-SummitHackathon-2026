@@ -46,6 +46,7 @@ export function TaskListPage() {
   const verdictHistory = loadVerdictHistory();
   const { shouldShow: showOnboarding, markDone: completeOnboarding } =
     useOnboarding();
+  const { score, justDecremented } = useDependencyScore();
 
   const activeTasks = tasks.filter((t) => t.status === "approved");
 

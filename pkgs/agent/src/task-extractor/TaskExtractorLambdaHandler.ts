@@ -1,7 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { BedrockClientAdapter } from "../bedrock/BedrockClientAdapter.js";
-import { DynamoSlackUserLookupRepository } from "../repositories/DynamoSlackUserLookupRepository.js";
 import { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
 import {
   EventBridgeSlackBackfillSchema,
@@ -33,7 +32,6 @@ const bedrockClient = new BedrockClientAdapter(
   process.env.BEDROCK_REGION ?? "ap-northeast-1",
 );
 const repository = new DynamoTaskCandidateRepository();
-const slackUserLookup = new DynamoSlackUserLookupRepository();
 
 /** Bedrock でタスク抽出を実行し結果をログする共通処理 */
 async function runExtraction(payload: SlackEventPayload): Promise<void> {

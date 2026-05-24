@@ -9,10 +9,7 @@ import {
 } from "@/components/ui/AchievementBadge";
 import { ComboCounter } from "@/components/ui/ComboCounter";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
-import {
-  GrowthJourneyBanner,
-  TitleDisplayCard,
-} from "@/components/ui/GrowthJourneyBanner";
+import { GrowthJourneyBanner } from "@/components/ui/GrowthJourneyBanner";
 import { JackpotOverlay } from "@/components/ui/JackpotOverlay";
 import {
   ManualProgressCard,
@@ -26,10 +23,8 @@ import {
 } from "@/components/ui/SaboriStreakBadge";
 import { ShareButton } from "@/components/ui/ShareCard";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
-import { DeferralCountdown } from "@/components/verdict/DeferralCountdown";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
-import { SaboriScoreCard } from "@/components/verdict/SaboriScoreCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
 import { saveVerdictEntry } from "@/components/verdict/VerdictHistory";
 import { useSaboriGamification } from "@/hooks/useSaboriGamification";

@@ -74,7 +74,8 @@ const resources = {
         syncMessages: "取り込む",
         syncing: "取り込み中…",
         syncResult: "{{queued}} 件をタスク候補に取り込んだよ",
-        noChannels: "SABOROU を招待したチャンネルがありません（/invite @SABOROU）",
+        noChannels:
+          "SABOROU を招待したチャンネルがありません（/invite @SABOROU）",
         shareToSlack: "Slackに共有",
         sharing: "共有中…",
         shareResult: "Slack に判定を投稿したよ",

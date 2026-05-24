@@ -142,7 +142,7 @@ export class SaborouAgentStack extends cdk.Stack {
     // 接続テーブル読み取り権限（Slack user ID → cognitoSub マッピング解決用）
     props.data.tables.connections.grantReadData(taskExtractorFn);
     props.data.secrets.slackClientSecret.grantRead(taskExtractorFn);
-    
+
     // --- SaboriProposer DLQ ---
     const saboriProposerDlq = new sqs.Queue(this, "SaboriProposerDlq", {
       queueName: `saborou-sabori-proposer-dlq-${environment}`,

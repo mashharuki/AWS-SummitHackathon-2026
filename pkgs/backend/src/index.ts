@@ -128,10 +128,7 @@ export function createApp() {
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
-  app.route(
-    "/api/slack",
-    createSlackRoute(taskRepository, proposalRepository),
-  );
+  app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
 
   // OpenAPI / Swagger UI
   app.get("/doc", (c) => c.json(openApiDoc));
