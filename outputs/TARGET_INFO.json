@@ -1,0 +1,10 @@
+{
+  "target_repo": "https://github.com/mashharuki/AWS-SummitHackathon-2026",
+  "target_ref_type": "commit",
+  "target_ref_label": "main",
+  "target_commit": "main",
+  "target_commit_short": "",
+  "project_name": "AWS-Summit-Hackaton2026",
+  "target_language": "TypeScript",
+  "target_layer": "other"
+}

@@ -1,0 +1,197 @@
+{
+  "program_name": "SABOROU (サボロー) — AWS Summit Japan 2026 Hackathon",
+  "program_url": "https://github.com/mashharuki/AWS-SummitHackathon-2026",
+  "description": "AI駆動タスク管理サービス。Slack・Gmail・Calendarから取り込んだタスクをAIが文脈分析し「今サボっていい理由」を根拠付きで提案する。",
+  "tech_stack": {
+    "frontend": "React + Vite + TypeScript (CloudFront + S3)",
+    "backend": "AWS Lambda + API Gateway + Hono (TypeScript)",
+    "auth": "Amazon Cognito + Slack OAuth 2.0",
+    "database": "Amazon DynamoDB",
+    "ai_agent": "Amazon Bedrock",
+    "secrets": "AWS Secrets Manager",
+    "infra": "AWS CDK (TypeScript), リージョン: ap-northeast-1"
+  },
+  "in_scope_components": [
+    {
+      "id": "S-01",
+      "name": "REST API — 認証・認可",
+      "path": "pkgs/backend/src/routes/auth.ts",
+      "description": "Cognito JWT 検証、Slack OAuth 2.0 フロー (state パラメータ、CSRF 対策)",
+      "threat_focus": [
+        "認証バイパス",
+        "OAuthフロー改ざん",
+        "stateパラメータ欠落"
+      ]
+    },
+    {
+      "id": "S-02",
+      "name": "REST API — タスク操作",
+      "path": "pkgs/backend/src/routes/tasks.ts",
+      "description": "GET/POST/PATCH/DELETE /tasks および /tasks/candidates — 全ルートに authMiddleware 適用済み",
+      "threat_focus": [
+        "水平権限昇格 (他ユーザのタスク参照・変更)",
+        "入力バリデーション迂回",
+        "論理削除後のデータ漏洩"
+      ]
+    },
+    {
+      "id": "S-03",
+      "name": "REST API — サボり提案 (AI Agent)",
+      "path": "pkgs/backend/src/routes/proposals.ts",
+      "description": "Bedrock Agent 呼び出しによるサボり理由生成",
+      "threat_focus": [
+        "プロンプトインジェクション",
+        "エージェント出力を通じた情報漏洩",
+        "コスト増大DoS (過剰リクエスト)"
+      ]
+    },
+    {
+      "id": "S-04",
+      "name": "Slack Webhook エンドポイント",
+      "path": "pkgs/backend/src/routes/webhooks.ts",
+      "description": "Slack Events API / Interactive Components 受信。HMAC-SHA256 署名検証を実施",
+      "threat_focus": [
+        "署名検証バイパス",
+        "リプレイアタック (タイムスタンプ検証)",
+        "ペイロードインジェクション"
+      ]
+    },
+    {
+      "id": "S-05",
+      "name": "Slack OAuthトークン管理",
+      "path": "pkgs/backend/src/routes/auth.ts, pkgs/backend/src/config/secrets.ts",
+      "description": "Slack bot トークンを Secrets Manager に保存・取得",
+      "threat_focus": [
+        "トークン漏洩",
+        "Secrets Manager アクセス権限過剰",
+        "ログへのトークン出力"
+      ]
+    },
+    {
+      "id": "S-06",
+      "name": "フロントエンド SPA",
+      "path": "pkgs/frontend/src/",
+      "description": "React SPA。CloudFront + S3 でホスティング",
+      "threat_focus": [
+        "XSS (AI 生成テキスト出力箇所)",
+        "CORS 設定ミス",
+        "機密情報のローカルストレージ保存"
+      ]
+    },
+    {
+      "id": "S-07",
+      "name": "DynamoDB アクセス制御",
+      "path": "pkgs/backend/src/repositories/",
+      "description": "Tasks / Users / TaskCandidates / ServiceConnections テーブル",
+      "threat_focus": [
+        "IAM ロール過剰権限",
+        "パーティションキーを使った他ユーザデータへのアクセス",
+        "スキャン操作の乱用"
+      ]
+    },
+    {
+      "id": "S-08",
+      "name": "CDK インフラ定義",
+      "path": "pkgs/cdk/lib/",
+      "description": "Lambda / API Gateway / Cognito / DynamoDB / CloudFront / Bedrock 各スタック",
+      "threat_focus": [
+        "IAM 最小権限違反",
+        "S3バケットパブリック公開設定",
+        "Lambda 環境変数への機密情報ハードコード"
+      ]
+    }
+  ],
+  "out_of_scope_components": [
+    {
+      "id": "O-01",
+      "name": "AWS マネージドサービス基盤",
+      "description": "Lambda ランタイム、DynamoDB ストレージ層、Cognito サービス本体など AWS が管理するレイヤー"
+    },
+    {
+      "id": "O-02",
+      "name": "Slack プラットフォーム",
+      "description": "Slack API サーバ自体の脆弱性"
+    },
+    {
+      "id": "O-03",
+      "name": "Amazon Bedrock モデル",
+      "description": "基盤モデル (Claude 等) 自体の動作。プロンプトインジェクションは S-03 として対象"
+    },
+    {
+      "id": "O-04",
+      "name": "CI/CD パイプライン",
+      "description": "GitHub Actions ワークフロー自体の設定 (本番デプロイなし)"
+    }
+  ],
+  "scope_notes": [
+    "本プログラムはAWS Summit Japan 2026ハッカソン向けのセキュリティスコープ定義です。",
+    "バウンティ報酬は存在しません (hackathon project)。",
+    "重大度分類は OWASP Risk Rating Methodology に基づきます。",
+    "全APIエンドポイントは ap-northeast-1 リージョンの API Gateway 経由で公開されます。",
+    "Slack OAuth トークンは AWS Secrets Manager に保存されており、コードへのハードコード禁止。",
+    "authMiddleware により全タスク操作に Cognito JWT 認証が必須です。"
+  ],
+  "severity_classification": {
+    "Critical": {
+      "cvss_range": "9.0 - 10.0",
+      "bounty_usd_max": 0,
+      "criteria": "認証なしで任意ユーザのデータを読み書き・削除できる。Secrets Manager の Slack トークン無断取得。AIエージェント経由での AWS リソース操作。",
+      "examples": [
+        "authMiddleware バイパスによる全ユーザのタスク一覧取得",
+        "Slack OAuthトークン漏洩 (ログ出力・レスポンスボディへの混入)",
+        "プロンプトインジェクションによる Bedrock Agent の権限外操作"
+      ],
+      "impact": "ユーザデータの大規模漏洩または完全な権限昇格。"
+    },
+    "High": {
+      "cvss_range": "7.0 - 8.9",
+      "bounty_usd_max": 0,
+      "criteria": "認証済みユーザが他ユーザのリソースに不正アクセスできる水平権限昇格。Slack Webhook 署名検証バイパス。",
+      "examples": [
+        "GET /tasks/:id で他ユーザの taskId を指定してデータ取得",
+        "Slack 署名検証をタイムスタンプリプレイで迂回し偽イベント送信",
+        "Cognito JWT の alg:none 攻撃による認証バイパス"
+      ],
+      "impact": "特定ユーザのデータ漏洩または不正な操作が可能。"
+    },
+    "Medium": {
+      "cvss_range": "4.0 - 6.9",
+      "bounty_usd_max": 0,
+      "criteria": "XSS、CSRF、過剰な情報漏洩、入力バリデーション不備によるサービス影響。",
+      "examples": [
+        "AIが生成したタスク提案テキストを通じた Stored XSS",
+        "OAuth state パラメータ欠落による CSRF",
+        "エラーレスポンスへの内部スタックトレース / AWS ARN 漏洩"
+      ],
+      "impact": "一部機能の悪用またはユーザセッションの侵害が可能。"
+    },
+    "Low": {
+      "cvss_range": "0.1 - 3.9",
+      "bounty_usd_max": 0,
+      "criteria": "攻撃条件が複雑、または影響が軽微なセキュリティ問題。",
+      "examples": [
+        "CloudFront の Content-Security-Policy ヘッダ未設定",
+        "DynamoDB テーブルの暗号化キー設定が AWS マネージドキーのまま",
+        "Lambda 環境変数に非機密設定情報が平文で含まれる"
+      ],
+      "impact": "直接的な悪用は困難だが、多層防御の観点で改善が望ましい。"
+    },
+    "Informational": {
+      "cvss_range": "N/A",
+      "bounty_usd_max": 0,
+      "criteria": "悪用可能な脆弱性ではないが、セキュリティ品質向上に資する指摘。",
+      "examples": [
+        "CDK スタックの IAM ポリシーが wildcard (*) を含む箇所の列挙",
+        "Secrets Manager のローテーション未設定",
+        "Lambda タイムアウト設定が過大でコスト増大リスクあり"
+      ],
+      "impact": "直接的なセキュリティ影響なし。改善推奨。"
+    }
+  },
+  "_provenance": {
+    "source": "project-specific",
+    "generated_at": "2026-05-25",
+    "note": "SABOROU プロジェクト向けにスクラッチで作成。Ethereum bug bounty テンプレートから完全置き換え済み。",
+    "custom": true
+  }
+}
