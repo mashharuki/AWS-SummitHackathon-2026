@@ -34,6 +34,17 @@ export const SABORU_3D_INK = new THREE.Color("#1F2937");
 /** 接地影の色（HTML border-heavy と同じ） */
 export const SABORU_3D_SHADOW = "#2B1E16";
 
+/**
+ * ペルソナ別3Dボディカラー（SaborouCharacter2D の PERSONA_BODY と色を同期）
+ * 体色のみペルソナで上書きし、表情・天気は verdict 由来を維持する
+ */
+export const PERSONA_3D_BODY: Record<string, THREE.Color> = {
+  saboru_ottori: new THREE.Color("#F97316"),
+  saboru_strict: new THREE.Color("#6B7280"),
+  saboru_psy: new THREE.Color("#6366F1"),
+  saboru_hacker: new THREE.Color("#10B981"),
+};
+
 /** 3Dコンテナの背景色（憲法3: cream で HTML 世界観に溶け込ませる） */
 export const SABORU_3D_BG_CLEAR = "#FFFAF5";
 

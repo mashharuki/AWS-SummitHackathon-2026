@@ -27,10 +27,10 @@ export function EvidenceList({ items, title }: EvidenceListProps) {
       >
         {resolvedTitle}
       </h3>
-      <ul className="flex flex-col gap-1.5" role="list">
-        {items.map((item, i) => (
+      <ul className="flex flex-col gap-1.5">
+        {items.map((item) => (
           <li
-            key={i}
+            key={item}
             className="flex items-start gap-2 text-saboru-ink"
             style={{ fontSize: 12, lineHeight: 1.5 }}
           >

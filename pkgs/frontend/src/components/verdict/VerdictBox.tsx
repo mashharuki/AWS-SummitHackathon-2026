@@ -28,8 +28,7 @@ export function VerdictBox({
         : t("verdict.mustDo");
 
   return (
-    <div
-      role="region"
+    <section
       aria-label={`Saborou verdict: ${verdictLabel}`}
       className="card-brutal p-3.5"
     >
@@ -67,6 +66,6 @@ export function VerdictBox({
           <span>{evaluatedAt}</span>
         </p>
       )}
-    </div>
+    </section>
   );
 }

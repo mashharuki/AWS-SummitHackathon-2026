@@ -22,6 +22,7 @@ describe("SaborouDataStack", () => {
   test("All tables use PAY_PER_REQUEST billing mode", () => {
     const tables = template.findResources("AWS::DynamoDB::Table");
     const tableList = Object.values(tables);
+    // biome-ignore lint/complexity/noForEach lint/suspicious/noExplicitAny: forEach is idiomatic in CDK test helpers; any is required for CDK template shape
     tableList.forEach((table: any) => {
       expect(table.Properties.BillingMode).toBe("PAY_PER_REQUEST");
     });
@@ -30,6 +31,7 @@ describe("SaborouDataStack", () => {
   test("All tables have encryption enabled", () => {
     const tables = template.findResources("AWS::DynamoDB::Table");
     const tableList = Object.values(tables);
+    // biome-ignore lint/complexity/noForEach lint/suspicious/noExplicitAny: forEach is idiomatic in CDK test helpers; any is required for CDK template shape
     tableList.forEach((table: any) => {
       expect(table.Properties.SSESpecification?.SSEEnabled).toBe(true);
     });
@@ -91,6 +93,7 @@ describe("SaborouDataStack", () => {
     // context: environment = "test" (非 prod) なので DESTROY が正しい
     const tables = template.findResources("AWS::DynamoDB::Table");
     const tableList = Object.values(tables);
+    // biome-ignore lint/complexity/noForEach lint/suspicious/noExplicitAny: forEach is idiomatic in CDK test helpers; any is required for CDK template shape
     tableList.forEach((table: any) => {
       expect(table.DeletionPolicy).toBe("Delete");
       expect(table.UpdateReplacePolicy).toBe("Delete");

@@ -223,9 +223,9 @@ export function ManualPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {traits.map((t, i) => (
+              {traits.map((t) => (
                 <div
-                  key={i}
+                  key={t.color}
                   className="card-brutal p-3"
                   style={{ borderLeft: `6px solid ${t.color}` }}
                 >

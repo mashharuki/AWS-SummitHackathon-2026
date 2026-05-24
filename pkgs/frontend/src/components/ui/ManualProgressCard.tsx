@@ -236,7 +236,7 @@ export function ManualProgressCard({
           height: 12,
           background: "#E5E7EB",
           borderRadius: 9999,
-          border: `2px solid #2B1E16`,
+          border: "2px solid #2B1E16",
           overflow: "hidden",
           marginBottom: 8,
           position: "relative",
@@ -315,10 +315,10 @@ export function ManualProgressCard({
 
       {/* 完成時の特別メッセージ */}
       {isComplete && (
-        <div
-          role="status"
+        <output
           aria-live="polite"
           style={{
+            display: "block",
             marginTop: 8,
             padding: "6px 10px",
             borderRadius: 8,
@@ -331,7 +331,7 @@ export function ManualProgressCard({
           }}
         >
           {t("gamification.manualCompleteMessage")}
-        </div>
+        </output>
       )}
 
       <style>{`

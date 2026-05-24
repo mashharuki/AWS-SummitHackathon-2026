@@ -51,7 +51,7 @@ export class AppError extends Error {
     this.details = details;
     // V8 環境でスタックトレースを正しく Error に付与する
     const errorConstructor = Error as typeof Error & {
-      captureStackTrace?: (target: Error, constructor: unknown) => void;
+      captureStackTrace?: (target: Error, ctor: unknown) => void;
     };
     if (errorConstructor.captureStackTrace) {
       errorConstructor.captureStackTrace(this, AppError);
@@ -66,7 +66,7 @@ export class AppError extends Error {
    * サーバーサイドのログ (CloudWatch) は独立して動作し、常に詳細を記録する
    */
   serialize(): SerializedError {
-    const nodeEnv = process.env["NODE_ENV"];
+    const nodeEnv = process.env.NODE_ENV;
     const isDev = nodeEnv === "development" || nodeEnv === "test";
     if (!isDev) {
       return {

@@ -109,7 +109,7 @@ export class SaborouAgentStack extends cdk.Stack {
         BEDROCK_REGION: "ap-northeast-1",
         // per-user の Slack Bot Token シークレット名プレフィックス。
         // ContextCollector が `${prefix}${cognitoSub}` で個別トークンを取得する。
-        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
+        SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
         PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
     });
@@ -179,7 +179,7 @@ export class SaborouAgentStack extends cdk.Stack {
         DYNAMODB_TABLE_TASKS: props.data.tables.tasks.tableName,
         BEDROCK_REGION: "ap-northeast-1",
         // per-user の Slack Bot Token シークレット名プレフィックス（ContextCollector が参照）
-        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
+        SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
         // DYNAMODB_TABLE_PERSONAS: 削除 (MVP スコープ — U-03b では未使用)
         PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },

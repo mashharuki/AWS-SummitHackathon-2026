@@ -24,7 +24,7 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
   const [deadline, setDeadline] = useState("");
   const [description, setDescription] = useState("");
   const [isAdding, setIsAdding] = useState(false);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -74,12 +74,12 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
   };
 
   return (
-    <div
+    <dialog
+      open
       ref={modalRef}
       className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
       aria-labelledby="add-task-title"
+      style={{ border: "none", maxWidth: "none", margin: 0, padding: 0 }}
     >
       <div className="bg-white rounded-2xl w-full max-w-md shadow-xl">
         {/* ヘッダー */}
@@ -164,6 +164,6 @@ export function TaskAddModal({ isOpen, onClose, onAdd }: TaskAddModalProps) {
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   );
 }

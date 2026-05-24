@@ -46,15 +46,15 @@ describe("AppError", () => {
   describe("serialize()", () => {
     beforeEach(() => {
       // Default: development mode
-      delete process.env["NODE_ENV"];
+      process.env.NODE_ENV = undefined;
     });
 
     afterEach(() => {
-      delete process.env["NODE_ENV"];
+      process.env.NODE_ENV = undefined;
     });
 
     it("should return detailed info in development mode", () => {
-      process.env["NODE_ENV"] = "development";
+      process.env.NODE_ENV = "development";
       const err = new AppError("TASK_NOT_FOUND", "Task missing", 404, {
         id: "123",
       });
@@ -66,7 +66,7 @@ describe("AppError", () => {
     });
 
     it("should return generic message in production mode", () => {
-      process.env["NODE_ENV"] = "production";
+      process.env.NODE_ENV = "production";
       const err = new AppError("TASK_NOT_FOUND", "Task missing", 404, {
         id: "123",
       });

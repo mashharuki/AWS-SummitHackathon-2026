@@ -148,9 +148,9 @@ export function GuildMockCard({ className = "" }: GuildMockCardProps) {
           メンバー
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          {MOCK_GUILD_MEMBERS.map((member, idx) => (
+          {MOCK_GUILD_MEMBERS.map((member) => (
             <div
-              key={`guild-member-${idx}`}
+              key={member.name}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -225,7 +225,7 @@ export function GuildMockCard({ className = "" }: GuildMockCardProps) {
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {MOCK_FEED.map((item, idx) => (
             <div
-              key={`feed-${idx}`}
+              key={`${item.member}-${item.action}`}
               style={{
                 display: "flex",
                 alignItems: "center",

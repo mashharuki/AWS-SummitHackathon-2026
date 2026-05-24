@@ -282,6 +282,152 @@ Slack ワークスペースで **「Apps」** セクションに `SABOROU` が�
 
 ---
 
+## STEP 6.5: ユーザー向け — 設定画面から Slack 連携（Bot Token 有効化）
+
+STEP 6-1〜6-3 は管理者によるアプリインストール。  
+次に、各ユーザーが SABOROU の設定画面から OAuth フローを実行し、**per-user Bot Token** を有効化する。
+
+### 前提条件
+
+| 項目 | 確認内容 |
+|------|---------|
+| STEP 2 完了 | Bot Token Scopes（`channels:history` 等）と Redirect URL が登録済みであること |
+| STEP 3 完了 | `client-secret-dev` に `{"clientId":"...","clientSecret":"..."}` 形式で登録済みであること |
+| CDK デプロイ | `SaborouApiStack` がデプロイ済みで `SLACK_CLIENT_ID` 環境変数が設定済みであること |
+
+> **`SLACK_CLIENT_ID` の確認方法**:
+> ```bash
+> aws lambda get-function-configuration \
+>   --function-name saborou-api-dev \
+>   --region ap-northeast-1 \
+>   --query 'Environment.Variables.SLACK_CLIENT_ID' \
+>   --output text
+> ```
+> 空の場合は `pkgs/cdk/lib/stacks/api-stack.ts` の `HonoFn` 環境変数に追加して再デプロイする。
+
+### 手順
+
+1. ブラウザで SABOROU フロントエンドを開く
+
+   | 環境 | URL |
+   |------|-----|
+   | 本番 | https://dd85fdpvb9hjv.cloudfront.net |
+   | ローカル | http://localhost:5173 |
+
+2. Cognito でサインアップ（初回）またはログイン
+
+3. 画面下部ナビ → **設定（⚙️）アイコン** をタップ → 設定ページへ遷移
+
+4. **「サービス連携」** セクションの Slack 行にある **「連携」** ボタンをクリック
+
+   > ボタンは未連携時のみ表示される。連携済みの場合は **「接続済み」** バッジが表示される。
+
+5. Slack の OAuth 承認ページ（`slack.com/oauth/v2/authorize`）にリダイレクトされる  
+   → 要求されるスコープ一覧を確認し **「許可する」** をクリック
+
+6. SABOROU の設定ページにリダイレクトバック。Slack 行が **「接続済み」** に変わることを確認
+
+   成功すると内部で以下が自動実行される:
+   | 処理 | 内容 |
+   |------|------|
+   | Bot Token 保存 | `saborou/slack-bot-token/<cognitoSub>` に `xoxb-...` を保存 |
+   | ユーザー属性更新 | Cognito ユーザーに `slackUserId`、`slackTeamId` を記録 |
+   | Connections 保存 | DynamoDB `Connections` テーブルに `service=slack` レコードを作成 |
+
+### トラブル：「連携」ボタンを押してもリダイレクトされない
+
+```bash
+# API Lambda の環境変数を確認
+aws lambda get-function-configuration \
+  --function-name saborou-api-dev \
+  --region ap-northeast-1 \
+  --query 'Environment.Variables' \
+  --output json | grep SLACK_CLIENT_ID
+```
+
+`null` または空の場合は `api-stack.ts` に `SLACK_CLIENT_ID` を追加して再デプロイ:
+
+```bash
+pnpm cdk run deploy SaborouApiStack --require-approval never
+```
+
+### トラブル：OAuth コールバック後に「接続済み」にならない
+
+```bash
+# API Lambda ログでコールバックエラーを確認
+aws logs tail /aws/lambda/saborou-api-dev \
+  --region ap-northeast-1 \
+  --follow \
+  --since 5m \
+  --filter-pattern "slack/callback"
+```
+
+よくある原因:
+- `client-secret-dev` が JSON 形式でない（単体文字列になっている）
+- Redirect URL が Slack API ポータルに登録されていない（STEP 2-2 参照）
+
+---
+
+## STEP 6.6: 設定画面からの機能テスト
+
+Slack 連携（Bot Token 有効化）が完了したら、以下の順序で SABOROU の各機能を画面から確認する。
+
+### テスト 1: 過去メッセージの遡及取り込み（SlackSyncControl）
+
+設定ページの Slack 連携後に表示される **「過去メッセージを取り込む」** フォームを使う。
+
+1. 設定ページ → Slack 行の下に表示される取り込みフォームを確認
+2. Slack の **チャンネル ID**（`C` で始まる10文字の ID）を入力
+
+   > チャンネル ID の確認方法: Slack でチャンネルを右クリック → 「チャンネル詳細を表示」→ 最下部に表示される
+
+3. 取得件数上限（デフォルト: 50）を必要に応じて変更
+4. **「取り込む」** ボタンをクリック → `{ "scanned": N, "queued": M }` が表示されれば成功
+5. タスクタブを開き、「候補」ステータスのタスクが追加されていることを確認
+
+   > タスクが表示されない場合は TaskExtractor Lambda のログを確認:
+   > ```bash
+   > aws logs tail /aws/lambda/saborou-task-extractor-dev \
+   >   --region ap-northeast-1 --follow --since 3m
+   > ```
+
+### テスト 2: タスク候補の承認
+
+1. タスクタブ → **候補リスト**に Slack から抽出されたタスクが表示されることを確認
+2. タスクをタップ → **「承認」** ボタンをクリック
+3. タスクが「承認済み」に移動することを確認
+
+### テスト 3: サボり判定の確認（TaskDetail）
+
+1. 承認済みタスクをタップ → タスク詳細画面（`/tasks/:id`）を開く
+2. 画面下部に判定結果（**「サボれる」/ 「微妙」/ 「やるべき」**）が表示されることを確認
+3. サボローキャラクターが口調付きでメッセージを表示していることを確認
+
+   > 判定が表示されない場合は API Lambda ログを確認:
+   > ```bash
+   > aws logs tail /aws/lambda/saborou-api-dev \
+   >   --region ap-northeast-1 --follow --since 3m
+   > ```
+
+### テスト 4: Slack への判定投稿（SlackShareControl）
+
+1. タスク詳細画面 → **「Slack に共有」** ボタン（存在する場合）をクリック
+2. チャンネル ID とスレッド TS を入力（任意）
+3. **「投稿」** → Slack チャンネルにサボロー口調のメッセージが投稿されることを確認
+
+   ```
+   POST /api/slack/notify-task
+   { "taskId": "...", "channelId": "C12345" }
+   ```
+
+### テスト 5: Slack 連携解除
+
+1. 設定ページ → Slack 行の **「切断」** ボタンをクリック
+2. Slack 行が **「連携」** ボタンに戻ることを確認
+3. 再度「連携」→ OAuth フロー → 「接続済み」になることを確認
+
+---
+
 ## STEP 7: 動作確認（E2E テスト）
 
 ### 7-1. テスト用チャンネルに App を招待

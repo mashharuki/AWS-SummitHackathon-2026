@@ -71,6 +71,7 @@ export function SaborouCharacter2D({
         width={size}
         height={size}
         style={{ overflow: "visible" }}
+        aria-hidden="true"
       >
         {/* 接地影 */}
         <ellipse cx="60" cy="108" rx="32" ry="4" fill="#00000018" />

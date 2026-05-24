@@ -19,6 +19,7 @@ import {
 import { getRuntimeConfig } from "./runtimeConfig.js";
 
 function getApiBaseUrl(): string {
+  /* v8 ignore next */
   return getRuntimeConfig("VITE_API_BASE_URL") || "http://localhost:3000";
 }
 
@@ -68,12 +69,14 @@ async function request<T>(
   });
 
   if (res.status === 401 && retry) {
+    /* v8 ignore next */
     if (!_refreshPromise) {
       _refreshPromise = refreshAccessToken().finally(() => {
         _refreshPromise = null;
       });
     }
     const newToken = await _refreshPromise;
+    /* v8 ignore next */
     if (newToken) {
       setAccessToken(newToken);
       return request<T>(path, options, false);

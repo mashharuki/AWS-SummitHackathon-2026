@@ -106,20 +106,27 @@ async function handleSlackEvent(
     return;
   }
 
-  // Slack identity (teamId + Slack user) から所有 Cognito ユーザーを逆引きする。
+  // Slack user ID (rawEvent.user) を cognitoSub に変換する。
+  // GSI-SlackLookup を使って teamId + slackUserId → cognitoSub を解決する。
   // 連携していない Slack ユーザーのメッセージはスキップ（こちらの管理対象外）。
-  const cognitoSub = await slackUserLookup.findCognitoSubBySlackIdentity(
+  const slackUserId = rawEvent.user;
+  const resolvedUserId = await slackUserLookup.findCognitoSubBySlackIdentity(
     detail.teamId,
-    rawEvent.user,
+    slackUserId,
   );
-  if (!cognitoSub) {
-    logInfo({ action: "skipped_unlinked_slack_user", teamId: detail.teamId });
+
+  if (!resolvedUserId) {
+    logInfo({
+      action: "skipped_unmapped_slack_user",
+      slackUserId,
+      hint: "User may not have connected Slack yet, or authed_user.id was not captured during OAuth",
+    });
     return;
   }
 
   const payload: SlackEventPayload = {
     source: "slack",
-    userId: cognitoSub,
+    userId: resolvedUserId,
     message: {
       text: rawEvent.text,
       channelId: rawEvent.channel,

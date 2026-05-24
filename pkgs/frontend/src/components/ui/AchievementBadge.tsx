@@ -61,6 +61,12 @@ export function AchievementToast({
         setVisible(false);
         setTimeout(onClose, 350);
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          setVisible(false);
+          setTimeout(onClose, 350);
+        }
+      }}
       style={{
         position: "fixed",
         bottom: 80, // BottomNavの上
@@ -194,12 +200,11 @@ export function AchievementBadge({
     : null;
 
   return (
-    <div
+    <button
+      type="button"
       className={`${className}`}
       onClick={() => setExpanded((e) => !e)}
       onKeyDown={(e) => e.key === "Enter" && setExpanded((prev) => !prev)}
-      role="button"
-      tabIndex={0}
       aria-label={`${achievement.title} (${unlocked ? t("gamification.achievementUnlockedStatus") : t("gamification.achievementLockedStatus")})`}
       aria-expanded={expanded}
       style={{
@@ -273,7 +278,7 @@ export function AchievementBadge({
           </p>
         </div>
       )}
-    </div>
+    </button>
   );
 }
 

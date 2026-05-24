@@ -1,11 +1,13 @@
+import i18n from "@/i18n";
 import {
   cn,
   formatDateJa,
   formatDeadlineDisplay,
+  getDisplayName,
   isOverdue,
   toUserMessage,
 } from "@/lib/utils";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("cn", () => {
   it("クラス名をマージする", () => {
@@ -111,5 +113,71 @@ describe("toUserMessage", () => {
   it("非Errorオブジェクト", () => {
     const msg = toUserMessage({ code: 500 });
     expect(msg).toBeTruthy();
+  });
+
+  it("500エラーのメッセージ", () => {
+    const err = new Error("500 Internal Server Error");
+    expect(toUserMessage(err)).toContain("サーバーエラー");
+  });
+});
+
+describe("toUserMessage — 英語ブランチ", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+  afterEach(async () => {
+    await i18n.changeLanguage("ja");
+  });
+
+  it("401エラー（英語）", () => {
+    expect(toUserMessage(new Error("401 Unauthorized"))).toContain(
+      "Session expired",
+    );
+  });
+
+  it("404エラー（英語）", () => {
+    expect(toUserMessage(new Error("404 Not Found"))).toContain("not found");
+  });
+
+  it("500エラー（英語）", () => {
+    expect(toUserMessage(new Error("500 Internal Server Error"))).toContain(
+      "Server error",
+    );
+  });
+
+  it("TypeError（英語）", () => {
+    expect(toUserMessage(new TypeError("network"))).toContain(
+      "Connection failed",
+    );
+  });
+
+  it("一般エラー（英語）", () => {
+    expect(toUserMessage({ code: 500 })).toContain("unexpected error");
+  });
+});
+
+describe("getDisplayName", () => {
+  it("UUID形式のnameはメールアドレスのプレフィックスを返す", () => {
+    const result = getDisplayName({
+      name: "123e4567-e89b-12d3-a456-426614174000",
+      email: "user@example.com",
+    });
+    expect(result).toBe("user");
+  });
+
+  it("UUID形式でemailが空の場合「ユーザー」を返す", () => {
+    const result = getDisplayName({
+      name: "123e4567-e89b-12d3-a456-426614174000",
+      email: "",
+    });
+    expect(result).toBe("ユーザー");
+  });
+
+  it("UUID形式でないnameはそのまま返す", () => {
+    const result = getDisplayName({
+      name: "田中 ユカ",
+      email: "user@example.com",
+    });
+    expect(result).toBe("田中 ユカ");
   });
 });

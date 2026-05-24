@@ -31,10 +31,7 @@ export function LoginPage() {
   }, [isAuthenticated, isLoading, navigate]);
 
   return (
-    <div
-      className="min-h-screen bg-saboru-cream flex flex-col items-center justify-center px-4 py-8"
-      role="main"
-    >
+    <main className="min-h-screen bg-saboru-cream flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md flex flex-col gap-6">
         {/* 3D ヒーロー（憲法2,3,4,6 準拠） */}
         <div className="brutal-3d-container" style={{ height: 280 }}>
@@ -139,6 +136,6 @@ export function LoginPage() {
           )}
         </ul>
       </div>
-    </div>
+    </main>
   );
 }

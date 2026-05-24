@@ -53,7 +53,7 @@ export function DependencyScoreDisplay({
       const timer = setTimeout(() => setShowFlash(false), 1400);
       return () => clearTimeout(timer);
     }
-  }, [isAnimating, score]);
+  }, [isAnimating]);
 
   const isUltimate = displayScore >= 81;
 

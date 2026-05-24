@@ -56,6 +56,12 @@ export function JackpotOverlay({ isActive, onClose }: JackpotOverlayProps) {
         setVisible(false);
         setTimeout(onClose, 300);
       }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          setVisible(false);
+          setTimeout(onClose, 300);
+        }
+      }}
     >
       {/* コンフェッティ */}
       <div

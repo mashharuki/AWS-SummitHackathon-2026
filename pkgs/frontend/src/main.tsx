@@ -1,9 +1,9 @@
 import { registerSW } from "virtual:pwa-register";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
 import "./i18n";
 import "./index.css";
-import App from "./App.tsx";
 
 async function loadRuntimeConfig(): Promise<void> {
   try {
@@ -18,7 +18,7 @@ async function loadRuntimeConfig(): Promise<void> {
 
 loadRuntimeConfig().then(() => {
   registerSW({ immediate: true });
-  createRoot(document.getElementById("root")!).render(
+  createRoot(document.getElementById("root") as HTMLElement).render(
     <StrictMode>
       <App />
     </StrictMode>,

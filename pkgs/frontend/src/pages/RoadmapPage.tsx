@@ -168,7 +168,7 @@ export function RoadmapPage() {
                   >
                     {m.features.map((f, fi) => (
                       <div
-                        key={fi}
+                        key={f.name.ja}
                         className="flex items-start gap-2 py-1.5"
                         style={{
                           borderBottom:

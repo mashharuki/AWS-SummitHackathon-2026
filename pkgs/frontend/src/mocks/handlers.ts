@@ -137,8 +137,8 @@ export const handlers = [
   http.post("*/api/tasks/candidates/:id/approve", ({ params }) => {
     const newTask: Task = {
       PK: "USER#test-sub",
-      SK: `TASK#${String(params["id"])}`,
-      taskId: String(params["id"]),
+      SK: `TASK#${String(params.id)}`,
+      taskId: String(params.id),
       userId: "test-sub",
       status: "approved",
       title: "承認されたタスク",
@@ -162,7 +162,7 @@ export const handlers = [
   }),
 
   http.get("*/api/tasks/:id", ({ params }) => {
-    const task = mockTasks.find((t) => t.taskId === params["id"]);
+    const task = mockTasks.find((t) => t.taskId === params.id);
     if (!task) return new HttpResponse(null, { status: 404 });
     return HttpResponse.json(task);
   }),
@@ -192,7 +192,7 @@ export const handlers = [
 
   http.patch("*/api/tasks/:id", async ({ params, request }) => {
     const body = (await request.json()) as Partial<Task>;
-    const task = mockTasks.find((t) => t.taskId === params["id"]);
+    const task = mockTasks.find((t) => t.taskId === params.id);
     if (!task) return new HttpResponse(null, { status: 404 });
     const updated = { ...task, ...body, updatedAt: new Date().toISOString() };
     return HttpResponse.json(updated);

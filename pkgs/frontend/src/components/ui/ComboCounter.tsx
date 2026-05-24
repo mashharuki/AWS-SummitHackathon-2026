@@ -32,9 +32,8 @@ export function ComboCounter({ combo, className = "" }: ComboCounterProps) {
   const isMegaCombo = combo.count >= 5;
 
   return (
-    <div
+    <output
       className={`flex items-center gap-1 ${className}`}
-      role="status"
       aria-label={t("gamification.comboAriaLabel", { count: combo.count })}
       style={{
         animation: isHighCombo
@@ -89,6 +88,6 @@ export function ComboCounter({ combo, className = "" }: ComboCounterProps) {
           50% { transform: scale(1.05); }
         }
       `}</style>
-    </div>
+    </output>
   );
 }

@@ -26,7 +26,7 @@ describe("SaborouAgentStack", () => {
   test("Both Lambda functions use ARM_64 architecture", () => {
     const fns = template.findResources("AWS::Lambda::Function");
     const fnList = Object.values(fns);
-    // biome-ignore lint/complexity/noForEach: forEach is idiomatic in this test helper context
+    // biome-ignore lint/complexity/noForEach lint/suspicious/noExplicitAny: forEach is idiomatic in CDK test helpers; any is required for CDK template shape
     fnList.forEach((fn: any) => {
       expect(fn.Properties.Architectures).toContain("arm64");
     });
@@ -55,6 +55,7 @@ describe("SaborouAgentStack", () => {
   test("DLQ queues have 1-day retention", () => {
     const queues = template.findResources("AWS::SQS::Queue");
     const queueList = Object.values(queues);
+    // biome-ignore lint/complexity/noForEach lint/suspicious/noExplicitAny: forEach is idiomatic in CDK test helpers; any is required for CDK template shape
     queueList.forEach((q: any) => {
       // MessageRetentionPeriod = 86400 seconds = 1 day
       expect(q.Properties.MessageRetentionPeriod).toBe(86400);

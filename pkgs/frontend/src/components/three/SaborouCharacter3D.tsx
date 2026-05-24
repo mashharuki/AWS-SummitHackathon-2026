@@ -2,6 +2,7 @@ import { useReducedMotion } from "@/hooks/useReducedMotion";
 import {
   BREATH_SPEED,
   CLOUD_COUNT,
+  PERSONA_3D_BODY,
   SABORU_3D_CHEEK,
   SABORU_3D_CLOUD_COLOR,
   SABORU_3D_CLOUD_DARK,
@@ -36,11 +37,14 @@ export interface SaborouCharacter3DProps {
   verdict: Verdict | null;
   /** SSE ストリーミング中はアイドル動作のみ（呼吸+まばたき） */
   isStreaming?: boolean;
+  /** ペルソナ ID。指定時は体色をペルソナカラーで上書き（表情・天気は verdict 由来を維持） */
+  personaId?: string;
 }
 
 export function SaborouCharacter3D({
   verdict,
   isStreaming = false,
+  personaId,
 }: SaborouCharacter3DProps) {
   const groupRef = useRef<THREE.Group>(null);
   const cloudGroupRef = useRef<THREE.Group>(null);
@@ -49,8 +53,14 @@ export function SaborouCharacter3D({
   // verdict が null のときは can_saboru 相当として扱う（憲法5: 同じ顔の維持）
   const v: Verdict = verdict ?? "can_saboru";
 
-  // verdict 別マテリアル（再生成を避けるため useMemo）
-  const bodyColor = useMemo(() => SABORU_3D_COLOR[v], [v]);
+  // verdict 別マテリアル（ペルソナ指定時は体色のみ上書き、再生成を避けるため useMemo）
+  const bodyColor = useMemo(
+    () =>
+      personaId && PERSONA_3D_BODY[personaId]
+        ? PERSONA_3D_BODY[personaId]
+        : SABORU_3D_COLOR[v],
+    [v, personaId],
+  );
   const cheekColor = useMemo(() => SABORU_3D_CHEEK[v], [v]);
   const breathSpeed = BREATH_SPEED[v];
   const cloudCount = CLOUD_COUNT[v];
@@ -267,6 +277,7 @@ function CloudGroup({
   return (
     <>
       {positions.slice(0, count).map((pos, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: 3D position array
         <mesh key={i} position={pos} scale={[1, 0.55, 0.8]}>
           <sphereGeometry args={[0.16, 16, 16]} />
           <meshStandardMaterial

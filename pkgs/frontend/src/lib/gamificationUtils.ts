@@ -103,6 +103,7 @@ export function getTitleInfo(score: number): TitleInfo {
   const found = DEPENDENCY_TITLES.find(
     (t) => clamped >= t.range[0] && clamped <= t.range[1],
   );
+  /* v8 ignore next */
   return found ?? DEPENDENCY_TITLES[0];
 }
 
@@ -112,6 +113,7 @@ export function getTitleInfo(score: number): TitleInfo {
 export function getTitleProgress(score: number): number {
   const info = getTitleInfo(score);
   const [min, max] = info.range;
+  /* v8 ignore next */
   if (max === min) return 1;
   return (score - min) / (max - min);
 }

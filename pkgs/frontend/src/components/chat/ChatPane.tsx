@@ -28,13 +28,13 @@ export function ChatPane({
   const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to bottom triggered by messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [isStreaming]);
+  }, [messages]);
 
   return (
-    <div
-      role="region"
+    <section
       aria-label={t("chat.paneAria")}
       className="card-brutal flex flex-col h-full overflow-hidden"
     >
@@ -90,6 +90,6 @@ export function ChatPane({
         disabled={isStreaming}
         placeholder={t("chat.messagePlaceholder")}
       />
-    </div>
+    </section>
   );
 }

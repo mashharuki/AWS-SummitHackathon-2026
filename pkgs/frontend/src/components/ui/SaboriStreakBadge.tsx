@@ -153,6 +153,7 @@ export function SaboriStreakBadge({
   const { t } = useTranslation();
   const [animated, setAnimated] = useState(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional animation trigger on streak change
   useEffect(() => {
     // マウント時に1回アニメーション
     setAnimated(true);
@@ -181,8 +182,7 @@ export function SaboriStreakBadge({
   return (
     <div className={`${className}`}>
       {/* ストリークバッジ本体 */}
-      <div
-        role="status"
+      <output
         aria-label={t("gamification.streakAriaLabel", { days: streakDays })}
         style={{
           display: "inline-flex",
@@ -220,9 +220,7 @@ export function SaboriStreakBadge({
             </div>
           )}
         </div>
-      </div>
-
-      {/* 損失回避メッセージ（オプション） */}
+      </output>
       {lossMessage && (
         <div
           role="alert"

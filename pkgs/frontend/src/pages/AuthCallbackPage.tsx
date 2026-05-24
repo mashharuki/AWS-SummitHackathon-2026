@@ -16,6 +16,7 @@ export function AuthCallbackPage() {
   const navigate = useNavigate();
   const processingRef = useRef(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional run-once mount effect
   useEffect(() => {
     if (processingRef.current) return;
     processingRef.current = true;
@@ -56,22 +57,20 @@ export function AuthCallbackPage() {
         showToast(t("authCallback.failed"), "error");
         void navigate("/login", { replace: true });
       });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div
+    <main
       className="min-h-screen bg-[#F5F4F0] flex items-center justify-center"
-      role="main"
       aria-label={t("authCallback.processingAria")}
     >
       <div className="flex flex-col items-center gap-4">
-        <div
+        <output
           className="w-12 h-12 border-2 border-[#FF6B2B] border-t-transparent rounded-full animate-spin"
-          role="status"
           aria-label={t("authCallback.spinnerAria")}
         />
         <p className="text-sm text-[#6B7280]">{t("authCallback.loggingIn")}</p>
       </div>
-    </div>
+    </main>
   );
 }
