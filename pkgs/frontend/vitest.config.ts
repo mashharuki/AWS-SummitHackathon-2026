@@ -1,5 +1,5 @@
-import { resolve } from "path";
 import react from "@vitejs/plugin-react";
+import { resolve } from "path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -29,10 +29,10 @@ export default defineConfig({
       // React component coverage requires browser test environment;
       // jsdom-based unit tests focus on business logic in lib/ and hooks/
       thresholds: {
-        statements: 15,
-        branches: 15,
-        functions: 15,
-        lines: 15,
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
       },
     },
   },
