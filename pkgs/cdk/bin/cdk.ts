@@ -112,12 +112,13 @@ const frontendStack = new SaborouFrontendStack(
   },
 );
 
-// Step 2: CognitoStack — CloudFront ドメインを callbackUrls / logoutUrls に使用
-// U-08: passkeyRelyingPartyId は Cognito Managed Login ドメインを指定する。
-// WebAuthn の RP ID はパスキー UI が提供されるページの origin と一致する必要があり、
-// Managed Login (v2) ではそれは Cognito のホスト型ドメインになる。
-// CloudFront ドメインをここに使うと RP ID mismatch エラーが発生する。
-const cognitoDomainHostname = `saborou-auth-${environment}.auth.ap-northeast-1.amazoncognito.com`;
+// Step 2: CognitoStack — CloudFront / 固定ドメインを callbackUrls / logoutUrls に使用
+// U-08: passkeyRelyingPartyId は明示指定しない。
+// Cognito を prefix domain（saborou-auth-<env>.auth.<region>.amazoncognito.com）で運用する場合、
+// Managed Login (v2) では Cognito が自動的にその prefix domain を RP ID に採用する。
+// amazoncognito.com は AWS の予約ドメインのため、UserPool 作成時に明示指定すると
+// "RelyingPartyId cannot be reserved domain" エラーで失敗する。
+// （将来 Cognito にカスタムドメインを割り当てる場合のみ、そのドメインを RP ID に指定する）
 
 // カスタムドメイン有効時は固定の https://saborou.agentic-jp.com を使用する。
 // 無効時は CloudFront デフォルトドメインを使用する。
@@ -131,7 +132,6 @@ const cognitoStack = new SaborouCognitoStack(
   {
     env,
     frontendDomainName: frontendDomainForCognito,
-    passkeyRelyingPartyId: cognitoDomainHostname,
   },
 );
 

@@ -77,20 +77,41 @@ describe("SaborouCognitoStack", () => {
     });
   });
 
-  // U-08: パスキー RP ID が設定される場合のテスト
-  test("UserPool has passkey relying party ID when passkeyRelyingPartyId is provided", () => {
-    templateWithPasskey.hasResourceProperties("AWS::Cognito::UserPool", {
-      WebAuthnRelyingPartyID: TEST_RELYING_PARTY_ID,
+  // U-08: choice-based 認証で password（フォールバック）＋ passkey を許可
+  test("UserPool allows password and passkey as first auth factors", () => {
+    template.hasResourceProperties("AWS::Cognito::UserPool", {
+      Policies: {
+        SignInPolicy: {
+          AllowedFirstAuthFactors: Match.arrayWith(["PASSWORD", "WEB_AUTHN"]),
+        },
+      },
+    });
+  });
+
+  // U-08: パスキー（WebAuthn）は RP ID 指定の有無に関わらず常に有効。
+  // user verification は preferred。
+  test("UserPool enables passkey with PREFERRED user verification by default", () => {
+    template.hasResourceProperties("AWS::Cognito::UserPool", {
       WebAuthnUserVerification: "preferred",
     });
   });
 
-  // U-08: passkeyRelyingPartyId 未設定時はパスキープロパティが存在しないことを確認
-  test("UserPool does not set WebAuthn properties when passkeyRelyingPartyId is not provided", () => {
+  // U-08: RP ID は明示指定しない（prefix domain を Cognito が自動採用）ため
+  // WebAuthnRelyingPartyID は出力されないことを確認。
+  test("UserPool does not set an explicit WebAuthn relying party ID by default", () => {
     const resources = template.findResources("AWS::Cognito::UserPool");
     const poolProps = Object.values(resources)[0]?.Properties as
       | Record<string, unknown>
       | undefined;
     expect(poolProps?.WebAuthnRelyingPartyID).toBeUndefined();
+  });
+
+  // U-08: passkeyRelyingPartyId を明示指定した場合はその値が設定される
+  // （将来 Cognito にカスタムドメインを割り当てる場合の経路）
+  test("UserPool sets passkey relying party ID when explicitly provided", () => {
+    templateWithPasskey.hasResourceProperties("AWS::Cognito::UserPool", {
+      WebAuthnRelyingPartyID: TEST_RELYING_PARTY_ID,
+      WebAuthnUserVerification: "preferred",
+    });
   });
 });

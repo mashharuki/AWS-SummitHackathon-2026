@@ -56,13 +56,23 @@ export class SaborouCognitoStack extends cdk.Stack {
       deletionProtection: false,
       // U-08: Essentials フィーチャープラン（パスキー / マネージドログイン に必須）
       featurePlan: cognito.FeaturePlan.ESSENTIALS,
-      // U-08: パスキー（WebAuthn）を許可（パスワードはフォールバックとして継続）
+      // U-08: choice-based 認証で「パスワード（フォールバック）＋パスキー」を許可する。
+      // password は必須（true 固定）。passkey を加えることでパスワードを残したまま
+      // パスキー（WebAuthn）も選べる。
+      signInPolicy: {
+        allowedFirstAuthFactors: {
+          password: true,
+          passkey: true,
+        },
+      },
+      // RP ID は明示指定しない。マネージドログイン構成では Cognito が自動的に
+      // prefix domain（saborou-auth-<env>.auth.<region>.amazoncognito.com）を RP ID に採用する。
+      // ※ amazoncognito.com は AWS の予約ドメインのため、UserPool 作成時に
+      //   passkeyRelyingPartyId として明示指定すると "RelyingPartyId cannot be reserved domain" で失敗する。
+      //   カスタムドメインを Cognito に割り当てる場合のみ passkeyRelyingPartyId にそのドメインを指定する。
+      passkeyUserVerification: cognito.PasskeyUserVerification.PREFERRED,
       ...(props?.passkeyRelyingPartyId
-        ? {
-            passkey: true,
-            passkeyRelyingPartyId: props.passkeyRelyingPartyId,
-            passkeyUserVerification: cognito.PasskeyUserVerification.PREFERRED,
-          }
+        ? { passkeyRelyingPartyId: props.passkeyRelyingPartyId }
         : {}),
     });
 
