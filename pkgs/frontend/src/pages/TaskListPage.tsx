@@ -5,7 +5,9 @@ import { OnboardingModal, useOnboarding } from "@/components/OnboardingModal";
 import { TaskAddModal } from "@/components/task/TaskAddModal";
 import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
+import { SeasonBanner } from "@/components/ui/SeasonBanner";
 import { SectionLabel } from "@/components/ui/SectionLabel";
+import { WeeklyChallengeCard } from "@/components/ui/WeeklyChallengeCard";
 import {
   VerdictHistory,
   loadVerdictHistory,
@@ -112,6 +114,12 @@ export function TaskListPage() {
           >
             AIに、サボっていいと言わせよう
           </p>
+        </div>
+
+        {/* シーズンバナー + 週次チャレンジ */}
+        <div className="px-4 pt-2 flex flex-col gap-2">
+          <SeasonBanner />
+          <WeeklyChallengeCard />
         </div>
 
         {/* 今日バナー */}

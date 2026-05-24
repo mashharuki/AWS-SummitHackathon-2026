@@ -123,6 +123,18 @@
   - `pkgs/frontend/src/__tests__/gamification-tier2.test.ts` — 49テスト追加
   - 合計テスト: 211/211 全パス / tsc エラーゼロ / vite build 成功
 
+  **Tier 4 残施策 + Tier 5 実装（2026-05-24T01:02:00Z）**:
+  - `pkgs/frontend/src/lib/soundManager.ts` — Web Audio API 音響設計（施策D）。7種SoundType（tap/scoreUp/jackpot/titleUnlock/comboUp/streakLoss/honneSend）・SoundManagerConfig・localStorage設定永続化
+  - `pkgs/frontend/src/components/ui/WeeklyChallengeCard.tsx` — 週次チャレンジUI（施策E）。5種チャレンジ・週番号ローテーション・進捗バー・達成演出・localStorage永続化
+  - `pkgs/frontend/src/components/ui/SeasonBanner.tsx` — シーズンテーマ表示（施策E）。12ヶ月シーズン定義・限定称号チャレンジ表示
+  - `pkgs/frontend/src/components/ui/GuildMockCard.tsx` — サボりギルドUIモック（施策C-1）。メンバーリスト・アクティビティフィード・リアクションボタン・COMING SOONバッジ
+  - `pkgs/frontend/src/components/ui/PvPMockCard.tsx` — PvP対決モックUI（施策C-2）。チャレンジ通知・対決内容・受諾/拒否UX・COMING SOONバッジ
+  - `pkgs/frontend/src/components/OnboardingModal.tsx` — サボり適性クイズ追加（施策F）。5問クイズ・スコア計算（0〜100%）・平均比較テキスト・既存スライドと統合
+  - `pkgs/frontend/src/pages/TaskListPage.tsx` — SeasonBanner・WeeklyChallengeCard 統合（施策E）
+  - `pkgs/frontend/src/__tests__/gamification-tier4.test.ts` — 35テスト追加（WeeklyChallengeCard/SeasonBanner/SoundManager）
+  - `pkgs/frontend/src/__tests__/gamification-tier5.test.ts` — 37テスト追加（OnboardingModal クイズ/統合テスト）
+  - 合計テスト: 283/283 全パス / tsc エラーゼロ / vite build 成功
+
 ### OPERATIONS フェーズ
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
 - [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）

@@ -4,7 +4,7 @@
  * - ShareCard: シェアテキスト生成
  * - PositioningCard: コンポーネントの存在確認
  */
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // ShareCard のユーティリティ関数をテスト（実装は内部関数なので文字列生成ロジックを検証）
 describe("ShareCard シェアテキスト生成", () => {
@@ -39,27 +39,25 @@ describe("ShareCard シェアテキスト生成", () => {
   });
 
   it("must_do 判定でシェアテキストが正しく生成される", () => {
-    const verdict = "must_do" as const;
-    const verdictLabel =
-      verdict === "can_saboru"
-        ? "✅ サボれる！"
-        : verdict === "borderline"
-          ? "⚠️ 微妙..."
-          : "❌ 今はサボれない";
-
-    expect(verdictLabel).toBe("❌ 今はサボれない");
+    const getVerdictLabel = (
+      v: "can_saboru" | "borderline" | "must_do",
+    ): string => {
+      if (v === "can_saboru") return "✅ サボれる！";
+      if (v === "borderline") return "⚠️ 微妙...";
+      return "❌ 今はサボれない";
+    };
+    expect(getVerdictLabel("must_do")).toBe("❌ 今はサボれない");
   });
 
   it("borderline 判定でシェアテキストが正しく生成される", () => {
-    const verdict = "borderline" as const;
-    const verdictLabel =
-      verdict === "can_saboru"
-        ? "✅ サボれる！"
-        : verdict === "borderline"
-          ? "⚠️ 微妙..."
-          : "❌ 今はサボれない";
-
-    expect(verdictLabel).toBe("⚠️ 微妙...");
+    const getVerdictLabel = (
+      v: "can_saboru" | "borderline" | "must_do",
+    ): string => {
+      if (v === "can_saboru") return "✅ サボれる！";
+      if (v === "borderline") return "⚠️ 微妙...";
+      return "❌ 今はサボれない";
+    };
+    expect(getVerdictLabel("borderline")).toBe("⚠️ 微妙...");
   });
 
   it("全グレードに対応するラベルが存在する", () => {
