@@ -223,7 +223,7 @@ export function GuildMockCard({ className = "" }: GuildMockCardProps) {
           最近のアクティビティ
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {MOCK_FEED.map((item) => (
+          {MOCK_FEED.map((item, idx) => (
             <div
               key={`${item.member}-${item.action}`}
               style={{
