@@ -5,7 +5,7 @@
  * resetModules は不要。process.env のキーを設定/削除し、env.* アクセス時にゲッターが起動する。
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { env } from "../../config/env.js";
 
 // テスト後に復元できるよう元の値を保存
@@ -228,5 +228,49 @@ describe("env.ENVIRONMENT — optionalEnv with default", () => {
   it("returns value when ENVIRONMENT is set", () => {
     process.env.ENVIRONMENT = "prod";
     expect(env.ENVIRONMENT).toBe("prod");
+  });
+});
+
+describe("env — Google OAuth / Calendar Cache getters (U-07a/b 追加分)", () => {
+  afterEach(() => {
+    process.env.GOOGLE_CLIENT_SECRET_ARN = "";
+    process.env.GOOGLE_CLIENT_ID = "";
+    process.env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE = "";
+  });
+
+  it("returns value for GOOGLE_CLIENT_SECRET_ARN when set", () => {
+    process.env.GOOGLE_CLIENT_SECRET_ARN = "arn:aws:secretsmanager:ap-northeast-1:123:secret:google-client";
+    expect(env.GOOGLE_CLIENT_SECRET_ARN).toBe("arn:aws:secretsmanager:ap-northeast-1:123:secret:google-client");
+  });
+
+  it("throws for GOOGLE_CLIENT_SECRET_ARN when missing", () => {
+    process.env.GOOGLE_CLIENT_SECRET_ARN = "";
+    expect(() => env.GOOGLE_CLIENT_SECRET_ARN).toThrow(
+      "Missing required environment variable: GOOGLE_CLIENT_SECRET_ARN",
+    );
+  });
+
+  it("returns value for GOOGLE_CLIENT_ID when set", () => {
+    process.env.GOOGLE_CLIENT_ID = "google-client-id-test.apps.googleusercontent.com";
+    expect(env.GOOGLE_CLIENT_ID).toBe("google-client-id-test.apps.googleusercontent.com");
+  });
+
+  it("throws for GOOGLE_CLIENT_ID when missing", () => {
+    process.env.GOOGLE_CLIENT_ID = "";
+    expect(() => env.GOOGLE_CLIENT_ID).toThrow(
+      "Missing required environment variable: GOOGLE_CLIENT_ID",
+    );
+  });
+
+  it("returns value for DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE when set", () => {
+    process.env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE = "google-calendar-cache-table";
+    expect(env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE).toBe("google-calendar-cache-table");
+  });
+
+  it("throws for DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE when missing", () => {
+    process.env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE = "";
+    expect(() => env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE).toThrow(
+      "Missing required environment variable: DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE",
+    );
   });
 });

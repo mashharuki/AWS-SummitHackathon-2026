@@ -2,6 +2,38 @@
 
 ---
 
+## CONSTRUCTION — U-08 passkey-auth 設計・実装
+**Timestamp**: 2026-05-24T05:30:00Z
+**User Input**: "SABOROU の機能改修バックログ **項目8（G: パスキー認証）** を、AI-DLC の新 Unit **U-08: passkey-auth** として設計・実装してください。**現在のブランチ `feature/google-integration`（PR #39）にそのまま追加コミットする**（Fと同じPRに乗せる）。[確定方針: パスキーを追加し、パスワード認証はフォールバックとして残す。技術制約: Cognito Essentials フィーチャープラン必須、choice-based 認証 + マネージドログイン、WebAuthn RP ID = CloudFront ドメイン。CDK synth 成功・全テスト維持が必須条件。まだコミットはしない。]"
+**AI Response**: U-08 passkey-auth を設計・実装。設計ドキュメント（functional-design.md / nfr-requirements.md / infrastructure-design.md / code-generation-summary.md）を aidlc-docs/construction/passkey-auth/ に作成。CDK 実装: cognito-stack.ts に featurePlan(ESSENTIALS)/passkey/passkeyRelyingPartyId/passkeyUserVerification/authFlows.user/ManagedLoginVersion.NEWER_MANAGED_LOGIN を追加。cdk.ts に passkeyRelyingPartyId=CloudFrontDomain を注入。cognito-stack.test.ts に新設定検証テスト4件追加。フロントエンド変更なし（マネージドログインでもエンドポイント同一）。品質ゲート全通過: CDK 47/47（+4件）/ agent 196 / shared 103 / frontend 140 / backend 307 / typecheck 全パス / Biome 悪化なし / CDK synth 成功。
+**Context**: CONSTRUCTION / passkey-auth / U-08 / Functional Design + NFR Requirements + Infrastructure Design + Code Generation 完了
+
+---
+
+## CONSTRUCTION — U-07 google-integration 設計整合性修正 + Unit分割 + U-07a実装着手
+**Timestamp**: 2026-05-24T00:00:00Z
+**User Input**: "SABOROU の新機能 F: Google連携（U-07: google-integration）について、親エージェントが既存実コードを精読して整合性検証を行い、設計と実装の差分を発見しました。これを設計に反映し、Unit分割して U-07a（OAuth基盤）から実装に進めてください。[差分1〜6および整合性確認済み点の詳細、作業手順、制約を含む完全な指示]"
+**AI Response**: 設計書6ファイルを差分1〜6に基づき修正（TaskExtractor汎用化必須・SOURCE_TYPE定数・GoogleトークンのJSON保存・redirect_uri動的生成・ForceDeleteカスタムリソース・sourceRef値の明記）。U-07をU-07a/U-07bに分割。U-07a（OAuth基盤）の実装を着手。
+**Context**: CONSTRUCTION / google-integration / 整合性修正 → U-07a実装
+
+---
+
+## CONSTRUCTION — U-07a Code Generation 完了・品質チェック確認
+**Timestamp**: 2026-05-24T03:00:00Z
+**User Input**: "[セッション継続] U-07a実装完了報告と品質確認"
+**AI Response**: U-07a（Google OAuth基盤）の全実装完了。品質ゲート全パス（shared 103/103・agent 177/177・backend 218/218・frontend 140/140・CDK data-stack 9/9・api-stack 9/9・CDK synth成功・typecheck 全パス・Biome 新規エラーなし）。pre-existing失敗（webhook-stack.test.ts 1件）はgit stashで事前検証済み。ユーザー承認を待機。
+**Context**: CONSTRUCTION / google-integration / U-07a / Code Generation 完了
+
+---
+
+## CONSTRUCTION — U-07b Code Generation 完了
+**Timestamp**: 2026-05-24T10:00:00Z
+**User Input**: "SABOROU の新機能 F: Google連携 の U-07b（Calendar/Gmail取り込み + サボり判定連携）を実装してください。U-07a（Google OAuth基盤）は実装・承認済みで、親エージェントが品質ゲート（typecheck/全テスト/カバレッジ/CDK synth/Biome）を独自再検証して全グリーンを確認済みです。[以下スコープ詳細・制約含む完全な指示]"
+**AI Response**: U-07b（Calendar/Gmail取り込み + サボり判定連携）の全実装完了。実装内容: (1) TaskExtractorAgent汎用化 — GenericExtractInput型・extractTaskFromSource()メソッド追加、extractTask()を後方互換ラッパーに変更。(2) CalendarContext型追加 — sabori-proposer/types.tsにCalendarContext interface・TaskContextへのオプション注入・心理シグナル追加（calendarBusyness/nextMeetingPressure）。(3) contextUtils拡張 — Calendarナラティブ生成・心理シグナル導出。(4) Gmail取り込みAPI — POST /api/google/gmail/fetch（7日以内未読50件→AI抽出→TaskCandidate化）。(5) Calendar取り込みAPI — POST /api/google/calendar/fetch + GET /api/google/calendar/status（GoogleCalendarCacheTable TTL24h・busyScore計算）。(6) proposals.tsへのContext注入 — calendarCacheRepository optional追加・24h有効キャッシュ読み出し・CalendarContext注入。(7) CDK拡張 — GoogleCalendarCacheTable新規・DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE env追加・IAM grantReadWriteData。(8) フロントエンド — SettingsPage.tsxにカレンダー/Gmail取り込みボタンUI（連携済み時のみ表示・最終取得件数表示）。品質ゲート全通過: agent 196/196・CDK 43/43・typecheck全パッケージ・Biome新規エラーなし。
+**Context**: CONSTRUCTION / google-integration / U-07b / Code Generation 完了
+
+---
+
 ## i18n レビュー＆修正完了
 **Timestamp**: 2026-05-24T00:48:00Z
 **User Input**: "今変更がステージされていないファイルを対象に以下の観点でレビューを行ってもらいたいです。モックデータが含まれていないか / i18nに対応していない箇所がないか / もし存在していた場合は既存の実装を参考に修正をお願いします(i18n.tsで一元管理したいです)"
@@ -1450,6 +1482,59 @@ aidlc-state.md U-06 セクションも本改訂版に合わせて更新済み（
 
 ---
 
+## CONSTRUCTION — U-07: google-integration セッション開始・既存実装調査
+
+**Timestamp**: 2026-05-24T00:00:00Z
+**User Input**: "SABOROU（AWS Summit Japan 2026 ハッカソン作品。テーマ「人をダメにするサービス」。Slack連携タスク管理＋AI「サボろう」判定）の新機能 **F: Google連携** を AI-DLC ワークフローで設計してください。[中略] 最初のアクションとして、(1) SESSION-HANDOFF.md と関連メモリの把握、(2) 既存Slack OAuth/agent実装の精査、(3) Fの設計方針と確認すべき設計判断ポイントの整理、を行い、その結果を日本語で報告してください。"
+**AI Response**: SESSION-HANDOFF.md・aidlc-state.md・既存コード（auth.ts / DynamoServiceConnectionRepository.ts / TaskExtractorAgent.ts / SaboriProposerAgent.ts / data-stack.ts / api-stack.ts / shared/types）を精査。調査結果と設計判断確認ポイントをユーザーに提示。
+**Context**: 新Unit U-07: google-integration の Requirements Analysis 開始。既存Slack OAuth実装の調査完了。
+
+---
+
+## CONSTRUCTION — U-07: google-integration 設計判断確定・設計成果物生成
+
+**Timestamp**: 2026-05-24T02:00:00Z
+**User Input**: "SABOROU の新機能 F: Google連携 の AI-DLC 設計を続行してください。[7つの設計判断ポイントへの確定回答付き] Q1: C（Gmail+Calendar 単一ボタン）/ Q2: A（Slack OAuth完全踏襲）/ Q3: 手動ボタン起点（Calendar）/ Q4: 手動ボタン起点（Gmail）/ Q5: C（予定タイトル非保管・structured context）/ Q6: C（予防的更新+フォールバックリトライ）/ Q7: 3機能すべて実装。CalendarキャッシュをDynamoDBに保存・判定時はキャッシュのみ参照。raw永続化なし。shared types拡張・CDK追加点含む。"
+**AI Response**: SESSION-HANDOFF.md 再確認・既存コード精査完了後、以下の設計成果物を生成した。
+- `aidlc-docs/construction/google-integration/functional-design/functional-design.md`: データモデル・ビジネスロジック・エンドポイント定義・依存関係・技術スタック
+- `aidlc-docs/construction/google-integration/functional-design/component-design.md`: ファイル一覧・APIエンドポイント詳細・Tool Useスキーマ拡張・フロントエンドUI設計
+- `aidlc-docs/construction/google-integration/functional-design/sequence-diagrams.md`: Google OAuth / Calendar取り込み / Gmail取り込み / SaboriProposer注入 / トークンリフレッシュ の5シーケンス図
+- `aidlc-docs/construction/google-integration/nfr-requirements/nfr-requirements.md`: NFR-G-P1〜P2 / S1〜S4 / R1〜R2 / C1〜C2 / T1〜T2 / O1 全11件
+- `aidlc-docs/construction/google-integration/nfr-design/nfr-design.md`: 設計パターン10件（Slack OAuth踏襲 / Secrets Manager保管 / トークンリフレッシュ / Zodバリデーション / raw破棄 / SMキャッシュ / CalendarCache upsert / 構造化ログ / Google credential管理 / フロント鮮度表示）
+- `aidlc-docs/construction/google-integration/infrastructure-design/infrastructure-design.md`: DataStack/ApiStack変更詳細・SSM設定・Google Cloud Console設定・CDKテスト追加点
+- `aidlc-docs/construction/google-integration/code/code-plan.md`: 実装チェックリスト・工数見積・依存順序・注意事項
+**Context**: U-07 google-integration の Functional Design / NFR Requirements / NFR Design / Infrastructure Design 完了。ユーザー承認待ち。
+
+---
+
+## CodeRabbit PR#39 指摘対応（16件）
+**Timestamp**: 2026-05-24T14:50:00Z
+**User Input**: "SABOROU の PR #39（`feature/google-integration` ブランチ、F: Google連携 + G: パスキー認証）に対して CodeRabbit が **16件のレビュー指摘**を出した。ユーザーは「**Major+Minor 全部修正**」を希望。各指摘を現コードに照らして検証し、修正してほしい。"
+**AI Response**: 16件すべてを検証し、有効な15件を修正（1件skip）。テスト322件グリーン・agent 196件グリーン・CDK 47件グリーン・Biome エラーなし・CDK synth 成功。
+**Context**: feature/google-integration ブランチの CodeRabbit 指摘対応。
+
+### 対応結果サマリー
+| # | 種別 | 対象 | 対応 |
+|---|------|------|------|
+| 1 | Major | TaskExtractorAgent.ts:82,99 | 修正: requesterHint を safeRequesterHint にサニタイズ（改行/山括弧除去・160文字制限） |
+| 2 | Major | secrets.ts:123 | 修正: GoogleTokenSecretSchema.parse() でバリデーション後にキャッシュ |
+| 3 | Major | DynamoGoogleCalendarCacheRepository.ts:67 | 修正: ...data 展開後に userId を上書きして PK 不一致を防止 |
+| 4 | Major | google-auth.ts:142 | 修正: fetchWithTimeout 共通ヘルパーを使用（10秒タイムアウト） |
+| 5 | Major | google.ts:125 | 修正: fetchWithTimeout を Calendar/Gmail/detail の全 fetch に適用 |
+| 6 | Major | google.ts:314 | 修正: URLSearchParams.set → append（3つの metadataHeaders が正しく送信される） |
+| 7 | Major | GoogleTokenService.ts:91 | 修正: fetchWithTimeout 共通ヘルパーを使用 |
+| 8 | Major | oauthState.ts:29 | 修正: issuedAt フィールド追加・10分有効期限チェック・Slack/Google 両 callback のテストも更新 |
+| 9 | Major | google-auth.ts:219 | 修正: DELETE /auth/google で Secrets Manager のトークンシークレットも削除 |
+| 10 | Major | cdk.ts:60 | 修正: passkeyRelyingPartyId を CloudFront ドメインから Cognito Managed Login ドメインに変更 |
+| 11 | Minor | GoogleTokenService.test.ts:185 | 修正: インライン vi.unstubAllGlobals() を afterEach に移動 |
+| 12 | Minor | index.ts:18 | 修正: コメントの `/auth/google*` → `/api/auth/google*` |
+| 13 | Minor | SettingsPage.tsx:50 | skip: .claude/rules/japanese-output.md によりプロジェクト全体が日本語ハードコード方針。i18n 基盤なし。既存他UIテキストも同方針。 |
+| 14 | Minor | code-generation-summary.md:94 | 修正: fenced block に `text` 識別子追加 |
+| 15 | Minor | infrastructure-design.md:37 | 修正: `bin/app.ts` → `pkgs/cdk/bin/cdk.ts` |
+| 16 | Minor | infrastructure-design.md:109 | 修正: fenced block に `text` 識別子追加 |
+
+---
+
 ## Haruki ゲーミフィケーション設計の作成
 
 gamification-strategy-20260523.md を作成
@@ -1470,5 +1555,3 @@ gamification-strategy-20260523.md を作成
 **Context**: U-07-gamification Tier 2 実装完了。ブランチ: update_core_functions。デッドライン: 2026-05-30。
 
 ---
-
-

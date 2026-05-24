@@ -7,7 +7,7 @@ import {
   derivePsychSignals,
   determineContextCoverage,
 } from "../contextUtils.js";
-import type { SlackContext, TaskContext } from "../types.js";
+import type { CalendarContext, SlackContext, TaskContext } from "../types.js";
 
 // ─────────────────────────────────────────────
 // テストフィクスチャー
@@ -439,5 +439,153 @@ describe("calcNextCheckAt", () => {
     const now = new Date("2026-05-17T00:00:00Z");
     const result = calcNextCheckAt(360, now);
     expect(result).toBe("2026-05-17T06:00:00.000Z");
+  });
+});
+
+// ─────────────────────────────────────────────
+// Calendar コンテキスト統合テスト（U-07b / BR-G-06）
+// ─────────────────────────────────────────────
+
+function makeCalendarContext(
+  overrides: Partial<CalendarContext> = {},
+): CalendarContext {
+  return {
+    upcomingEventCount: 2,
+    nextEventStartsInMinutes: 60,
+    freeSlotMinutesToday: 180,
+    busyScore: 0.5,
+    fetchedAt: "2026-05-24T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("derivePsychSignals — calendarBusyness（BR-G-06）", () => {
+  it("calendarBusyness='high' when busyScore >= 0.7", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ busyScore: 0.8 }),
+    };
+    const signals = derivePsychSignals(context);
+    expect(signals?.calendarBusyness).toBe("high");
+  });
+
+  it("calendarBusyness='low' when busyScore <= 0.3", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ busyScore: 0.2 }),
+    };
+    const signals = derivePsychSignals(context);
+    expect(signals?.calendarBusyness).toBe("low");
+  });
+
+  it("calendarBusyness='unknown' when busyScore is between 0.3 and 0.7", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ busyScore: 0.5 }),
+    };
+    const signals = derivePsychSignals(context);
+    expect(signals?.calendarBusyness).toBe("unknown");
+  });
+
+  it("calendarBusyness='unknown' when no calendarContext", () => {
+    const context: TaskContext = { task: makeTask() };
+    const signals = derivePsychSignals(context);
+    expect(signals?.calendarBusyness).toBe("unknown");
+  });
+});
+
+describe("derivePsychSignals — nextMeetingPressure（BR-G-06）", () => {
+  it("nextMeetingPressure='high' when nextEventStartsInMinutes < 30", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ nextEventStartsInMinutes: 15 }),
+    };
+    const signals = derivePsychSignals(context);
+    expect(signals?.nextMeetingPressure).toBe("high");
+  });
+
+  it("nextMeetingPressure='low' when nextEventStartsInMinutes >= 30", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ nextEventStartsInMinutes: 90 }),
+    };
+    const signals = derivePsychSignals(context);
+    expect(signals?.nextMeetingPressure).toBe("low");
+  });
+
+  it("nextMeetingPressure='unknown' when nextEventStartsInMinutes is null", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ nextEventStartsInMinutes: null }),
+    };
+    const signals = derivePsychSignals(context);
+    expect(signals?.nextMeetingPressure).toBe("unknown");
+  });
+
+  it("nextMeetingPressure='unknown' when no calendarContext", () => {
+    const context: TaskContext = { task: makeTask() };
+    const signals = derivePsychSignals(context);
+    expect(signals?.nextMeetingPressure).toBe("unknown");
+  });
+});
+
+describe("deriveContextSignals — nearestMeetingMinutes（BR-G-06）", () => {
+  it("nearestMeetingMinutes is set from calendarContext", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ nextEventStartsInMinutes: 45 }),
+    };
+    const signals = deriveContextSignals(context);
+    expect(signals.nearestMeetingMinutes).toBe(45);
+  });
+
+  it("nearestMeetingMinutes is undefined when no calendarContext", () => {
+    const context: TaskContext = { task: makeTask() };
+    const signals = deriveContextSignals(context);
+    expect(signals.nearestMeetingMinutes).toBeUndefined();
+  });
+
+  it("nearestMeetingMinutes is undefined when nextEventStartsInMinutes is null", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ nextEventStartsInMinutes: null }),
+    };
+    const signals = deriveContextSignals(context);
+    expect(signals.nearestMeetingMinutes).toBeUndefined();
+  });
+});
+
+describe("assembleContextNarrative — Calendar コンテキスト（BR-G-06）", () => {
+  it("Calendar セクションを含む when calendarContext あり", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({
+        upcomingEventCount: 3,
+        nextEventStartsInMinutes: 45,
+        freeSlotMinutesToday: 120,
+        busyScore: 0.6,
+      }),
+    };
+    const narrative = assembleContextNarrative(context);
+    expect(narrative).toContain("Googleカレンダーの状況");
+    expect(narrative).toContain("3件");
+    expect(narrative).toContain("45分");
+    expect(narrative).toContain("120分");
+    expect(narrative).toContain("0.60");
+  });
+
+  it("次の予定なし と表示する when nextEventStartsInMinutes is null", () => {
+    const context: TaskContext = {
+      task: makeTask(),
+      calendarContext: makeCalendarContext({ nextEventStartsInMinutes: null }),
+    };
+    const narrative = assembleContextNarrative(context);
+    expect(narrative).toContain("予定なし");
+  });
+
+  it("Calendar セクションを含まない when calendarContext なし", () => {
+    const context: TaskContext = { task: makeTask() };
+    const narrative = assembleContextNarrative(context);
+    expect(narrative).not.toContain("Googleカレンダーの状況");
   });
 });

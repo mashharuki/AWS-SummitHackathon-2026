@@ -1,14 +1,28 @@
 import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
+import type * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
+import type { CUSTOM_DOMAIN } from "./acm-us-east-1-stack";
 
 // 他スタックへの依存を持たないシンプルなProps
-export type FrontendStackProps = cdk.StackProps;
+export interface FrontendStackProps extends cdk.StackProps {
+  /**
+   * カスタムドメイン有効時に渡す us-east-1 証明書。
+   * customDomain context フラグが true のときのみ指定する。
+   * @default undefined (customDomain=false のとき)
+   */
+  readonly cloudfrontCertificate?: acm.ICertificate;
+  /**
+   * CloudFront に設定するカスタムドメイン名。
+   * @default undefined
+   */
+  readonly customDomainName?: (typeof CUSTOM_DOMAIN)["frontend"];
+}
 
 export interface FrontendStackExports {
   readonly distributionDomainName: string;
@@ -16,13 +30,23 @@ export interface FrontendStackExports {
   // ConfigDeployStack が env-config.json を書き込むために使用
   readonly bucket: s3.Bucket;
   readonly distribution: cloudfront.Distribution;
+  /**
+   * カスタムドメイン有効時のフロント URL（https://saborou.agentic-jp.com）。
+   * 無効時は CloudFront デフォルトドメインを使用した URL になる。
+   */
+  readonly frontendUrl: string;
 }
 
 export class SaborouFrontendStack extends cdk.Stack {
   public readonly exports: FrontendStackExports;
 
   constructor(scope: Construct, id: string, props?: FrontendStackProps) {
-    super(scope, id, props);
+    // crossRegionReferences: true により us-east-1 の ACM 証明書をクロスリージョン参照可能にする。
+    // customDomain=false のときは不要だが、設定しても害はない。
+    super(scope, id, {
+      ...props,
+      crossRegionReferences: true,
+    });
 
     const environment = this.node.tryGetContext("environment") ?? "dev";
 
@@ -41,7 +65,18 @@ export class SaborouFrontendStack extends cdk.Stack {
     // origin を一度生成して default と additionalBehaviors で共有し、OAC が重複しないようにする
     const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
 
+    // カスタムドメインが指定された場合は証明書とドメイン名を設定する。
+    // CloudFront 証明書は us-east-1 必須のため AcmUsEast1Stack から渡される。
+    const customDomainConfig =
+      props?.cloudfrontCertificate && props?.customDomainName
+        ? {
+            certificate: props.cloudfrontCertificate,
+            domainNames: [props.customDomainName],
+          }
+        : {};
+
     const distribution = new cloudfront.Distribution(this, "Distribution", {
+      ...customDomainConfig,
       defaultBehavior: {
         origin: s3Origin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -112,12 +147,26 @@ export class SaborouFrontendStack extends cdk.Stack {
       exclude: ["env-config.json"],
     });
 
+    // カスタムドメイン有効時のフロント URL を決定する
+    const frontendUrl = props?.customDomainName
+      ? `https://${props.customDomainName}`
+      : `https://${distribution.distributionDomainName}`;
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "CloudFrontDomainName", {
       value: distribution.distributionDomainName,
-      description: "CloudFront Distribution domain name",
+      description: "CloudFront Distribution domain name (xxx.cloudfront.net)",
       exportName: `SaborouCloudFrontDomain-${environment}`,
     });
+
+    // カスタムドメイン有効時の DNS 設定案内を出力する
+    if (props?.customDomainName) {
+      new cdk.CfnOutput(this, "CloudFrontCnameDnsRecord", {
+        value: `CNAME: ${props.customDomainName} → ${distribution.distributionDomainName}  (Cloudflare Proxy OFF / DNS only)`,
+        description:
+          "[手動] Cloudflare に追加すべき CloudFront 向け CNAME レコード",
+      });
+    }
 
     new cdk.CfnOutput(this, "S3BucketName", {
       value: bucket.bucketName,
@@ -178,6 +227,7 @@ export class SaborouFrontendStack extends cdk.Stack {
       bucketName: bucket.bucketName,
       bucket,
       distribution,
+      frontendUrl,
     };
   }
 }

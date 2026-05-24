@@ -15,13 +15,17 @@ export type { IBedrockClient } from "./bedrock/IBedrockClient.js";
 // タスク抽出エージェント (U-03a)
 export { DynamoTaskCandidateRepository } from "./repositories/DynamoTaskCandidateRepository.js";
 export { TaskExtractorAgent } from "./task-extractor/TaskExtractorAgent.js";
-export type { ExtractionResult } from "./task-extractor/TaskExtractorAgent.js";
+export type {
+  ExtractionResult,
+  GenericExtractInput,
+} from "./task-extractor/TaskExtractorAgent.js";
 
 // サボリ提案エージェント (U-03b)
 export { DynamoProposalRepository } from "./repositories/DynamoProposalRepository.js";
 export { PersonaRenderer } from "./sabori-proposer/PersonaRenderer.js";
 export { SaboriProposerAgent } from "./sabori-proposer/SaboriProposerAgent.js";
 export type {
+  CalendarContext,
   ContextSignals,
   LLMJudgment,
   ProposalDelta,

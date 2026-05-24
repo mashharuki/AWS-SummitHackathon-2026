@@ -14,7 +14,6 @@
  * 5. トークンを Secrets Manager に保存し、ARN を ServiceConnections DynamoDB に登録
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   CreateSecretCommand,
   SecretsManagerClient,
@@ -28,6 +27,7 @@ import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoServiceConnectionRepository } from "../repositories/DynamoServiceConnectionRepository.js";
 import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../types.js";
+import { encodeState, verifyState } from "../utils/oauthState.js";
 
 const SLACK_OAUTH_SCOPES = [
   "channels:history",
@@ -49,35 +49,6 @@ const SLACK_TOKEN_URL = "https://slack.com/api/oauth.v2.access";
 const smClient = new SecretsManagerClient({
   region: process.env.AWS_REGION ?? "ap-northeast-1",
 });
-
-function signState(payload: string, secret: string): string {
-  return createHmac("sha256", secret).update(payload).digest("hex");
-}
-
-function verifyState(
-  stateParam: string,
-  secret: string,
-): { userId: string } | null {
-  try {
-    const decoded = Buffer.from(stateParam, "base64url").toString("utf8");
-    const { payload, mac } = JSON.parse(decoded) as {
-      payload: string;
-      mac: string;
-    };
-    const expected = signState(payload, secret);
-    const expectedBuf = Buffer.from(expected, "hex");
-    const actualBuf = Buffer.from(mac, "hex");
-    if (
-      expectedBuf.length !== actualBuf.length ||
-      !timingSafeEqual(expectedBuf, actualBuf)
-    ) {
-      return null;
-    }
-    return JSON.parse(payload) as { userId: string };
-  } catch {
-    return null;
-  }
-}
 
 export function createAuthRoute(
   connectionRepository: DynamoServiceConnectionRepository,
@@ -101,12 +72,7 @@ export function createAuthRoute(
 
     // state パラメータに userId + HMAC-SHA256 署名をエンコードして CSRF 対策
     const oauthStateSecret = env.OAUTH_STATE_SECRET;
-    const nonce = crypto.randomUUID();
-    const payload = JSON.stringify({ userId, nonce });
-    const mac = signState(payload, oauthStateSecret);
-    const state = Buffer.from(JSON.stringify({ payload, mac })).toString(
-      "base64url",
-    );
+    const state = encodeState(userId, oauthStateSecret);
 
     const params = new URLSearchParams({
       client_id: slackClientId,

@@ -40,10 +40,13 @@ describe("SaborouWebhookStack", () => {
   });
 
   test("EventBridge Rule is created for Slack events", () => {
+    // PR #38: ルールは Webhook 由来（リアルタイム）に加え、
+    // SlackBackfill（C-1 の遡及取得 API 由来）も TaskExtractor へ配信する。
+    // source / detail-type ともに両系統を含むことを検証する。
     template.hasResourceProperties("AWS::Events::Rule", {
       EventPattern: {
-        source: ["saborou.webhook"],
-        "detail-type": ["SlackEvent"],
+        source: Match.arrayWith(["saborou.webhook", "saborou.backend"]),
+        "detail-type": Match.arrayWith(["SlackEvent", "SlackBackfill"]),
       },
     });
   });

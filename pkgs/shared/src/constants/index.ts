@@ -14,6 +14,8 @@ export const VERDICT_TYPE = {
 export const SOURCE_TYPE = {
   SLACK: "slack",
   MANUAL: "manual",
+  GMAIL: "gmail",
+  CALENDAR: "calendar",
 } as const;
 
 /**
@@ -21,6 +23,7 @@ export const SOURCE_TYPE = {
  */
 export const SERVICE_TYPE = {
   SLACK: "slack",
+  GOOGLE: "google",
 } as const;
 
 /**

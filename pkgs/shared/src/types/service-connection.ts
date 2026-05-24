@@ -44,4 +44,27 @@ export interface ServiceConnection {
   connectedAt: string;
   /** Token expiration (ISO 8601 / null: no expiration) */
   expiresAt: string | null;
+
+  // ---- Google-specific fields (present only for Google connections) ----
+  /**
+   * OAuth scopes granted by the user (space-separated).
+   * Only present for Google connections.
+   */
+  googleScopes?: string;
+  /**
+   * Access token expiration datetime (ISO 8601).
+   * Google access tokens expire in 3600 seconds; refreshed via refreshToken.
+   * Only present for Google connections.
+   */
+  googleAccessTokenExpiresAt?: string;
+  /**
+   * Datetime of the last Google Calendar cache fetch (ISO 8601).
+   * Only present for Google connections.
+   */
+  calendarLastFetchedAt?: string;
+  /**
+   * Datetime of the last Gmail cache fetch (ISO 8601).
+   * Only present for Google connections.
+   */
+  gmailLastFetchedAt?: string;
 }

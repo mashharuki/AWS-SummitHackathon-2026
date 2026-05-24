@@ -106,8 +106,9 @@ async function handleSlackEvent(
     return;
   }
 
-  // Slack user ID (rawEvent.user) を cognitoSub に変換する
-  // GSI-SlackLookup を使って teamId + slackUserId → cognitoSub を解決する
+  // Slack user ID (rawEvent.user) を cognitoSub に変換する。
+  // GSI-SlackLookup を使って teamId + slackUserId → cognitoSub を解決する。
+  // 連携していない Slack ユーザーのメッセージはスキップ（こちらの管理対象外）。
   const slackUserId = rawEvent.user;
   const resolvedUserId = await slackUserLookup.findCognitoSubBySlackIdentity(
     detail.teamId,
@@ -123,16 +124,15 @@ async function handleSlackEvent(
     return;
   }
 
-  // EventBridge エンベロープ → ドメイン型に変換
   const payload: SlackEventPayload = {
     source: "slack",
-    userId: resolvedUserId, // cognitoSub (not Slack user ID)
+    userId: resolvedUserId,
     message: {
       text: rawEvent.text,
       channelId: rawEvent.channel,
       messageTs: rawEvent.ts,
       teamId: detail.teamId,
-      userId: slackUserId, // message.userId はSlack IDのまま（ログ用）
+      userId: rawEvent.user,
       ...(rawEvent.thread_ts ? { threadTs: rawEvent.thread_ts } : {}),
     },
   };

@@ -2,12 +2,14 @@ import * as cdk from "aws-cdk-lib";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import type * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
+import type { CUSTOM_DOMAIN } from "./acm-us-east-1-stack";
 import type { CognitoStackExports } from "./cognito-stack";
 import type { DataStackExports } from "./data-stack";
 
@@ -15,11 +17,27 @@ export interface ApiStackProps extends cdk.StackProps {
   readonly cognito: CognitoStackExports;
   readonly data: DataStackExports;
   readonly frontendDomainName?: string;
+  /**
+   * カスタムドメイン有効時の ap-northeast-1 証明書（API Gateway 用）。
+   * customDomain context フラグが true のときのみ指定する。
+   * @default undefined
+   */
+  readonly apiCertificate?: acm.ICertificate;
+  /**
+   * API Gateway に設定するカスタムドメイン名。
+   * @default undefined
+   */
+  readonly customApiDomainName?: (typeof CUSTOM_DOMAIN)["api"];
 }
 
 export interface ApiStackExports {
   readonly httpApiUrl: string;
   readonly honoFn: lambda.Function;
+  /**
+   * カスタムドメイン有効時の API URL（https://saborou-api.agentic-jp.com）。
+   * 無効時は API Gateway デフォルトエンドポイント URL になる。
+   */
+  readonly apiUrl: string;
 }
 
 export class SaborouApiStack extends cdk.Stack {
@@ -89,6 +107,16 @@ export class SaborouApiStack extends cdk.Stack {
           : {}),
         // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出す
         BEDROCK_REGION: "ap-northeast-1",
+        // --- Google OAuth（差分5）---
+        GOOGLE_CLIENT_SECRET_ARN:
+          props.data.secrets.googleClientSecret.secretArn,
+        GOOGLE_CLIENT_ID: ssm.StringParameter.valueForStringParameter(
+          this,
+          "/saborou/google/client-id",
+        ),
+        // --- Google Calendar Cache（U-07b）---
+        DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE:
+          props.data.tables.googleCalendarCache.tableName,
       },
     });
 
@@ -136,9 +164,14 @@ export class SaborouApiStack extends cdk.Stack {
     props.data.tables.proposals.grantReadWriteData(honoFn);
     props.data.tables.honneData.grantReadWriteData(honoFn);
     props.data.tables.personas.grantReadData(honoFn);
+    // Google Calendar キャッシュ: 読み書き（Calendar 取り込み時書き込み・提案時読み込み）
+    props.data.tables.googleCalendarCache.grantReadWriteData(honoFn);
 
     // --- Secrets Manager 権限付与 (追加: U-04 Slack OAuth) ---
     props.data.secrets.slackClientSecret.grantRead(honoFn);
+
+    // --- Google OAuth client secret の読み取り権限（差分5）---
+    props.data.secrets.googleClientSecret.grantRead(honoFn);
 
     // --- per-user Slack Bot Token の読み書き権限 ---
     // 読み取り（遡及取得 API）と書き込み（OAuth コールバックでの保存）の両方が必要。
@@ -162,6 +195,24 @@ export class SaborouApiStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ["secretsmanager:CreateSecret"],
         resources: ["*"],
+      }),
+    );
+
+    // --- per-user Google token の読み書き権限（差分5）---
+    // `saborou/google-token/<userId>` に refreshToken/accessToken を JSON 保存
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:DeleteSecret", // 連携解除時の ForceDelete（dev）
+        ],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/google-token/*`,
+        ],
       }),
     );
 
@@ -225,6 +276,18 @@ export class SaborouApiStack extends cdk.Stack {
       ),
     });
 
+    // Google OAuth コールバック (認証なし)
+    // Google からのブラウザリダイレクトで来るため JWT は付かない。
+    // CSRF は state パラメータの HMAC 署名検証（google-auth.ts verifyState）で担保する。
+    httpApi.addRoutes({
+      path: "/api/auth/google/callback",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "GoogleCallbackIntegration",
+        honoFn,
+      ),
+    });
+
     // メインルート (JWT 認証必須)
     // OPTIONS は除外: API Gateway の corsPreflight が preflight を自動処理する。
     // ANY に OPTIONS を含めると JWT Authorizer が preflight に 401 を返し CORS が壊れる。
@@ -245,10 +308,57 @@ export class SaborouApiStack extends cdk.Stack {
       authorizer,
     });
 
+    // --- API Gateway カスタムドメイン（customDomain=true のときのみ） ---
+    // ap-northeast-1 の証明書と DomainName L2 コンストラクトを使用する。
+    // ApiMapping で HTTP API のデフォルトステージをカスタムドメインのルートに紐付ける。
+    let apiUrl = httpApi.apiEndpoint;
+
+    if (props.apiCertificate && props.customApiDomainName) {
+      const apiDomainName = new apigatewayv2.DomainName(
+        this,
+        "ApiCustomDomain",
+        {
+          domainName: props.customApiDomainName,
+          certificate: props.apiCertificate,
+          // HTTP API はリージョナルエンドポイントのみ対応（EDGE は WebSocket のみ）
+          endpointType: apigatewayv2.EndpointType.REGIONAL,
+          securityPolicy: apigatewayv2.SecurityPolicy.TLS_1_2,
+        },
+      );
+
+      // HTTP API のデフォルトステージをカスタムドメインのルートパスにマッピング
+      new apigatewayv2.ApiMapping(this, "ApiDomainMapping", {
+        api: httpApi,
+        domainName: apiDomainName,
+        // mappingKey を省略することでルートパス（/）にマッピングされる
+      });
+
+      // カスタムドメイン有効時の API URL
+      apiUrl = `https://${props.customApiDomainName}`;
+
+      // Cloudflare に登録すべき DNS レコードを出力
+      new cdk.CfnOutput(this, "ApiDomainRegionalDomainName", {
+        value: apiDomainName.regionalDomainName,
+        description:
+          "[手動] Cloudflare に追加すべき API 向け CNAME レコードのターゲット値",
+      });
+
+      new cdk.CfnOutput(this, "ApiCnameDnsRecord", {
+        value: `CNAME: ${props.customApiDomainName} → ${apiDomainName.regionalDomainName}  (Cloudflare Proxy OFF / DNS only)`,
+        description:
+          "[手動] Cloudflare に追加すべき API 向け CNAME レコード（フルテキスト）",
+      });
+
+      new cdk.CfnOutput(this, "ApiAcmDnsValidationNote", {
+        value: `ACM コンソール (ap-northeast-1) で証明書 ${props.customApiDomainName} の検証 CNAME (Name / Value) を確認し、Cloudflare DNS に登録してください。Proxy は OFF（DNS only）にすること。`,
+        description: "API 用 ACM DNS 検証 CNAME の登録方法",
+      });
+    }
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "HttpApiUrl", {
       value: httpApi.apiEndpoint,
-      description: "HTTP API Gateway endpoint URL",
+      description: "HTTP API Gateway endpoint URL (デフォルトエンドポイント)",
       exportName: `SaborouHttpApiUrl-${environment}`,
     });
 
@@ -289,6 +399,7 @@ export class SaborouApiStack extends cdk.Stack {
     this.exports = {
       httpApiUrl: httpApi.apiEndpoint,
       honoFn,
+      apiUrl,
     };
   }
 }

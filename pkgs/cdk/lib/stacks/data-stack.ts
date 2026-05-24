@@ -15,10 +15,13 @@ export interface DataStackExports {
     readonly proposals: dynamodb.Table;
     readonly honneData: dynamodb.Table;
     readonly personas: dynamodb.Table;
+    /** Google Calendar 手動取り込みキャッシュ（U-07b / BR-G-03） */
+    readonly googleCalendarCache: dynamodb.Table;
   };
   readonly secrets: {
     readonly slackClientSecret: secretsmanager.Secret;
     readonly slackSigningSecret: secretsmanager.Secret;
+    readonly googleClientSecret: secretsmanager.Secret;
   };
 }
 
@@ -78,6 +81,19 @@ export class SaborouDataStack extends cdk.Stack {
       ...tableDefaults,
       tableName: `saborou-personas-${environment}`,
     });
+
+    // Google Calendar キャッシュ（U-07b / BR-G-03）
+    // PK=USER#<cognitoSub> SK=CACHE#calendar でユーザーあたり1レコード
+    // TTL=24h で古いキャッシュを自動削除
+    const googleCalendarCache = new dynamodb.Table(
+      this,
+      "GoogleCalendarCacheTable",
+      {
+        ...tableDefaults,
+        tableName: `saborou-google-calendar-cache-${environment}`,
+        timeToLiveAttribute: "ttl",
+      },
+    );
 
     // --- GSI ---
     // connections: Slack identity (<teamId>#<slackUserId>) から所有 Cognito ユーザーを逆引きする。
@@ -141,6 +157,18 @@ export class SaborouDataStack extends cdk.Stack {
       },
     );
 
+    // Google OAuth client secret（差分5: ForceDelete パターン同一）
+    // 命名規則: /saborou/google/client-secret-${environment}（Slackと同一形式）
+    const googleClientSecret = new secretsmanager.Secret(
+      this,
+      "GoogleClientSecret",
+      {
+        secretName: `/saborou/google/client-secret-${environment}`,
+        description: "Google OAuth Client ID and Secret (JSON format)",
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+      },
+    );
+
     // dev: cdk destroy 時に ForceDeleteWithoutRecovery で即時削除するカスタムリソース
     // RETAIN のシークレットは CF が削除しないため、このカスタムリソースが唯一の削除手段
     if (!isProd) {
@@ -187,6 +215,31 @@ export class SaborouDataStack extends cdk.Stack {
             new iam.PolicyStatement({
               actions: ["secretsmanager:DeleteSecret"],
               resources: [slackSigningSecret.secretArn],
+            }),
+          ]),
+        },
+      );
+
+      // Google client secret の ForceDelete（差分5）
+      const forceDeleteGoogle = new cr.AwsCustomResource(
+        this,
+        "ForceDeleteGoogleClientSecret",
+        {
+          onDelete: {
+            service: "SecretsManager",
+            action: "deleteSecret",
+            parameters: {
+              SecretId: googleClientSecret.secretArn,
+              ForceDeleteWithoutRecovery: true,
+            },
+            physicalResourceId: cr.PhysicalResourceId.of(
+              googleClientSecret.secretArn,
+            ),
+          },
+          policy: cr.AwsCustomResourcePolicy.fromStatements([
+            new iam.PolicyStatement({
+              actions: ["secretsmanager:DeleteSecret"],
+              resources: [googleClientSecret.secretArn],
             }),
           ]),
         },
@@ -252,8 +305,9 @@ export class SaborouDataStack extends cdk.Stack {
         proposals,
         honneData,
         personas,
+        googleCalendarCache,
       },
-      secrets: { slackClientSecret, slackSigningSecret },
+      secrets: { slackClientSecret, slackSigningSecret, googleClientSecret },
     };
   }
 }

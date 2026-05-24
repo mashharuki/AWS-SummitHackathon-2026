@@ -21,10 +21,10 @@ export type QuickReplyType =
 // 'disagree_with_ai': "Want to completely ignore it" (deny AI judgment)
 
 /** Data source type */
-export type SourceType = "slack" | "manual";
+export type SourceType = "slack" | "manual" | "gmail" | "calendar";
 
 /** External service type */
-export type ServiceType = "slack";
+export type ServiceType = "slack" | "google";
 
 /** External service connection status */
 export type ConnectionStatus = "connected" | "disconnected" | "token_expired";
