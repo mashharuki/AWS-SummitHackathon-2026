@@ -132,14 +132,28 @@ export class SaborouApiStack extends cdk.Stack {
     // --- Secrets Manager 権限付与 (追加: U-04 Slack OAuth) ---
     props.data.secrets.slackClientSecret.grantRead(honoFn);
 
-    // --- per-user Slack Bot Token 読み取り権限（遡及取得 API が使用） ---
+    // --- per-user Slack Bot Token の読み書き権限 ---
+    // 読み取り（遡及取得 API）と書き込み（OAuth コールバックでの保存）の両方が必要。
     honoFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["secretsmanager:GetSecretValue"],
+        actions: [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DescribeSecret",
+        ],
         resources: [
           `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-bot-token/*`,
         ],
+      }),
+    );
+    // CreateSecret はリソース未作成のため * 指定（OAuth 初回連携で Bot Token を新規作成）
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["secretsmanager:CreateSecret"],
+        resources: ["*"],
       }),
     );
 
