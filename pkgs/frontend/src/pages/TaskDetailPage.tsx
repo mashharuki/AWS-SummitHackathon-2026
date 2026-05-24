@@ -28,6 +28,7 @@ import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
 import { saveVerdictEntry } from "@/components/verdict/VerdictHistory";
+import { useAuth } from "@/hooks/useAuth";
 import { useProposalStream } from "@/hooks/useProposalStream";
 import { useSaboriGamification } from "@/hooks/useSaboriGamification";
 import { useTasks } from "@/hooks/useTasks";
@@ -65,6 +66,7 @@ export function TaskDetailPage() {
   const { i18n, t } = useTranslation();
   const { id: taskId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { tasks, updateTask, deleteTask } = useTasks();
 
   const [task, setTask] = useState<Task | null>(null);
@@ -374,6 +376,7 @@ export function TaskDetailPage() {
                     <SaborouCharacter2D
                       verdict={verdictForDisplay ?? "can_saboru"}
                       size={160}
+                      personaId={user?.preferredPersonaId}
                     />
                   </div>
                 }
@@ -382,6 +385,7 @@ export function TaskDetailPage() {
                   verdict={verdictForDisplay}
                   isStreaming={isStreaming}
                   size={280}
+                  personaId={user?.preferredPersonaId}
                 />
               </Suspense>
             </div>
