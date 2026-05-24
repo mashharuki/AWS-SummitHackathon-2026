@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/SaboriStreakBadge";
 import { ShareButton } from "@/components/ui/ShareCard";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
+import { DeferralCountdown } from "@/components/verdict/DeferralCountdown";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
@@ -411,6 +412,14 @@ export function TaskDetailPage() {
                       )
                     : undefined
                 }
+              />
+            )}
+
+            {/* 時間軸付き先延ばし可視化 — 競合との決定的差別化要素 */}
+            {proposal?.nextCheckAt && verdictForDisplay === "can_saboru" && (
+              <DeferralCountdown
+                nextCheckAt={proposal.nextCheckAt}
+                onRecheck={startProposal}
               />
             )}
 
