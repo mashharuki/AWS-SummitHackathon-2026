@@ -57,7 +57,6 @@ export function AchievementToast({
       role="alert"
       aria-live="assertive"
       aria-label={`${t("gamification.achievementUnlocked")}: ${achievement.title}`}
-      tabIndex={0}
       onClick={() => {
         setVisible(false);
         setTimeout(onClose, 350);

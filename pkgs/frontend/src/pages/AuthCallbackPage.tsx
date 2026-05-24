@@ -16,6 +16,7 @@ export function AuthCallbackPage() {
   const navigate = useNavigate();
   const processingRef = useRef(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional run-once mount effect
   useEffect(() => {
     if (processingRef.current) return;
     processingRef.current = true;
@@ -56,8 +57,6 @@ export function AuthCallbackPage() {
         showToast(t("authCallback.failed"), "error");
         void navigate("/login", { replace: true });
       });
-    // eslint-disable-line react-hooks/exhaustive-deps
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional run-once mount effect
   }, []);
 
   return (

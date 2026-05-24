@@ -38,7 +38,6 @@ export function JackpotOverlay({ isActive, onClose }: JackpotOverlayProps) {
       aria-live="assertive"
       role="alert"
       aria-label={t("gamification.jackpotAriaLabel")}
-      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,

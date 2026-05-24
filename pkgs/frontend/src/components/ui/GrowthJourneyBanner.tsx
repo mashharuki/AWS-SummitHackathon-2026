@@ -60,7 +60,6 @@ export function GrowthJourneyBanner({
     <div
       aria-live="assertive"
       role="alert"
-      tabIndex={0}
       style={{
         position: "fixed",
         inset: 0,

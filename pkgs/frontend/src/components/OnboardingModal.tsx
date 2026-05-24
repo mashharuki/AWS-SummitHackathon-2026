@@ -192,11 +192,16 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   if (step === "quiz") {
     if (showResult && aptitudeScore !== null) {
       return (
-        <div
+        <dialog
+          open
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(43,30,22,0.75)" }}
-          role="dialog"
-          aria-modal="true"
+          style={{
+            background: "rgba(43,30,22,0.75)",
+            border: "none",
+            maxWidth: "none",
+            margin: 0,
+            padding: 0,
+          }}
           aria-label="サボり適性結果"
         >
           <div
@@ -300,7 +305,7 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
               SABOROUを始める 🦥
             </button>
           </div>
-        </div>
+        </dialog>
       );
     }
 
@@ -308,11 +313,16 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
     const totalQ = QUIZ_QUESTIONS.length;
 
     return (
-      <div
+      <dialog
+        open
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: "rgba(43,30,22,0.75)" }}
-        role="dialog"
-        aria-modal="true"
+        style={{
+          background: "rgba(43,30,22,0.75)",
+          border: "none",
+          maxWidth: "none",
+          margin: 0,
+          padding: 0,
+        }}
         aria-label="サボり適性クイズ"
       >
         <div
@@ -325,10 +335,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
         >
           {/* クイズ進捗 */}
           <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
-            {QUIZ_QUESTIONS.map((_, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: quiz dots
+            {QUIZ_QUESTIONS.map((q, i) => (
               <div
-                key={`dot-${i}`}
+                key={q.question}
                 style={{
                   flex: 1,
                   height: 4,
@@ -418,17 +427,22 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
             クイズをスキップ
           </button>
         </div>
-      </div>
+      </dialog>
     );
   }
 
   // ===== 通常スライド画面 =====
   return (
-    <div
+    <dialog
+      open
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(43,30,22,0.75)" }}
-      role="dialog"
-      aria-modal="true"
+      style={{
+        background: "rgba(43,30,22,0.75)",
+        border: "none",
+        maxWidth: "none",
+        margin: 0,
+        padding: 0,
+      }}
       aria-label="SABOROU オンボーディング"
     >
       <div
@@ -441,10 +455,9 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       >
         {/* ドットインジケーター */}
         <div className="flex gap-1.5 justify-center mb-5">
-          {SLIDES.map((_, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: slide dots
+          {SLIDES.map((s, i) => (
             <div
-              key={`slide-dot-${i}`}
+              key={s.emoji}
               style={{
                 width: i === slideIndex ? 20 : 6,
                 height: 6,
@@ -525,6 +538,6 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </button>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }

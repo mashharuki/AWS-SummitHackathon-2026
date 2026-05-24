@@ -136,6 +136,7 @@ export function TaskDetailPage() {
   });
 
   // 判定履歴をlocalStorageに保存（task + proposal 両方が揃ったとき）
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on proposal update
   useEffect(() => {
     if (task && proposal) {
       saveVerdictEntry({
@@ -146,17 +147,16 @@ export function TaskDetailPage() {
         evaluatedAt: proposal.evaluatedAt,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on proposal update
   }, [proposal?.evaluatedAt]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional run-once on taskId
   useEffect(() => {
     if (taskId && !proposal) {
       void startProposal();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional run-once on taskId
-  }, [taskId]);: Tier 1〜2 ゲーミフィケーション結果を記録
-  useEffect(() => 
+  }, [taskId]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional trigger on proposal update
+  useEffect(() => {
     if (proposal?.verdict) {
       const signals = proposal.psychSignals;
       const signalCount = signals
@@ -181,7 +181,8 @@ export function TaskDetailPage() {
           nowHour: new Date().getHours(),
         });
       }
-    }, [proposal?.evaluatedAt]);
+    }
+  }, [proposal?.evaluatedAt]);
 
   // チャットメッセージを型変換
   const chatMessages: ChatMessageType[] = streamMessages.map((m) => ({

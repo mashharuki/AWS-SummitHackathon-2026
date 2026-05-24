@@ -153,12 +153,12 @@ export function SaboriStreakBadge({
   const { t } = useTranslation();
   const [animated, setAnimated] = useState(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional animation trigger on streak change
   useEffect(() => {
     // マウント時に1回アニメーション
     setAnimated(true);
     const timer = setTimeout(() => setAnimated(false), 600);
     return () => clearTimeout(timer);
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional animation trigger on streak change
   }, [streakDays]);
 
   if (streakDays === 0) return null;
