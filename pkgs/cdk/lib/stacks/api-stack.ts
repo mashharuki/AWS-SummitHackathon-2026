@@ -2,12 +2,14 @@ import * as cdk from "aws-cdk-lib";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import type * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as ssm from "aws-cdk-lib/aws-ssm";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
+import type { CUSTOM_DOMAIN } from "./acm-us-east-1-stack";
 import type { CognitoStackExports } from "./cognito-stack";
 import type { DataStackExports } from "./data-stack";
 
@@ -15,11 +17,27 @@ export interface ApiStackProps extends cdk.StackProps {
   readonly cognito: CognitoStackExports;
   readonly data: DataStackExports;
   readonly frontendDomainName?: string;
+  /**
+   * カスタムドメイン有効時の ap-northeast-1 証明書（API Gateway 用）。
+   * customDomain context フラグが true のときのみ指定する。
+   * @default undefined
+   */
+  readonly apiCertificate?: acm.ICertificate;
+  /**
+   * API Gateway に設定するカスタムドメイン名。
+   * @default undefined
+   */
+  readonly customApiDomainName?: (typeof CUSTOM_DOMAIN)["api"];
 }
 
 export interface ApiStackExports {
   readonly httpApiUrl: string;
   readonly honoFn: lambda.Function;
+  /**
+   * カスタムドメイン有効時の API URL（https://saborou-api.agentic-jp.com）。
+   * 無効時は API Gateway デフォルトエンドポイント URL になる。
+   */
+  readonly apiUrl: string;
 }
 
 export class SaborouApiStack extends cdk.Stack {
@@ -81,7 +99,7 @@ export class SaborouApiStack extends cdk.Stack {
         EVENT_BUS_NAME: `saborou-event-bus-${environment}`,
         // per-user の Slack Bot Token シークレット名プレフィックス
         // （遡及取得 API が認証ユーザーの Bot Token を取得するため）
-        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
+        SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
         // Slack OAuth コールバック成功後のフロント（CloudFront）リダイレクト先。
         // 未設定だと localhost:5173 にフォールバックしてしまう。
         ...(props.frontendDomainName
@@ -90,7 +108,8 @@ export class SaborouApiStack extends cdk.Stack {
         // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出す
         BEDROCK_REGION: "ap-northeast-1",
         // --- Google OAuth（差分5）---
-        GOOGLE_CLIENT_SECRET_ARN: props.data.secrets.googleClientSecret.secretArn,
+        GOOGLE_CLIENT_SECRET_ARN:
+          props.data.secrets.googleClientSecret.secretArn,
         GOOGLE_CLIENT_ID: ssm.StringParameter.valueForStringParameter(
           this,
           "/saborou/google/client-id",
@@ -112,13 +131,13 @@ export class SaborouApiStack extends cdk.Stack {
         resources: [
           // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (inference-profile ARN にはアカウント ID が必要)
           `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,
-          `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6`,
-          `arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6`,
+          "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6",
+          "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6",
           // Claude Haiku 4.5 (PersonaRenderer): JP Geo クロスリージョン推論プロファイル
           // ※ Haiku 3.5 は ap-northeast-1 に存在しないため 4.5 を使用
           `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-haiku-4-5-20251001-v1:0`,
-          `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
-          `arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
+          "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+          "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
         ],
       }),
     );
@@ -289,10 +308,57 @@ export class SaborouApiStack extends cdk.Stack {
       authorizer,
     });
 
+    // --- API Gateway カスタムドメイン（customDomain=true のときのみ） ---
+    // ap-northeast-1 の証明書と DomainName L2 コンストラクトを使用する。
+    // ApiMapping で HTTP API のデフォルトステージをカスタムドメインのルートに紐付ける。
+    let apiUrl = httpApi.apiEndpoint;
+
+    if (props.apiCertificate && props.customApiDomainName) {
+      const apiDomainName = new apigatewayv2.DomainName(
+        this,
+        "ApiCustomDomain",
+        {
+          domainName: props.customApiDomainName,
+          certificate: props.apiCertificate,
+          // HTTP API はリージョナルエンドポイントのみ対応（EDGE は WebSocket のみ）
+          endpointType: apigatewayv2.EndpointType.REGIONAL,
+          securityPolicy: apigatewayv2.SecurityPolicy.TLS_1_2,
+        },
+      );
+
+      // HTTP API のデフォルトステージをカスタムドメインのルートパスにマッピング
+      new apigatewayv2.ApiMapping(this, "ApiDomainMapping", {
+        api: httpApi,
+        domainName: apiDomainName,
+        // mappingKey を省略することでルートパス（/）にマッピングされる
+      });
+
+      // カスタムドメイン有効時の API URL
+      apiUrl = `https://${props.customApiDomainName}`;
+
+      // Cloudflare に登録すべき DNS レコードを出力
+      new cdk.CfnOutput(this, "ApiDomainRegionalDomainName", {
+        value: apiDomainName.regionalDomainName,
+        description:
+          "[手動] Cloudflare に追加すべき API 向け CNAME レコードのターゲット値",
+      });
+
+      new cdk.CfnOutput(this, "ApiCnameDnsRecord", {
+        value: `CNAME: ${props.customApiDomainName} → ${apiDomainName.regionalDomainName}  (Cloudflare Proxy OFF / DNS only)`,
+        description:
+          "[手動] Cloudflare に追加すべき API 向け CNAME レコード（フルテキスト）",
+      });
+
+      new cdk.CfnOutput(this, "ApiAcmDnsValidationNote", {
+        value: `ACM コンソール (ap-northeast-1) で証明書 ${props.customApiDomainName} の検証 CNAME (Name / Value) を確認し、Cloudflare DNS に登録してください。Proxy は OFF（DNS only）にすること。`,
+        description: "API 用 ACM DNS 検証 CNAME の登録方法",
+      });
+    }
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "HttpApiUrl", {
       value: httpApi.apiEndpoint,
-      description: "HTTP API Gateway endpoint URL",
+      description: "HTTP API Gateway endpoint URL (デフォルトエンドポイント)",
       exportName: `SaborouHttpApiUrl-${environment}`,
     });
 
@@ -333,6 +399,7 @@ export class SaborouApiStack extends cdk.Stack {
     this.exports = {
       httpApiUrl: httpApi.apiEndpoint,
       honoFn,
+      apiUrl,
     };
   }
 }
