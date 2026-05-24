@@ -74,9 +74,7 @@ export function SideNav() {
             aria-label={item.label}
             className={({ isActive }) =>
               `flex items-center justify-center lg:justify-start gap-3 rounded-xl px-2 py-2.5 transition-colors ${
-                isActive
-                  ? "bg-saboru-orange-light"
-                  : "hover:bg-saboru-cream"
+                isActive ? "bg-saboru-orange-light" : "hover:bg-saboru-cream"
               }`
             }
           >

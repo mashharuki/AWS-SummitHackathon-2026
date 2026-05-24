@@ -195,7 +195,6 @@ export function createAuthRoute(
       ok: boolean;
       access_token?: string;
       team?: { id: string; name: string };
-      // OAuth v2 はワークスペースにインストールした Slack ユーザーを authed_user で返す
       authed_user?: { id: string };
       error?: string;
     };
@@ -244,7 +243,6 @@ export function createAuthRoute(
     const slackTeamId = tokenData.team?.id;
     const slackUserId = tokenData.authed_user?.id;
 
-    // Save connection record to DynamoDB（slack identity 付き → GSI-SlackLookup 用）
     await connectionRepository.saveForUser(userId, {
       service: "slack",
       status: "connected",
@@ -253,6 +251,9 @@ export function createAuthRoute(
       ...(slackTeamId ? { slackTeamId } : {}),
       connectedAt: toIsoString(new Date()),
       expiresAt: null,
+      ...(tokenData.authed_user?.id
+        ? { slackUserId: tokenData.authed_user.id }
+        : {}),
     });
 
     // Cognito ユーザーのプロフィールにも Slack identity を保存する。

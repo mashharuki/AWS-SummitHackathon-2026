@@ -46,9 +46,7 @@ export function PageHeader({
           {title}
         </h1>
         {subtitle && (
-          <p
-            className="text-saboru-ink-muted mt-0.5 truncate text-xs md:text-sm"
-          >
+          <p className="text-saboru-ink-muted mt-0.5 truncate text-xs md:text-sm">
             {subtitle}
           </p>
         )}

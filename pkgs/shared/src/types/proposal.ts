@@ -1,5 +1,20 @@
 import type { Verdict } from "./enums";
 
+/** Psychological signal level */
+export type SignalLevel = "high" | "low" | "unknown";
+
+/** Real psychological signals derived from task context (not hardcoded) */
+export interface PsychSignals {
+  /** Identifiability (Williams et al., 1981): can requester see contribution? */
+  taskIdentifiability: SignalLevel;
+  /** Expectancy Theory (Vroom, 1964): effort-outcome expectancy by deadline */
+  effortOutcomeExpectancy: SignalLevel;
+  /** Sucker Effect (Kerr, 1983): perceived peer effort level */
+  perceivedPeerEffort: SignalLevel;
+  /** SDT (Ryan & Deci, 2000): external pressure from reminders/urgency */
+  externalPressureLevel: SignalLevel;
+}
+
 /**
  * Proposal entity (sabori proposal log)
  * DynamoDB: Proposals table
@@ -34,4 +49,6 @@ export interface Proposal {
   nextCheckAt: string;
   /** Token count used (for cost tracking) */
   tokenCount: number;
+  /** Real psychological signals derived from task context at judgment time */
+  psychSignals?: PsychSignals;
 }

@@ -107,6 +107,40 @@ export async function getMe(): Promise<User> {
   return request<User>("/api/users/me");
 }
 
+/** GET /api/users/me/dependency-score */
+export async function getDependencyScore(): Promise<{ score: number }> {
+  return request<{ score: number }>("/api/users/me/dependency-score");
+}
+
+/** POST /api/users/me/dependency-score/decrement */
+export async function decrementDependencyScore(
+  delta: number,
+): Promise<{ score: number }> {
+  return request<{ score: number }>(
+    "/api/users/me/dependency-score/decrement",
+    {
+      method: "POST",
+      body: JSON.stringify({ delta }),
+    },
+  );
+}
+
+export interface HonneSummary {
+  count: number;
+  quickReplyBreakdown: {
+    agree_with_ai: number;
+    truly_tired: number;
+    disagree_with_ai: number;
+    actually_important: number;
+  };
+  recentFreeTexts: string[];
+}
+
+/** GET /api/users/me/honne/summary */
+export async function getHonneSummary(): Promise<HonneSummary> {
+  return request<HonneSummary>("/api/users/me/honne/summary");
+}
+
 /** PUT /api/users/me/persona — 好みの AI ペルソナを更新 */
 export async function updatePersona(personaId: string): Promise<User> {
   return request<User>("/api/users/me/persona", {
@@ -275,6 +309,9 @@ export function buildProposalStreamUrl(taskId: string): string {
 
 export default {
   getMe,
+  getDependencyScore,
+  decrementDependencyScore,
+  getHonneSummary,
   updatePersona,
   getCandidates,
   approveCandidate,

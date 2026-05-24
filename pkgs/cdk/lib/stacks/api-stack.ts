@@ -96,7 +96,10 @@ export class SaborouApiStack extends cdk.Stack {
     honoFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
-        actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+        actions: [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream",
+        ],
         resources: [
           // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (inference-profile ARN にはアカウント ID が必要)
           `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,

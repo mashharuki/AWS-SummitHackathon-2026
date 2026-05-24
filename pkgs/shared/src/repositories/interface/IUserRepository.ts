@@ -21,4 +21,17 @@ export interface IUserRepository {
    * DynamoDB: PutItem PK=USER#<cognitoSub> SK=PROFILE
    */
   upsert(user: Omit<User, "PK" | "SK">): Promise<User>;
+
+  /**
+   * Get current AI dependency score (0-100). Returns 100 if not yet set.
+   * DynamoDB: GetItem PK=USER#<cognitoSub> SK=PROFILE → dependencyScore
+   */
+  getDependencyScore(cognitoSub: string): Promise<number>;
+
+  /**
+   * Decrement AI dependency score by delta. Floors at 0.
+   * DynamoDB: UpdateItem PK=USER#<cognitoSub> SK=PROFILE
+   * @returns New score after decrement
+   */
+  decrementDependencyScore(cognitoSub: string, delta: number): Promise<number>;
 }

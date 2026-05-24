@@ -82,7 +82,6 @@ export class DynamoServiceConnectionRepository
    */
   async saveForUser(
     userId: string,
-    // connectedAt は省略可能（省略時は現在時刻で補完する）
     connection: Omit<ServiceConnection, "PK" | "SK" | "connectedAt"> & {
       connectedAt?: string;
     },

@@ -4,68 +4,34 @@ import { VERDICT_META } from "@/lib/verdictMeta";
  *
  * U-06-ui-redesign Phase 5 / api-html-gap-analysis.md GAP-04 準拠
  *
- * API は心理学シグナルを返さないため、verdict 値から静的プリセットを引いて表示する。
- * ハッカソンの説得力を高める "見せ場" 要素。
+ * psychSignals が渡された場合は AI が実際に計算したシグナル値を表示する。
+ * 渡されない場合は verdict ベースのフォールバックプリセットを使用する。
  */
-import type { Verdict } from "@saboru/shared";
+import type { PsychSignals, SignalLevel, Verdict } from "@saboru/shared";
 import { useTranslation } from "react-i18next";
 
-interface PsychTheory {
-  key: keyof typeof PSYCH_SIGNAL_PRESETS.can_saboru;
-  label: string;
-  jp: string;
-  cite: string;
-  desc: string;
+interface PsychTheoryConfig {
+  key: keyof PsychSignals;
   /** true: 低いほど can_saboru 方向 */
   inverted: boolean;
 }
 
-const PSYCH_THEORIES: PsychTheory[] = [
-  {
-    key: "taskIdentifiability",
-    label: "Identifiability",
-    jp: "識別可能性",
-    cite: "Williams et al. (1981)",
-    desc: "依頼者から貢献が見えるか",
-    inverted: true,
-  },
-  {
-    key: "effortOutcomeExpectancy",
-    label: "Expectancy",
-    jp: "期待値（締切余裕）",
-    cite: "Vroom (1964)",
-    desc: "今努力する報酬期待",
-    inverted: false,
-  },
-  {
-    key: "perceivedPeerEffort",
-    label: "Sucker Effect",
-    jp: "ピア努力知覚",
-    cite: "Kerr (1983)",
-    desc: "他者も動いていないか",
-    inverted: true,
-  },
-  {
-    key: "externalPressureLevel",
-    label: "SDT",
-    jp: "外発的プレッシャー",
-    cite: "Ryan & Deci (2000)",
-    desc: "リマインドの強さ",
-    inverted: true,
-  },
+interface PsychTheoryI18n {
+  label: string;
+  jp: string;
+  saboruExplanation: string;
+  doExplanation: string;
+}
+
+const PSYCH_THEORY_CONFIGS: PsychTheoryConfig[] = [
+  { key: "taskIdentifiability", inverted: true },
+  { key: "effortOutcomeExpectancy", inverted: false },
+  { key: "perceivedPeerEffort", inverted: true },
+  { key: "externalPressureLevel", inverted: true },
 ];
 
-type SignalLevel = "low" | "high" | "unknown";
-
-const PSYCH_SIGNAL_PRESETS: Record<
-  Verdict,
-  {
-    taskIdentifiability: SignalLevel;
-    effortOutcomeExpectancy: SignalLevel;
-    perceivedPeerEffort: SignalLevel;
-    externalPressureLevel: SignalLevel;
-  }
-> = {
+/** verdict ベースのフォールバック（psychSignals が未保存の古い提案用） */
+const PSYCH_SIGNAL_FALLBACKS: Record<Verdict, PsychSignals> = {
   can_saboru: {
     taskIdentifiability: "low",
     effortOutcomeExpectancy: "high",
@@ -91,26 +57,63 @@ const scoreOf = (sig: SignalLevel): number =>
 
 export interface PsychSignalsCardProps {
   verdict: Verdict;
+  /** Real psychological signals from AI judgment. Falls back to verdict presets if absent. */
+  psychSignals?: PsychSignals;
 }
 
-export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
+export function PsychSignalsCard({
+  verdict,
+  psychSignals,
+}: PsychSignalsCardProps) {
   const { t } = useTranslation();
-  const signals = PSYCH_SIGNAL_PRESETS[verdict];
+  const signals = psychSignals ?? PSYCH_SIGNAL_FALLBACKS[verdict];
   const meta = VERDICT_META[verdict];
+  const isRealData = psychSignals != null;
+
+  const theoriesI18n = t("verdict.psychTheories", {
+    returnObjects: true,
+  }) as PsychTheoryI18n[];
+  const scoreLabels = t("verdict.scoreLabels", {
+    returnObjects: true,
+  }) as { canSaboru: string; borderline: string; mustDo: string };
 
   const totalScore =
-    PSYCH_THEORIES.reduce((acc, t) => {
-      const s = scoreOf(signals[t.key]);
-      return acc + (t.inverted ? 1 - s : s);
-    }, 0) / PSYCH_THEORIES.length;
+    PSYCH_THEORY_CONFIGS.reduce((acc, cfg) => {
+      const s = scoreOf(signals[cfg.key]);
+      return acc + (cfg.inverted ? 1 - s : s);
+    }, 0) / PSYCH_THEORY_CONFIGS.length;
+
+  const scoreLabel =
+    totalScore >= 0.67
+      ? scoreLabels.mustDo
+      : totalScore >= 0.34
+        ? scoreLabels.borderline
+        : scoreLabels.canSaboru;
 
   return (
     <div className="card-brutal p-3.5">
       <div className="flex items-start justify-between mb-2.5">
         <div>
-          <h3 className="text-saboru-ink font-bold" style={{ fontSize: 11 }}>
-            {t("verdict.psychTitle")}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-saboru-ink font-bold" style={{ fontSize: 11 }}>
+              {t("verdict.psychTitle")}
+            </h3>
+            {isRealData && (
+              <span
+                style={{
+                  fontSize: 7,
+                  fontWeight: 800,
+                  color: "#10B981",
+                  background: "#D1FAE5",
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                  letterSpacing: "0.03em",
+                }}
+              >
+                LIVE
+              </span>
+            )}
+          </div>
           <p className="text-saboru-ink-muted mt-0.5" style={{ fontSize: 9 }}>
             {t("verdict.psychSubtitle")}
           </p>
@@ -130,21 +133,39 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
             {Math.round(totalScore * 100)}
             <span style={{ fontSize: 10, fontWeight: 600 }}>/100</span>
           </p>
+          <p
+            className="font-bold mt-0.5"
+            style={{ fontSize: 9, color: meta.color }}
+          >
+            {scoreLabel}
+          </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        {PSYCH_THEORIES.map((theory) => {
-          const s = signals[theory.key];
+        {PSYCH_THEORY_CONFIGS.map((cfg, i) => {
+          const labels = theoriesI18n[i] ?? {
+            label: "",
+            jp: "",
+            saboruExplanation: "",
+            doExplanation: "",
+          };
+          const s = signals[cfg.key];
           const score = scoreOf(s);
-          const supports = theory.inverted ? s === "low" : s === "high";
+          const supports = cfg.inverted ? s === "low" : s === "high";
           const barColor = supports
             ? "#10B981"
             : s === "unknown"
               ? "#9CA3AF"
               : "#EF4444";
+          const levelLabel =
+            s === "low"
+              ? t("verdict.levelLow")
+              : s === "high"
+                ? t("verdict.levelHigh")
+                : t("verdict.levelUnknown");
           return (
-            <div key={theory.key}>
+            <div key={String(cfg.key)}>
               <div className="flex items-baseline justify-between mb-1">
                 <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
                   <span
@@ -154,13 +175,13 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
                       fontSize: 10,
                     }}
                   >
-                    {theory.label}
+                    {labels.label}
                   </span>
                   <span
                     className="text-saboru-ink-soft truncate"
                     style={{ fontSize: 9 }}
                   >
-                    {theory.jp}
+                    {labels.jp}
                   </span>
                 </div>
                 <span
@@ -173,7 +194,7 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
                     borderRadius: 4,
                   }}
                 >
-                  {s === "low" ? "LOW" : s === "high" ? "HIGH" : "—"}
+                  {levelLabel}
                 </span>
               </div>
               <div
@@ -194,10 +215,19 @@ export function PsychSignalsCard({ verdict }: PsychSignalsCardProps) {
                 />
               </div>
               <p
-                className="text-saboru-ink-muted italic mt-0.5"
-                style={{ fontSize: 8 }}
+                className="mt-0.5"
+                style={{
+                  fontSize: 9,
+                  color: barColor,
+                  lineHeight: 1.4,
+                  fontStyle: "italic",
+                }}
               >
-                {theory.cite} · {theory.desc}
+                {supports
+                  ? labels.saboruExplanation
+                  : s === "unknown"
+                    ? t("verdict.levelUnknownDesc")
+                    : labels.doExplanation}
               </p>
             </div>
           );

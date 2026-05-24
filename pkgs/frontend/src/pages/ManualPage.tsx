@@ -2,21 +2,91 @@
  * 取扱説明書ページ — あなたの「サボり癖」を可視化
  *
  * U-06-ui-redesign Phase 6 / 共有 HTML ManualScreen 準拠
- * API なし（MANUAL_TRAITS 静的定数）。
+ * 本音データを API から取得して傾向を表示する。
  */
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import { MANUAL_PROGRESS, MANUAL_TRAITS } from "@/lib/staticContent";
+import apiClient, { type HonneSummary } from "@/lib/apiClient";
+import type { ManualTrait } from "@/lib/staticContent";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+const TOTAL_GOAL = 100;
+
+function deriveTraits(summary: HonneSummary): ManualTrait[] {
+  const traits: ManualTrait[] = [];
+  const { quickReplyBreakdown: b } = summary;
+
+  if (b.agree_with_ai >= 2) {
+    traits.push({
+      title: { ja: "AIに判断を委ねる傾向", en: "Tendency to defer to AI" },
+      body: {
+        ja: "サボり提案に素直に同意することが多い。AIへの信頼度が高く、自己判断を省力化している。",
+        en: "You often agree with AI proposals. High AI trust, reducing the cognitive load of self-judgment.",
+      },
+      count: b.agree_with_ai,
+      color: "#6366F1",
+    });
+  }
+  if (b.truly_tired >= 2) {
+    traits.push({
+      title: {
+        ja: "疲労感が高い時にサボりやすい",
+        en: "Slacks off when fatigued",
+      },
+      body: {
+        ja: "「本当に疲れているのでサボる」を選ぶ頻度が高い。疲れがサボり判断の主なトリガーになっている。",
+        en: "Frequently selects 'truly tired'. Fatigue is the primary trigger for your slack-off decisions.",
+      },
+      count: b.truly_tired,
+      color: "#F59E0B",
+    });
+  }
+  if (b.disagree_with_ai >= 2) {
+    traits.push({
+      title: { ja: "AIに反論する主体性", en: "Proactive AI challenger" },
+      body: {
+        ja: "AIの判断に反論し、自ら決断するケースが多い。自己判断力が高く保たれている。",
+        en: "You frequently challenge AI judgments and decide for yourself. Strong self-determination.",
+      },
+      count: b.disagree_with_ai,
+      color: "#10B981",
+    });
+  }
+  if (b.actually_important >= 2) {
+    traits.push({
+      title: {
+        ja: "重要性を自ら見極める",
+        en: "Self-assesses task importance",
+      },
+      body: {
+        ja: "AIが「サボれる」と言っても「これは重要」と判断するケースが多い。責任感が強い。",
+        en: "Even when AI says skip, you often decide it matters. Strong sense of responsibility.",
+      },
+      count: b.actually_important,
+      color: "#EF4444",
+    });
+  }
+  return traits;
+}
 
 export function ManualPage() {
   const { i18n } = useTranslation();
   const locale = i18n.language.startsWith("ja") ? "ja" : "en";
   const isJa = locale === "ja";
-  const percent = Math.round(
-    (MANUAL_PROGRESS.collected / MANUAL_PROGRESS.total) * 100,
-  );
+  const [summary, setSummary] = useState<HonneSummary | null>(null);
+
+  useEffect(() => {
+    apiClient
+      .getHonneSummary()
+      .then(setSummary)
+      .catch(() => {});
+  }, []);
+
+  const collected = summary?.count ?? 0;
+  const percent = Math.round((collected / TOTAL_GOAL) * 100);
+  const traits = summary ? deriveTraits(summary) : [];
 
   return (
     <AppShell>
@@ -25,11 +95,11 @@ export function ManualPage() {
           title={isJa ? "あなたの取扱説明書" : "Your Personal Manual"}
           subtitle={
             isJa
-              ? MANUAL_PROGRESS.collected > 0
-                ? `本音データから生成 · ${MANUAL_PROGRESS.collected}件のサンプル`
+              ? collected > 0
+                ? `本音データから生成 · ${collected}件のサンプル`
                 : "本音データを蓄積してあなたの傾向を発見"
-              : MANUAL_PROGRESS.collected > 0
-                ? `Generated from honne data · ${MANUAL_PROGRESS.collected} samples`
+              : collected > 0
+                ? `Generated from honne data · ${collected} samples`
                 : "Collect honne data to discover your tendencies"
           }
         />
@@ -96,7 +166,7 @@ export function ManualPage() {
                   fontFamily: "Space Grotesk, system-ui, sans-serif",
                 }}
               >
-                {MANUAL_PROGRESS.collected} / {MANUAL_PROGRESS.total}
+                {collected} / {TOTAL_GOAL}
               </span>
             </div>
             <div
@@ -113,8 +183,16 @@ export function ManualPage() {
             </div>
             <p className="text-saboru-ink-muted mt-2" style={{ fontSize: 10 }}>
               {isJa
-                ? `あと ${MANUAL_PROGRESS.total - MANUAL_PROGRESS.collected} 件の本音データで、外部 AI に渡せる完全版が完成します`
-                : `${MANUAL_PROGRESS.total - MANUAL_PROGRESS.collected} more samples to complete the full manual for external AI`}
+                ? collected === 0
+                  ? "タスク詳細でサボりに「本音リアクション」を送ると、あなたの傾向が蓄積されます"
+                  : collected < 10
+                    ? `データが溜まり始めました。あと ${TOTAL_GOAL - collected} 件で傾向が見えてきます`
+                    : collected < 50
+                      ? `傾向が見えてきました！あと ${TOTAL_GOAL - collected} 件でさらに精度が上がります`
+                      : `あと ${TOTAL_GOAL - collected} 件の本音データで、外部 AI に渡せる完全版が完成します`
+                : collected === 0
+                  ? "Send honne reactions on task detail pages to start building your profile"
+                  : `${TOTAL_GOAL - collected} more samples to complete the full manual`}
             </p>
           </div>
 
@@ -122,7 +200,7 @@ export function ManualPage() {
           <SectionLabel>
             {isJa ? "発見されたあなたの傾向" : "Detected tendencies"}
           </SectionLabel>
-          {MANUAL_TRAITS.length === 0 ? (
+          {traits.length === 0 ? (
             <div
               className="card-brutal p-4 flex flex-col items-center gap-2"
               style={{ background: "#FFFAF5" }}
@@ -145,7 +223,7 @@ export function ManualPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {MANUAL_TRAITS.map((t, i) => (
+              {traits.map((t, i) => (
                 <div
                   key={i}
                   className="card-brutal p-3"
@@ -181,37 +259,6 @@ export function ManualPage() {
               ))}
             </div>
           )}
-
-          {/* Future vision */}
-          <div
-            className="card-brutal p-3.5"
-            style={{
-              background: "linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%)",
-            }}
-          >
-            <p
-              className="font-bold tracking-wider"
-              style={{
-                fontSize: 10,
-                color: "#5B21B6",
-                letterSpacing: "0.05em",
-              }}
-            >
-              COMING SOON
-            </p>
-            <p
-              className="font-semibold mt-1"
-              style={{
-                fontSize: 12,
-                color: "#312E81",
-                lineHeight: 1.5,
-              }}
-            >
-              {isJa
-                ? "ChatGPT / Claude / Notion AI と MCP 連携。あなたの「サボり癖」を他の AI にも共有して、より自然なタスク管理を。"
-                : "MCP integration with ChatGPT / Claude / Notion AI. Share your slack patterns with external AIs for more natural task management."}
-            </p>
-          </div>
         </div>
       </div>
     </AppShell>
