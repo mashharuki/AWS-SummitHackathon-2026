@@ -191,6 +191,18 @@ export class SaborouApiStack extends cdk.Stack {
       ),
     });
 
+    // Slack OAuth コールバック (認証なし)
+    // Slack からのブラウザリダイレクトで来るため JWT は付かない。
+    // CSRF は state パラメータの HMAC 署名検証（auth.ts verifyState）で担保する。
+    httpApi.addRoutes({
+      path: "/api/auth/slack/callback",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "SlackCallbackIntegration",
+        honoFn,
+      ),
+    });
+
     // メインルート (JWT 認証必須)
     // OPTIONS は除外: API Gateway の corsPreflight が preflight を自動処理する。
     // ANY に OPTIONS を含めると JWT Authorizer が preflight に 401 を返し CORS が壊れる。
