@@ -1,9 +1,9 @@
 import * as cdk from "aws-cdk-lib";
-import * as cognito from "aws-cdk-lib/aws-cognito";
 import { Match, Template } from "aws-cdk-lib/assertions";
+import * as cognito from "aws-cdk-lib/aws-cognito";
+import { SaborouApiStack } from "../lib/stacks/api-stack";
 import { SaborouCognitoStack } from "../lib/stacks/cognito-stack";
 import { SaborouDataStack } from "../lib/stacks/data-stack";
-import { SaborouApiStack } from "../lib/stacks/api-stack";
 
 function buildTemplate(): Template {
   const app = new cdk.App({ context: { environment: "test" } });
@@ -62,6 +62,57 @@ describe("SaborouApiStack", () => {
     template.hasResourceProperties("AWS::Logs::LogGroup", {
       LogGroupName: Match.stringLikeRegexp("saborou-api"),
       RetentionInDays: 14,
+    });
+  });
+
+  test("Lambda function has GOOGLE_CLIENT_SECRET_ARN environment variable", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          GOOGLE_CLIENT_SECRET_ARN: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
+  test("HonoFn has IAM policy for saborou/google-token/* (secretsmanager:GetSecretValue)", () => {
+    // Google token IAM ポリシーが存在することを Statement の Action から確認する
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const allStatements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((p) => p.Properties.PolicyDocument.Statement ?? []);
+    const hasGoogleTokenPolicy = allStatements.some((stmt) => {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const actions: string[] = Array.isArray(s.Action)
+        ? (s.Action as string[])
+        : [s.Action as string];
+      const resources: unknown[] = Array.isArray(s.Resource)
+        ? s.Resource
+        : [s.Resource];
+      const hasGetSecret = actions.includes("secretsmanager:GetSecretValue");
+      const resourceStr = JSON.stringify(resources);
+      return hasGetSecret && resourceStr.includes("saborou/google-token");
+    });
+    expect(hasGoogleTokenPolicy).toBe(true);
+  });
+
+  test("Google OAuth callback route is created without authorizer", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: "GET /api/auth/google/callback",
+      AuthorizationType: "NONE",
+    });
+  });
+
+  test("Lambda function has DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE environment variable (U-07b)", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE: Match.anyValue(),
+        }),
+      },
     });
   });
 });

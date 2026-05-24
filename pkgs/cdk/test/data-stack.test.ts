@@ -15,8 +15,8 @@ describe("SaborouDataStack", () => {
     template = buildTemplate();
   });
 
-  test("7 DynamoDB tables are created", () => {
-    template.resourceCountIs("AWS::DynamoDB::Table", 7);
+  test("8 DynamoDB tables are created (7 existing + GoogleCalendarCache)", () => {
+    template.resourceCountIs("AWS::DynamoDB::Table", 8);
   });
 
   test("All tables use PAY_PER_REQUEST billing mode", () => {
@@ -66,16 +66,34 @@ describe("SaborouDataStack", () => {
     });
   });
 
-  test("2 Secrets Manager secrets are created", () => {
-    template.resourceCountIs("AWS::SecretsManager::Secret", 2);
+  test("3 Secrets Manager secrets are created (Slack client, Slack signing, Google client)", () => {
+    template.resourceCountIs("AWS::SecretsManager::Secret", 3);
   });
 
-  test("All tables have RETAIN removal policy", () => {
+  test("Google OAuth client secret is created with correct naming", () => {
+    template.hasResourceProperties("AWS::SecretsManager::Secret", {
+      Name: Match.stringLikeRegexp("/saborou/google/client-secret"),
+      Description: "Google OAuth Client ID and Secret (JSON format)",
+    });
+  });
+
+  test("GoogleCalendarCache table is created with TTL", () => {
+    template.hasResourceProperties("AWS::DynamoDB::Table", {
+      TableName: Match.stringLikeRegexp("saborou-google-calendar-cache"),
+      TimeToLiveSpecification: {
+        AttributeName: "ttl",
+        Enabled: true,
+      },
+    });
+  });
+
+  test("All tables have DESTROY removal policy in non-prod (test) environment", () => {
+    // context: environment = "test" (非 prod) なので DESTROY が正しい
     const tables = template.findResources("AWS::DynamoDB::Table");
     const tableList = Object.values(tables);
     tableList.forEach((table: any) => {
-      expect(table.DeletionPolicy).toBe("Retain");
-      expect(table.UpdateReplacePolicy).toBe("Retain");
+      expect(table.DeletionPolicy).toBe("Delete");
+      expect(table.UpdateReplacePolicy).toBe("Delete");
     });
   });
 });

@@ -10,12 +10,15 @@
  */
 
 import {
+  CreateSecretCommand,
   GetSecretValueCommand,
   SecretsManagerClient,
+  UpdateSecretCommand,
 } from "@aws-sdk/client-secrets-manager";
+import type { GoogleTokenSecret } from "../types/google.js";
 
 const client = new SecretsManagerClient({
-  region: process.env["AWS_REGION"] ?? "ap-northeast-1",
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
 });
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -27,6 +30,7 @@ interface CachedSecret {
 
 let slackSigningSecretCache: CachedSecret | undefined;
 let slackClientSecretCache: CachedSecret | undefined;
+let googleClientSecretCache: CachedSecret | undefined;
 
 async function fetchSecret(secretArn: string): Promise<string> {
   const result = await client.send(
@@ -74,8 +78,117 @@ export async function getSlackClientSecret(secretArn: string): Promise<string> {
   return value;
 }
 
+/**
+ * Google OAuth クライアントシークレットを取得する (JSON形式)
+ * TTL (5分) 経過後に再フェッチする。
+ */
+export async function getGoogleClientSecret(
+  secretArn: string,
+): Promise<string> {
+  const now = Date.now();
+  if (
+    googleClientSecretCache &&
+    now - googleClientSecretCache.fetchedAt < CACHE_TTL_MS
+  ) {
+    return googleClientSecretCache.value;
+  }
+  const value = await fetchSecret(secretArn);
+  googleClientSecretCache = { value, fetchedAt: now };
+  return value;
+}
+
+// In-memory cache for per-user Google tokens (access token only; refresh token in SM)
+const googleTokenCache = new Map<
+  string,
+  { accessToken: string; expiresAt: number; scope: string }
+>();
+
+/**
+ * per-user の Google トークンを取得する (JSON 形式)
+ *
+ * Secrets Manager に保存されたトークン JSON を取得してパースする。
+ * access_token は Lambda in-memory キャッシュに保存してウォーム時に再利用する。
+ */
+export async function getGoogleToken(
+  userId: string,
+  secretName: string,
+): Promise<GoogleTokenSecret> {
+  const raw = await fetchSecret(secretName);
+  const parsed = JSON.parse(raw) as GoogleTokenSecret;
+  // Update in-memory cache
+  googleTokenCache.set(userId, {
+    accessToken: parsed.accessToken,
+    expiresAt: new Date(parsed.expiresAt).getTime(),
+    scope: parsed.scope,
+  });
+  return parsed;
+}
+
+/**
+ * per-user の Google トークンを保存または更新する (JSON 形式)
+ *
+ * Slack Bot Token は平文だが、Google トークンは複数値が必要なので JSON で保存する。
+ */
+export async function saveGoogleToken(
+  userId: string,
+  secretName: string,
+  tokenData: GoogleTokenSecret,
+): Promise<string> {
+  const smClient = new SecretsManagerClient({
+    region: process.env.AWS_REGION ?? "ap-northeast-1",
+  });
+  const secretString = JSON.stringify(tokenData);
+  try {
+    const createResult = await smClient.send(
+      new CreateSecretCommand({
+        Name: secretName,
+        SecretString: secretString,
+        Description: `Google OAuth token for Saborou user ${userId}`,
+      }),
+    );
+    // Update in-memory cache
+    googleTokenCache.set(userId, {
+      accessToken: tokenData.accessToken,
+      expiresAt: new Date(tokenData.expiresAt).getTime(),
+      scope: tokenData.scope,
+    });
+    return createResult.ARN ?? secretName;
+  } catch (err) {
+    if ((err as { name?: string }).name === "ResourceExistsException") {
+      const updateResult = await smClient.send(
+        new UpdateSecretCommand({
+          SecretId: secretName,
+          SecretString: secretString,
+        }),
+      );
+      // Update in-memory cache
+      googleTokenCache.set(userId, {
+        accessToken: tokenData.accessToken,
+        expiresAt: new Date(tokenData.expiresAt).getTime(),
+        scope: tokenData.scope,
+      });
+      return updateResult.ARN ?? secretName;
+    }
+    throw err;
+  }
+}
+
+/**
+ * in-memory の Google アクセストークンキャッシュから取得する。
+ * キャッシュミスまたは有効期限切れの場合は null を返す（呼び出し元でリフレッシュする）。
+ */
+export function getCachedGoogleAccessToken(
+  userId: string,
+): { accessToken: string; expiresAt: number; scope: string } | null {
+  const cached = googleTokenCache.get(userId);
+  if (!cached) return null;
+  return cached;
+}
+
 /** キャッシュをリセットする — テスト専用 */
 export function _resetSecretsCache(): void {
   slackSigningSecretCache = undefined;
   slackClientSecretCache = undefined;
+  googleClientSecretCache = undefined;
+  googleTokenCache.clear();
 }

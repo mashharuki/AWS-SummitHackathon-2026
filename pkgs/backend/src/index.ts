@@ -10,6 +10,12 @@
  * GET    /health                         — 認証なし
  * GET    /auth/slack                     — Slack OAuth 開始 (認証必要)
  * GET    /auth/slack/callback            — Slack OAuth コールバック
+ * GET    /auth/google                    — Google OAuth 開始 (認証必要)
+ * GET    /auth/google/callback           — Google OAuth コールバック
+ * DELETE /auth/google                    — Google 連携解除
+ * POST   /api/google/calendar/fetch      — Google Calendar 手動取り込み (認証必要)
+ * GET    /api/google/calendar/status     — Calendar キャッシュ状態確認 (認証必要)
+ * POST   /api/google/gmail/fetch         — Gmail 手動取り込み (認証必要)
  * GET    /tasks                          — 承認済みタスク一覧
  * POST   /tasks                          — タスク手動作成
  * GET    /tasks/candidates               — 保留中の候補
@@ -31,12 +37,14 @@ import {
   BedrockClientAdapter,
   PersonaRenderer,
   SaboriProposerAgent,
+  TaskExtractorAgent,
 } from "@saboru/agent";
 import { Hono } from "hono";
 import { env } from "./config/env.js";
 import { openApiDoc } from "./config/openapi.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/logger.js";
+import { DynamoGoogleCalendarCacheRepository } from "./repositories/DynamoGoogleCalendarCacheRepository.js";
 import { DynamoHonneRepository } from "./repositories/DynamoHonneRepository.js";
 import { DynamoProposalRepository } from "./repositories/DynamoProposalRepository.js";
 import { DynamoServiceConnectionRepository } from "./repositories/DynamoServiceConnectionRepository.js";
@@ -45,6 +53,8 @@ import { DynamoTaskRepository } from "./repositories/DynamoTaskRepository.js";
 import { DynamoUserRepository } from "./repositories/DynamoUserRepository.js";
 import { createAuthRoute } from "./routes/auth.js";
 import { createConnectionsRoute } from "./routes/connections.js";
+import { createGoogleAuthRoute } from "./routes/google-auth.js";
+import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
 import { createProposalsRoute } from "./routes/proposals.js";
@@ -83,6 +93,10 @@ const honneRepository = new DynamoHonneRepository(
   dynamoClient,
   env.DYNAMODB_TABLE_HONNE_DATA,
 );
+const googleCalendarCacheRepository = new DynamoGoogleCalendarCacheRepository(
+  dynamoClient,
+  env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE,
+);
 
 // Initialize SaboriProposerAgent (U-03b dependency)
 const bedrockClient = new BedrockClientAdapter();
@@ -91,6 +105,12 @@ const saboriProposerAgent = new SaboriProposerAgent(
   bedrockClient,
   proposalRepository,
   personaRenderer,
+);
+
+// Initialize TaskExtractorAgent (Gmail 取り込みで使用)
+const taskExtractorAgent = new TaskExtractorAgent(
+  bedrockClient,
+  candidateRepository,
 );
 
 /**
@@ -109,6 +129,7 @@ export function createApp() {
   // /api/* — フロントエンドの apiClient が期待するプレフィックス
   app.route("/api/users", createUsersRoute(userRepository));
   app.route("/api/auth", createAuthRoute(connectionRepository, userRepository));
+  app.route("/api/auth", createGoogleAuthRoute(connectionRepository));
   app.route(
     "/api/tasks",
     createTasksRoute(taskRepository, candidateRepository),
@@ -121,6 +142,7 @@ export function createApp() {
       proposalRepository,
       saboriProposerAgent,
       userRepository,
+      googleCalendarCacheRepository,
     ),
   );
   app.route(
@@ -131,6 +153,16 @@ export function createApp() {
   app.route(
     "/api/slack",
     createSlackRoute(taskRepository, proposalRepository),
+  );
+  // Google Calendar/Gmail 取り込みルート（U-07b）
+  app.route(
+    "/api/google",
+    createGoogleRoute(
+      connectionRepository,
+      googleCalendarCacheRepository,
+      candidateRepository,
+      taskExtractorAgent,
+    ),
   );
 
   // OpenAPI / Swagger UI

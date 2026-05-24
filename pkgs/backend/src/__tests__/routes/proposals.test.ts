@@ -7,6 +7,7 @@ import type { Proposal, Task } from "@saboru/shared";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../middleware/error-handler.js";
+import type { DynamoGoogleCalendarCacheRepository } from "../../repositories/DynamoGoogleCalendarCacheRepository.js";
 import type { DynamoProposalRepository } from "../../repositories/DynamoProposalRepository.js";
 import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
 import type { DynamoUserRepository } from "../../repositories/DynamoUserRepository.js";
@@ -22,6 +23,7 @@ function buildTestApp(
   userRepo: Partial<DynamoUserRepository> = {
     findById: vi.fn().mockResolvedValue(null),
   },
+  calendarCacheRepo?: Partial<DynamoGoogleCalendarCacheRepository>,
 ) {
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
@@ -39,6 +41,7 @@ function buildTestApp(
       proposalRepo as DynamoProposalRepository,
       agent as SaboriProposerAgent,
       userRepo as DynamoUserRepository,
+      calendarCacheRepo as DynamoGoogleCalendarCacheRepository | undefined,
     ),
   );
   app.onError(errorHandler);
@@ -231,5 +234,359 @@ describe("GET /tasks/:taskId/proposal (SSE stream=true)", () => {
     const text = await res.text();
     // SSE ボディに cached:true を含む done イベントが存在すること
     expect(text).toContain('"cached":true');
+  });
+});
+
+// calendarCacheRecord のサンプル（24h 以内 = 有効）
+const validCacheRecord = {
+  PK: "USER#user-proposal-test",
+  SK: "CACHE#calendar",
+  userId: MOCK_USER_ID,
+  fetchedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1h 前
+  upcomingEventCount: 3,
+  nextEventStartsInMinutes: 45,
+  freeSlotMinutesToday: 120,
+  busyScore: 0.4,
+  ttl: Math.floor(Date.now() / 1000) + 86400,
+};
+
+// calendarCacheRecord のサンプル（24h 超過 = 期限切れ）
+const expiredCacheRecord = {
+  ...validCacheRecord,
+  fetchedAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(), // 25h 前
+};
+
+describe("GET /tasks/:taskId/proposal — calendarContext 注入 (BR-G-05)", () => {
+  it("calendarCacheRepository 未指定時は calendarContext なしで agent.propose を呼ぶ", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const app = buildTestApp(taskRepo, proposalRepo, agent);
+
+    const res = await app.request("/tasks/T01/proposal");
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+
+  it("キャッシュが存在し 24h 以内の場合、calendarContext を agent.propose に渡す", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(validCacheRecord),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal");
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    const calCtx = (ctx as { calendarContext: typeof validCacheRecord })
+      .calendarContext;
+    expect(calCtx).toBeDefined();
+    expect(calCtx.upcomingEventCount).toBe(3);
+    expect(calCtx.busyScore).toBe(0.4);
+  });
+
+  it("キャッシュが 24h 超過の場合、calendarContext は undefined", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(expiredCacheRecord),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal");
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+
+  it("findByUserId が null を返す場合、calendarContext は undefined", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(null),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal");
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+});
+
+describe("GET /tasks/:taskId/proposal?stream=true — calendarContext 注入 (BR-G-05)", () => {
+  it("キャッシュが存在し 24h 以内の場合、calendarContext を proposeStream に渡す", async () => {
+    async function* mockStream() {
+      yield {
+        type: "verdict" as const,
+        verdict: "can_saboru",
+        summaryText: "サボれる",
+      };
+      yield { type: "done" as const, proposalId: "P1", cached: false };
+    }
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockProposeStream = vi.fn().mockReturnValue(mockStream());
+    const agent = { proposeStream: mockProposeStream };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(validCacheRecord),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal?stream=true");
+    expect(res.status).toBe(200);
+    expect(mockProposeStream).toHaveBeenCalledOnce();
+    const [, ctx] = mockProposeStream.mock.calls[0];
+    const calCtx = (ctx as { calendarContext: typeof validCacheRecord })
+      .calendarContext;
+    expect(calCtx).toBeDefined();
+    expect(calCtx.upcomingEventCount).toBe(3);
+  });
+
+  it("キャッシュが 24h 超過の場合、proposeStream に calendarContext は渡さない", async () => {
+    async function* mockStream() {
+      yield { type: "done" as const, proposalId: "P2", cached: false };
+    }
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockProposeStream = vi.fn().mockReturnValue(mockStream());
+    const agent = { proposeStream: mockProposeStream };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(expiredCacheRecord),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal?stream=true");
+    expect(res.status).toBe(200);
+    expect(mockProposeStream).toHaveBeenCalledOnce();
+    const [, ctx] = mockProposeStream.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+
+  it("findByUserId が null の場合、proposeStream に calendarContext は渡さない", async () => {
+    async function* mockStream() {
+      yield { type: "done" as const, proposalId: "P3", cached: false };
+    }
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockProposeStream = vi.fn().mockReturnValue(mockStream());
+    const agent = { proposeStream: mockProposeStream };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(null),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal?stream=true");
+    expect(res.status).toBe(200);
+    expect(mockProposeStream).toHaveBeenCalledOnce();
+    const [, ctx] = mockProposeStream.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+});
+
+describe("POST /tasks/:taskId/proposal — 基本", () => {
+  it("タスクが存在しない場合 404 を返す", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(null) };
+    const proposalRepo = { findLatestByTaskId: vi.fn() };
+    const agent = {};
+    const app = buildTestApp(taskRepo, proposalRepo, agent);
+
+    const res = await app.request("/tasks/NOTFOUND/proposal", {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("POST /tasks/:taskId/proposal — calendarContext 注入 (BR-G-05)", () => {
+  it("calendarCacheRepository 未指定時は calendarContext なしで agent.propose を呼ぶ", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const app = buildTestApp(taskRepo, proposalRepo, agent);
+
+    const res = await app.request("/tasks/T01/proposal", { method: "POST" });
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+
+  it("キャッシュが存在し 24h 以内の場合、calendarContext を agent.propose に渡す", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(validCacheRecord),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal", { method: "POST" });
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    const calCtx = (ctx as { calendarContext: typeof validCacheRecord })
+      .calendarContext;
+    expect(calCtx).toBeDefined();
+    expect(calCtx.upcomingEventCount).toBe(3);
+    expect(calCtx.fetchedAt).toBe(validCacheRecord.fetchedAt);
+  });
+
+  it("キャッシュが 24h 超過の場合、calendarContext は undefined", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(expiredCacheRecord),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal", { method: "POST" });
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+
+  it("findByUserId が null の場合、calendarContext は undefined", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockResolvedValue(cachedProposal);
+    const agent = { propose: mockPropose };
+    const calendarCacheRepo = {
+      findByUserId: vi.fn().mockResolvedValue(null),
+    };
+    const app = buildTestApp(
+      taskRepo,
+      proposalRepo,
+      agent,
+      undefined,
+      calendarCacheRepo,
+    );
+
+    const res = await app.request("/tasks/T01/proposal", { method: "POST" });
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
+    const [, ctx] = mockPropose.mock.calls[0];
+    expect(
+      (ctx as { calendarContext: unknown }).calendarContext,
+    ).toBeUndefined();
+  });
+
+  it("agent.propose が throw した場合、catch ブロックに入りストリームを正常終了する", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const proposalRepo = {
+      findLatestByTaskId: vi.fn().mockResolvedValue(null),
+    };
+    const mockPropose = vi.fn().mockRejectedValue(new Error("Bedrock error"));
+    const agent = { propose: mockPropose };
+    const app = buildTestApp(taskRepo, proposalRepo, agent);
+
+    const res = await app.request("/tasks/T01/proposal", { method: "POST" });
+    // catch ブロックが console.error を呼ぶが、ストリームはクローズされる
+    expect(res.status).toBe(200);
+    expect(mockPropose).toHaveBeenCalledOnce();
   });
 });

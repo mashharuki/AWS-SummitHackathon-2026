@@ -273,6 +273,91 @@ export function buildProposalStreamUrl(taskId: string): string {
   return `${getApiBaseUrl()}/api/tasks/${taskId}/proposal?stream=true`;
 }
 
+// --- Google OAuth ---
+
+/**
+ * GET /api/auth/google — Google OAuth 認可 URL を取得する
+ * （認証ヘッダ付き fetch。返ってきた url へフロントが遷移して連携を開始する）
+ */
+export async function getGoogleAuthUrl(): Promise<string> {
+  const data = await request<{ url: string }>("/api/auth/google");
+  return data.url;
+}
+
+/**
+ * DELETE /api/auth/google — Google 連携解除
+ */
+export async function disconnectGoogle(): Promise<void> {
+  return request<void>("/api/auth/google", {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Google Calendar 取り込みレスポンス型
+ */
+export interface CalendarFetchResponse {
+  fetchedAt: string;
+  upcomingEventCount: number;
+  nextEventStartsInMinutes: number | null;
+  freeSlotMinutesToday: number;
+  busyScore: number;
+}
+
+/**
+ * Google Calendar キャッシュ状態レスポンス型
+ */
+export interface CalendarStatusResponse {
+  cached: boolean;
+  valid?: boolean;
+  fetchedAt?: string;
+  upcomingEventCount?: number;
+  nextEventStartsInMinutes?: number | null;
+  freeSlotMinutesToday?: number;
+  busyScore?: number;
+}
+
+/**
+ * Gmail 取り込みレスポンス型
+ */
+export interface GmailFetchResponse {
+  total: number;
+  extracted: number;
+  skippedNotTask: number;
+  candidates: Array<{
+    candidateId: string;
+    title: string;
+    deadline: string | null;
+    sourceType: string;
+    sourceRef: string;
+  }>;
+}
+
+/**
+ * POST /api/google/calendar/fetch — Google Calendar 手動取り込み
+ */
+export async function fetchGoogleCalendar(): Promise<CalendarFetchResponse> {
+  return request<CalendarFetchResponse>("/api/google/calendar/fetch", {
+    method: "POST",
+  });
+}
+
+/**
+ * GET /api/google/calendar/status — Calendar キャッシュ状態確認
+ */
+export async function getCalendarStatus(): Promise<CalendarStatusResponse> {
+  return request<CalendarStatusResponse>("/api/google/calendar/status");
+}
+
+/**
+ * POST /api/google/gmail/fetch — Gmail 手動取り込み
+ */
+export async function fetchGmail(): Promise<GmailFetchResponse> {
+  return request<GmailFetchResponse>("/api/google/gmail/fetch", {
+    method: "POST",
+  });
+}
+
 export default {
   getMe,
   updatePersona,
@@ -293,4 +378,9 @@ export default {
   notifyTaskToSlack,
   disconnectService,
   buildProposalStreamUrl,
+  getGoogleAuthUrl,
+  disconnectGoogle,
+  fetchGoogleCalendar,
+  getCalendarStatus,
+  fetchGmail,
 };

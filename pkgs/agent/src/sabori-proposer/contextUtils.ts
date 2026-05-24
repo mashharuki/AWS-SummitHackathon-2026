@@ -1,5 +1,10 @@
 import { minutesUntil } from "@saboru/shared";
-import type { ContextSignals, SlackContext, TaskContext } from "./types.js";
+import type {
+  CalendarContext,
+  ContextSignals,
+  SlackContext,
+  TaskContext,
+} from "./types.js";
 
 /**
  * contextUtils — フェーズ 1 コンテキスト組み立てユーティリティ
@@ -64,6 +69,31 @@ export function assembleContextNarrative(context: TaskContext): string {
   } else {
     lines.push("\n## Slack の状況");
     lines.push("- Slack コンテキストなし（手動タスク）");
+  }
+
+  // Google Calendar コンテキスト（BR-G-06）
+  if (context.calendarContext) {
+    lines.push("\n## Googleカレンダーの状況");
+    lines.push(
+      `- 直近24時間の予定数: ${context.calendarContext.upcomingEventCount}件`,
+    );
+    if (context.calendarContext.nextEventStartsInMinutes !== null) {
+      lines.push(
+        `- 次の予定まで: ${context.calendarContext.nextEventStartsInMinutes}分`,
+      );
+    } else {
+      lines.push("- 次の予定まで: 予定なし");
+    }
+    lines.push(
+      `- 今日の推定空き時間: ${context.calendarContext.freeSlotMinutesToday}分`,
+    );
+    lines.push(
+      `- 多忙度スコア: ${context.calendarContext.busyScore.toFixed(2)}（0=余裕 / 1=超多忙）`,
+    );
+    const fetchedAtLocal = new Date(
+      context.calendarContext.fetchedAt,
+    ).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+    lines.push(`- データ取得: ${fetchedAtLocal}`);
   }
 
   return lines.join("\n");
@@ -170,11 +200,31 @@ export function derivePsychSignals(
     }
   }
 
+  // --- Calendar シグナル (BR-G-06) ---
+  // calendarBusyness: busyScore >= 0.7 → "high" / busyScore <= 0.3 → "low"
+  let calendarBusyness: "high" | "low" | "unknown" = "unknown";
+  // nextMeetingPressure: nextEventStartsInMinutes < 30 → "high"（会議前はサボれない）
+  let nextMeetingPressure: "high" | "low" | "unknown" = "unknown";
+
+  if (context.calendarContext) {
+    const cal: CalendarContext = context.calendarContext;
+    if (cal.busyScore >= 0.7) {
+      calendarBusyness = "high";
+    } else if (cal.busyScore <= 0.3) {
+      calendarBusyness = "low";
+    }
+    if (cal.nextEventStartsInMinutes !== null) {
+      nextMeetingPressure = cal.nextEventStartsInMinutes < 30 ? "high" : "low";
+    }
+  }
+
   return {
     taskIdentifiability,
     effortOutcomeExpectancy,
     perceivedPeerEffort,
     externalPressureLevel,
+    calendarBusyness,
+    nextMeetingPressure,
   };
 }
 
@@ -188,12 +238,17 @@ export function deriveContextSignals(context: TaskContext): ContextSignals {
     ? minutesUntil(context.task.deadline)
     : undefined;
 
+  // nearestMeetingMinutes: Google Calendar キャッシュから取得（BR-G-06）
+  const nearestMeetingMinutes =
+    context.calendarContext?.nextEventStartsInMinutes ?? undefined;
+
   return {
     hasReminder: slack ? slack.reminderCount > 0 : false,
     reminderCount: slack?.reminderCount ?? 0,
     requesterActiveStatus: slack?.requesterStatus ?? "unknown",
     hasUrgentKeyword: slack ? slack.urgencyKeywords.length > 0 : false,
     deadlineMinutes: deadlineMinutes ?? undefined,
+    nearestMeetingMinutes,
     contextCoverage: determineContextCoverage(context),
     psychSignals: derivePsychSignals(context),
   };

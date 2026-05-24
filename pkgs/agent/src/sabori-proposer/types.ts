@@ -8,12 +8,33 @@ import type { Proposal, Task, Verdict } from "@saboru/shared";
  */
 
 /**
+ * CalendarContext — Google Calendar の手動取り込みキャッシュから得られるコンテキスト
+ *
+ * BR-G-05: GoogleCalendarCache から読み込み、24h 以内のキャッシュのみ有効とする。
+ * 予定のタイトルは保存しない（PII保護・raw破棄パターン DP-04 踏襲）。
+ */
+export interface CalendarContext {
+  /** 直近24h以内の予定数 */
+  upcomingEventCount: number;
+  /** 次の予定開始まで（分）。予定なし=null */
+  nextEventStartsInMinutes: number | null;
+  /** 今日の空き時間（分）推定値 */
+  freeSlotMinutesToday: number;
+  /** 多忙度スコア 0.0–1.0（ヒューリスティック） */
+  busyScore: number;
+  /** キャッシュ取得日時（ISO 8601）。鮮度表示用 */
+  fetchedAt: string;
+}
+
+/**
  * TaskContext — SaboriProposerAgent への入力
- * タスクデータとオプションの Slack エンリッチメントを組み合わせる
+ * タスクデータとオプションの Slack エンリッチメント、Google Calendar コンテキストを組み合わせる
  */
 export interface TaskContext {
   task: Task;
   slackContext?: SlackContext;
+  /** Google Calendar キャッシュから注入されるコンテキスト（optional: 未取得時は undefined） */
+  calendarContext?: CalendarContext;
 }
 
 /**
@@ -64,6 +85,10 @@ export interface ContextSignals {
     perceivedPeerEffort: "high" | "low" | "unknown";
     /** SDT (Ryan & Deci, 2000): external pressure from reminders/urgency */
     externalPressureLevel: "high" | "low" | "unknown";
+    /** Calendar busyness (BR-G-06): derived from busyScore */
+    calendarBusyness?: "high" | "low" | "unknown";
+    /** Next meeting pressure (BR-G-06): high if next meeting < 30 min */
+    nextMeetingPressure?: "high" | "low" | "unknown";
   };
 }
 

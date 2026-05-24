@@ -8,12 +8,13 @@
  * パターン 5 (NFR 設計): streamSSE + SaboriProposerAgent 非同期イテレータ
  */
 
-import type { SaboriProposerAgent, TaskContext } from "@saboru/agent";
+import type { CalendarContext, SaboriProposerAgent, TaskContext } from "@saboru/agent";
 import { DEFAULT_PERSONA_ID } from "@saboru/shared";
 import { Hono } from "hono";
 import { stream, streamSSE } from "hono/streaming";
 import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
+import type { DynamoGoogleCalendarCacheRepository } from "../repositories/DynamoGoogleCalendarCacheRepository.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
 import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
 import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
@@ -24,6 +25,7 @@ export function createProposalsRoute(
   proposalRepository: DynamoProposalRepository,
   agent: SaboriProposerAgent,
   userRepository: DynamoUserRepository,
+  calendarCacheRepository?: DynamoGoogleCalendarCacheRepository,
 ): Hono<AppEnv> {
   const proposals = new Hono<AppEnv>();
 
@@ -90,8 +92,26 @@ export function createProposalsRoute(
       });
     }
 
-    // TaskContext を構築
-    const context: TaskContext = { task };
+    // TaskContext を構築（calendarContext を注入: BR-G-05）
+    let calendarContext: CalendarContext | undefined;
+    if (calendarCacheRepository) {
+      const cache = await calendarCacheRepository.findByUserId(userId);
+      if (cache) {
+        const fetchedAtMs = new Date(cache.fetchedAt).getTime();
+        const isValid = Date.now() - fetchedAtMs < 24 * 60 * 60 * 1000;
+        if (isValid) {
+          calendarContext = {
+            upcomingEventCount: cache.upcomingEventCount,
+            nextEventStartsInMinutes: cache.nextEventStartsInMinutes,
+            freeSlotMinutesToday: cache.freeSlotMinutesToday,
+            busyScore: cache.busyScore,
+            fetchedAt: cache.fetchedAt,
+          };
+        }
+      }
+    }
+
+    const context: TaskContext = { task, calendarContext };
 
     const personaId = await resolvePersonaId(userId);
 
@@ -145,7 +165,25 @@ export function createProposalsRoute(
     const task = await taskRepository.findById(userId, taskId);
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
 
-    const context: TaskContext = { task };
+    // Calendar コンテキスト注入（BR-G-05）
+    let calendarContextPost: CalendarContext | undefined;
+    if (calendarCacheRepository) {
+      const cache = await calendarCacheRepository.findByUserId(userId);
+      if (cache) {
+        const fetchedAtMs = new Date(cache.fetchedAt).getTime();
+        if (Date.now() - fetchedAtMs < 24 * 60 * 60 * 1000) {
+          calendarContextPost = {
+            upcomingEventCount: cache.upcomingEventCount,
+            nextEventStartsInMinutes: cache.nextEventStartsInMinutes,
+            freeSlotMinutesToday: cache.freeSlotMinutesToday,
+            busyScore: cache.busyScore,
+            fetchedAt: cache.fetchedAt,
+          };
+        }
+      }
+    }
+
+    const context: TaskContext = { task, calendarContext: calendarContextPost };
     const personaId = await resolvePersonaId(userId);
 
     return stream(c, async (s) => {

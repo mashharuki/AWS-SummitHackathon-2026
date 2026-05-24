@@ -66,10 +66,24 @@ export function useConnections() {
     }
   }, [showToast]);
 
+  /**
+   * Google 連携を開始する。
+   * 認証付きで OAuth 認可 URL を取得し、そのページへ遷移する。
+   */
+  const connectGoogle = useCallback(async () => {
+    try {
+      const url = await apiClient.getGoogleAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      showToast(toUserMessage(err), "error");
+    }
+  }, [showToast]);
+
   return {
     connections,
     isLoading,
     connectSlack,
+    connectGoogle,
     disconnect,
     getConnection,
     refresh: fetchConnections,

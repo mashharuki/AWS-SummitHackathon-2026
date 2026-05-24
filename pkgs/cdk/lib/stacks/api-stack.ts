@@ -89,6 +89,15 @@ export class SaborouApiStack extends cdk.Stack {
           : {}),
         // Bedrock: SaboriProposerAgent が API Lambda 内で直接 Bedrock を呼び出す
         BEDROCK_REGION: "ap-northeast-1",
+        // --- Google OAuth（差分5）---
+        GOOGLE_CLIENT_SECRET_ARN: props.data.secrets.googleClientSecret.secretArn,
+        GOOGLE_CLIENT_ID: ssm.StringParameter.valueForStringParameter(
+          this,
+          "/saborou/google/client-id",
+        ),
+        // --- Google Calendar Cache（U-07b）---
+        DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE:
+          props.data.tables.googleCalendarCache.tableName,
       },
     });
 
@@ -133,9 +142,14 @@ export class SaborouApiStack extends cdk.Stack {
     props.data.tables.proposals.grantReadWriteData(honoFn);
     props.data.tables.honneData.grantReadWriteData(honoFn);
     props.data.tables.personas.grantReadData(honoFn);
+    // Google Calendar キャッシュ: 読み書き（Calendar 取り込み時書き込み・提案時読み込み）
+    props.data.tables.googleCalendarCache.grantReadWriteData(honoFn);
 
     // --- Secrets Manager 権限付与 (追加: U-04 Slack OAuth) ---
     props.data.secrets.slackClientSecret.grantRead(honoFn);
+
+    // --- Google OAuth client secret の読み取り権限（差分5）---
+    props.data.secrets.googleClientSecret.grantRead(honoFn);
 
     // --- per-user Slack Bot Token の読み書き権限 ---
     // 読み取り（遡及取得 API）と書き込み（OAuth コールバックでの保存）の両方が必要。
@@ -159,6 +173,24 @@ export class SaborouApiStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ["secretsmanager:CreateSecret"],
         resources: ["*"],
+      }),
+    );
+
+    // --- per-user Google token の読み書き権限（差分5）---
+    // `saborou/google-token/<userId>` に refreshToken/accessToken を JSON 保存
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:DeleteSecret", // 連携解除時の ForceDelete（dev）
+        ],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/google-token/*`,
+        ],
       }),
     );
 
@@ -218,6 +250,18 @@ export class SaborouApiStack extends cdk.Stack {
       methods: [apigatewayv2.HttpMethod.GET],
       integration: new apigatewayv2Integrations.HttpLambdaIntegration(
         "SlackCallbackIntegration",
+        honoFn,
+      ),
+    });
+
+    // Google OAuth コールバック (認証なし)
+    // Google からのブラウザリダイレクトで来るため JWT は付かない。
+    // CSRF は state パラメータの HMAC 署名検証（google-auth.ts verifyState）で担保する。
+    httpApi.addRoutes({
+      path: "/api/auth/google/callback",
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "GoogleCallbackIntegration",
         honoFn,
       ),
     });

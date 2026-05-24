@@ -63,4 +63,15 @@ export const env = {
   get EVENT_BUS_NAME(): string {
     return requireEnv("EVENT_BUS_NAME");
   },
+  // --- Google OAuth ---
+  get GOOGLE_CLIENT_SECRET_ARN(): string {
+    return requireEnv("GOOGLE_CLIENT_SECRET_ARN");
+  },
+  get GOOGLE_CLIENT_ID(): string {
+    return requireEnv("GOOGLE_CLIENT_ID");
+  },
+  // --- Google Calendar Cache ---
+  get DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE(): string {
+    return requireEnv("DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE");
+  },
 } as const;
