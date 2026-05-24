@@ -139,6 +139,8 @@ export interface HonneSummary {
 /** GET /api/users/me/honne/summary */
 export async function getHonneSummary(): Promise<HonneSummary> {
   return request<HonneSummary>("/api/users/me/honne/summary");
+}
+
 /** PUT /api/users/me/persona — 好みの AI ペルソナを更新 */
 export async function updatePersona(personaId: string): Promise<User> {
   return request<User>("/api/users/me/persona", {
