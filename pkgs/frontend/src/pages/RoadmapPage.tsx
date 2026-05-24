@@ -1,13 +1,13 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ROADMAP_ITEMS } from "@/lib/staticContent";
+import { useTranslation } from "react-i18next";
 /**
  * プロダクトロードマップページ — 「人をダメにする」を、文化に育てる
  *
  * U-06-ui-redesign Phase 6 / 共有 HTML RoadmapScreen 準拠
  */
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 
 const STATUS_STYLE = {
   current: {

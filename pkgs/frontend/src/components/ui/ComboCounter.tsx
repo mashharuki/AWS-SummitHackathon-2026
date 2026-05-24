@@ -1,3 +1,4 @@
+import type { ComboState } from "@/lib/gamificationUtils";
 /**
  * ComboCounter — サボりコンボカウンター
  *
@@ -9,7 +10,6 @@
  *   7（予測不能）: 次のサボりでコンボが続くかどうか
  */
 import { useTranslation } from "react-i18next";
-import type { ComboState } from "@/lib/gamificationUtils";
 
 interface ComboCounterProps {
   combo: ComboState;

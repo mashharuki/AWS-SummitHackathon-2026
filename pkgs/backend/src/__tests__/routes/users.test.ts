@@ -2,13 +2,13 @@
  * GET /api/users/me のテスト
  */
 
+import type { User } from "@saboru/shared";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createUsersRoute } from "../../routes/users.js";
 import { errorHandler } from "../../middleware/error-handler.js";
 import type { DynamoHonneRepository } from "../../repositories/DynamoHonneRepository.js";
 import type { DynamoUserRepository } from "../../repositories/DynamoUserRepository.js";
-import type { User } from "@saboru/shared";
+import { createUsersRoute } from "../../routes/users.js";
 
 const mockUserId = "cognito-sub-abc123";
 

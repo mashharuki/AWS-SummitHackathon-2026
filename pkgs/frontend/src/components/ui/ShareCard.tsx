@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 /**
  * ShareCard / ShareButton — サボり判定シェアカード（Tier 3 施策6）
  *
@@ -11,7 +12,6 @@
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import i18n from "@/i18n";
 
 import type { SaboriGrade } from "@/lib/gamificationUtils";
 

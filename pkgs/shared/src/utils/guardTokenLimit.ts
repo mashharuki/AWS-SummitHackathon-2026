@@ -46,7 +46,7 @@ export function countTokens(text: string): number {
 export function guardTokenLimit(prompt: string, limit?: number): string {
   const parsedEnvLimit = process.env["MAX_TOKEN_LIMIT"]
     ? Number.parseInt(process.env["MAX_TOKEN_LIMIT"], 10)
-    : NaN;
+    : Number.NaN;
   const effectiveLimit =
     limit ??
     (Number.isFinite(parsedEnvLimit) && parsedEnvLimit > 0

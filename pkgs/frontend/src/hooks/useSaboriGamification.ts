@@ -6,6 +6,15 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import {
+  incrementManualProgress,
+  loadManualProgress,
+} from "@/components/ui/ManualProgressCard";
+import {
+  type StreakState,
+  loadStreakState,
+  updateStreak,
+} from "@/components/ui/SaboriStreakBadge";
 import apiClient from "@/lib/apiClient";
 import {
   type ComboState,
@@ -17,15 +26,6 @@ import {
   getTitleInfo,
   isTitleChanged,
 } from "@/lib/gamificationUtils";
-import {
-  type StreakState,
-  loadStreakState,
-  updateStreak,
-} from "@/components/ui/SaboriStreakBadge";
-import {
-  loadManualProgress,
-  incrementManualProgress,
-} from "@/components/ui/ManualProgressCard";
 
 const STORAGE_KEY_COMBO = "saborou_combo";
 const STORAGE_KEY_SCORE = "saborou_dependency_score";
@@ -106,7 +106,7 @@ export function useSaboriGamification(): GamificationState &
 
   // 初回ロード: API または localStorage からスコアを復元
   useEffect(() => {
-    const localScore = parseInt(
+    const localScore = Number.parseInt(
       localStorage.getItem(STORAGE_KEY_SCORE) ?? "0",
       10,
     );

@@ -18,8 +18,8 @@ import {
 import { PositioningCard } from "@/components/ui/PositioningCard";
 import {
   SaboriStreakBadge,
-  updateStreak,
   loadStreakState,
+  updateStreak,
 } from "@/components/ui/SaboriStreakBadge";
 import { ShareButton } from "@/components/ui/ShareCard";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
@@ -27,9 +27,9 @@ import { EvidenceList } from "@/components/verdict/EvidenceList";
 import { PsychSignalsCard } from "@/components/verdict/PsychSignalsCard";
 import { VerdictBox } from "@/components/verdict/VerdictBox";
 import { saveVerdictEntry } from "@/components/verdict/VerdictHistory";
+import { useProposalStream } from "@/hooks/useProposalStream";
 import { useSaboriGamification } from "@/hooks/useSaboriGamification";
 import { useTasks } from "@/hooks/useTasks";
-import { useProposalStream } from "@/hooks/useProposalStream";
 import apiClient from "@/lib/apiClient";
 import { getTitleInfo } from "@/lib/gamificationUtils";
 import { formatDeadlineDisplay } from "@/lib/utils";

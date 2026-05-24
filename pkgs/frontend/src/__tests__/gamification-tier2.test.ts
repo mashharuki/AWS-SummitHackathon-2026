@@ -9,28 +9,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ===== 施策3: ストリークシステム =====
 import {
+  type StreakState,
   getCurrentMilestone,
   getStreakLossMessage,
   updateStreak,
-  type StreakState,
 } from "../components/ui/SaboriStreakBadge";
 
 // ===== 施策4: 取扱説明書ゲージ =====
 import {
+  MANUAL_STAGES,
   getManualStage,
   incrementManualProgress,
   loadManualProgress,
   saveManualProgress,
-  MANUAL_STAGES,
 } from "../components/ui/ManualProgressCard";
 
 // ===== 施策5: 実績システム =====
 import {
+  ACHIEVEMENTS,
+  RARITY_STYLES,
   checkNewAchievements,
   loadUnlockedAchievements,
   unlockAchievement,
-  ACHIEVEMENTS,
-  RARITY_STYLES,
 } from "../lib/achievementSystem";
 
 // ===== localStorage モック =====

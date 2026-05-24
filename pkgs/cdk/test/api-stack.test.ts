@@ -1,9 +1,9 @@
 import * as cdk from "aws-cdk-lib";
-import * as cognito from "aws-cdk-lib/aws-cognito";
 import { Match, Template } from "aws-cdk-lib/assertions";
+import * as cognito from "aws-cdk-lib/aws-cognito";
+import { SaborouApiStack } from "../lib/stacks/api-stack";
 import { SaborouCognitoStack } from "../lib/stacks/cognito-stack";
 import { SaborouDataStack } from "../lib/stacks/data-stack";
-import { SaborouApiStack } from "../lib/stacks/api-stack";
 
 function buildTemplate(): Template {
   const app = new cdk.App({ context: { environment: "test" } });

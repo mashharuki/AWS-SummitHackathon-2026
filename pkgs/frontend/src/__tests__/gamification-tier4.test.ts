@@ -40,12 +40,12 @@ beforeEach(() => {
 
 import {
   WEEKLY_CHALLENGES,
+  type WeeklyChallengeProgress,
   getCurrentWeekChallenge,
   getTimeRemainingText,
   incrementChallengeProgress,
   loadChallengeProgress,
   saveChallengeProgress,
-  type WeeklyChallengeProgress,
 } from "../components/ui/WeeklyChallengeCard";
 
 describe("WEEKLY_CHALLENGES", () => {

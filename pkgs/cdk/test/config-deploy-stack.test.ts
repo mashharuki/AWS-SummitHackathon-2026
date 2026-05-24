@@ -1,7 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
-import { SaborouFrontendStack } from "../lib/stacks/frontend-stack";
 import { SaborouConfigDeployStack } from "../lib/stacks/config-deploy-stack";
+import { SaborouFrontendStack } from "../lib/stacks/frontend-stack";
 
 function buildTemplate(): Template {
   const app = new cdk.App({ context: { environment: "test" } });

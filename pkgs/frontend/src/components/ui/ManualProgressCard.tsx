@@ -75,7 +75,7 @@ export function loadManualProgress(): number {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_MANUAL);
     if (stored !== null)
-      return Math.max(0, Math.min(100, parseInt(stored, 10)));
+      return Math.max(0, Math.min(100, Number.parseInt(stored, 10)));
   } catch {
     // ignore
   }

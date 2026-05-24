@@ -148,8 +148,8 @@ describe("getAptitudeComparisonText", () => {
 // ============================================================
 
 import {
-  getCurrentSeason,
   SEASONS,
+  getCurrentSeason,
   getSeasonLimitedTitle,
 } from "../components/ui/SeasonBanner";
 

@@ -1,7 +1,7 @@
+import { OnboardingModal, useOnboarding } from "@/components/OnboardingModal";
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { AppShell } from "@/components/layout/AppShell";
 import { Logo } from "@/components/layout/Logo";
-import { OnboardingModal, useOnboarding } from "@/components/OnboardingModal";
 import { TaskAddModal } from "@/components/task/TaskAddModal";
 import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
