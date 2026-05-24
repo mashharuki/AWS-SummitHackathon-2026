@@ -20,13 +20,13 @@ describe("ShareCard シェアテキスト生成", () => {
       verdict === "can_saboru" ? "✅ サボれる！" : "❌ 今はサボれない";
 
     const shareText = [
-      `🦥 SABOROU サボり判定結果`,
+      "🦥 SABOROU サボり判定結果",
       `タスク: 「${taskTitle}」`,
       `判定: ${verdictLabel}（${grade}評価）`,
       `AI依存度: ${dependencyScore}%「${titleName}」`,
-      ``,
-      `私の取扱説明書はAIに渡った`,
-      `#SABOROU #先延ばし支援AI #人をダメにするサービス`,
+      "",
+      "私の取扱説明書はAIに渡った",
+      "#SABOROU #先延ばし支援AI #人をダメにするサービス",
     ].join("\n");
 
     expect(shareText).toContain("🦥 SABOROU");
@@ -72,6 +72,7 @@ describe("ShareCard シェアテキスト生成", () => {
 
     expect(Object.keys(gradeLabels)).toHaveLength(6);
     expect(gradeLabels["A+"]).toContain("完全なるサボり");
+    // biome-ignore lint/complexity/useLiteralKeys: bracket notation matches the key name used above for consistency
     expect(gradeLabels["E"]).toContain("今はサボれない");
   });
 });

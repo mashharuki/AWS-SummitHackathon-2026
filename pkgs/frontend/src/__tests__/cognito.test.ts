@@ -157,6 +157,7 @@ describe("OAuth CSRF防止 — buildCognitoAuthUrl / validateOAuthState", () => 
   it("正しいstateで検証成功", async () => {
     await buildCognitoAuthUrl();
     const state = sessionStorage.getItem("oauth_state");
+    // biome-ignore lint/style/noNonNullAssertion: non-null asserted after getItem — value was just set by buildCognitoAuthUrl
     expect(validateOAuthState(state!)).toBe(true);
   });
 
@@ -168,6 +169,7 @@ describe("OAuth CSRF防止 — buildCognitoAuthUrl / validateOAuthState", () => 
   it("検証後にsessionStorageからstateが削除される", async () => {
     await buildCognitoAuthUrl();
     const state = sessionStorage.getItem("oauth_state");
+    // biome-ignore lint/style/noNonNullAssertion: non-null asserted after getItem — value was just set by buildCognitoAuthUrl
     validateOAuthState(state!);
     expect(sessionStorage.getItem("oauth_state")).toBeNull();
   });
