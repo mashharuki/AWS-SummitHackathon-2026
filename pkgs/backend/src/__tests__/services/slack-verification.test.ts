@@ -8,6 +8,7 @@
  * また有効な署名は受入れること。
  */
 
+// biome-ignore lint/style/useNodejsImportProtocol: legacy module name kept for consistency
 import { createHmac } from "crypto";
 import { describe, expect, it } from "vitest";
 import { verifySlackSignature } from "../../services/slack-verification.js";

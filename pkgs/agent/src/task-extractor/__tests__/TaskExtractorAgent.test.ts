@@ -146,6 +146,7 @@ describe("TaskExtractorAgent", () => {
 
   beforeEach(() => {
     // pseudonymize() に必要な環境変数を設定
+    // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
     process.env["PSEUDONYMIZE_SALT"] = "test-salt-1234567";
 
     mockBedrock = new MockBedrockClient(makeTaskBedrockResponse());

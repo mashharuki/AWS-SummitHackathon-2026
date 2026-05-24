@@ -17,6 +17,7 @@ export function log(level: LogLevel, data: Record<string, unknown>): void {
   console.log(
     JSON.stringify({
       level,
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       unit: process.env["AWS_LAMBDA_FUNCTION_NAME"] ?? "task-extractor",
       timestamp: new Date().toISOString(),
       ...data,

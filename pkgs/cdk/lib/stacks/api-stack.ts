@@ -81,7 +81,7 @@ export class SaborouApiStack extends cdk.Stack {
         EVENT_BUS_NAME: `saborou-event-bus-${environment}`,
         // per-user の Slack Bot Token シークレット名プレフィックス
         // （遡及取得 API が認証ユーザーの Bot Token を取得するため）
-        SLACK_BOT_TOKEN_SECRET_PREFIX: `saborou/slack-bot-token/`,
+        SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
         // Slack OAuth コールバック成功後のフロント（CloudFront）リダイレクト先。
         // 未設定だと localhost:5173 にフォールバックしてしまう。
         ...(props.frontendDomainName
@@ -103,13 +103,13 @@ export class SaborouApiStack extends cdk.Stack {
         resources: [
           // Claude Sonnet 4.6: JP Geo クロスリージョン推論プロファイル (inference-profile ARN にはアカウント ID が必要)
           `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-sonnet-4-6`,
-          `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6`,
-          `arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6`,
+          "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-sonnet-4-6",
+          "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-sonnet-4-6",
           // Claude Haiku 4.5 (PersonaRenderer): JP Geo クロスリージョン推論プロファイル
           // ※ Haiku 3.5 は ap-northeast-1 に存在しないため 4.5 を使用
           `arn:aws:bedrock:ap-northeast-1:${this.account}:inference-profile/jp.anthropic.claude-haiku-4-5-20251001-v1:0`,
-          `arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
-          `arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0`,
+          "arn:aws:bedrock:ap-northeast-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+          "arn:aws:bedrock:ap-northeast-3::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
         ],
       }),
     );

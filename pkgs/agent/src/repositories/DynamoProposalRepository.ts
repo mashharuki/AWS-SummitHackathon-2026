@@ -36,12 +36,14 @@ export class DynamoProposalRepository implements IProposalRepository {
 
   constructor() {
     const ddbClient = new DynamoDBClient({
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       region: process.env["AWS_REGION"] ?? "ap-northeast-1",
     });
     this.docClient = DynamoDBDocumentClient.from(ddbClient, {
       marshallOptions: { removeUndefinedValues: true },
     });
     this.tableName =
+      // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
       process.env["DYNAMODB_TABLE_PROPOSALS"] ?? "saborou-proposals-dev";
   }
 

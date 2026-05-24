@@ -49,6 +49,7 @@ async function runExtraction(payload: SlackEventPayload): Promise<void> {
 }
 
 const dynamoDocClient = DynamoDBDocumentClient.from(
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   new DynamoDBClient({ region: process.env["AWS_REGION"] ?? "ap-northeast-1" }),
 );
 
@@ -65,6 +66,7 @@ const dynamoDocClient = DynamoDBDocumentClient.from(
 async function resolveUserIdBySlackUserId(
   slackUserId: string,
 ): Promise<string | null> {
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   const tableName = process.env["DYNAMODB_TABLE_CONNECTIONS"];
   if (!tableName) return null;
 

@@ -15,6 +15,7 @@ import {
 } from "@aws-sdk/client-secrets-manager";
 
 const client = new SecretsManagerClient({
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   region: process.env["AWS_REGION"] ?? "ap-northeast-1",
 });
 

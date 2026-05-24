@@ -36,7 +36,9 @@ describe("DynamoProposalRepository.findLatestByTaskId", () => {
 
     const proposal = await repo.findLatestByTaskId("T01");
     expect(proposal).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: non-null asserted after not.toBeNull() check
     expect(proposal!.taskId).toBe("T01");
+    // biome-ignore lint/style/noNonNullAssertion: non-null asserted after not.toBeNull() check
     expect(proposal!.verdict).toBe("can_saboru");
   });
 

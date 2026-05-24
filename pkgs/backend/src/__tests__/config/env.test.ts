@@ -54,6 +54,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws when COGNITO_USER_POOL_ID is missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.COGNITO_USER_POOL_ID;
     expect(() => env.COGNITO_USER_POOL_ID).toThrow(
       "Missing required environment variable: COGNITO_USER_POOL_ID",
@@ -66,6 +67,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws when COGNITO_CLIENT_ID is missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.COGNITO_CLIENT_ID;
     expect(() => env.COGNITO_CLIENT_ID).toThrow(
       "Missing required environment variable",
@@ -78,6 +80,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_USERS when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_USERS;
     expect(() => env.DYNAMODB_TABLE_USERS).toThrow(
       "Missing required environment variable",
@@ -90,6 +93,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_CONNECTIONS when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_CONNECTIONS;
     expect(() => env.DYNAMODB_TABLE_CONNECTIONS).toThrow(
       "Missing required environment variable",
@@ -102,6 +106,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_TASK_CANDIDATES when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_TASK_CANDIDATES;
     expect(() => env.DYNAMODB_TABLE_TASK_CANDIDATES).toThrow(
       "Missing required environment variable",
@@ -114,6 +119,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_TASKS when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_TASKS;
     expect(() => env.DYNAMODB_TABLE_TASKS).toThrow(
       "Missing required environment variable",
@@ -126,6 +132,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_PROPOSALS when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_PROPOSALS;
     expect(() => env.DYNAMODB_TABLE_PROPOSALS).toThrow(
       "Missing required environment variable",
@@ -138,6 +145,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_HONNE_DATA when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_HONNE_DATA;
     expect(() => env.DYNAMODB_TABLE_HONNE_DATA).toThrow(
       "Missing required environment variable",
@@ -150,6 +158,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for DYNAMODB_TABLE_PERSONAS when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.DYNAMODB_TABLE_PERSONAS;
     expect(() => env.DYNAMODB_TABLE_PERSONAS).toThrow(
       "Missing required environment variable",
@@ -162,6 +171,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for SLACK_SIGNING_SECRET_ARN when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.SLACK_SIGNING_SECRET_ARN;
     expect(() => env.SLACK_SIGNING_SECRET_ARN).toThrow(
       "Missing required environment variable",
@@ -174,6 +184,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for SLACK_CLIENT_SECRET_ARN when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.SLACK_CLIENT_SECRET_ARN;
     expect(() => env.SLACK_CLIENT_SECRET_ARN).toThrow(
       "Missing required environment variable",
@@ -191,6 +202,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for OAUTH_STATE_SECRET when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.OAUTH_STATE_SECRET;
     expect(() => env.OAUTH_STATE_SECRET).toThrow(
       "Missing required environment variable",
@@ -198,6 +210,7 @@ describe("env — requireEnv (getter)", () => {
   });
 
   it("throws for EVENT_BUS_NAME when missing", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.EVENT_BUS_NAME;
     expect(() => env.EVENT_BUS_NAME).toThrow(
       "Missing required environment variable",
@@ -207,6 +220,7 @@ describe("env — requireEnv (getter)", () => {
 
 describe("env.ENVIRONMENT — optionalEnv with default", () => {
   it("returns 'dev' when ENVIRONMENT is not set", () => {
+    // biome-ignore lint/performance/noDelete: test env cleanup requires delete to unset required env vars
     delete process.env.ENVIRONMENT;
     expect(env.ENVIRONMENT).toBe("dev");
   });

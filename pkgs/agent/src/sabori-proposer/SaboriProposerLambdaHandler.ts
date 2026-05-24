@@ -69,6 +69,7 @@ interface LambdaResponse {
 
 // モジュールレベルシングルトン (ウォーム呼び出し間で再利用)
 const bedrockClient = new BedrockClientAdapter(
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   process.env["BEDROCK_REGION"] ?? "ap-northeast-1",
 );
 const proposalRepository = new DynamoProposalRepository();

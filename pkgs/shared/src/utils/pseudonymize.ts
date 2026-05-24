@@ -1,3 +1,4 @@
+// biome-ignore lint/style/useNodejsImportProtocol: legacy module name kept for consistency across the codebase
 import { createHmac } from "crypto";
 import { AppError } from "../errors/AppError";
 
@@ -28,6 +29,7 @@ import { AppError } from "../errors/AppError";
  * @throws AppError('INVALID_INPUT') ソルトが未設定または短すぎる場合
  */
 export function pseudonymize(name: string): string {
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   const salt = process.env["PSEUDONYMIZE_SALT"];
   if (!salt || salt.length < 16) {
     throw new AppError(

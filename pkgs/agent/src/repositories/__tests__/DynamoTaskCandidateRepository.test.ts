@@ -74,15 +74,20 @@ describe("DynamoTaskCandidateRepository", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
     process.env["DYNAMODB_TABLE_TASK_CANDIDATES"] =
       "saborou-task-candidates-test";
+    // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
     process.env["DYNAMODB_TABLE_TASKS"] = "saborou-tasks-test";
   });
 
   describe("create()", () => {
     it("uses default region/table names when env vars are missing", async () => {
+      // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
       delete process.env["AWS_REGION"];
+      // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
       delete process.env["DYNAMODB_TABLE_TASK_CANDIDATES"];
+      // biome-ignore lint/performance/noDelete lint/complexity/useLiteralKeys: test env cleanup requires delete with bracket notation
       delete process.env["DYNAMODB_TABLE_TASKS"];
       vi.clearAllMocks();
 

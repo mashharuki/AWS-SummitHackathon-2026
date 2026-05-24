@@ -26,6 +26,7 @@ import { getSlackSigningSecret } from "../config/secrets.js";
 import { verifySlackSignature } from "../services/slack-verification.js";
 
 const ebClient = new EventBridgeClient({
+  // biome-ignore lint/complexity/useLiteralKeys: env var name contains underscores, bracket notation is clearer
   region: process.env["AWS_REGION"] ?? "ap-northeast-1",
 });
 

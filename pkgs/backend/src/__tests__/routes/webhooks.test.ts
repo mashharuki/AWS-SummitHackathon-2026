@@ -5,6 +5,7 @@
  * Secrets Manager と EventBridge クライアントは vi.mock でスタブする。
  */
 
+// biome-ignore lint/style/useNodejsImportProtocol: legacy module name kept for consistency
 import { createHmac } from "crypto";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";

@@ -31,6 +31,7 @@ describe("DynamoUserRepository.findById", () => {
 
     const user = await repo.findById("sub-123");
     expect(user).not.toBeNull();
+    // biome-ignore lint/style/noNonNullAssertion: non-null asserted after not.toBeNull() check
     expect(user!.cognitoSub).toBe("sub-123");
   });
 

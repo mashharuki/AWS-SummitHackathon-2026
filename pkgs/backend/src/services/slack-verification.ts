@@ -11,6 +11,7 @@
  * 参考: https://api.slack.com/authentication/verifying-requests-from-slack
  */
 
+// biome-ignore lint/style/useNodejsImportProtocol: legacy module name kept for consistency
 import { createHmac, timingSafeEqual } from "crypto";
 
 /**
@@ -31,6 +32,7 @@ export async function verifySlackSignature(
   // リプレイ攻撃防止: 5 分以上前のリクエストを拒否
   const now = Math.floor(Date.now() / 1000);
   const ts = Number.parseInt(timestamp, 10);
+  // biome-ignore lint/suspicious/noGlobalIsNan: Number.isNaN rejects valid timestamps parsed via parseInt
   if (isNaN(ts) || Math.abs(now - ts) > 300) {
     return false;
   }
