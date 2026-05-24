@@ -62,8 +62,16 @@ export function SaborouScene3D({
         position: "relative",
       }}
     >
-      <ErrorBoundary fallback={<Fallback2D verdict={verdict} size={size} personaId={personaId} />}>
-        <Suspense fallback={<Fallback2D verdict={verdict} size={size} personaId={personaId} />}>
+      <ErrorBoundary
+        fallback={
+          <Fallback2D verdict={verdict} size={size} personaId={personaId} />
+        }
+      >
+        <Suspense
+          fallback={
+            <Fallback2D verdict={verdict} size={size} personaId={personaId} />
+          }
+        >
           <Canvas
             camera={{ position: [0, 0.5, 3], fov: 35 }}
             style={{ background: "transparent" }}
@@ -102,7 +110,11 @@ export function SaborouScene3D({
               color={SABORU_3D_SHADOW}
             />
 
-            <SaborouCharacter3D verdict={verdict} isStreaming={isStreaming} personaId={personaId} />
+            <SaborouCharacter3D
+              verdict={verdict}
+              isStreaming={isStreaming}
+              personaId={personaId}
+            />
           </Canvas>
 
           {/* must_do 時の稲妻オーバーレイ（憲法11.8: HTML側で実装） */}

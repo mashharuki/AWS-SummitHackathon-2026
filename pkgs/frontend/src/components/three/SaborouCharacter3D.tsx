@@ -55,7 +55,10 @@ export function SaborouCharacter3D({
 
   // verdict 別マテリアル（ペルソナ指定時は体色のみ上書き、再生成を避けるため useMemo）
   const bodyColor = useMemo(
-    () => (personaId && PERSONA_3D_BODY[personaId]) ? PERSONA_3D_BODY[personaId] : SABORU_3D_COLOR[v],
+    () =>
+      personaId && PERSONA_3D_BODY[personaId]
+        ? PERSONA_3D_BODY[personaId]
+        : SABORU_3D_COLOR[v],
     [v, personaId],
   );
   const cheekColor = useMemo(() => SABORU_3D_CHEEK[v], [v]);
