@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/useToast";
  * 共有 HTML SettingsScreen 準拠（ネオブルータリズム）
  */
 import apiClient from "@/lib/apiClient";
+import { PERSONAS } from "@/lib/staticContent";
 import type {
   CalendarFetchResponse,
   GmailFetchResponse,
@@ -394,13 +395,20 @@ export function SettingsPage() {
                 verdict="can_saboru"
                 size={44}
                 animated={false}
+                personaId={user?.preferredPersonaId}
               />
               <div className="flex-1 min-w-0">
                 <p
                   className="text-saboru-ink font-bold"
                   style={{ fontSize: 13 }}
                 >
-                  {t("settings.personaCurrent")}
+                  {PERSONAS.find(
+                    (p) =>
+                      p.id ===
+                      (user?.preferredPersonaId ?? "saboru_ottori"),
+                  )?.name[
+                    i18n.language.startsWith("ja") ? "ja" : "en"
+                  ] ?? t("settings.personaCurrent")}
                 </p>
                 <p
                   className="text-saboru-ink-muted mt-0.5"

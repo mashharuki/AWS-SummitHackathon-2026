@@ -369,7 +369,7 @@ export function TaskDetailPage() {
             </div>
 
             {/* 3D 判定ヒーロー（憲法2: 320px / 憲法4: brutal-3d-container で外枠） */}
-            <div className="brutal-3d-container" style={{ height: 280 }}>
+            <div className="brutal-3d-container shrink-0" style={{ height: 280 }}>
               <Suspense
                 fallback={
                   <div className="w-full h-full flex items-center justify-center">
