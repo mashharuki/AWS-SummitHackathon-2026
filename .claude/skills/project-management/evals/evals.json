@@ -1,0 +1,23 @@
+{
+  "skill_name": "project-management",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "新しいECサイトのリニューアルプロジェクトを立ち上げたいです。チームは5人（フロントエンド2名、バックエンド2名、デザイナー1名）で、予算は500万円、納期は6ヶ月後です。まずは何から始めればいいか教えてください。また、プロジェクト憲章のドラフトも作成してほしいです。",
+      "expected_output": "PMBOK準拠のプロジェクト立ち上げアドバイス（ステークホルダー特定、スコープ定義、リスク概要）と、具体的な記入済みプロジェクト憲章のドラフトが含まれること。テンプレートだけでなく実際の値が入力されていること。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I'm managing a software migration project that's 3 months in and starting to slip. We had a planned completion of 6 months total, but we're only at 35% complete when we should be at 50%. My budget has also been running hot - we've spent $180,000 of our $300,000 budget to get that 35% done. Can you help me calculate the EVM metrics, diagnose what's happening, and suggest a recovery plan?",
+      "expected_output": "EVM計算（PV, EV, AC, SV, CV, SPI, CPI, EAC）が正確に算出され、状況診断（コスト・スケジュール両方でオーバー）と具体的なリカバリープランが含まれること。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "スタートアップで新機能のリリースを3ヶ月で行いたいのですが、アジャイルかウォーターフォールか迷っています。機能は「AIを使った自動レポート生成機能」で、要件はまだ固まっていません。チームは4人のエンジニアです。どちらのアプローチが適切か教えてください。また、選んだアプローチのスプリント計画または工程表を作成してください。",
+      "expected_output": "アジャイル vs ウォーターフォールの適切な比較と推奨（要件未確定なのでアジャイルが適切）、具体的なスプリント計画（バックログ、スプリント構成、チームロール）が含まれること。",
+      "files": []
+    }
+  ]
+}
