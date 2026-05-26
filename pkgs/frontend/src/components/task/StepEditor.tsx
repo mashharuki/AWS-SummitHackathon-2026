@@ -10,10 +10,17 @@ import type { ScheduleStep } from "@saboru/shared";
  *   （実際のローディング/エラー状態とフェッチは親 = TaskApprovalModal が管理する）
  */
 import { Plus, RefreshCw, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 /** ステップ件数の上限（ApproveOverridesSchema.plannedSteps の max と揃える） */
 export const MAX_STEPS = 8;
+
+/** 所要時間（分）の許容範囲。ScheduleStepSchema と揃える。 */
+const MIN_MINUTES = 5;
+const MAX_MINUTES = 480;
+/** 空欄を確定したときに使うデフォルト分数。 */
+const DEFAULT_MINUTES = 30;
 
 interface StepEditorProps {
   steps: ScheduleStep[];
@@ -105,76 +112,12 @@ export function StepEditor({
 
       <ul className="space-y-2">
         {steps.map((step, index) => (
-          <li
+          <StepRow
             key={step.stepId}
-            className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white p-2"
-          >
-            {/* 作業 / 判断 トグル */}
-            <button
-              type="button"
-              onClick={() =>
-                updateStep(index, {
-                  bandType: step.bandType === "work" ? "decision" : "work",
-                })
-              }
-              className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold transition-colors"
-              style={
-                step.bandType === "decision"
-                  ? { background: "#FEF3C7", color: "#B45309" }
-                  : { background: "#F3F4F6", color: "#6B7280" }
-              }
-              aria-label={
-                step.bandType === "work"
-                  ? t("approvalModal.stepKindWork")
-                  : t("approvalModal.stepKindDecision")
-              }
-            >
-              {step.bandType === "work"
-                ? t("approvalModal.stepKindWork")
-                : t("approvalModal.stepKindDecision")}
-            </button>
-
-            {/* ステップ名 */}
-            <Input
-              value={step.stepLabel}
-              onChange={(e) => updateStep(index, { stepLabel: e.target.value })}
-              placeholder={t("approvalModal.stepLabelPlaceholder")}
-              maxLength={60}
-              className="h-9 flex-1"
-              aria-label={t("approvalModal.stepLabelPlaceholder")}
-            />
-
-            {/* 所要時間（分） */}
-            <div className="flex shrink-0 items-center gap-1">
-              <Input
-                type="number"
-                value={String(step.durationMinutes)}
-                onChange={(e) =>
-                  updateStep(index, {
-                    durationMinutes: clampMinutes(e.target.value),
-                  })
-                }
-                min={5}
-                max={480}
-                step={5}
-                className="h-9 w-16 text-center"
-                aria-label={t("approvalModal.stepMinutes")}
-              />
-              <span className="text-[10px] text-[#9CA3AF]">
-                {t("approvalModal.stepMinutes")}
-              </span>
-            </div>
-
-            {/* 削除 */}
-            <button
-              type="button"
-              onClick={() => removeStep(index)}
-              aria-label={t("approvalModal.removeStep")}
-              className="shrink-0 rounded-lg p-1.5 text-[#9CA3AF] transition-colors hover:bg-[#F3F4F6] hover:text-[#EF4444]"
-            >
-              <X size={14} aria-hidden="true" />
-            </button>
-          </li>
+            step={step}
+            onPatch={(patch) => updateStep(index, patch)}
+            onRemove={() => removeStep(index)}
+          />
         ))}
       </ul>
 
@@ -194,9 +137,119 @@ export function StepEditor({
   );
 }
 
-/** 入力された分数を 5〜480 の整数にクランプする。空入力時は 5 を返す。 */
+interface StepRowProps {
+  step: ScheduleStep;
+  onPatch: (patch: Partial<ScheduleStep>) => void;
+  onRemove: () => void;
+}
+
+/**
+ * StepRow — ステップ1行。所要時間の入力は編集途中の空文字を許容するため
+ * ローカル文字列 state で管理し、blur 時に 5〜480 へ正規化して親へ確定する。
+ * （onChange で即クランプすると「数字を全部消すと 5 になり消せない」UX になるため）
+ */
+function StepRow({ step, onPatch, onRemove }: StepRowProps) {
+  const { t } = useTranslation();
+  // 分入力の生文字列。空文字や編集途中の値をそのまま保持できる。
+  const [minutesText, setMinutesText] = useState(String(step.durationMinutes));
+
+  // 親の値が外から変わったら（再生成など）入力欄に同期する。
+  // durationMinutes はこの行以外の操作では変わらないため、値が変わったときのみ追従する。
+  useEffect(() => {
+    setMinutesText(String(step.durationMinutes));
+  }, [step.durationMinutes]);
+
+  const handleMinutesChange = (raw: string) => {
+    setMinutesText(raw);
+    // 有効な数値がそのまま範囲内なら即座に親へ反映（プレビュー追従）。
+    // 空・範囲外・編集途中はここでは確定せず、blur で正規化する。
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isNaN(n) && n >= MIN_MINUTES && n <= MAX_MINUTES) {
+      onPatch({ durationMinutes: n });
+    }
+  };
+
+  const handleMinutesBlur = () => {
+    const normalized = clampMinutes(minutesText);
+    setMinutesText(String(normalized));
+    if (normalized !== step.durationMinutes) {
+      onPatch({ durationMinutes: normalized });
+    }
+  };
+
+  const isDecision = step.bandType === "decision";
+
+  return (
+    <li className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white p-2">
+      {/* 作業 / 判断 トグル */}
+      <button
+        type="button"
+        onClick={() => onPatch({ bandType: isDecision ? "work" : "decision" })}
+        className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold transition-colors"
+        style={
+          isDecision
+            ? { background: "#FEF3C7", color: "#B45309" }
+            : { background: "#F3F4F6", color: "#6B7280" }
+        }
+        aria-label={
+          isDecision
+            ? t("approvalModal.stepKindDecision")
+            : t("approvalModal.stepKindWork")
+        }
+      >
+        {isDecision
+          ? t("approvalModal.stepKindDecision")
+          : t("approvalModal.stepKindWork")}
+      </button>
+
+      {/* ステップ名 */}
+      <Input
+        value={step.stepLabel}
+        onChange={(e) => onPatch({ stepLabel: e.target.value })}
+        placeholder={t("approvalModal.stepLabelPlaceholder")}
+        maxLength={60}
+        className="h-9 flex-1"
+        aria-label={t("approvalModal.stepLabelPlaceholder")}
+      />
+
+      {/* 所要時間（分） */}
+      <div className="flex shrink-0 items-center gap-1">
+        <Input
+          type="number"
+          inputMode="numeric"
+          value={minutesText}
+          onChange={(e) => handleMinutesChange(e.target.value)}
+          onBlur={handleMinutesBlur}
+          min={MIN_MINUTES}
+          max={MAX_MINUTES}
+          step={5}
+          className="h-9 w-16 text-center"
+          aria-label={t("approvalModal.stepMinutes")}
+        />
+        <span className="text-[10px] text-[#9CA3AF]">
+          {t("approvalModal.stepMinutes")}
+        </span>
+      </div>
+
+      {/* 削除 */}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={t("approvalModal.removeStep")}
+        className="shrink-0 rounded-lg p-1.5 text-[#9CA3AF] transition-colors hover:bg-[#F3F4F6] hover:text-[#EF4444]"
+      >
+        <X size={14} aria-hidden="true" />
+      </button>
+    </li>
+  );
+}
+
+/**
+ * 入力された分数を 5〜480 の整数にクランプする。
+ * 空・非数値のときはデフォルト（30 分）を返す。
+ */
 function clampMinutes(raw: string): number {
   const n = Number.parseInt(raw, 10);
-  if (Number.isNaN(n)) return 5;
-  return Math.min(480, Math.max(5, n));
+  if (Number.isNaN(n)) return DEFAULT_MINUTES;
+  return Math.min(MAX_MINUTES, Math.max(MIN_MINUTES, n));
 }

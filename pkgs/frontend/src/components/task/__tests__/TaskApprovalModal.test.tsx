@@ -249,4 +249,102 @@ describe("TaskApprovalModal", () => {
     const overrides = onConfirm.mock.calls[0][1];
     expect(overrides.plannedSteps[0].bandType).toBe("decision");
   });
+
+  it("所要時間: 編集途中は空欄にでき、即座に5へ強制されない", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[0]]);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={() => {}}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("初稿を起こす")).toBeInTheDocument();
+    });
+
+    const minutes = screen.getByLabelText("分");
+    // 全消し → 空欄を保持できる（5 に勝手に変わらない）
+    fireEvent.change(minutes, { target: { value: "" } });
+    expect(minutes).toHaveValue(null); // number input の空欄
+
+    // 続けて任意の数字を入力できる
+    fireEvent.change(minutes, { target: { value: "9" } });
+    expect(minutes).toHaveValue(9);
+  });
+
+  it("所要時間: blur で範囲外（4分）は最小5にクランプされる", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[0]]);
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("初稿を起こす")).toBeInTheDocument();
+    });
+
+    const minutes = screen.getByLabelText("分");
+    fireEvent.change(minutes, { target: { value: "4" } });
+    fireEvent.blur(minutes);
+    expect(minutes).toHaveValue(5);
+
+    fireEvent.click(screen.getByRole("button", { name: "確定して承認" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][1].plannedSteps[0].durationMinutes).toBe(5);
+  });
+
+  it("所要時間: 空欄のまま blur するとデフォルト30に確定する", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[0]]);
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("初稿を起こす")).toBeInTheDocument();
+    });
+
+    const minutes = screen.getByLabelText("分");
+    fireEvent.change(minutes, { target: { value: "" } });
+    fireEvent.blur(minutes);
+    expect(minutes).toHaveValue(30);
+
+    fireEvent.click(screen.getByRole("button", { name: "確定して承認" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][1].plannedSteps[0].durationMinutes).toBe(30);
+  });
+
+  it("所要時間: 範囲内の有効値はそのまま確定値になる", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[0]]);
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("初稿を起こす")).toBeInTheDocument();
+    });
+
+    const minutes = screen.getByLabelText("分");
+    fireEvent.change(minutes, { target: { value: "90" } });
+    fireEvent.blur(minutes);
+
+    fireEvent.click(screen.getByRole("button", { name: "確定して承認" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    expect(onConfirm.mock.calls[0][1].plannedSteps[0].durationMinutes).toBe(90);
+  });
 });

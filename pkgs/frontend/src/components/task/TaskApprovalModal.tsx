@@ -40,7 +40,12 @@ function isoToDateInput(iso: string | null): string {
   return iso.split("T")[0] ?? "";
 }
 
-/** 確定時にステップを正規化: 空ラベルを除去し stepId を s1..sN に振り直す。 */
+/**
+ * 確定時にステップを正規化:
+ * - 空ラベルを除去
+ * - stepId を s1..sN に振り直す
+ * - durationMinutes を 5〜480 にクランプ（blur 前に確定されても破綻しない保険）
+ */
 function normalizeSteps(steps: ScheduleStep[]): ScheduleStep[] {
   return steps
     .filter((s) => s.stepLabel.trim().length > 0)
@@ -48,6 +53,10 @@ function normalizeSteps(steps: ScheduleStep[]): ScheduleStep[] {
       ...s,
       stepId: `s${i + 1}`,
       stepLabel: s.stepLabel.trim(),
+      durationMinutes: Math.min(
+        480,
+        Math.max(5, Math.round(s.durationMinutes)),
+      ),
     }));
 }
 
