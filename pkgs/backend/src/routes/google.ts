@@ -268,10 +268,13 @@ export function createGoogleRoute(
       clientSecret,
     );
 
-    // 3. Gmail API messages.list（直近7日・未読・最大50件）
+    // 3. Gmail API messages.list（直近7日・未読・最大8件）
+    // NOTE: 各メッセージを Bedrock でタスク抽出するため、API Gateway の 29 秒
+    // タイムアウト内に収まるよう件数を絞る（直列だと 1 件 ~1.5 秒）。
+    // さらに後続の詳細取得＋抽出は Promise.all で並列実行する。
     const listUrl = new URL(`${GMAIL_BASE}/messages`);
     listUrl.searchParams.set("q", "newer_than:7d is:unread");
-    listUrl.searchParams.set("maxResults", "50");
+    listUrl.searchParams.set("maxResults", "8");
 
     const listResponse = await fetchWithTimeout(listUrl.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -303,80 +306,85 @@ export function createGoogleRoute(
     });
 
     // 4. 各メッセージの Subject/From/Date + snippet を取得してタスク抽出
-    const extractedCandidates = [];
+    // API Gateway の 29 秒制限内に収めるため Promise.all で並列実行する。
     const skippedCount = { notTask: 0, error: 0 };
 
-    for (const msg of messages) {
-      try {
-        const detailUrl = new URL(`${GMAIL_BASE}/messages/${msg.id}`);
-        detailUrl.searchParams.set("format", "metadata");
-        // set() は同一キーの値を上書きするため、複数の metadataHeaders には append() を使う
-        detailUrl.searchParams.append("metadataHeaders", "Subject");
-        detailUrl.searchParams.append("metadataHeaders", "From");
-        detailUrl.searchParams.append("metadataHeaders", "Date");
+    const settled = await Promise.all(
+      messages.map(async (msg) => {
+        try {
+          const detailUrl = new URL(`${GMAIL_BASE}/messages/${msg.id}`);
+          detailUrl.searchParams.set("format", "metadata");
+          // set() は同一キーの値を上書きするため、複数の metadataHeaders には append() を使う
+          detailUrl.searchParams.append("metadataHeaders", "Subject");
+          detailUrl.searchParams.append("metadataHeaders", "From");
+          detailUrl.searchParams.append("metadataHeaders", "Date");
 
-        const detailResponse = await fetchWithTimeout(detailUrl.toString(), {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+          const detailResponse = await fetchWithTimeout(detailUrl.toString(), {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
 
-        if (!detailResponse.ok) {
-          skippedCount.error++;
-          continue;
-        }
+          if (!detailResponse.ok) {
+            return { kind: "error" as const };
+          }
 
-        const detail = (await detailResponse.json()) as {
-          id: string;
-          snippet?: string;
-          payload?: {
-            headers?: Array<{ name: string; value: string }>;
+          const detail = (await detailResponse.json()) as {
+            id: string;
+            snippet?: string;
+            payload?: {
+              headers?: Array<{ name: string; value: string }>;
+            };
           };
-        };
 
-        // ヘッダーから Subject / From を取得
-        const headers = detail.payload?.headers ?? [];
-        const getHeader = (name: string): string =>
-          headers.find((h) => h.name.toLowerCase() === name.toLowerCase())
-            ?.value ?? "";
+          // ヘッダーから Subject / From を取得
+          const headers = detail.payload?.headers ?? [];
+          const getHeader = (name: string): string =>
+            headers.find((h) => h.name.toLowerCase() === name.toLowerCase())
+              ?.value ?? "";
 
-        const subject = getHeader("Subject");
-        const from = getHeader("From");
-        const snippet = detail.snippet ?? "";
+          const subject = getHeader("Subject");
+          const from = getHeader("From");
+          const snippet = detail.snippet ?? "";
 
-        // 入力テキストを組み立て（件名 + 送信者 + snippet）
-        // raw 本文（body）は取得・永続化しない（DP-04）
-        const inputText = [
-          `件名: ${subject}`,
-          `送信者: ${from}`,
-          `内容: ${snippet}`,
-        ]
-          .filter((line) => line.split(": ")[1]?.trim())
-          .join("\n");
+          // 入力テキストを組み立て（件名 + 送信者 + snippet）
+          // raw 本文（body）は取得・永続化しない（DP-04）
+          const inputText = [
+            `件名: ${subject}`,
+            `送信者: ${from}`,
+            `内容: ${snippet}`,
+          ]
+            .filter((line) => line.split(": ")[1]?.trim())
+            .join("\n");
 
-        // 5. 汎用化した TaskExtractor に渡す（sourceType="gmail", sourceRef=messageId）
-        const result = await taskExtractorAgent.extractTaskFromSource({
-          userId,
-          text: inputText,
-          sourceType: SOURCE_TYPE.GMAIL,
-          sourceRef: detail.id,
-          requesterHint: from,
-        });
+          // 5. 汎用化した TaskExtractor に渡す（sourceType="gmail", sourceRef=messageId）
+          const result = await taskExtractorAgent.extractTaskFromSource({
+            userId,
+            text: inputText,
+            sourceType: SOURCE_TYPE.GMAIL,
+            sourceRef: detail.id,
+            requesterHint: from,
+          });
 
-        if (!result.skipped) {
-          extractedCandidates.push(result.candidate);
-        } else {
-          skippedCount.notTask++;
+          // inputText はここでスコープ外になる（DP-04: raw 情報の破棄）
+          if (!result.skipped) {
+            return { kind: "extracted" as const, candidate: result.candidate };
+          }
+          return { kind: "not_task" as const };
+        } catch (err) {
+          logError({
+            action: "gmail_message_process_error",
+            messageId: msg.id,
+            err,
+          });
+          return { kind: "error" as const };
         }
+      }),
+    );
 
-        // inputText はここでスコープ外になる（DP-04: raw 情報の破棄）
-      } catch (err) {
-        logError({
-          action: "gmail_message_process_error",
-          messageId: msg.id,
-          err,
-        });
-        skippedCount.error++;
-      }
-    }
+    const extractedCandidates = settled.flatMap((r) =>
+      r.kind === "extracted" ? [r.candidate] : [],
+    );
+    skippedCount.notTask = settled.filter((r) => r.kind === "not_task").length;
+    skippedCount.error = settled.filter((r) => r.kind === "error").length;
 
     logInfo({
       action: "gmail_fetch_complete",
