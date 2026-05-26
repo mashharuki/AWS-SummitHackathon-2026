@@ -127,6 +127,8 @@ function buildTestApp(
 // Google Calendar API の正常レスポンス
 function makeCalendarResponse(
   items: Array<{
+    id?: string;
+    summary?: string;
     start?: { dateTime?: string; date?: string };
     end?: { dateTime?: string; date?: string };
   }> = [],
@@ -334,6 +336,90 @@ describe("POST /api/google/calendar/fetch", () => {
     // 実際: 20分以内なので meetingPressure=0.4, 3件なら 3*0.3=0.9, 合計 1.0 → capped to 1.0
     expect(body.busyScore).toBeGreaterThan(0);
     expect(body.nextEventStartsInMinutes).toBeGreaterThanOrEqual(0);
+  });
+
+  it("予定をタスク候補として抽出する（summary を TaskExtractor に渡す）", async () => {
+    const connRepo: Partial<DynamoServiceConnectionRepository> = {
+      findByUserAndService: vi.fn().mockResolvedValue({
+        service: "google",
+        status: "connected",
+      }),
+    };
+    const calendarCacheRepo: Partial<DynamoGoogleCalendarCacheRepository> = {
+      save: vi.fn().mockResolvedValue({}),
+    };
+    const now = new Date();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        makeCalendarResponse([
+          {
+            id: "evt-1",
+            summary: "デザイン変更締め切り",
+            start: {
+              dateTime: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+            },
+            end: {
+              dateTime: new Date(now.getTime() + 120 * 60 * 1000).toISOString(),
+            },
+          },
+        ]),
+      ),
+    );
+
+    const taskExtractor = makeTaskExtractor();
+    const app = buildTestApp(connRepo, calendarCacheRepo, {}, taskExtractor);
+    const res = await app.request("/api/google/calendar/fetch", {
+      method: "POST",
+    });
+
+    expect(res.status).toBe(200);
+    // TaskExtractor が予定の summary を含むテキストで呼ばれる
+    expect(taskExtractor.extractTaskFromSource).toHaveBeenCalledTimes(1);
+    const callArg = taskExtractor.extractTaskFromSource.mock.calls[0][0];
+    expect(callArg.sourceType).toBe("calendar");
+    expect(callArg.text).toContain("デザイン変更締め切り");
+    const body = (await res.json()) as { extracted: number };
+    expect(body.extracted).toBe(1);
+  });
+
+  it("summary が無い予定はタスク抽出をスキップする", async () => {
+    const connRepo: Partial<DynamoServiceConnectionRepository> = {
+      findByUserAndService: vi.fn().mockResolvedValue({
+        service: "google",
+        status: "connected",
+      }),
+    };
+    const calendarCacheRepo: Partial<DynamoGoogleCalendarCacheRepository> = {
+      save: vi.fn().mockResolvedValue({}),
+    };
+    const now = new Date();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        makeCalendarResponse([
+          {
+            start: {
+              dateTime: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+            },
+            end: {
+              dateTime: new Date(now.getTime() + 120 * 60 * 1000).toISOString(),
+            },
+          },
+        ]),
+      ),
+    );
+
+    const taskExtractor = makeTaskExtractor();
+    const app = buildTestApp(connRepo, calendarCacheRepo, {}, taskExtractor);
+    const res = await app.request("/api/google/calendar/fetch", {
+      method: "POST",
+    });
+    expect(res.status).toBe(200);
+    // summary が無いので TaskExtractor は呼ばれない
+    expect(taskExtractor.extractTaskFromSource).not.toHaveBeenCalled();
+    const body = (await res.json()) as { extracted: number };
+    expect(body.extracted).toBe(0);
   });
 
   it("Cache に upsert を呼び出す", async () => {

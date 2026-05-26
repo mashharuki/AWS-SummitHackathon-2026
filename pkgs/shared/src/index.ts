@@ -18,6 +18,20 @@ export type {
   SignalLevel,
   HonneData,
   Persona,
+  BandType,
+  BusySlot,
+  ScheduleBlock,
+  SaboriSchedule,
+  ScheduleApiResponse,
+} from "./types";
+
+// Schedule (gantt) zod schemas — runtime validation
+export {
+  BandTypeSchema,
+  BusySlotSchema,
+  ScheduleBlockSchema,
+  SaboriScheduleSchema,
+  ScheduleApiResponseSchema,
 } from "./types";
 
 // Errors

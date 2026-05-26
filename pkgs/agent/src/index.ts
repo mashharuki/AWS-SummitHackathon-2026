@@ -35,6 +35,26 @@ export type {
   TaskContext,
 } from "./sabori-proposer/types.js";
 
+// 段取り逆算エージェント (U-G03: schedule-planner)
+export { SchedulePlannerAgent } from "./schedule-planner/SchedulePlannerAgent.js";
+export type { SchedulePlannerInput } from "./schedule-planner/SchedulePlannerAgent.js";
+export {
+  calcSchedule,
+  resolveWindowEnd,
+  normalizeBusySlots,
+  buildAvailableSlots,
+} from "./schedule-planner/saboruBlockCalc.js";
+export {
+  PLAN_SCHEDULE_TOOL,
+  PLAN_SCHEDULE_TOOL_NAME,
+  PlanScheduleOutputSchema,
+  ScheduleStepSchema,
+} from "./schedule-planner/tools.js";
+export type {
+  PlanScheduleOutput,
+  ScheduleStep,
+} from "./schedule-planner/tools.js";
+
 // コンテキストコレクター (共有)
 export {
   ContextCollector,

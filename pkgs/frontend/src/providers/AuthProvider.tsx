@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // refreshAccessToken は内部で id/access 両トークンをメモリに復元する。
+    // 戻り値で再度 setAccessToken する必要はない（expiresIn がデフォルト値に化ける副作用も避ける）。
     refreshAccessToken()
       .then(async (newToken) => {
         if (!newToken) {
@@ -60,7 +62,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setState({ user: null, isAuthenticated: false, isLoading: false });
           return;
         }
-        setAccessToken(newToken);
         try {
           const user = await getMe();
           setState({ user, isAuthenticated: true, isLoading: false });

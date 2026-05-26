@@ -5,6 +5,8 @@
  */
 import type {
   Proposal,
+  SaboriSchedule,
+  ScheduleApiResponse,
   ServiceConnection,
   Task,
   TaskCandidate,
@@ -13,8 +15,8 @@ import type {
 import {
   clearTokens,
   getApiAuthToken,
+  getRefreshToken,
   refreshAccessToken,
-  setAccessToken,
 } from "./cognito";
 import { getRuntimeConfig } from "./runtimeConfig.js";
 
@@ -48,6 +50,16 @@ export class ApiError extends Error {
 
 let _refreshPromise: Promise<string | null> | null = null;
 
+/** 同時多発リクエストでも refresh は一度だけ走らせる（重複リフレッシュ防止） */
+function refreshOnce(): Promise<string | null> {
+  if (!_refreshPromise) {
+    _refreshPromise = refreshAccessToken().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
 /** NFR-DESIGN-8: 認証付きリクエスト（401時はリフレッシュ + 1回リトライ） */
 async function request<T>(
   path: string,
@@ -55,7 +67,18 @@ async function request<T>(
   retry = true,
 ): Promise<T> {
   // API Gateway JWT オーソライザーには id_token を送る（name/email クレームを含む）
-  const token = getApiAuthToken();
+  let token = getApiAuthToken();
+
+  // トークンがメモリに無い場合（リロード直後など）、ヘッダー無しで送ると
+  // API Gateway の JWT オーソライザーに必ず 401 で弾かれる。
+  // refresh_token があるなら先にリフレッシュしてからトークンを載せる。
+  // （AuthProvider のトークン復元と本リクエストのレース対策）
+  if (!token && retry && getRefreshToken()) {
+    const refreshed = await refreshOnce();
+    if (refreshed) {
+      token = getApiAuthToken();
+    }
+  }
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -69,16 +92,11 @@ async function request<T>(
   });
 
   if (res.status === 401 && retry) {
-    /* v8 ignore next */
-    if (!_refreshPromise) {
-      _refreshPromise = refreshAccessToken().finally(() => {
-        _refreshPromise = null;
-      });
-    }
-    const newToken = await _refreshPromise;
+    // refreshAccessToken は内部で id/access 両トークンを更新する。
+    // ここで個別に setAccessToken する必要はない（getApiAuthToken が更新後の id_token を返す）。
+    const newToken = await refreshOnce();
     /* v8 ignore next */
     if (newToken) {
-      setAccessToken(newToken);
       return request<T>(path, options, false);
     }
     // リフレッシュ失敗 → ログアウト
@@ -225,6 +243,21 @@ export async function createTask(data: {
 export async function getProposal(taskId: string): Promise<Proposal | null> {
   try {
     return await request<Proposal>(`/api/tasks/${taskId}/proposal`);
+  } catch (err) {
+    if (err instanceof ApiError && err.isNotFound()) return null;
+    throw err;
+  }
+}
+
+/** GET /api/tasks/:id/schedule（3バンドガント用スケジュール取得） */
+export async function getSchedule(
+  taskId: string,
+): Promise<SaboriSchedule | null> {
+  try {
+    const res = await request<ScheduleApiResponse>(
+      `/api/tasks/${taskId}/schedule`,
+    );
+    return res.schedule;
   } catch (err) {
     if (err instanceof ApiError && err.isNotFound()) return null;
     throw err;
@@ -410,6 +443,7 @@ export default {
   deleteTask,
   createTask,
   getProposal,
+  getSchedule,
   submitHonne,
   getConnections,
   getSlackAuthUrl,

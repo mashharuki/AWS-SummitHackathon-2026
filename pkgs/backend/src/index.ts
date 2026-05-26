@@ -25,6 +25,7 @@
  * PATCH  /tasks/:id                      — インライン編集
  * DELETE /tasks/:id                      — 論理削除
  * GET    /tasks/:taskId/proposal         — サボり提案 (SSE / 同期)
+ * GET    /tasks/:taskId/schedule         — スケジュール (3バンドガント) 生成
  * POST   /tasks/:taskId/honne            — 本音記録
  * GET    /connections                    — サービス接続
  * DELETE /connections/:service           — サービスの接続解除
@@ -37,11 +38,13 @@ import {
   BedrockClientAdapter,
   PersonaRenderer,
   SaboriProposerAgent,
+  SchedulePlannerAgent,
   TaskExtractorAgent,
 } from "@saboru/agent";
 import { Hono } from "hono";
 import { env } from "./config/env.js";
 import { openApiDoc } from "./config/openapi.js";
+import { getGoogleClientSecret } from "./config/secrets.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/logger.js";
 import { DynamoGoogleCalendarCacheRepository } from "./repositories/DynamoGoogleCalendarCacheRepository.js";
@@ -58,9 +61,11 @@ import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
 import { createProposalsRoute } from "./routes/proposals.js";
+import { createScheduleRoute } from "./routes/schedule.js";
 import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
 import { createUsersRoute } from "./routes/users.js";
+import { GoogleTokenService } from "./services/GoogleTokenService.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
@@ -113,6 +118,31 @@ const taskExtractorAgent = new TaskExtractorAgent(
   candidateRepository,
 );
 
+// Initialize SchedulePlannerAgent (3バンドガント生成で使用 / U-G04)
+const schedulePlannerAgent = new SchedulePlannerAgent(bedrockClient);
+
+/**
+ * Google アクセストークン取得のデフォルト実装（U-G04 schedule ルート用）。
+ * google.ts と同じ手順: clientSecret ARN → JSON parse → GoogleTokenService.getValidAccessToken。
+ */
+async function getGoogleAccessToken(userId: string): Promise<string> {
+  const clientSecretJson = await getGoogleClientSecret(
+    env.GOOGLE_CLIENT_SECRET_ARN,
+  );
+  const { clientId, clientSecret } = JSON.parse(clientSecretJson) as {
+    clientId: string;
+    clientSecret: string;
+  };
+  const tokenService = new GoogleTokenService();
+  const secretName = GoogleTokenService.buildSecretName(userId);
+  return tokenService.getValidAccessToken(
+    userId,
+    secretName,
+    clientId,
+    clientSecret,
+  );
+}
+
 /**
  * createApp — Hono app factory (exported for testing)
  * Accepts optional overrides for dependency injection in tests.
@@ -148,6 +178,16 @@ export function createApp() {
   app.route(
     "/api/tasks",
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
+  );
+  // Schedule (3バンドガント) も /api/tasks プレフィックスに相乗り（U-G04）
+  app.route(
+    "/api/tasks",
+    createScheduleRoute(
+      taskRepository,
+      connectionRepository,
+      schedulePlannerAgent,
+      getGoogleAccessToken,
+    ),
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
