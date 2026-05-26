@@ -41,13 +41,15 @@ Read this file when:
 
 ## Architecture Diagram
 
+> **AWS Architecture:** If ANY AWS service (Lambda, S3, DynamoDB, etc.) appears in the diagram, **stop here and read `references/aws-architecture.md` instead.** That file provides official AWS icon shapes, correct category colors, group container styles, layout conventions, and a full quality checklist — everything needed to produce Dojo-level diagrams. The generic presets below are for non-AWS architecture diagrams only.
+
 | Element | Style | Notes |
 |---------|-------|-------|
 | Layer/tier | `swimlane;startSize=30;` | Containers for grouping: Client / API / Service / Data |
 | Service | `rounded=1;whiteSpace=wrap;html=1;` + tier color | Use color palette by tier |
 | Database | `shape=cylinder3;whiteSpace=wrap;html=1;` | Green palette |
 | Queue/Bus | `rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;` | Yellow — place centrally for hub pattern |
-| Gateway/LB | `shape=mxgraph.aws4.resourceIcon;` or `rounded=1;` with orange | Orange palette |
+| Gateway/LB | `rounded=1;` with orange | Orange palette |
 | External | `rounded=1;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;` | Dashed border for external systems |
 | Layout | TB or LR by tier count; ≥4 tiers → TB | Hub nodes centered |
 

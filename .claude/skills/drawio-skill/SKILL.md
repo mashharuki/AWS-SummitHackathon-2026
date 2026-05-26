@@ -1,11 +1,11 @@
 ---
 name: drawio-skill
-description: Use when user requests diagrams, flowcharts, architecture charts, or visualizations. Also use proactively when explaining systems with 3+ components, complex data flows, or relationships that benefit from visual representation. Generates .drawio XML files and exports to PNG/SVG/PDF locally using the native draw.io desktop CLI.
+description: Use when user requests diagrams, flowcharts, architecture charts, or visualizations — including AWS architecture diagrams, cloud system diagrams, and infrastructure diagrams. Also use proactively when explaining systems with 3+ components, complex data flows, or relationships that benefit from visual representation. For AWS diagrams, always produces Dojo-quality output with official AWS service icons, correct category colors, and proper VPC/subnet/AZ groupings. Generates .drawio XML files and exports to PNG/SVG/PDF locally using the native draw.io desktop CLI.
 license: MIT
 homepage: https://github.com/Agents365-ai/drawio-skill
 compatibility: Requires draw.io desktop app CLI on PATH (macOS/Linux/Windows). Self-check step requires a vision-enabled model (e.g., Claude Sonnet/Opus); gracefully skipped if unavailable.
 platforms: [macos, linux, windows]
-metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.5.0"}
+metadata: {"openclaw":{"requires":{"anyBins":["draw.io","drawio"]},"emoji":"📐","os":["darwin","linux","win32"],"install":[{"id":"brew-drawio","kind":"brew","formula":"drawio","bins":["draw.io"],"label":"Install draw.io via Homebrew","os":["darwin"]}]},"hermes":{"tags":["drawio","diagram","flowchart","architecture","visualization","uml","aws","cloud","infrastructure"],"category":"design","requires_tools":["draw.io"],"related_skills":["mermaid","excalidraw","plantuml"]},"author":"Agents365-ai","version":"1.6.0"}
 ---
 
 # Draw.io Diagrams
@@ -24,7 +24,8 @@ When the workflow references one of these, read it on demand — none of them ne
 
 | File | Read it when |
 |---|---|
-| `references/diagram-types.md` | The user names a specific diagram type (ERD, UML class, sequence, architecture, ML/DL, flowchart) |
+| `references/aws-architecture.md` | **ALWAYS read first** when any AWS service appears in the diagram request — before writing any XML. Contains the complete icon shape lookup, official AWS colors, group container styles, layout conventions, architecture patterns, and quality checklist. |
+| `references/diagram-types.md` | The user names a specific diagram type (ERD, UML class, sequence, architecture, ML/DL, flowchart) — skip for AWS diagrams (use aws-architecture.md instead) |
 | `references/style-presets.md` | The user asks to learn / save / list / set-default / delete a style preset, or you've resolved an active preset and need the application rules |
 | `references/style-extraction.md` | You're inside the Learn flow and need the extraction procedure (called from `style-presets.md`) |
 | `references/troubleshooting.md` | An export fails, vision rejects a PNG, or a rendering looks wrong |
@@ -442,15 +443,18 @@ When something looks wrong (export fails, vision rejects a PNG, layout broken, e
 
 ## Diagram Type Presets
 
-When the user requests a specific diagram type, read `references/diagram-types.md` for the matching preset (shapes, edges, layout direction). Pick by user phrasing:
+**AWS diagrams take priority:** if the user's request mentions any AWS service or "AWS architecture", read `references/aws-architecture.md` first — it fully supersedes the generic Architecture section in `references/diagram-types.md`.
 
-| User says | Section in `references/diagram-types.md` |
+For non-AWS diagram types, read `references/diagram-types.md` for the matching preset (shapes, edges, layout direction). Pick by user phrasing:
+
+| User says | What to read |
 |---|---|
-| "ER diagram", "schema diagram", "data model" | ERD |
-| "UML class diagram", "class diagram" | UML Class |
-| "sequence diagram", "interaction diagram", "lifeline" | Sequence |
-| "architecture", "system diagram", "service diagram" | Architecture |
-| "neural network", "model architecture", "ML diagram", "deep learning" | ML / Deep Learning Model |
-| "flowchart", "decision tree", "process flow" | Flowchart |
+| AWS service name, "AWS architecture", "cloud diagram", "infrastructure diagram" | **`references/aws-architecture.md`** (priority — always read for AWS) |
+| "ER diagram", "schema diagram", "data model" | `references/diagram-types.md` → ERD |
+| "UML class diagram", "class diagram" | `references/diagram-types.md` → UML Class |
+| "sequence diagram", "interaction diagram", "lifeline" | `references/diagram-types.md` → Sequence |
+| "architecture", "system diagram", "service diagram" (non-AWS) | `references/diagram-types.md` → Architecture |
+| "neural network", "model architecture", "ML diagram", "deep learning" | `references/diagram-types.md` → ML / Deep Learning Model |
+| "flowchart", "decision tree", "process flow" | `references/diagram-types.md` → Flowchart |
 
 The diagram-type preset sets **structural** style keywords. If a user style preset is also active (see `## Style Presets`), keep the structural keywords and layer color/font/edge/extras on top — read `references/style-presets.md` → "Interaction with diagram-type presets" for the merge rules.
