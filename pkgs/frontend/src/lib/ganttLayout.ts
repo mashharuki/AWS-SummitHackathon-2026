@@ -128,10 +128,14 @@ export function buildTimeTicks(
  * スケジュールのブロックを「行」にグルーピングする。
  * - 最上段は必ず「さぼろう」行（saboru バンドを集約）
  * - 続いて work/decision を stepLabel の出現順に1行ずつ
+ * - busy（カレンダー予定）は件数が多いと縦に肥大化するため「予定」1行に集約する
  */
 export function buildRows(schedule: SaboriSchedule): GanttRowData[] {
   const saboruBlocks = schedule.blocks.filter((b) => b.bandType === "saboru");
-  const workBlocks = schedule.blocks.filter((b) => b.bandType !== "saboru");
+  const busyBlocks = schedule.blocks.filter((b) => b.bandType === "busy");
+  const workBlocks = schedule.blocks.filter(
+    (b) => b.bandType !== "saboru" && b.bandType !== "busy",
+  );
 
   const rows: GanttRowData[] = [];
 
@@ -161,6 +165,16 @@ export function buildRows(schedule: SaboriSchedule): GanttRowData[] {
     }
   }
 
+  // 予定（busy）は1レーンに集約（複数予定でも縦に増やさない）。
+  // 個々の予定名はブロックの stepLabel に保持され、バー上に表示される。
+  if (busyBlocks.length > 0) {
+    rows.push({
+      stepLabel: "予定",
+      bandType: "busy",
+      blocks: busyBlocks,
+    });
+  }
+
   return rows;
 }
 
@@ -174,6 +188,130 @@ export function viewWidthPx(
 ): number {
   const ms = new Date(viewEndAt).getTime() - new Date(viewStartAt).getTime();
   return (ms / MS_PER_HOUR) * pxPerHour;
+}
+
+/** 1日の表示範囲（ローカルタイム基準） */
+export interface DayRange {
+  /** 表示開始（ISO）。当日は now 起点、他日は 00:00 起点 */
+  startAt: string;
+  /** 表示終了（ISO）。締切がその日中なら締切、それ以外はその日の 23:59:59.999 */
+  endAt: string;
+}
+
+/** ローカルタイムでその日の 00:00:00.000 を返す */
+function startOfLocalDay(d: Date): Date {
+  const r = new Date(d);
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+
+/** ローカルタイムでその日の 23:59:59.999 を返す */
+function endOfLocalDay(d: Date): Date {
+  const r = new Date(d);
+  r.setHours(23, 59, 59, 999);
+  return r;
+}
+
+/** 2つの Date が同じローカル日付か */
+export function isSameLocalDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * 指定日の表示範囲（横軸の開始・終了）を算出する。
+ *
+ * - 開始: その日が「今日」なら now、それ以外はその日の 00:00。
+ *   ただしスケジュールの viewStartAt より前にはしない。
+ * - 終了: その日の 23:59:59.999 を基準に、締切がその日中ならそこまで（夜まで伸ばさない）。
+ *   さらに schedule.viewEndAt を超えない。
+ */
+export function getDayRange(
+  dayDate: Date,
+  schedule: SaboriSchedule,
+  now: Date = new Date(),
+): DayRange {
+  const viewStartMs = new Date(schedule.viewStartAt).getTime();
+  const viewEndMs = new Date(schedule.viewEndAt).getTime();
+  const deadlineMs = schedule.deadline
+    ? new Date(schedule.deadline).getTime()
+    : null;
+
+  // 開始: 今日なら now、他日は 00:00。viewStartAt 以上にクランプ。
+  const dayStartBase = isSameLocalDay(dayDate, now)
+    ? now
+    : startOfLocalDay(dayDate);
+  const startMs = Math.max(dayStartBase.getTime(), viewStartMs);
+
+  // 終了候補: その日の終わり / 締切（その日中なら）/ viewEnd の最小。
+  let endMs = endOfLocalDay(dayDate).getTime();
+  if (deadlineMs !== null && isSameLocalDay(new Date(deadlineMs), dayDate)) {
+    endMs = Math.min(endMs, deadlineMs);
+  }
+  endMs = Math.min(endMs, viewEndMs);
+
+  // 開始が終了を超える異常時は最低 1 時間の窓を確保（潰れ防止）。
+  if (endMs <= startMs) {
+    endMs = startMs + MS_PER_HOUR;
+  }
+
+  return {
+    startAt: new Date(startMs).toISOString(),
+    endAt: new Date(endMs).toISOString(),
+  };
+}
+
+/** ブロックが [rangeStartMs, rangeEndMs] と時間的に重なるか */
+function blockOverlapsRange(
+  b: ScheduleBlock,
+  rangeStartMs: number,
+  rangeEndMs: number,
+): boolean {
+  const s = new Date(b.startAt).getTime();
+  const e = new Date(b.endAt).getTime();
+  return s < rangeEndMs && e > rangeStartMs;
+}
+
+/**
+ * スケジュールを「指定日の1日分」に絞り込んだ新しいスケジュールを返す（純関数）。
+ *
+ * - viewStartAt/viewEndAt を当日の表示範囲（getDayRange）にクランプ
+ * - blocks は当日範囲と重なるものだけ残す
+ * - deadline はその日中なら維持、範囲外なら null（締切ラインを当日に出さない）
+ * - totalSaboruMinutes は当日に残った saboru ブロックの合計で再計算
+ */
+export function filterScheduleByDay(
+  schedule: SaboriSchedule,
+  dayDate: Date,
+  now: Date = new Date(),
+): SaboriSchedule {
+  const range = getDayRange(dayDate, schedule, now);
+  const startMs = new Date(range.startAt).getTime();
+  const endMs = new Date(range.endAt).getTime();
+
+  const blocks = schedule.blocks.filter((b) =>
+    blockOverlapsRange(b, startMs, endMs),
+  );
+
+  const deadlineInDay =
+    schedule.deadline !== null &&
+    isSameLocalDay(new Date(schedule.deadline), dayDate);
+
+  const totalSaboruMinutes = blocks
+    .filter((b) => b.bandType === "saboru")
+    .reduce((sum, b) => sum + b.durationMinutes, 0);
+
+  return {
+    ...schedule,
+    viewStartAt: range.startAt,
+    viewEndAt: range.endAt,
+    deadline: deadlineInDay ? schedule.deadline : null,
+    blocks,
+    totalSaboruMinutes,
+  };
 }
 
 /**

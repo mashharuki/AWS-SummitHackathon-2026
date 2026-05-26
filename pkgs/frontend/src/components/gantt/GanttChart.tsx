@@ -3,12 +3,14 @@ import {
   buildRows,
   buildTimeTicks,
   durationToWidthPx,
+  filterScheduleByDay,
+  isSameLocalDay,
   timeToPx,
   viewWidthPx,
 } from "@/lib/ganttLayout";
 import { cn } from "@/lib/utils";
 import type { BandType, SaboriSchedule } from "@saboru/shared";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /**
  * GanttChart — 3バンドガントチャート（SABOROU のコアUI）
@@ -40,6 +42,18 @@ export function GanttChart({
   className,
   pxPerHour = 120,
 }: GanttChartProps) {
+  // 表示対象の日（1日単位）。デフォルトは現在日。ただしスケジュール期間外なら
+  // 期間の端（初日／最終日）にクランプする（期間が過ぎた／未来でも空表示にしない）。
+  // 締切が翌日以降のタスクでも、まずは「今日やる分」だけを見せる。
+  const [viewDate, setViewDate] = useState<Date>(() => {
+    const base = now ?? new Date();
+    const startMs = new Date(schedule.viewStartAt).getTime();
+    const endMs = new Date(schedule.viewEndAt).getTime();
+    if (base.getTime() < startMs) return new Date(startMs);
+    if (base.getTime() > endMs) return new Date(endMs);
+    return base;
+  });
+
   // NOWライン位置をリアルタイム更新（now 未指定時のみ）
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -47,45 +61,86 @@ export function GanttChart({
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
   }, [now]);
-  // tick を参照して再レンダー（lint 回避 + 明示的依存）
-  void tick;
 
-  const viewStartMs = new Date(schedule.viewStartAt).getTime();
-  const rows = buildRows(schedule);
-  const ticks = buildTimeTicks(
-    schedule.viewStartAt,
-    schedule.viewEndAt,
-    pxPerHour,
-  );
-  const totalWidth = viewWidthPx(
-    schedule.viewStartAt,
-    schedule.viewEndAt,
-    pxPerHour,
+  // 現在時刻。now prop があれば固定、無ければ tick 連動で再評価する。
+  // useMemo の依存に毎回新しい Date を入れないため安定参照にする。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tick で実時間を再評価する意図
+  const nowDate = useMemo(() => now ?? new Date(), [now, tick]);
+
+  // スケジュールを「表示対象日の1日分」に絞り込む（行数・横幅を当日に限定）
+  const view = useMemo(
+    () => filterScheduleByDay(schedule, viewDate, nowDate),
+    [schedule, viewDate, nowDate],
   );
 
-  const nowDate = now ?? new Date();
+  // 日付ナビの可否: スケジュール全体の期間（viewStartAt〜 deadline/viewEndAt）が
+  // 複数日にまたがる場合のみ前後移動を許可する。
+  const fullStart = new Date(schedule.viewStartAt);
+  const fullEndIso = schedule.deadline ?? schedule.viewEndAt;
+  const fullEnd = new Date(fullEndIso);
+  const canPrev = !isSameLocalDay(viewDate, fullStart) && viewDate > fullStart;
+  const canNext = !isSameLocalDay(viewDate, fullEnd) && viewDate < fullEnd;
+  const isMultiDay = !isSameLocalDay(fullStart, fullEnd);
+
+  const shiftDay = (delta: number) => {
+    setViewDate((prev) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + delta);
+      return d;
+    });
+  };
+
+  const viewStartMs = new Date(view.viewStartAt).getTime();
+  const rows = buildRows(view);
+  const ticks = buildTimeTicks(view.viewStartAt, view.viewEndAt, pxPerHour);
+  const totalWidth = viewWidthPx(view.viewStartAt, view.viewEndAt, pxPerHour);
+
   const nowMs = nowDate.getTime();
-  const viewEndMs = new Date(schedule.viewEndAt).getTime();
+  const viewEndMs = new Date(view.viewEndAt).getTime();
   const nowInRange = nowMs >= viewStartMs && nowMs <= viewEndMs;
   const nowLeftPx = timeToPx(nowDate.toISOString(), viewStartMs, pxPerHour);
 
   const deadlineInRange =
-    schedule.deadline !== null &&
-    new Date(schedule.deadline).getTime() >= viewStartMs &&
-    new Date(schedule.deadline).getTime() <= viewEndMs;
-  const deadlineLeftPx = schedule.deadline
-    ? timeToPx(schedule.deadline, viewStartMs, pxPerHour)
+    view.deadline !== null &&
+    new Date(view.deadline).getTime() >= viewStartMs &&
+    new Date(view.deadline).getTime() <= viewEndMs;
+  const deadlineLeftPx = view.deadline
+    ? timeToPx(view.deadline, viewStartMs, pxPerHour)
     : 0;
 
   const gridHeight = rows.length * ROW_HEIGHT;
 
   return (
     <div className={cn("card-brutal overflow-hidden", className)}>
-      {/* ヘッダー: 日付 + 凡例 */}
+      {/* ヘッダー: 日付（+複数日なら前後ナビ）+ 凡例 */}
       <div className="flex items-center justify-between px-3 py-2 border-b-[3px] border-saboru-heavy">
-        <span className="font-extrabold text-saboru-ink text-sm">
-          {formatDateHeader(schedule.viewStartAt)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {isMultiDay && (
+            <button
+              type="button"
+              onClick={() => shiftDay(-1)}
+              disabled={!canPrev}
+              aria-label="前日"
+              className="w-6 h-6 flex items-center justify-center rounded-md border-2 border-saboru-heavy text-saboru-ink text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-saboru-line-soft"
+            >
+              ‹
+            </button>
+          )}
+          <span className="font-extrabold text-saboru-ink text-sm whitespace-nowrap">
+            {formatDateHeader(view.viewStartAt)}
+          </span>
+          {isMultiDay && (
+            <button
+              type="button"
+              onClick={() => shiftDay(1)}
+              disabled={!canNext}
+              aria-label="翌日"
+              className="w-6 h-6 flex items-center justify-center rounded-md border-2 border-saboru-heavy text-saboru-ink text-xs font-bold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-saboru-line-soft"
+            >
+              ›
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2.5 text-[11px]">
           <Legend bandType="saboru" />
           <Legend bandType="work" />

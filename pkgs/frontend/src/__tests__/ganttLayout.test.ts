@@ -4,7 +4,10 @@ import {
   buildRows,
   buildTimeTicks,
   durationToWidthPx,
+  filterScheduleByDay,
   formatTick,
+  getDayRange,
+  isSameLocalDay,
   timeToPx,
   viewWidthPx,
 } from "@/lib/ganttLayout";
@@ -166,5 +169,204 @@ describe("buildRows", () => {
     const d = rows.find((r) => r.stepLabel === "確認");
     expect(d?.blocks).toHaveLength(1);
     expect(d?.bandType).toBe("decision");
+  });
+
+  it("複数の busy（予定）を「予定」1行に集約する（縦肥大の防止）", () => {
+    const rows = buildRows(
+      makeSchedule([
+        block("ev1", "busy", 0, 60, "ジム"),
+        block("ev2", "busy", 90, 30, "zkTokyo"),
+        block("ev3", "busy", 130, 30, "JPYC定例"),
+        block("s1", "work", 60, 30, "作業A"),
+      ]),
+    );
+    const busyRows = rows.filter((r) => r.bandType === "busy");
+    expect(busyRows).toHaveLength(1);
+    expect(busyRows[0].stepLabel).toBe("予定");
+    expect(busyRows[0].blocks).toHaveLength(3);
+    // 個々の予定名はブロックに保持される
+    expect(busyRows[0].blocks.map((b) => b.stepLabel)).toEqual([
+      "ジム",
+      "zkTokyo",
+      "JPYC定例",
+    ]);
+  });
+
+  it("busy が無ければ予定行を作らない", () => {
+    const rows = buildRows(makeSchedule([block("s1", "work", 0, 30, "作業A")]));
+    expect(rows.some((r) => r.bandType === "busy")).toBe(false);
+  });
+
+  it("busy 行は作業行の後（最下段）に配置する", () => {
+    const rows = buildRows(
+      makeSchedule([
+        block("saboru_0", "saboru", 0, 30),
+        block("s1", "work", 30, 30, "作業A"),
+        block("ev1", "busy", 60, 30, "ジム"),
+      ]),
+    );
+    expect(rows[rows.length - 1].bandType).toBe("busy");
+  });
+});
+
+describe("isSameLocalDay", () => {
+  it("同じローカル日付なら true", () => {
+    const a = new Date(2026, 4, 26, 9, 0);
+    const b = new Date(2026, 4, 26, 23, 0);
+    expect(isSameLocalDay(a, b)).toBe(true);
+  });
+  it("別日なら false", () => {
+    const a = new Date(2026, 4, 26, 23, 59);
+    const b = new Date(2026, 4, 27, 0, 1);
+    expect(isSameLocalDay(a, b)).toBe(false);
+  });
+});
+
+describe("getDayRange", () => {
+  // ローカルタイムで日付を組み立てる（タイムゾーン非依存にするため）
+  function localSchedule(
+    viewStart: Date,
+    viewEnd: Date,
+    deadline: Date | null,
+  ): SaboriSchedule {
+    return {
+      taskId: "t1",
+      generatedAt: viewStart.toISOString(),
+      viewStartAt: viewStart.toISOString(),
+      viewEndAt: viewEnd.toISOString(),
+      deadline: deadline ? deadline.toISOString() : null,
+      blocks: [],
+      totalSaboruMinutes: 0,
+      calendarUsed: false,
+    };
+  }
+
+  it("今日が対象日なら開始は now、終了は締切（その日中）", () => {
+    const now = new Date(2026, 4, 26, 14, 0); // 今日 14:00
+    const deadline = new Date(2026, 4, 26, 18, 0); // 今日 18:00
+    const viewEnd = new Date(2026, 4, 30, 23, 59); // 締切より後ろまでビューは伸びている
+    const s = localSchedule(now, viewEnd, deadline);
+
+    const range = getDayRange(now, s, now);
+    expect(new Date(range.startAt).getTime()).toBe(now.getTime());
+    // 夜まで伸ばさず締切まで
+    expect(new Date(range.endAt).getTime()).toBe(deadline.getTime());
+  });
+
+  it("締切が翌日以降なら、当日の終了はその日の 23:59:59.999", () => {
+    const now = new Date(2026, 4, 26, 9, 0);
+    const deadline = new Date(2026, 4, 28, 18, 0); // 締切は2日後
+    const viewEnd = new Date(2026, 4, 28, 18, 0);
+    const s = localSchedule(now, viewEnd, deadline);
+
+    const range = getDayRange(now, s, now);
+    const end = new Date(range.endAt);
+    expect(isSameLocalDay(end, now)).toBe(true);
+    expect(end.getHours()).toBe(23);
+    expect(end.getMinutes()).toBe(59);
+  });
+
+  it("翌日を指定した場合は開始 00:00・終了 23:59（その日が締切日でなければ）", () => {
+    const now = new Date(2026, 4, 26, 9, 0);
+    const tomorrow = new Date(2026, 4, 27, 0, 0);
+    const deadline = new Date(2026, 4, 28, 18, 0);
+    const viewEnd = new Date(2026, 4, 28, 18, 0);
+    const s = localSchedule(now, viewEnd, deadline);
+
+    const range = getDayRange(tomorrow, s, now);
+    const start = new Date(range.startAt);
+    const end = new Date(range.endAt);
+    expect(start.getHours()).toBe(0);
+    expect(start.getMinutes()).toBe(0);
+    expect(isSameLocalDay(end, tomorrow)).toBe(true);
+  });
+
+  it("開始が終了以上の異常時は最低1時間の窓を確保する", () => {
+    const now = new Date(2026, 4, 26, 23, 59);
+    const deadline = new Date(2026, 4, 26, 23, 59, 30); // ほぼ now と同時
+    const s = localSchedule(now, deadline, deadline);
+    const range = getDayRange(now, s, now);
+    expect(new Date(range.endAt).getTime()).toBeGreaterThan(
+      new Date(range.startAt).getTime(),
+    );
+  });
+});
+
+describe("filterScheduleByDay", () => {
+  function bl(
+    stepId: string,
+    bandType: ScheduleBlock["bandType"],
+    start: Date,
+    durationMinutes: number,
+    stepLabel = stepId,
+  ): ScheduleBlock {
+    return {
+      stepId,
+      stepLabel,
+      bandType,
+      startAt: start.toISOString(),
+      endAt: new Date(start.getTime() + durationMinutes * 60_000).toISOString(),
+      durationMinutes,
+    };
+  }
+
+  it("当日範囲外のブロックを除外し、当日のものだけ残す", () => {
+    const now = new Date(2026, 4, 26, 9, 0);
+    const todayBlock = bl("today", "work", new Date(2026, 4, 26, 10, 0), 60);
+    const tomorrowBlock = bl(
+      "tomorrow",
+      "work",
+      new Date(2026, 4, 27, 10, 0),
+      60,
+    );
+    const schedule: SaboriSchedule = {
+      taskId: "t1",
+      generatedAt: now.toISOString(),
+      viewStartAt: now.toISOString(),
+      viewEndAt: new Date(2026, 4, 28, 0, 0).toISOString(),
+      deadline: new Date(2026, 4, 28, 0, 0).toISOString(),
+      blocks: [todayBlock, tomorrowBlock],
+      totalSaboruMinutes: 0,
+      calendarUsed: false,
+    };
+
+    const filtered = filterScheduleByDay(schedule, now, now);
+    expect(filtered.blocks).toHaveLength(1);
+    expect(filtered.blocks[0].stepId).toBe("today");
+  });
+
+  it("締切が当日でなければ deadline を null にする（締切ラインを当日に出さない）", () => {
+    const now = new Date(2026, 4, 26, 9, 0);
+    const schedule: SaboriSchedule = {
+      taskId: "t1",
+      generatedAt: now.toISOString(),
+      viewStartAt: now.toISOString(),
+      viewEndAt: new Date(2026, 4, 28, 0, 0).toISOString(),
+      deadline: new Date(2026, 4, 28, 18, 0).toISOString(),
+      blocks: [],
+      totalSaboruMinutes: 0,
+      calendarUsed: false,
+    };
+    const filtered = filterScheduleByDay(schedule, now, now);
+    expect(filtered.deadline).toBeNull();
+  });
+
+  it("totalSaboruMinutes を当日の saboru ブロック合計で再計算する", () => {
+    const now = new Date(2026, 4, 26, 9, 0);
+    const schedule: SaboriSchedule = {
+      taskId: "t1",
+      generatedAt: now.toISOString(),
+      viewStartAt: now.toISOString(),
+      viewEndAt: new Date(2026, 4, 28, 0, 0).toISOString(),
+      deadline: new Date(2026, 4, 28, 0, 0).toISOString(),
+      blocks: [
+        bl("sab1", "saboru", new Date(2026, 4, 26, 10, 0), 30),
+        bl("sab2", "saboru", new Date(2026, 4, 27, 10, 0), 45), // 翌日（除外）
+      ],
+      totalSaboruMinutes: 75,
+      calendarUsed: false,
+    };
+    const filtered = filterScheduleByDay(schedule, now, now);
+    expect(filtered.totalSaboruMinutes).toBe(30);
   });
 });
