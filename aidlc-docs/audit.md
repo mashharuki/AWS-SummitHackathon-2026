@@ -1662,3 +1662,37 @@ gamification-strategy-20260523.md を作成
 **Context**: CONSTRUCTION（既存 Unit 横断改修）— 承認確認モーダル機能の実装完了。コミット前。実 AWS 動作確認は未実施。
 
 ---
+
+## 承認確認モーダル — コミット & 実 AWS デプロイ
+**Timestamp**: 2026-05-27T07:00:00Z
+**User Input**: "お願いします。実際のawsで動作確認したい。"
+**AI Response**:
+1. コミット: 機能関連の pkgs/ 変更＋本機能ドキュメントを `feat: タスク承認前の確認・編集モーダルでガント精度を向上` でコミット（`19605e9`、ブランチ feature/approval-confirmation-modal、Claude 関与の記載なし）。SABOROU_pitch.md 等の別件未追跡ファイルは対象外。
+2. ビルド: shared/agent/backend/frontend すべて本番ビルド成功。CDK は tsc ビルド成功。
+3. cdk diff（customDomain=true / environment=dev / アカウント 055259484931）で影響確認:
+   - SaborouApi-dev: HonoFn（backend Lambda）コードアセットのみ変更
+   - SaborouAgent-dev: TaskExtractorFn / SaboriProposerFn コードアセットのみ変更
+   - SaborouData-dev / SaborouCognito-dev: 差分なし（インフラ定義変更なしを確認）
+4. cdk deploy --all 実行 → 全スタック UPDATE_COMPLETE / CREATE_COMPLETE を確認（DescribeStacks で検証）。saborou-api-dev Lambda は 2026-05-26T21:56 更新。
+   - SchedulePlannerAgent は backend HonoFn にバンドルされるため、plan-steps エンドポイントと plannedSteps スキップ分岐はともに saborou-api-dev に反映済み。
+   - URL: フロント https://saborou.agentic-jp.com / API https://saborou-api.agentic-jp.com
+**Context**: OPERATIONS — 実 AWS デプロイ完了（全スタック UPDATE_COMPLETE）。ブラウザでの E2E 動作確認はユーザー作業（チェックリストを提示）。
+
+---
+
+## 後ろ詰めスケジューリング ＋ 意思決定の時刻アンカー化（追補 v1.1.0）
+**Timestamp**: 2026-05-27T08:20:00Z
+**User Input**: "締め切りギリギリにしながら合間をサボれるように" / "意思決定は時間が決められたりする…承認ボタン押してモーダル開くときも意思決定は何分かではなく何時かの方が良い" / 添付画像（合間にサボろうが分散・後半びっちりにしない）
+**AI Response**: SABOROU_pitch.md と照合し整合を確認のうえ実装。配置を前詰め→後ろ詰めに変更し、意思決定を時刻アンカー化。途中で「ステップ所要時間入力が空欄にできず5固定」の不具合も別途修正・frontendデプロイ済み（コミット e375b92）。
+
+- shared: `ScheduleStep.decisionAt?`(ISO) 追加（commit 8faf07b）。
+- agent: `saboruBlockCalc.calcSchedule` を後ろ詰め＋decisionアンカー区間配置に全面書き換え。さぼろう帯は「窓内利用可能時間 − 配置済み」で算出し合間に分散。`plan_schedule` tool/プロンプトに decisionAt（締切逆算・現在時刻より後/締切より前）を追加。`generateStepDraft` に now を渡し decisionAt 提案の基準を明示。
+- backend: decisionAt は shared schema 経由で素通し（approve overrides / plan-steps）。round-trip テスト追加。
+- frontend: StepEditor の decision 行を所要分入力→時刻(time)入力に切替。作業⇄判断トグルで入力欄が切替わり、判断化時に decisionAt 初期値を付与。baseDateIso（締切日）と HH:MM から ISO を組み立て。
+
+品質ゲート（全 PASS）: typecheck 4パッケージ / test shared144・agent238・backend347・frontend411（計1140）/ biome 変更14ファイルクリーン / build 全成功。
+デプロイ: cdk deploy --all（055259484931 / customDomain=true）→ 全スタック UPDATE_COMPLETE。saborou-api-dev Lambda 2026-05-26T23:18 更新。Agent/Frontend も更新。
+意思決定設計: AI提案（締切逆算で decisionAt 提案）→ ユーザーがモーダルで時刻上書き、で確定。間に合わない時は手前（過去側）へ押し出して配置。
+**Context**: OPERATIONS — 後ろ詰め＋decision時刻化を実装・デプロイ完了。ブラウザ E2E 確認はユーザー作業。
+
+---
