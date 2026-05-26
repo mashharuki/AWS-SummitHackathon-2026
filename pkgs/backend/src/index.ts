@@ -162,7 +162,7 @@ export function createApp() {
   app.route("/api/auth", createGoogleAuthRoute(connectionRepository));
   app.route(
     "/api/tasks",
-    createTasksRoute(taskRepository, candidateRepository),
+    createTasksRoute(taskRepository, candidateRepository, schedulePlannerAgent),
   );
   // Proposal and honne share the /api/tasks prefix for :taskId param
   app.route(

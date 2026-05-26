@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  ApproveOverridesSchema,
   CreateHonneSchema,
   CreateTaskSchema,
   UpdateTaskSchema,
 } from "../index";
+
+const validStep = {
+  stepId: "s1",
+  stepLabel: "初稿を起こす",
+  durationMinutes: 45,
+  bandType: "work" as const,
+};
 
 describe("CreateTaskSchema", () => {
   it("should pass with valid minimal input (title only)", () => {
@@ -89,6 +97,67 @@ describe("UpdateTaskSchema", () => {
 
   it("should still validate constraints when fields provided", () => {
     const result = UpdateTaskSchema.safeParse({ title: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("ApproveOverridesSchema", () => {
+  it("空オブジェクトを許可する（全フィールド任意・後方互換）", () => {
+    const result = ApproveOverridesSchema.safeParse({});
+    expect(result.success).toBe(true);
+  });
+
+  it("全フィールド指定の正常系", () => {
+    const result = ApproveOverridesSchema.safeParse({
+      title: "議事録の共有",
+      deadline: "2026-06-01T09:00:00Z",
+      description: "上司確認後に初稿を共有する",
+      plannedSteps: [validStep, { ...validStep, stepId: "s2" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("deadline は null を許可する", () => {
+    const result = ApproveOverridesSchema.safeParse({ deadline: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("title が空文字なら失敗する", () => {
+    const result = ApproveOverridesSchema.safeParse({ title: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("title が200文字超なら失敗する", () => {
+    const result = ApproveOverridesSchema.safeParse({ title: "a".repeat(201) });
+    expect(result.success).toBe(false);
+  });
+
+  it("plannedSteps が空配列なら失敗する（min 1）", () => {
+    const result = ApproveOverridesSchema.safeParse({ plannedSteps: [] });
+    expect(result.success).toBe(false);
+  });
+
+  it("plannedSteps が8件超なら失敗する（max 8）", () => {
+    const result = ApproveOverridesSchema.safeParse({
+      plannedSteps: Array.from({ length: 9 }, (_, i) => ({
+        ...validStep,
+        stepId: `s${i}`,
+      })),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("plannedSteps の bandType に saboru は不可", () => {
+    const result = ApproveOverridesSchema.safeParse({
+      plannedSteps: [{ ...validStep, bandType: "saboru" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("plannedSteps の durationMinutes 範囲外を弾く", () => {
+    const result = ApproveOverridesSchema.safeParse({
+      plannedSteps: [{ ...validStep, durationMinutes: 1 }],
+    });
     expect(result.success).toBe(false);
   });
 });

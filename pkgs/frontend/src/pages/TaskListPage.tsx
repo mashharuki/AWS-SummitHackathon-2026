@@ -3,6 +3,7 @@ import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { AppShell } from "@/components/layout/AppShell";
 import { Logo } from "@/components/layout/Logo";
 import { TaskAddModal } from "@/components/task/TaskAddModal";
+import { TaskApprovalModal } from "@/components/task/TaskApprovalModal";
 import { CandidateCard, TaskCard } from "@/components/task/TaskCard";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
 import { SeasonBanner } from "@/components/ui/SeasonBanner";
@@ -24,7 +25,7 @@ import { getDisplayName } from "@/lib/utils";
  * 今日バナー / 承認済みタスク / 候補タスク / FAB の構成。
  * キャラはすべて 2D SVG（憲法2,6）。
  */
-import type { Verdict } from "@saboru/shared";
+import type { TaskCandidate, Verdict } from "@saboru/shared";
 import { Plus, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,6 +44,9 @@ export function TaskListPage() {
     createTask,
   } = useTasks();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  // 承認確認モーダル: 「承認する」押下で対象候補をセットして開く（即承認はしない）
+  const [approvalCandidate, setApprovalCandidate] =
+    useState<TaskCandidate | null>(null);
   const verdictHistory = loadVerdictHistory();
   const { shouldShow: showOnboarding, markDone: completeOnboarding } =
     useOnboarding();
@@ -187,7 +191,13 @@ export function TaskListPage() {
                   <CandidateCard
                     key={c.candidateId}
                     candidate={c}
-                    onApprove={(id) => void approveCandidate(id)}
+                    // 即承認はせず確認モーダルを開く（精度向上のため内容を確認・編集させる）
+                    onApprove={(id) => {
+                      const target = candidates.find(
+                        (x) => x.candidateId === id,
+                      );
+                      if (target) setApprovalCandidate(target);
+                    }}
                     onReject={(id) => void rejectCandidate(id)}
                   />
                 ))}
@@ -298,6 +308,16 @@ export function TaskListPage() {
           onClose={() => setIsAddModalOpen(false)}
           onAdd={async (data) => {
             await createTask(data);
+          }}
+        />
+
+        {/* 承認確認モーダル（候補の内容を確認・編集してから承認） */}
+        <TaskApprovalModal
+          candidate={approvalCandidate}
+          isOpen={approvalCandidate !== null}
+          onClose={() => setApprovalCandidate(null)}
+          onConfirm={async (candidateId, overrides) => {
+            await approveCandidate(candidateId, overrides);
           }}
         />
 

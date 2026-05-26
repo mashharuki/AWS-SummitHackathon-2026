@@ -202,6 +202,115 @@ describe("DynamoTaskCandidateRepository.approve", () => {
       "TransactWriteItems failed",
     );
   });
+
+  it("applies overrides (title/deadline/description) when provided", async () => {
+    let callCount = 0;
+    let putItem: Record<string, unknown> | undefined;
+    const client = mockClient((command) => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem }; // findById
+      // TransactWriteItems — capture the Put item (2nd transact item)
+      const input = (command as { input: { TransactItems: unknown[] } }).input;
+      putItem = (
+        input.TransactItems[1] as { Put: { Item: Record<string, unknown> } }
+      ).Put.Item;
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const task = await repo.approve("user1", "01CAND", {
+      title: "編集後タイトル",
+      deadline: "2026-06-01T09:00:00Z",
+      description: "編集後の内容",
+    });
+
+    expect(task.title).toBe("編集後タイトル");
+    expect(task.deadline).toBe("2026-06-01T09:00:00Z");
+    expect(task.description).toBe("編集後の内容");
+    // 候補の requester は保持（PII ハッシュ）
+    expect(task.requester).toBe("req-hash");
+    // marshall された Put item にも反映されている
+    expect(putItem?.title).toEqual({ S: "編集後タイトル" });
+  });
+
+  it("persists plannedSteps to the Task when provided", async () => {
+    let callCount = 0;
+    let putItem: Record<string, unknown> | undefined;
+    const client = mockClient((command) => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem };
+      const input = (command as { input: { TransactItems: unknown[] } }).input;
+      putItem = (
+        input.TransactItems[1] as { Put: { Item: Record<string, unknown> } }
+      ).Put.Item;
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const plannedSteps = [
+      {
+        stepId: "s1",
+        stepLabel: "初稿",
+        durationMinutes: 45,
+        bandType: "work" as const,
+      },
+    ];
+    const task = await repo.approve("user1", "01CAND", { plannedSteps });
+
+    expect(task.plannedSteps).toEqual(plannedSteps);
+    // marshall された Put item に plannedSteps (List) が含まれる
+    expect(putItem?.plannedSteps).toBeDefined();
+  });
+
+  it("does not set plannedSteps when overrides omit it (legacy/backward compat)", async () => {
+    let callCount = 0;
+    let putItem: Record<string, unknown> | undefined;
+    const client = mockClient((command) => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem };
+      const input = (command as { input: { TransactItems: unknown[] } }).input;
+      putItem = (
+        input.TransactItems[1] as { Put: { Item: Record<string, unknown> } }
+      ).Put.Item;
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const task = await repo.approve("user1", "01CAND");
+    expect(task.plannedSteps).toBeUndefined();
+    expect(putItem?.plannedSteps).toBeUndefined();
+    // 候補の元値が使われる
+    expect(task.title).toBe("候補タスク");
+  });
+
+  it("treats empty plannedSteps array as no steps (Bedrock fallback)", async () => {
+    let callCount = 0;
+    const client = mockClient(() => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem };
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const task = await repo.approve("user1", "01CAND", { plannedSteps: [] });
+    expect(task.plannedSteps).toBeUndefined();
+  });
 });
 
 describe("DynamoTaskCandidateRepository.createForUser", () => {

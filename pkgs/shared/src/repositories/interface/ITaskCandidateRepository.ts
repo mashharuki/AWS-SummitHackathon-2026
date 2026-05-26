@@ -1,5 +1,24 @@
-import type { TaskCandidate } from "../../types";
+import type { ScheduleStep, TaskCandidate } from "../../types";
 import type { ApprovedTask } from "./ITaskRepository";
+
+/**
+ * Values that override the candidate's fields when approving.
+ *
+ * Produced by the approval-confirmation modal where the user reviews and edits
+ * the task before it becomes a Task. All fields optional — omitted fields keep
+ * the candidate's original value (backward compatible). `plannedSteps`, when
+ * present, is the user-confirmed step list persisted to the Task so that gantt
+ * generation can skip Bedrock re-inference.
+ *
+ * The exact request-body validation lives in `ApproveOverridesSchema`
+ * (schemas/task.ts); this structural type is what the repository layer consumes.
+ */
+export interface ApproveOverrides {
+  title?: string;
+  deadline?: string | null;
+  description?: string;
+  plannedSteps?: ScheduleStep[];
+}
 
 /**
  * Task candidate repository interface
@@ -40,10 +59,16 @@ export interface ITaskCandidateRepository {
    * Approved Task has a new ULID (BR-04)
    * Access pattern: POST /api/tasks/candidates/:id/approve
    *
+   * @param overrides Optional user edits from the approval modal. Omitted
+   *   fields fall back to the candidate's values (backward compatible).
    * @returns Newly created approved Task
    * @throws DynamoWriteFailedError on TransactWriteItems failure
    */
-  approve(userId: string, candidateId: string): Promise<ApprovedTask>;
+  approve(
+    userId: string,
+    candidateId: string,
+    overrides?: ApproveOverrides,
+  ): Promise<ApprovedTask>;
 
   /**
    * Delete task candidate (when user rejects)

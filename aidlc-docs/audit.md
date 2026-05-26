@@ -1563,3 +1563,102 @@ gamification-strategy-20260523.md を作成
 **Context**: U-07-gamification Tier 2 実装完了。ブランチ: update_core_functions。デッドライン: 2026-05-30。
 
 ---
+
+## UPDATE-PLAN — タスク承認前の確認・編集モーダル（ガント精度向上）計画書作成
+
+**Timestamp**: 2026-05-26T08:00:00Z
+**User Input**: "SABOROU（このリポジトリ）に新機能「タスク承認前の確認・編集モーダル」を追加する。これは直近mainにマージされたガントチャート機能の精度を上げるための改修。AI-DLCワークフローに則って、まず **更新計画（update-plan）の策定とユーザー確認待ち** までを行ってほしい。いきなり実装には入らないこと。
+
+## 背景・狙い（ユーザーの要望そのまま）
+ガントチャートの精度が、候補タスクの情報が曖昧（deadlineがnull、descriptionが薄い、ステップが不明）なまま承認されることで下がっている。そこで「承認する」を押した後にモーダルで内容を確認・編集させ、ガント生成前にタスク内容を明確化することで精度を上げたい。モックは添付スクショ（タスクの内容 / 締切 / やること / 誰が言っているか の4欄を確認・編集し「確定して承認」）。
+
+## ユーザーと合意済みの確定仕様（これを前提に計画を立てること）
+
+### A. 承認フロー
+- 候補カードの「承認する」を押すと **必ず確認モーダルが開く**（即承認は廃止）。モーダルで内容確認・編集 →「確定して承認」でガント生成へ。クイック承認との併存はしない。
+
+### B. モーダルの4欄
+1. タスクの内容（title / description 相当）
+2. 締切（deadline、ISO 8601 / 編集可能）
+3. やること（= 作業ステップ。下記C）
+4. 誰が言っているか（requester / sourceType。表示。requesterはSHA-256ハッシュ済みなので生表示できない点に注意 — 表示方法は計画で検討）
+
+### C. 「やること」欄 = Bedrockステップ下書き → ユーザー編集（最重要・精度の肝）
+- モーダルを開いた瞬間に、Bedrockがステップ案を生成して「やること」欄に下書き表示する。
+- この「ステップ分解」は **既存の `SchedulePlannerAgent.runPlanPhase`（pkgs/agent/src/schedule-planner/SchedulePlannerAgent.ts:96-166）でやっている処理そのもの**。これを承認前（モーダルを開いた時）に前倒しして呼ぶ新エンドポイントを作る想定。
+- ユーザーがステップを手直しできる。
+- 確定したステップは Task に保存する。
+
+### D. 保存方式
+- approve API（POST /tasks/candidates/:id/approve、pkgs/backend/src/routes/tasks.ts:82-94）の **リクエストbodyに `overrides`（title / deadline / description / 確定済みsteps）を載せ**、バックでTaskに反映する方式。
+- 候補を先にPATCHする方式ではない。
+
+### E. フル実装（精度最大化の核）— ユーザー承認済み
+- **確定済みステップを Task に保存し、ガント生成時（SchedulePlannerAgent.plan）はそのステップがあればフェーズ1（Bedrock再推論）をスキップして、そのままフェーズ2の配置計算（calcSchedule）に流す。**
+- これにより「ユーザーが確認した内容＝ガント」が保証され精度が最大化する。
+- これには次の改修が伴うことを計画に明記すること:
+  - `Task` 型（pkgs/shared/src/types/task.ts）に確定済みステップを持つフィールドを追加（例: plannedSteps?: ScheduleStep[]）。ステップの型は既存の plan_schedule tool（pkgs/agent/src/schedule-planner/tools.ts:20-26 の stepId/stepLabel/durationMinutes/bandType/rationale）と整合させる。
+  - DynamoDB Tasks への保存（DynamoTaskCandidateRepository.approve / pkgs/backend/src/repositories/DynamoTaskCandidateRepository.ts:145-198 のTransactWriteItemsでPutするTaskにステップを含める）。
+  - SchedulePlannerAgent.plan のフェーズ1分岐（task.plannedSteps があればBedrockを呼ばず、それを steps として使う）。
+  - shared の Zodスキーマ（pkgs/shared/src/schemas/task.ts）更新。
+
+## 既存実装の事実（調査済み・計画の根拠に使ってよい）
+- フロント: pkgs/frontend（React18+Vite+TS）。候補カード = pkgs/frontend/src/components/task/TaskCard.tsx の CandidateCard、承認ボタン = 86-94行。一覧 = pkgs/frontend/src/pages/TaskListPage.tsx。承認state管理 = pkgs/frontend/src/hooks/useTasks.ts の approveCandidate（37-61行、楽観的更新）。
+- 既存モーダル資産: pkgs/frontend/src/components/task/TaskAddModal.tsx（HTML<dialog>+フォーカストラップ+Esc）、TaskEditForm.tsx（title/deadline/description編集）。これらを流用ベースにできる。
+- バック: pkgs/backend（Hono）。承認 = routes/tasks.ts:82-94 → DynamoTaskCandidateRepository.approve。スケジュール = routes/schedule.ts:71-137 → SchedulePlannerAgent.plan。
+- エージェント: pkgs/agent。SchedulePlannerAgent（plan = フェーズ1 Bedrockステップ分解 + フェーズ2 calcSchedule決定論配置）。tools.ts に plan_schedule tool と SCHEDULE_SYSTEM_PROMPT。モデル jp.anthropic.claude-sonnet-4-6。
+- 型: pkgs/shared/src/types/task.ts（Task）, task-candidate.ts（TaskCandidate）, schedule.ts（ScheduleBlock/SaboriSchedule）。
+
+## あなたにやってほしいこと
+1. まず aidlc-docs/aidlc-state.md と audit.md を確認し、現在のワークフロー状態を把握（Construction完了済みのはず）。
+2. これが「既存ユニットへの機能追加」であることを踏まえ、AI-DLCの adaptive workflow に従って適切な深さで進める（過剰なステージは省略可、ただし判断理由をstateに記録）。
+3. **更新計画ドキュメント（update-plan）** を aidlc-docs 配下の適切な場所（既存の aidlc-docs/update-plans/ に倣う）に作成する。内容:
+   - 目的・背景
+   - 確定仕様（上記A〜E）
+   - 影響を受けるファイル一覧（フロント/バック/エージェント/shared、それぞれパス付き）
+   - 実装ステップをチェックボックス付きで段階分け（型変更→バック→エージェント→フロント→テスト の順を推奨）
+   - 新規/変更APIの仕様（エンドポイント・リクエスト/レスポンス型）
+   - テスト方針（Vitest、既存テストへの影響、新規テスト）
+   - リスク・考慮点（Bedrockコスト増＝モーダル開く度に推論が走る点、後方互換＝plannedStepsを持たない既存Taskのフォールバック、PII＝requesterハッシュ表示、楽観的更新との整合）
+   - デプロイ・動作確認方針（実AWS確認のタイミング）
+4. ドキュメントは日本語（japanese-output.md ルール準拠）。
+5. audit.md に今回のユーザー要望（生入力）と本計画策定を追記（上書きせず追記）。
+6. 計画ができたら、ユーザー確認用に「計画サマリ + 確認待ちメッセージ」を返す。**実装には進まないこと。**
+
+注意: commitメッセージ/コメントにClaude関与を残さないルールあり（今回はまだcommitしない）。Biome --unsafe の noDelete 注意あり。日本語で進める。"
+**AI Response**: 以下を実施した。
+1. aidlc-state.md・audit.md を確認。Construction フェーズ全 Unit 完了済みを確認。既存 update-plans ディレクトリの形式を確認。
+2. ワークフロー適応深度判定: 既存 Unit への横断改修であるため Inception フェーズは不要。update-plan ドキュメントの直接作成が適切と判断。スキップ理由を audit.md に記録。
+3. 関連コードを精査:
+   - `pkgs/shared/src/types/task.ts`（Task 型）・`schemas/task.ts`（Zod スキーマ）
+   - `pkgs/backend/src/routes/tasks.ts:82-94`（approve エンドポイント）・`DynamoTaskCandidateRepository.ts:145-198`（approve 実装）
+   - `pkgs/agent/src/schedule-planner/SchedulePlannerAgent.ts:96-166`（runPlanPhase）・`tools.ts`（ScheduleStep 型）
+   - `pkgs/frontend/src/components/task/TaskCard.tsx`・`TaskAddModal.tsx`・`hooks/useTasks.ts`・`lib/apiClient.ts`
+4. `aidlc-docs/update-plans/update-plan-20260526-approval-modal.md` を作成。以下を網羅:
+   - 目的・背景 / 確定仕様 A〜E / 影響ファイル一覧 / 実装ステップ 11 段階（チェックボックス付き）/ 新規・変更 API 仕様（approve overrides・plan-steps エンドポイント）/ テスト方針 / リスク 6 件（Bedrock コスト増・後方互換・PII ハッシュ表示・楽観的更新整合・ScheduleStep 型所有権・i18n）/ デプロイ方針
+5. audit.md に本エントリを追記（上書きなし）。
+**Context**: UPDATE-PLAN 策定完了。ユーザー確認待ち。実装には未着手。
+
+---
+
+## 承認確認モーダル — 実装完了
+**Timestamp**: 2026-05-27T06:45:00Z
+**User Input**: "ちなみにaidlc-specialistで実装すると遅いので、あなたが実装を進めてください。ただしどれだけ時間をかけても良いので、質を優先して下さい。"
+**AI Response**: update-plan-20260526-approval-modal.md の確定仕様 A〜E に沿って全 11 ステップを実装。ユーザーへの追加確認（AskUserQuestion）で「推論中UX=スケルトン表示」「デザイン=既存TaskAddModal踏襲」を確定済み。ブランチ `feature/approval-confirmation-modal` で実施。
+
+実装内容:
+- **shared**: `ScheduleStep`/`ScheduleStepSchema` を types/schedule.ts に新設（単一情報源 R-5）。`Task.plannedSteps?` 追加。`ApproveOverridesSchema`（schemas/task.ts）と `ApproveOverrides` 型（ITaskCandidateRepository）追加。agent/tools.ts は shared から re-export に変更。
+- **agent**: `SchedulePlannerAgent.plan()` に分岐追加 — `task.plannedSteps` があれば Bedrock をスキップしてそのまま配置（精度最大化の核 E）。`runPlanPhase` を public `generateStepDraft(StepDraftInput)` に切り出し（承認前のステップ下書き生成に再利用）。完了ログに `stepSource: planned_steps|bedrock` を追加。
+- **backend**: `DynamoTaskCandidateRepository.approve(userId, candidateId, overrides?)` で overrides を Task に反映＋plannedSteps 永続化（空配列は未設定扱い＝Bedrock フォールバック / 後方互換）。`POST /tasks/candidates/:id/plan-steps`（200/404/503）新設。approve ルートで `ApproveOverridesSchema` バリデーション（ボディ無しは後方互換）。`createTasksRoute` に schedulePlannerAgent を注入。
+- **frontend**: `apiClient.approveCandidate(id, overrides?)` 拡張＋`fetchPlanSteps(id)` 追加。`useTasks.approveCandidate(id, overrides?)`（楽観削除は確定時）。`StepEditor.tsx`（ステップ一覧編集・追加/削除/種別トグル・スケルトン/エラー）と `TaskApprovalModal.tsx`（4欄確認・編集モーダル / 既存 TaskAddModal の dialog+フォーカストラップ+Esc 踏襲 / 開いた瞬間に Bedrock 下書き取得 / requester は sourceType でマスク表示）を新規作成。`TaskListPage` は「承認する」で即承認せずモーダルを開くよう変更。MSW handlers に plan-steps モック＋approve overrides 反映を追加。i18n に approvalModal ブロック（ja/en）追加。
+
+品質確認（全 PASS）:
+- typecheck: shared / agent / backend / frontend すべて 0 エラー
+- test: shared 141 / agent 234 / backend 347 / frontend 404（新規追加: shared +10、agent +6、backend +12、frontend modal 9 + apiClient 4）
+- biome: 本ブランチ変更 27 ファイルすべてクリーン（リポジトリ既存の 10 件は本機能と無関係の既存 main の指摘のため未着手）
+- build: backend バンドル / frontend 本番ビルド 成功
+
+未実施: commit / 実 AWS デプロイ・動作確認（update-plan のデプロイ方針どおり全実装後にまとめて行う想定。ユーザー判断待ち）。
+**Context**: CONSTRUCTION（既存 Unit 横断改修）— 承認確認モーダル機能の実装完了。コミット前。実 AWS 動作確認は未実施。
+
+---

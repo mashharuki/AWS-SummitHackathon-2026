@@ -31,6 +31,40 @@ export const BandTypeSchema = z.enum(["saboru", "work", "decision", "busy"]);
 export type BandType = z.infer<typeof BandTypeSchema>;
 
 // ───────────────────────────────────────────
+// ScheduleStep — AI が分解した作業ステップ（LLM 入出力 / 承認時の確定値）
+// ───────────────────────────────────────────
+
+/**
+ * ScheduleStep — タスクを構成する 1 作業ステップ
+ *
+ * 用途:
+ * - SchedulePlannerAgent が Bedrock（plan_schedule Tool）から受け取る出力の 1 要素
+ * - 承認モーダルでユーザーが確認・編集し、確定したものを Task.plannedSteps に保存
+ * - ガント生成時、Task.plannedSteps があれば Bedrock 再呼び出しを省略してそのまま配置
+ *
+ * 所有権メモ（R-5）:
+ * この型は agent / backend / frontend が共通で使うため shared が所有する。
+ * agent 側（plan_schedule Tool）は本スキーマを re-import する。
+ *
+ * 注意: saboru / busy はステップには含めない。
+ * - saboru: ステップ間の空き時間から呼び出し元が決定論的に算出する
+ * - busy:   カレンダー予定由来であり作業ステップではない
+ */
+export const ScheduleStepSchema = z.object({
+  /** ステップ ID（s1, s2, ... の形式。最大30文字） */
+  stepId: z.string().min(1).max(30),
+  /** ステップ表示名（最大60文字。例:「議事録を文字起こし」） */
+  stepLabel: z.string().min(1).max(60),
+  /** 所要時間（分、5〜480） */
+  durationMinutes: z.number().int().min(5).max(480),
+  /** バンド種別。work=手を動かす作業 / decision=判断・確認が必要な工程 */
+  bandType: z.enum(["work", "decision"]),
+  /** このステップが必要な理由（任意、最大200文字） */
+  rationale: z.string().max(200).optional(),
+});
+export type ScheduleStep = z.infer<typeof ScheduleStepSchema>;
+
+// ───────────────────────────────────────────
 // BusySlot — カレンダー予定の時間区間（揮発・PII フリー）
 // ───────────────────────────────────────────
 

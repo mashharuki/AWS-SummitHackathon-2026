@@ -20,8 +20,11 @@ import {
 // ─────────────────────────────────────────────
 
 class MockBedrockClient implements IBedrockClient {
+  /** converse が呼ばれた回数（Bedrock スキップ検証に使用） */
+  converseCallCount = 0;
   constructor(private response: ConverseCommandOutput) {}
   async converse(_input: ConverseCommandInput): Promise<ConverseCommandOutput> {
+    this.converseCallCount += 1;
     return this.response;
   }
   async converseStream(
@@ -30,6 +33,33 @@ class MockBedrockClient implements IBedrockClient {
     throw new Error("not used");
   }
 }
+
+/** converse が呼ばれたら必ず失敗する mock（呼ばれてはいけないケース用） */
+class ThrowingBedrockClient implements IBedrockClient {
+  async converse(_input: ConverseCommandInput): Promise<ConverseCommandOutput> {
+    throw new Error("converse should not be called");
+  }
+  async converseStream(
+    _input: ConverseStreamCommandInput,
+  ): Promise<ConverseStreamCommandOutput> {
+    throw new Error("not used");
+  }
+}
+
+const confirmedSteps = [
+  {
+    stepId: "u1",
+    stepLabel: "ユーザー確定: 初稿",
+    durationMinutes: 40,
+    bandType: "work" as const,
+  },
+  {
+    stepId: "u2",
+    stepLabel: "ユーザー確定: 上司確認",
+    durationMinutes: 20,
+    bandType: "decision" as const,
+  },
+];
 
 function makeToolResponse(input: unknown): ConverseCommandOutput {
   return {
@@ -197,6 +227,109 @@ describe("SchedulePlannerAgent.plan", () => {
       now: NOW,
     });
     expect(schedule.blocks.length).toBeGreaterThan(0);
+  });
+
+  it("plannedSteps があれば Bedrock を呼ばず確定済みステップを配置する", async () => {
+    // converse が呼ばれたら失敗する mock。呼ばれないことを保証する。
+    const agent = new SchedulePlannerAgent(new ThrowingBedrockClient());
+    const schedule = await agent.plan({
+      task: makeTask({ plannedSteps: confirmedSteps }),
+      busySlots: [],
+      calendarUsed: false,
+      now: NOW,
+    });
+    // 確定済みステップ（u1 / u2）がそのまま配置されている
+    const work = schedule.blocks.filter((b) => b.bandType !== "saboru");
+    expect(work.map((b) => b.stepId)).toEqual(["u1", "u2"]);
+    // 窓 180 分 - 作業 60 分 = 120 分のさぼろう
+    expect(schedule.totalSaboruMinutes).toBe(120);
+  });
+
+  it("plannedSteps が空配列なら従来通り Bedrock で分解する（後方互換）", async () => {
+    const mock = new MockBedrockClient(makeToolResponse(validSteps));
+    const agent = new SchedulePlannerAgent(mock);
+    const schedule = await agent.plan({
+      task: makeTask({ plannedSteps: [] }),
+      busySlots: [],
+      calendarUsed: false,
+      now: NOW,
+    });
+    expect(mock.converseCallCount).toBe(1);
+    const work = schedule.blocks.filter((b) => b.bandType !== "saboru");
+    expect(work.map((b) => b.stepId)).toEqual(["s1", "s2"]);
+  });
+
+  it("plannedSteps 未設定（legacy task）なら従来通り Bedrock で分解する", async () => {
+    const mock = new MockBedrockClient(makeToolResponse(validSteps));
+    const agent = new SchedulePlannerAgent(mock);
+    await agent.plan({
+      task: makeTask(), // plannedSteps undefined
+      busySlots: [],
+      calendarUsed: false,
+      now: NOW,
+    });
+    expect(mock.converseCallCount).toBe(1);
+  });
+});
+
+describe("SchedulePlannerAgent.generateStepDraft", () => {
+  it("正常系: Bedrock のステップ案をそのまま返す", async () => {
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient(makeToolResponse(validSteps)),
+    );
+    const steps = await agent.generateStepDraft({
+      title: "提案資料の初版作成",
+      deadline: "2026-05-24T08:00:00.000Z",
+      description: "クライアント向け提案資料の初版を作る",
+      refId: "cand-1",
+    });
+    expect(steps).toHaveLength(2);
+    expect(steps[0]?.stepId).toBe("s1");
+    expect(steps[1]?.bandType).toBe("decision");
+  });
+
+  it("deadline=null / description 空でも動作する", async () => {
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient(makeToolResponse(validSteps)),
+    );
+    const steps = await agent.generateStepDraft({
+      title: "タイトルのみ",
+      deadline: null,
+      description: "",
+    });
+    expect(steps.length).toBeGreaterThan(0);
+  });
+
+  it("toolUse が無い場合はエラーを投げる", async () => {
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient({
+        $metadata: {},
+        output: {
+          message: { role: "assistant", content: [{ text: "no tool" }] },
+        },
+        stopReason: "end_turn",
+      }),
+    );
+    await expect(
+      agent.generateStepDraft({
+        title: "x",
+        deadline: null,
+        description: "y",
+      }),
+    ).rejects.toThrow(/did not return plan_schedule/);
+  });
+
+  it("Zod バリデーション失敗時はエラーを投げる", async () => {
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient(makeToolResponse({ steps: [{ stepId: "s1" }] })),
+    );
+    await expect(
+      agent.generateStepDraft({
+        title: "x",
+        deadline: null,
+        description: "y",
+      }),
+    ).rejects.toThrow(/schema validation/);
   });
 });
 

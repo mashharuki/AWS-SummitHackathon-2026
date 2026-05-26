@@ -5,6 +5,7 @@ import {
   SaboriScheduleSchema,
   ScheduleApiResponseSchema,
   ScheduleBlockSchema,
+  ScheduleStepSchema,
 } from "../schedule";
 
 const ISO = "2026-05-24T15:00:00.000Z";
@@ -43,6 +44,70 @@ describe("BusySlotSchema", () => {
 
   it("rejects missing endAt", () => {
     expect(BusySlotSchema.safeParse({ startAt: ISO }).success).toBe(false);
+  });
+});
+
+describe("ScheduleStepSchema", () => {
+  const validStep = {
+    stepId: "s1",
+    stepLabel: "議事録を文字起こし",
+    durationMinutes: 30,
+    bandType: "work",
+  };
+
+  it("accepts valid work step", () => {
+    expect(ScheduleStepSchema.safeParse(validStep).success).toBe(true);
+  });
+
+  it("accepts decision step with rationale", () => {
+    expect(
+      ScheduleStepSchema.safeParse({
+        ...validStep,
+        bandType: "decision",
+        rationale: "上司確認が必要なため",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects saboru/busy bandType (work/decision only)", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, bandType: "saboru" })
+        .success,
+    ).toBe(false);
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, bandType: "busy" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects durationMinutes below 5 or above 480", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, durationMinutes: 4 })
+        .success,
+    ).toBe(false);
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, durationMinutes: 481 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects non-integer durationMinutes", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, durationMinutes: 30.5 })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects stepLabel over 60 chars", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, stepLabel: "あ".repeat(61) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("rejects empty stepId", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, stepId: "" }).success,
+    ).toBe(false);
   });
 });
 

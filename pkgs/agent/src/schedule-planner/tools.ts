@@ -1,4 +1,5 @@
 import type { Tool } from "@aws-sdk/client-bedrock-runtime";
+import { ScheduleStepSchema } from "@saboru/shared";
 import { z } from "zod";
 
 /**
@@ -16,15 +17,15 @@ import { z } from "zod";
 
 export const PLAN_SCHEDULE_TOOL_NAME = "plan_schedule";
 
-/** LLM が返す 1 ステップのスキーマ */
-export const ScheduleStepSchema = z.object({
-  stepId: z.string().min(1).max(30),
-  stepLabel: z.string().min(1).max(60),
-  durationMinutes: z.number().int().min(5).max(480),
-  bandType: z.enum(["work", "decision"]),
-  rationale: z.string().max(200).optional(),
-});
-export type ScheduleStep = z.infer<typeof ScheduleStepSchema>;
+/**
+ * LLM が返す 1 ステップのスキーマ。
+ *
+ * 単一情報源（R-5）として shared が所有する `ScheduleStepSchema` を re-export する。
+ * 承認モーダルでの確認・編集とガント生成時の Task.plannedSteps が同じ型を共有するため、
+ * ここで agent 独自に定義しない。
+ */
+export { ScheduleStepSchema };
+export type { ScheduleStep } from "@saboru/shared";
 
 /** plan_schedule ツール出力スキーマ（LLM が返す） */
 export const PlanScheduleOutputSchema = z.object({

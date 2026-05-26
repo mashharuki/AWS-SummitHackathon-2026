@@ -7,6 +7,7 @@ import type {
   Proposal,
   SaboriSchedule,
   ScheduleApiResponse,
+  ScheduleStep,
   ServiceConnection,
   Task,
   TaskCandidate,
@@ -180,11 +181,44 @@ export async function getCandidates(): Promise<TaskCandidate[]> {
   return data.candidates;
 }
 
-/** POST /api/tasks/candidates/:id/approve */
-export async function approveCandidate(candidateId: string): Promise<Task> {
+/** 承認モーダルでユーザーが編集した内容（候補の値を上書きする） */
+export interface ApproveOverridesPayload {
+  title?: string;
+  deadline?: string | null;
+  description?: string;
+  plannedSteps?: ScheduleStep[];
+}
+
+/**
+ * POST /api/tasks/candidates/:id/approve
+ *
+ * overrides を渡すと、承認モーダルで確認・編集した内容で Task を生成する。
+ * 省略時は候補の元値で承認（後方互換）。
+ */
+export async function approveCandidate(
+  candidateId: string,
+  overrides?: ApproveOverridesPayload,
+): Promise<Task> {
   return request<Task>(`/api/tasks/candidates/${candidateId}/approve`, {
     method: "POST",
+    ...(overrides ? { body: JSON.stringify({ overrides }) } : {}),
   });
+}
+
+/**
+ * POST /api/tasks/candidates/:id/plan-steps
+ *
+ * 承認モーダルを開いたときに呼ぶ。Bedrock で「やること」（作業ステップ）の
+ * 下書きを生成して返す。失敗時は ApiError（503 など）を投げる。
+ */
+export async function fetchPlanSteps(
+  candidateId: string,
+): Promise<ScheduleStep[]> {
+  const data = await request<{ steps: ScheduleStep[] }>(
+    `/api/tasks/candidates/${candidateId}/plan-steps`,
+    { method: "POST" },
+  );
+  return data.steps;
 }
 
 /** DELETE /api/tasks/candidates/:id */
@@ -436,6 +470,7 @@ export default {
   updatePersona,
   getCandidates,
   approveCandidate,
+  fetchPlanSteps,
   rejectCandidate,
   getTasks,
   getTask,

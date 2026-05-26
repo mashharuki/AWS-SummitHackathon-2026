@@ -1,4 +1,9 @@
-import type { BusySlot, SaboriSchedule, Task } from "@saboru/shared";
+import type {
+  BusySlot,
+  SaboriSchedule,
+  ScheduleStep,
+  Task,
+} from "@saboru/shared";
 import { toIsoString } from "@saboru/shared";
 import type { IBedrockClient } from "../bedrock/IBedrockClient.js";
 import { logError, logInfo } from "../utils/logger.js";
@@ -9,6 +14,20 @@ import {
   PlanScheduleOutputSchema,
   SCHEDULE_SYSTEM_PROMPT,
 } from "./tools.js";
+
+/**
+ * ステップ分解に必要なタスク情報の最小サブセット。
+ *
+ * `generateStepDraft` は承認前（候補段階）にも呼ばれるため、承認済み Task に
+ * 限定せず、タイトル・締切・内容だけを受け取れるようにする。
+ */
+export interface StepDraftInput {
+  title: string;
+  deadline: string | null;
+  description: string;
+  /** ログ用の識別子（候補 ID / タスク ID のいずれか。任意） */
+  refId?: string;
+}
 
 /**
  * AP クロスリージョン推論プロファイル ID。
@@ -47,8 +66,20 @@ export class SchedulePlannerAgent {
     const now = input.now ?? toIsoString(new Date());
     const startMs = Date.now();
 
-    // フェーズ 1: Bedrock で作業ステップ分解
-    const steps = await this.runPlanPhase(task);
+    // フェーズ 1: 作業ステップを決定する。
+    // ユーザーが承認モーダルで確定したステップ（task.plannedSteps）があれば
+    // それをそのまま使い、Bedrock 再推論をスキップする（精度最大化の核 / E）。
+    // 無い場合（このフィールド導入前の既存タスク等）は従来通り Bedrock で分解する。
+    const hasConfirmedSteps =
+      Array.isArray(task.plannedSteps) && task.plannedSteps.length > 0;
+    const steps: ScheduleStep[] = hasConfirmedSteps
+      ? (task.plannedSteps as ScheduleStep[])
+      : await this.generateStepDraft({
+          title: task.title,
+          deadline: task.deadline,
+          description: task.description,
+          refId: task.taskId,
+        });
 
     // フェーズ 2: 決定論的にカレンダーを避けて配置 + さぼろう帯算出
     const { blocks, totalSaboruMinutes } = calcSchedule({
@@ -82,6 +113,8 @@ export class SchedulePlannerAgent {
       action: "schedule_plan_complete",
       taskId: task.taskId,
       stepCount: steps.length,
+      // ユーザー確認済みステップを使ったか（true=Bedrock 再推論スキップ）
+      stepSource: hasConfirmedSteps ? "planned_steps" : "bedrock",
       totalSaboruMinutes,
       calendarUsed,
       totalMs: Date.now() - startMs,
@@ -91,19 +124,26 @@ export class SchedulePlannerAgent {
   }
 
   /**
-   * フェーズ 1: Bedrock converse（toolChoice 強制）で作業ステップを取得する。
+   * Bedrock converse（toolChoice 強制）で作業ステップ案を生成する。
+   *
+   * 用途:
+   * - 承認モーダルのオープン時、ユーザーに見せる「やること」下書きの生成
+   *   （POST /tasks/candidates/:id/plan-steps から呼ばれる）
+   * - `plan()` 内で、確定済みステップが無い場合のフォールバック分解
+   *
+   * 失敗時は Error を投げる（呼び出し側でハンドリングする）。
    */
-  private async runPlanPhase(task: Task) {
+  async generateStepDraft(input: StepDraftInput): Promise<ScheduleStep[]> {
     const todayIso = new Date().toISOString().slice(0, 10);
-    const deadlineText = task.deadline
-      ? `締切: ${task.deadline}`
+    const deadlineText = input.deadline
+      ? `締切: ${input.deadline}`
       : "締切: 未定";
 
-    // task.description はユーザー/外部由来のため、改行を除去してインジェクション対策
-    const safeDescription = task.description
+    // description / title はユーザー/外部由来のため、改行を除去してインジェクション対策
+    const safeDescription = input.description
       .replace(/[\r\n]+/g, " ")
       .slice(0, 1000);
-    const safeTitle = task.title.replace(/[\r\n]+/g, " ").slice(0, 200);
+    const safeTitle = input.title.replace(/[\r\n]+/g, " ").slice(0, 200);
 
     const response = await this.bedrock.converse({
       modelId: MODEL_ID,
@@ -143,7 +183,7 @@ export class SchedulePlannerAgent {
       logError({
         action: "schedule_plan_no_tool_use",
         stopReason: response.stopReason,
-        taskId: task.taskId,
+        refId: input.refId,
       });
       throw new Error(
         `Bedrock did not return plan_schedule tool use (stopReason: ${response.stopReason})`,
@@ -157,7 +197,7 @@ export class SchedulePlannerAgent {
       logError({
         action: "schedule_plan_invalid_output",
         issues: parsed.error.issues,
-        taskId: task.taskId,
+        refId: input.refId,
       });
       throw new Error("plan_schedule output failed schema validation");
     }
