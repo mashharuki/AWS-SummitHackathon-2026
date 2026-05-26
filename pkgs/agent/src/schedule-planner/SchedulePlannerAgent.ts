@@ -195,9 +195,12 @@ export class SchedulePlannerAgent {
       );
     }
 
-    const parsed = PlanScheduleOutputSchema.safeParse(
-      toolUseBlock.toolUse.input,
-    );
+    // LLM が返す decisionAt は形式が揺れる（オフセット付き / 秒なし / 全角等）。
+    // safeParse 前に canonical ISO へ正規化し、解釈不能なら decisionAt を落として
+    // バリデーション失敗（=503）を防ぐ。
+    const normalizedInput = normalizeToolDecisionAt(toolUseBlock.toolUse.input);
+
+    const parsed = PlanScheduleOutputSchema.safeParse(normalizedInput);
     if (!parsed.success) {
       logError({
         action: "schedule_plan_invalid_output",
@@ -209,4 +212,32 @@ export class SchedulePlannerAgent {
 
     return parsed.data.steps;
   }
+}
+
+/**
+ * Bedrock の plan_schedule ツール出力（未検証 raw）の各ステップ decisionAt を
+ * canonical ISO（UTC, ミリ秒, Z）へ正規化する。解釈できない値は decisionAt を削除する。
+ *
+ * LLM は `2026-06-05T16:00:00+09:00` や `2026-06-05 16:00` など揺れた形式を返すため、
+ * Zod 検証前にここで吸収して 503（検証失敗）を防ぐ。元オブジェクトは破壊しない。
+ */
+export function normalizeToolDecisionAt(rawInput: unknown): unknown {
+  if (!rawInput || typeof rawInput !== "object") return rawInput;
+  const obj = rawInput as { steps?: unknown };
+  if (!Array.isArray(obj.steps)) return rawInput;
+
+  const steps = obj.steps.map((step) => {
+    if (!step || typeof step !== "object") return step;
+    const s = step as Record<string, unknown>;
+    if (typeof s.decisionAt !== "string") return step;
+    const parsed = new Date(s.decisionAt);
+    if (Number.isNaN(parsed.getTime())) {
+      // 解釈不能: decisionAt を落とす（decision は durationMinutes で配置される）
+      const { decisionAt: _drop, ...rest } = s;
+      return rest;
+    }
+    return { ...s, decisionAt: parsed.toISOString() };
+  });
+
+  return { ...obj, steps };
 }

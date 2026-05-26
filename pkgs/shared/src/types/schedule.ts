@@ -68,8 +68,11 @@ export const ScheduleStepSchema = z.object({
    *
    * AI（Bedrock）が締切から逆算して提案し、ユーザーが承認モーダルで上書きできる。
    * work ステップでは通常 undefined。
+   *
+   * 形式: タイムゾーンオフセット付き（例 +09:00）も許容する。LLM はオフセット付きで
+   * 返すことがあるため offset: true。配置側は new Date() で UTC 正規化して扱う。
    */
-  decisionAt: z.string().datetime().optional(),
+  decisionAt: z.string().datetime({ offset: true }).optional(),
   /** このステップが必要な理由（任意、最大200文字） */
   rationale: z.string().max(200).optional(),
 });

@@ -7,7 +7,10 @@ import type {
 import type { Task } from "@saboru/shared";
 import { describe, expect, it } from "vitest";
 import type { IBedrockClient } from "../../bedrock/IBedrockClient.js";
-import { SchedulePlannerAgent } from "../SchedulePlannerAgent.js";
+import {
+  SchedulePlannerAgent,
+  normalizeToolDecisionAt,
+} from "../SchedulePlannerAgent.js";
 import {
   PLAN_SCHEDULE_TOOL,
   PLAN_SCHEDULE_TOOL_NAME,
@@ -400,6 +403,101 @@ describe("SchedulePlannerAgent.generateStepDraft", () => {
     const d1 = steps.find((s) => s.stepId === "d1");
     expect(d1?.decisionAt).toBe("2026-05-24T07:00:00.000Z");
     expect(d1?.bandType).toBe("decision");
+  });
+
+  it("オフセット付き decisionAt を canonical ISO に正規化して受理する", async () => {
+    // LLM がオフセット付き（+09:00）や秒なしで返しても 503 にせず正規化する
+    const withOffset = {
+      steps: [
+        {
+          stepId: "s1",
+          stepLabel: "初稿",
+          durationMinutes: 45,
+          bandType: "work",
+        },
+        {
+          stepId: "d1",
+          stepLabel: "上司確認",
+          durationMinutes: 10,
+          bandType: "decision",
+          decisionAt: "2026-05-24T16:00:00+09:00",
+        },
+      ],
+    };
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient(makeToolResponse(withOffset)),
+    );
+    const steps = await agent.generateStepDraft({
+      title: "提案資料",
+      deadline: "2026-05-24T08:00:00.000Z",
+      description: "x",
+      now: NOW,
+    });
+    const d1 = steps.find((s) => s.stepId === "d1");
+    // +09:00 16:00 = UTC 07:00（canonical Z 形式）
+    expect(d1?.decisionAt).toBe("2026-05-24T07:00:00.000Z");
+  });
+
+  it("解釈不能な decisionAt は落として処理を継続する", async () => {
+    const withBad = {
+      steps: [
+        {
+          stepId: "s1",
+          stepLabel: "初稿",
+          durationMinutes: 45,
+          bandType: "work",
+        },
+        {
+          stepId: "d1",
+          stepLabel: "確認",
+          durationMinutes: 10,
+          bandType: "decision",
+          decisionAt: "来週の金曜",
+        },
+      ],
+    };
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient(makeToolResponse(withBad)),
+    );
+    const steps = await agent.generateStepDraft({
+      title: "x",
+      deadline: null,
+      description: "y",
+      now: NOW,
+    });
+    const d1 = steps.find((s) => s.stepId === "d1");
+    // 不正な decisionAt は除去され、503 にならない
+    expect(d1).toBeDefined();
+    expect(d1?.decisionAt).toBeUndefined();
+  });
+});
+
+describe("normalizeToolDecisionAt", () => {
+  it("オフセット付きを canonical ISO へ正規化する", () => {
+    const out = normalizeToolDecisionAt({
+      steps: [{ stepId: "d1", decisionAt: "2026-05-24T16:00:00+09:00" }],
+    }) as { steps: { decisionAt?: string }[] };
+    expect(out.steps[0].decisionAt).toBe("2026-05-24T07:00:00.000Z");
+  });
+
+  it("解釈不能な decisionAt は削除する", () => {
+    const out = normalizeToolDecisionAt({
+      steps: [{ stepId: "d1", decisionAt: "not-a-date" }],
+    }) as { steps: { decisionAt?: string }[] };
+    expect(out.steps[0].decisionAt).toBeUndefined();
+    expect(out.steps[0].stepId).toBe("d1");
+  });
+
+  it("decisionAt の無いステップはそのまま", () => {
+    const out = normalizeToolDecisionAt({
+      steps: [{ stepId: "s1", durationMinutes: 30 }],
+    }) as { steps: { decisionAt?: string }[] };
+    expect(out.steps[0].decisionAt).toBeUndefined();
+  });
+
+  it("steps を持たない入力はそのまま返す", () => {
+    expect(normalizeToolDecisionAt(null)).toBeNull();
+    expect(normalizeToolDecisionAt({ foo: 1 })).toEqual({ foo: 1 });
   });
 });
 

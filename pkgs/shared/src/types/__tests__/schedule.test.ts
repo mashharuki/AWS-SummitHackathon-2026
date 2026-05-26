@@ -120,6 +120,16 @@ describe("ScheduleStepSchema", () => {
     ).toBe(true);
   });
 
+  it("accepts decisionAt with timezone offset (LLM 形式揺れ吸収)", () => {
+    expect(
+      ScheduleStepSchema.safeParse({
+        ...validStep,
+        bandType: "decision",
+        decisionAt: "2026-05-24T16:00:00+09:00",
+      }).success,
+    ).toBe(true);
+  });
+
   it("accepts step without decisionAt (optional)", () => {
     const result = ScheduleStepSchema.safeParse(validStep);
     expect(result.success).toBe(true);
