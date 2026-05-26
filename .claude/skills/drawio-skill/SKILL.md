@@ -150,6 +150,72 @@ Once the user approves:
 - **Auto-launch:** offer to open the `.drawio` file in draw.io desktop for fine-tuning — `open diagram.drawio` (macOS), `xdg-open` (Linux), `start` (Windows)
 - Confirm files are saved and ready to use
 
+## Subagent Workflow for AWS Architecture Diagrams
+
+Three specialized subagents enhance diagram quality. Read the agent file (`agents/<name>.md`) when you decide to spawn one — it contains the full briefing template to include in the spawn prompt.
+
+### Bundled agents
+
+| Agent file | Purpose | When to spawn |
+|------------|---------|---------------|
+| `agents/aws-architecture-advisor.md` | Analyzes requirements, fills in missing services, recommends patterns and layout | **Before Step 3** (Generate) for any medium/complex AWS diagram |
+| `agents/diagram-quality-reviewer.md` | Audits generated XML against Dojo standards, returns Critical/Warning/Info findings | **After Step 3** (Generate), before Step 4 (Export draft) |
+| `agents/icon-shape-finder.md` | Finds the correct `mxgraph.aws4.*` shape string for a service not in the lookup table | On-demand whenever a service is missing from `references/aws-architecture.md` |
+
+### Decision table: when to use subagents
+
+| Diagram | Advisor | Quality Reviewer | Icon Finder |
+|---------|---------|-----------------|-------------|
+| Simple, ≤5 services, user specified all of them | Skip | Skip | As needed |
+| Standard AWS diagram (6–15 services) | **Spawn** | **Spawn** | As needed |
+| Complex / enterprise (15+ services, Multi-AZ) | **Spawn** | **Spawn** | As needed |
+| User says "best practice" or "production-ready" | Always spawn | Always spawn | As needed |
+| Non-AWS diagram (ERD, UML, flowchart) | Skip | Skip | Skip |
+
+### Execution sequence (sequential — not parallel)
+
+```
+User request
+    ↓
+[Spawn Advisor]  ← read agents/aws-architecture-advisor.md first
+    ↓ (wait for result)
+Apply advisor's Complete Service List and Layout Recommendation to Step 2 (Plan)
+    ↓
+Step 3 (Generate) — write XML using the full service list
+    ↓
+[Spawn Quality Reviewer]  ← read agents/diagram-quality-reviewer.md first
+    ↓ (wait for result)
+Apply all Critical fixes, then Warning fixes → update XML
+    ↓
+Step 4 (Export draft) → Step 5 (Self-check) → Step 6 (Review loop) → Step 7 (Final)
+```
+
+The Advisor must finish **before** XML is written. The Quality Reviewer must finish **before** the draft PNG is exported. Neither can be parallelized with their dependency.
+
+The Icon Finder can be spawned **in parallel with the Advisor** when you already know which service is missing — e.g., "Amazon Q Business is not in the lookup table" can be resolved while the Advisor is running.
+
+### Briefing subagents
+
+When spawning, include:
+1. The agent's SKILL.md section (or a pointer: "read `agents/aws-architecture-advisor.md` in the drawio-skill directory at `<path>`")
+2. The user's original request verbatim
+3. The path to `references/aws-architecture.md` for reference
+4. For the Quality Reviewer: the full XML content of the generated file
+
+### Incorporating results
+
+**From the Advisor:**
+- Use the "Complete Service List" table as the authoritative list of cells to generate
+- Follow the "VPC / Networking Plan" for container nesting
+- Add all services in "Services Added" — don't skip them without explaining to the user
+
+**From the Quality Reviewer:**
+- Fix ALL Critical issues before proceeding to export
+- Fix all Warning issues (they determine Dojo quality)
+- For each fix, edit the XML in place — re-read the `.drawio` file first to get current content
+
+---
+
 ## Style Presets
 
 A **style preset** is a named JSON file capturing a user's visual preferences (palette, shapes, font, edges). When active, it fully replaces the built-in color/shape conventions in this skill.
