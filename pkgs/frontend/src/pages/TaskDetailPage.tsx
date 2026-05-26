@@ -1,5 +1,6 @@
 import { SaborouCharacter2D } from "@/components/character/SaborouCharacter2D";
 import { SlackShareControl } from "@/components/features/SlackShareControl";
+import { GanttPanel } from "@/components/gantt/GanttPanel";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
@@ -9,19 +10,25 @@ import {
 } from "@/components/ui/AchievementBadge";
 import { ComboCounter } from "@/components/ui/ComboCounter";
 import { DependencyScoreDisplay } from "@/components/ui/DependencyScoreDisplay";
+import { Drawer } from "@/components/ui/Drawer";
 import { GrowthJourneyBanner } from "@/components/ui/GrowthJourneyBanner";
+import { GuildMockCard } from "@/components/ui/GuildMockCard";
 import { JackpotOverlay } from "@/components/ui/JackpotOverlay";
 import {
   ManualProgressCard,
   useManualProgress,
 } from "@/components/ui/ManualProgressCard";
+import { Popover } from "@/components/ui/Popover";
 import { PositioningCard } from "@/components/ui/PositioningCard";
+import { PvPMockCard } from "@/components/ui/PvPMockCard";
 import {
   SaboriStreakBadge,
   loadStreakState,
   updateStreak,
 } from "@/components/ui/SaboriStreakBadge";
+import { SeasonBanner } from "@/components/ui/SeasonBanner";
 import { ShareButton } from "@/components/ui/ShareCard";
+import { WeeklyChallengeCard } from "@/components/ui/WeeklyChallengeCard";
 import { ContextCollectingAnim } from "@/components/verdict/ContextCollectingAnim";
 import { DeferralCountdown } from "@/components/verdict/DeferralCountdown";
 import { EvidenceList } from "@/components/verdict/EvidenceList";
@@ -37,15 +44,17 @@ import { getTitleInfo } from "@/lib/gamificationUtils";
 import { formatDeadlineDisplay } from "@/lib/utils";
 import type { ChatMessage as ChatMessageType } from "@/types/ui";
 /**
- * タスク詳細ページ — U-07-gamification Tier 1〜3 統合版
+ * タスク詳細ページ — U-G08 3ペイン/4タブ再編版
  *
- * ゲーミフィケーション要素を全面統合:
- * - Tier 1: AI依存度スコア育成ゲーム化、A〜E評価、コンボ、ジャックポット
- * - Tier 2: ストリーク、取扱説明書完成度ゲージ、実績システム
- * - Tier 3: サボりシェアカード、競合対比ポジショニングUI
+ * 構成:
+ * - PC (lg+): 3ペイン（左: タスク文脈+判定HUD / 中央: ガント盤面 / 右: チャット）
+ *   ゲーム要素は HUD 常駐 + Popover / 右ペイン Drawer で「押下して開く」
+ * - スマホ (< lg): 4タブ（ガント / 判定 / チャット / ゲーム）で縦圧縮
+ *
+ * 既存のゲーミフィケーション資産は全て維持し、配置のみ再編する。
  */
 import type { Proposal, QuickReplyType, Task } from "@saboru/shared";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Gamepad2, Trash2 } from "lucide-react";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -62,6 +71,8 @@ const ChatPane = lazy(() =>
   import("@/components/chat/ChatPane").then((m) => ({ default: m.ChatPane })),
 );
 
+type MobileTab = "gantt" | "verdict" | "chat" | "game";
+
 export function TaskDetailPage() {
   const { i18n, t } = useTranslation();
   const { id: taskId } = useParams<{ id: string }>();
@@ -73,6 +84,10 @@ export function TaskDetailPage() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // スマホタブ / ゲームドロワー
+  const [mobileTab, setMobileTab] = useState<MobileTab>("gantt");
+  const [gameDrawerOpen, setGameDrawerOpen] = useState(false);
 
   // ゲーミフィケーション統合フック（Tier 1）
   const {
@@ -100,7 +115,7 @@ export function TaskDetailPage() {
   // タスク取得
   useEffect(() => {
     if (!taskId) return;
-    const found = tasks.find((t) => t.taskId === taskId);
+    const found = tasks.find((tk) => tk.taskId === taskId);
     if (found) {
       setTask(found);
     } else {
@@ -270,26 +285,246 @@ export function TaskDetailPage() {
   }
 
   const verdictForDisplay = proposal?.verdict ?? currentVerdict ?? null;
+  const reasoningCount = proposal?.reasoning?.length ?? 0;
+
+  // ─────────────────────────────────────────────
+  // 部分ビュー（PC/スマホで共有）
+  // ─────────────────────────────────────────────
+
+  const taskInfoBlock = (
+    <div className="card-brutal p-3.5">
+      {isEditing ? (
+        <TaskEditForm
+          task={task}
+          onSave={async (data) => {
+            const updated = await updateTask(task.taskId, data);
+            setTask(updated);
+            setIsEditing(false);
+          }}
+          onCancel={() => setIsEditing(false)}
+        />
+      ) : (
+        <>
+          <h1
+            className="text-saboru-ink font-extrabold text-lg md:text-xl"
+            style={{ letterSpacing: "-0.02em", lineHeight: 1.25 }}
+          >
+            {task.title}
+          </h1>
+          <p className="text-saboru-ink-muted mt-1.5 text-xs md:text-sm">
+            📅 {formatDeadlineDisplay(task.deadline)}
+          </p>
+        </>
+      )}
+    </div>
+  );
+
+  const verdictBlock = (
+    <>
+      {/* 3D 判定ヒーロー */}
+      <div className="brutal-3d-container shrink-0" style={{ height: 240 }}>
+        <Suspense
+          fallback={
+            <div className="w-full h-full flex items-center justify-center">
+              <SaborouCharacter2D
+                verdict={verdictForDisplay ?? "can_saboru"}
+                size={140}
+                personaId={user?.preferredPersonaId}
+              />
+            </div>
+          }
+        >
+          <SaborouScene3D
+            verdict={verdictForDisplay}
+            isStreaming={isStreaming}
+            size={240}
+            personaId={user?.preferredPersonaId}
+          />
+        </Suspense>
+      </div>
+
+      {isStreaming && !proposal && <ContextCollectingAnim phase={phase} />}
+
+      {verdictForDisplay && proposal && (
+        <VerdictBox
+          verdict={verdictForDisplay}
+          summaryText={proposal.summaryText}
+          evaluatedAt={
+            proposal.evaluatedAt
+              ? new Date(proposal.evaluatedAt).toLocaleString(
+                  i18n.language.startsWith("ja") ? "ja-JP" : "en-US",
+                  {
+                    month: "numeric",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  },
+                )
+              : undefined
+          }
+        />
+      )}
+
+      {proposal?.nextCheckAt && verdictForDisplay === "can_saboru" && (
+        <DeferralCountdown
+          nextCheckAt={proposal.nextCheckAt}
+          onRecheck={startProposal}
+        />
+      )}
+
+      {/* 補足情報は Popover で「押下して開く」 */}
+      <div className="flex flex-wrap gap-2">
+        {verdictForDisplay && (
+          <Popover
+            trigger={
+              <span className="btn-brutal-secondary text-xs">
+                🧠 心理シグナル
+              </span>
+            }
+          >
+            <PsychSignalsCard
+              verdict={verdictForDisplay}
+              psychSignals={proposal?.psychSignals}
+            />
+          </Popover>
+        )}
+        {proposal?.reasoning && proposal.reasoning.length > 0 && (
+          <Popover
+            trigger={
+              <span className="btn-brutal-secondary text-xs">
+                📋 根拠を見る
+              </span>
+            }
+          >
+            <EvidenceList items={proposal.reasoning} />
+          </Popover>
+        )}
+        <Popover
+          trigger={
+            <span className="btn-brutal-secondary text-xs">📊 立ち位置</span>
+          }
+        >
+          <PositioningCard />
+        </Popover>
+      </div>
+
+      {/* C-2: 判定を Slack に共有 */}
+      {proposal && taskId && <SlackShareControl taskId={taskId} />}
+
+      {/* シェアボタン */}
+      {proposal?.verdict && currentGrade && (
+        <ShareButton
+          verdict={proposal.verdict}
+          taskTitle={task.title}
+          dependencyScore={dependencyScore}
+          grade={currentGrade}
+          titleName={getTitleInfo(dependencyScore).title}
+        />
+      )}
+    </>
+  );
+
+  const chatBlock = (
+    <Suspense
+      fallback={
+        <div
+          className="card-brutal flex items-center justify-center flex-1"
+          style={{ background: "#FFFAF5", minHeight: 200 }}
+        >
+          <div
+            className="w-6 h-6 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
+            role="status"
+            aria-label={t("common.loading")}
+          />
+        </div>
+      }
+    >
+      <ChatPane
+        messages={chatMessages}
+        isStreaming={isStreaming}
+        onQuickReply={handleQuickReply}
+        onFreeText={(text) => void sendFreeText(text)}
+        showQuickReplies={chatMessages.length > 0}
+      />
+    </Suspense>
+  );
+
+  // ゲーム要素まとめ（ドロワー / ゲームタブ で開く）
+  const gameContent = (
+    <div className="flex flex-col gap-3">
+      {streakState.days > 0 && (
+        <SaboriStreakBadge streakDays={streakState.days} showLossWarning />
+      )}
+      <ManualProgressCard progress={manualProgress} />
+      <WeeklyChallengeCard />
+      <SeasonBanner />
+      <GuildMockCard />
+      <PvPMockCard />
+    </div>
+  );
+
+  // 画面上部に常駐する HUD（スコア・コンボ・ストリーク・ゲームを開くボタン）
+  const hud = (
+    <div className="flex items-center gap-2">
+      <ComboCounter combo={combo} />
+      <DependencyScoreDisplay
+        score={dependencyScore}
+        justIncremented={justIncremented}
+      />
+      <button
+        type="button"
+        onClick={() => setGameDrawerOpen(true)}
+        aria-label="ゲーム要素を開く"
+        className="p-1.5 text-saboru-orange hover:text-saboru-orange-dark"
+      >
+        <Gamepad2 size={18} aria-hidden="true" />
+      </button>
+    </div>
+  );
+
+  const editDeleteButtons = !isEditing && (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsEditing(true)}
+        aria-label={t("tasks.editTask")}
+        className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
+      >
+        <Edit2 size={15} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        onClick={() => void handleDelete()}
+        disabled={isDeleting}
+        aria-label={t("tasks.deleteTask")}
+        className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+      >
+        <Trash2 size={15} aria-hidden="true" />
+      </button>
+    </>
+  );
 
   return (
     <AppShell>
       {/* === ゲーミフィケーション演出レイヤー === */}
-
-      {/* 称号解除バナー（Tier 1） */}
       <GrowthJourneyBanner
         titleInfo={titleUnlockEvent}
         onClose={clearTitleUnlockEvent}
       />
-
-      {/* A+ ジャックポット全画面演出（Tier 1） */}
       <JackpotOverlay isActive={isJackpot} onClose={clearJackpot} />
-
-      {/* 実績解除トースト通知（Tier 2） */}
       {pendingToast && (
         <AchievementToast achievement={pendingToast} onClose={dismissToast} />
       )}
 
-      {/* === メインコンテンツ === */}
+      {/* ゲーム要素ドロワー（HUDのゲームアイコンから開く / 全要素を保持） */}
+      <Drawer
+        open={gameDrawerOpen}
+        onClose={() => setGameDrawerOpen(false)}
+        title="🎮 サボりゲーム"
+      >
+        {gameContent}
+      </Drawer>
+
       <div className="flex flex-col flex-1 min-h-0">
         <PageHeader
           title={t("tasks.detailTitle")}
@@ -297,228 +532,102 @@ export function TaskDetailPage() {
           onBack={() => navigate("/tasks")}
           right={
             <div className="flex items-center gap-2">
-              {/* コンボカウンター */}
-              <ComboCounter combo={combo} />
-
-              {/* AI依存度スコア（育成ゲーム型） */}
-              <DependencyScoreDisplay
-                score={dependencyScore}
-                justIncremented={justIncremented}
-              />
-
-              {!isEditing && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    aria-label={t("tasks.editTask")}
-                    className="p-1.5 text-saboru-ink-soft hover:text-saboru-ink"
-                  >
-                    <Edit2 size={15} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete()}
-                    disabled={isDeleting}
-                    aria-label={t("tasks.deleteTask")}
-                    className="p-1.5 text-red-500 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
-                </>
-              )}
+              {hud}
+              {editDeleteButtons}
             </div>
           }
         />
 
-        {/*
-          Mobile: 単一カラム + スクロール
-          lg+: 2カラム（左: タスク情報/3D/判定、右: チャット）
-        */}
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row lg:overflow-hidden">
-          {/* 左カラム: タスク情報・3Dヒーロー・判定結果 */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pb-24 md:pb-8 lg:pb-6 flex flex-col gap-3 pt-3 lg:max-w-lg lg:border-r-[3px] lg:border-[#2B1E16]">
-            {/* タスク情報 */}
-            <div className="card-brutal p-3.5">
-              {isEditing ? (
-                <TaskEditForm
-                  task={task}
-                  onSave={async (data) => {
-                    const updated = await updateTask(task.taskId, data);
-                    setTask(updated);
-                    setIsEditing(false);
-                  }}
-                  onCancel={() => setIsEditing(false)}
-                />
-              ) : (
-                <>
-                  <h1
-                    className="text-saboru-ink font-extrabold text-lg md:text-xl"
-                    style={{
-                      letterSpacing: "-0.02em",
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    {task.title}
-                  </h1>
-                  <p className="text-saboru-ink-muted mt-1.5 text-xs md:text-sm">
-                    📅 {formatDeadlineDisplay(task.deadline)}
-                  </p>
-                </>
-              )}
-            </div>
-
-            {/* 3D 判定ヒーロー（憲法2: 320px / 憲法4: brutal-3d-container で外枠） */}
-            <div className="brutal-3d-container shrink-0" style={{ height: 280 }}>
-              <Suspense
-                fallback={
-                  <div className="w-full h-full flex items-center justify-center">
-                    <SaborouCharacter2D
-                      verdict={verdictForDisplay ?? "can_saboru"}
-                      size={160}
-                      personaId={user?.preferredPersonaId}
-                    />
-                  </div>
-                }
-              >
-                <SaborouScene3D
-                  verdict={verdictForDisplay}
-                  isStreaming={isStreaming}
-                  size={280}
-                  personaId={user?.preferredPersonaId}
-                />
-              </Suspense>
-            </div>
-
-            {/* ストリーミング中: ContextCollectingAnim を表示 */}
-            {isStreaming && !proposal && (
-              <ContextCollectingAnim phase={phase} />
-            )}
-
-            {/* VerdictBox */}
-            {verdictForDisplay && proposal && (
-              <VerdictBox
-                verdict={verdictForDisplay}
-                summaryText={proposal.summaryText}
-                evaluatedAt={
-                  proposal.evaluatedAt
-                    ? new Date(proposal.evaluatedAt).toLocaleString(
-                        i18n.language.startsWith("ja") ? "ja-JP" : "en-US",
-                        {
-                          month: "numeric",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )
-                    : undefined
-                }
-              />
-            )}
-
-            {/* 時間軸付き先延ばし可視化 — 競合との決定的差別化要素 */}
-            {proposal?.nextCheckAt && verdictForDisplay === "can_saboru" && (
-              <DeferralCountdown
-                nextCheckAt={proposal.nextCheckAt}
-                onRecheck={startProposal}
-              />
-            )}
-
-            {/* C-2: 判定を Slack に共有（連携済み時のみ表示） */}
-            {proposal && taskId && <SlackShareControl taskId={taskId} />}
-
-            {/* PsychSignals（verdict 連動の静的プリセット表示） */}
-            {verdictForDisplay && (
-              <PsychSignalsCard
-                verdict={verdictForDisplay}
-                psychSignals={proposal?.psychSignals}
-              />
-            )}
-
-            {/* reasoning リスト */}
-            {proposal?.reasoning && proposal.reasoning.length > 0 && (
-              <EvidenceList items={proposal.reasoning} />
-            )}
-
-            {/* シェアボタン（Tier 3 施策6）: 判定結果がある場合のみ表示 */}
-            {proposal?.verdict && currentGrade && (
-              <ShareButton
-                verdict={proposal.verdict}
-                taskTitle={task.title}
-                dependencyScore={dependencyScore}
-                grade={currentGrade}
-                titleName={getTitleInfo(dependencyScore).title}
-              />
-            )}
-
-            {/* ストリークバッジ（Tier 2 施策3） */}
-            {streakState.days > 0 && (
-              <SaboriStreakBadge
-                streakDays={streakState.days}
-                showLossWarning
-              />
-            )}
-
-            {/* 取扱説明書完成度（Tier 2 施策4） */}
-            <ManualProgressCard progress={manualProgress} />
-
-            {/* 競合対比ポジショニングUI（Tier 3 施策7） */}
-            <PositioningCard />
-
-            {/* チャット: モバイル/タブレットのみここに表示（lg+ は右カラムへ） */}
-            <div className="lg:hidden" style={{ height: 480 }}>
-              <Suspense
-                fallback={
-                  <div
-                    className="card-brutal flex items-center justify-center h-full"
-                    style={{ background: "#FFFAF5" }}
-                  >
-                    <div
-                      className="w-6 h-6 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
-                      role="status"
-                      aria-label={t("common.loading")}
-                    />
-                  </div>
-                }
-              >
-                <ChatPane
-                  messages={chatMessages}
-                  isStreaming={isStreaming}
-                  onQuickReply={handleQuickReply}
-                  onFreeText={(text) => void sendFreeText(text)}
-                  showQuickReplies={chatMessages.length > 0}
-                />
-              </Suspense>
-            </div>
+        {/* ───────── PC: 3ペイン ───────── */}
+        <div className="hidden lg:flex flex-1 min-h-0 overflow-hidden">
+          {/* 左: タスク文脈 + 判定 */}
+          <div className="w-[360px] shrink-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 border-r-[3px] border-saboru-heavy">
+            {taskInfoBlock}
+            {verdictBlock}
           </div>
+          {/* 中央: ガント盤面（主役） */}
+          <div className="flex-1 min-w-0 overflow-y-auto px-4 py-3">
+            {taskId && (
+              <GanttPanel taskId={taskId} reasoningCount={reasoningCount} />
+            )}
+          </div>
+          {/* 右: チャット */}
+          <div className="w-[360px] shrink-0 flex flex-col p-4 border-l-[3px] border-saboru-heavy">
+            {chatBlock}
+          </div>
+        </div>
 
-          {/* 右カラム: チャット（lg+ のみ） */}
-          <div className="hidden lg:flex lg:flex-col lg:flex-1 min-h-0 p-4 lg:p-6">
-            <Suspense
-              fallback={
-                <div
-                  className="card-brutal flex items-center justify-center flex-1"
-                  style={{ background: "#FFFAF5" }}
-                >
-                  <div
-                    className="w-6 h-6 border-2 border-saboru-orange border-t-transparent rounded-full animate-spin"
-                    role="status"
-                    aria-label={t("common.loading")}
-                  />
-                </div>
-              }
-            >
-              <ChatPane
-                messages={chatMessages}
-                isStreaming={isStreaming}
-                onQuickReply={handleQuickReply}
-                onFreeText={(text) => void sendFreeText(text)}
-                showQuickReplies={chatMessages.length > 0}
-              />
-            </Suspense>
+        {/* ───────── スマホ: 4タブ ───────── */}
+        <div className="lg:hidden flex flex-col flex-1 min-h-0">
+          <MobileTabBar tab={mobileTab} onChange={setMobileTab} />
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 pt-3 flex flex-col gap-3">
+            {mobileTab === "gantt" && taskId && (
+              <GanttPanel taskId={taskId} reasoningCount={reasoningCount} />
+            )}
+            {mobileTab === "verdict" && (
+              <>
+                {taskInfoBlock}
+                {verdictBlock}
+              </>
+            )}
+            {mobileTab === "chat" && (
+              <div className="flex flex-col" style={{ minHeight: 480 }}>
+                {chatBlock}
+              </div>
+            )}
+            {mobileTab === "game" && gameContent}
           </div>
         </div>
       </div>
     </AppShell>
+  );
+}
+
+// ─────────────────────────────────────────────
+// スマホ用タブバー
+// ─────────────────────────────────────────────
+
+const MOBILE_TABS: { id: MobileTab; label: string }[] = [
+  { id: "gantt", label: "📊 ガント" },
+  { id: "verdict", label: "🦥 判定" },
+  { id: "chat", label: "💬 チャット" },
+  { id: "game", label: "🎮 ゲーム" },
+];
+
+function MobileTabBar({
+  tab,
+  onChange,
+}: {
+  tab: MobileTab;
+  onChange: (t: MobileTab) => void;
+}) {
+  return (
+    <div
+      className="flex border-b-[3px] border-saboru-heavy bg-saboru-paper"
+      role="tablist"
+    >
+      {MOBILE_TABS.map((item) => {
+        const active = tab === item.id;
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(item.id)}
+            className="flex-1 py-2 text-xs font-bold transition-colors"
+            style={{
+              color: active ? "#F97316" : "#9CA3AF",
+              borderBottom: active
+                ? "3px solid #F97316"
+                : "3px solid transparent",
+              marginBottom: -3,
+            }}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

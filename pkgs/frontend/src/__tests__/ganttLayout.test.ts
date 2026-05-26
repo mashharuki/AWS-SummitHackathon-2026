@@ -1,5 +1,6 @@
 import {
   BAND_META,
+  buildDummySchedule,
   buildRows,
   buildTimeTicks,
   durationToWidthPx,
@@ -87,6 +88,24 @@ describe("buildTimeTicks", () => {
 describe("viewWidthPx", () => {
   it("3時間 × 120px = 360px", () => {
     expect(viewWidthPx(VIEW_START, VIEW_END, 120)).toBe(360);
+  });
+});
+
+describe("buildDummySchedule", () => {
+  it("さぼろう/作業/意思決定を含むサンプル盤面を生成する", () => {
+    const s = buildDummySchedule("demo", new Date(VIEW_START));
+    expect(s.taskId).toBe("demo");
+    expect(s.calendarUsed).toBe(false);
+    expect(s.totalSaboruMinutes).toBe(90);
+    const bands = new Set(s.blocks.map((b) => b.bandType));
+    expect(bands.has("saboru")).toBe(true);
+    expect(bands.has("work")).toBe(true);
+    expect(bands.has("decision")).toBe(true);
+  });
+
+  it("now 省略時もブロックを生成する", () => {
+    const s = buildDummySchedule("demo");
+    expect(s.blocks.length).toBeGreaterThan(0);
   });
 });
 

@@ -169,3 +169,73 @@ export function viewWidthPx(
   const ms = new Date(viewEndAt).getTime() - new Date(viewStartAt).getTime();
   return (ms / MS_PER_HOUR) * pxPerHour;
 }
+
+/**
+ * デモ/フォールバック用のダミースケジュールを生成する。
+ *
+ * スケジュールAPIが未取得・失敗のときでもガントを空にせず、
+ * 「作業 / 意思決定 / さぼろう」の見本盤面を表示する（デモ映え優先）。
+ * now を起点に 3 時間ぶんのサンプル配置を作る。
+ */
+export function buildDummySchedule(
+  taskId: string,
+  now: Date = new Date(),
+): SaboriSchedule {
+  const startMs = now.getTime();
+  const at = (min: number): string =>
+    new Date(startMs + min * MS_PER_MIN).toISOString();
+
+  const blocks: ScheduleBlock[] = [
+    {
+      stepId: "saboru_0",
+      stepLabel: "さぼろう",
+      bandType: "saboru",
+      startAt: at(0),
+      endAt: at(45),
+      durationMinutes: 45,
+    },
+    {
+      stepId: "saboru_1",
+      stepLabel: "さぼろう",
+      bandType: "saboru",
+      startAt: at(75),
+      endAt: at(120),
+      durationMinutes: 45,
+    },
+    {
+      stepId: "s1",
+      stepLabel: "要点を整理",
+      bandType: "work",
+      startAt: at(45),
+      endAt: at(75),
+      durationMinutes: 30,
+    },
+    {
+      stepId: "s2",
+      stepLabel: "関係者へ確認",
+      bandType: "decision",
+      startAt: at(120),
+      endAt: at(150),
+      durationMinutes: 30,
+    },
+    {
+      stepId: "s3",
+      stepLabel: "仕上げて提出",
+      bandType: "work",
+      startAt: at(150),
+      endAt: at(180),
+      durationMinutes: 30,
+    },
+  ];
+
+  return {
+    taskId,
+    generatedAt: at(0),
+    viewStartAt: at(0),
+    viewEndAt: at(180),
+    deadline: at(180),
+    blocks,
+    totalSaboruMinutes: 90,
+    calendarUsed: false,
+  };
+}
