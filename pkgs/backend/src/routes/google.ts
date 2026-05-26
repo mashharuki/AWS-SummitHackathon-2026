@@ -140,6 +140,8 @@ export function createGoogleRoute(
 
     const calData = (await calResponse.json()) as {
       items?: Array<{
+        id?: string;
+        summary?: string;
         start?: { dateTime?: string; date?: string };
         end?: { dateTime?: string; date?: string };
       }>;
@@ -194,11 +196,53 @@ export function createGoogleRoute(
       ttl,
     });
 
+    // 6. 各予定をタスク候補として抽出する（Gmail と同様に AI が判定）。
+    // 「デザイン変更締め切り」のような予定はタスク化され、単なる予定は除外される。
+    // API Gateway の 29 秒制限内に収めるため Promise.all で並列実行する。
+    const settled = await Promise.all(
+      items.map(async (item, idx) => {
+        try {
+          const title = item.summary?.trim();
+          if (!title) return { kind: "not_task" as const };
+
+          const startStr = item.start?.dateTime ?? item.start?.date ?? "";
+          // 予定の開始日時をテキストに含めて締切推定の手がかりにする
+          const inputText = [`予定: ${title}`, `開始: ${startStr}`]
+            .filter((line) => line.split(": ")[1]?.trim())
+            .join("\n");
+
+          const result = await taskExtractorAgent.extractTaskFromSource({
+            userId,
+            text: inputText,
+            sourceType: SOURCE_TYPE.CALENDAR,
+            sourceRef: item.id ?? `cal-${idx}`,
+            requesterHint: "",
+          });
+
+          if (!result.skipped) {
+            return { kind: "extracted" as const, candidate: result.candidate };
+          }
+          return { kind: "not_task" as const };
+        } catch (err) {
+          logError({
+            action: "calendar_task_extract_error",
+            err,
+          });
+          return { kind: "error" as const };
+        }
+      }),
+    );
+
+    const extractedCandidates = settled.flatMap((r) =>
+      r.kind === "extracted" ? [r.candidate] : [],
+    );
+
     logInfo({
       action: "calendar_fetch_success",
       userId,
       upcomingEventCount,
       busyScore,
+      extracted: extractedCandidates.length,
     });
 
     return c.json({
@@ -207,6 +251,14 @@ export function createGoogleRoute(
       nextEventStartsInMinutes,
       freeSlotMinutesToday,
       busyScore,
+      extracted: extractedCandidates.length,
+      candidates: extractedCandidates.map((c) => ({
+        candidateId: c.candidateId,
+        title: c.title,
+        deadline: c.deadline,
+        sourceType: c.sourceType,
+        sourceRef: c.sourceRef,
+      })),
     });
   });
 
