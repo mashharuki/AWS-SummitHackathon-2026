@@ -119,7 +119,11 @@ export function extractGanttResult(
   schedule: SaboriSchedule,
   reasoningCount: number,
   comboCount: number,
-): { ganttGameScore: number; totalSaboruMinutes: number; grade: GanttGradeInfo } {
+): {
+  ganttGameScore: number;
+  totalSaboruMinutes: number;
+  grade: GanttGradeInfo;
+} {
   return {
     totalSaboruMinutes: schedule.totalSaboruMinutes,
     ganttGameScore: calcGanttGameScore(
