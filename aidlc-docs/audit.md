@@ -1696,3 +1696,15 @@ gamification-strategy-20260523.md を作成
 **Context**: OPERATIONS — 後ろ詰め＋decision時刻化を実装・デプロイ完了。ブラウザ E2E 確認はユーザー作業。
 
 ---
+
+## plan-steps 503 不具合の修正（decisionAt 形式揺れ）
+**Timestamp**: 2026-05-27T08:45:00Z
+**User Input**: 実環境で plan-steps が 503 / モーダルが「段取りの自動生成に失敗しました」表示になる旨の報告（コンソールログ添付）
+**AI Response**: CloudWatch（saborou-api-dev）を調査。`schedule_plan_invalid_output` で `decisionAt` が Zod `datetime`（厳格UTC・Z必須）に弾かれ `plan_schedule output failed schema validation` → 503 と判明。Bedrock 自体は成功しており、LLM がオフセット付き等の形式で decisionAt を返していたのが原因。
+- shared: `ScheduleStep.decisionAt` を `z.string().datetime({ offset: true })` に緩和（オフセット付き許容）。
+- agent: `normalizeToolDecisionAt` を新設し、ツール出力を safeParse 前に canonical ISO（UTC/Z）へ正規化。解釈不能な decisionAt は削除して処理継続（503 を根絶）。
+- テスト追加: shared offset 受理 / agent offset round-trip・不正値ドロップ・normalize 単体。全パッケージ typecheck/test/biome PASS（agent 244）。
+- commit a0b2a3b。cdk deploy SaborouApi-dev / SaborouAgent-dev → 両 UPDATE_COMPLETE（2026-05-26T23:44）。
+**Context**: OPERATIONS — plan-steps 503 を修正・デプロイ済み。ハードリロードで再確認をユーザーに依頼。
+
+---
