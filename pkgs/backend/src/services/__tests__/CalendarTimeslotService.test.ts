@@ -171,13 +171,13 @@ describe("CalendarTimeslotService.fetchBusySlots", () => {
     });
   });
 
-  it("PII 保護: summary / description を含むレスポンスでも返り値に含まれない", async () => {
+  it("summary は title として返すが description は返さない（揮発・PII配慮）", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
         makeCalendarResponse([
           {
-            summary: "機密プロジェクト定例（秘密のタイトル）",
+            summary: "デザイン変更締め切り",
             description: "顧客名や個人情報を含む説明文",
             start: { dateTime: "2026-05-25T09:00:00.000Z" },
             end: { dateTime: "2026-05-25T10:00:00.000Z" },
@@ -189,14 +189,37 @@ describe("CalendarTimeslotService.fetchBusySlots", () => {
     const slots = await callFetchBusySlots();
 
     expect(slots).toHaveLength(1);
-    // 返り値は startAt / endAt の 2 キーのみ（PII フィールドが漏れていない）
-    expect(Object.keys(slots[0]).sort()).toEqual(["endAt", "startAt"]);
+    // title（予定名）は返す
+    expect(slots[0].title).toBe("デザイン変更締め切り");
+    expect(slots[0].startAt).toBe("2026-05-25T09:00:00.000Z");
+    // 返り値キーは startAt / endAt / title のみ（description は含まない）
+    expect(Object.keys(slots[0]).sort()).toEqual([
+      "endAt",
+      "startAt",
+      "title",
+    ]);
 
-    // 念のためシリアライズ後にもタイトル・説明が含まれないことを確認
+    // description（説明文）は漏れていない
     const serialized = JSON.stringify(slots);
-    expect(serialized).not.toContain("秘密のタイトル");
     expect(serialized).not.toContain("個人情報");
-    expect(serialized).not.toContain("summary");
     expect(serialized).not.toContain("description");
+  });
+
+  it("summary 空文字の予定は title を付けない", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        makeCalendarResponse([
+          {
+            summary: "   ",
+            start: { dateTime: "2026-05-25T09:00:00.000Z" },
+            end: { dateTime: "2026-05-25T10:00:00.000Z" },
+          },
+        ]),
+      ),
+    );
+
+    const slots = await callFetchBusySlots();
+    expect(slots[0].title).toBeUndefined();
   });
 });

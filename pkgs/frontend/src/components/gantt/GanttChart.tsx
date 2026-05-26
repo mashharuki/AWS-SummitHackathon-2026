@@ -7,7 +7,7 @@ import {
   viewWidthPx,
 } from "@/lib/ganttLayout";
 import { cn } from "@/lib/utils";
-import type { SaboriSchedule } from "@saboru/shared";
+import type { BandType, SaboriSchedule } from "@saboru/shared";
 import { useEffect, useState } from "react";
 
 /**
@@ -90,6 +90,7 @@ export function GanttChart({
           <Legend bandType="saboru" />
           <Legend bandType="work" />
           <Legend bandType="decision" />
+          <Legend bandType="busy" />
         </div>
       </div>
 
@@ -124,7 +125,11 @@ export function GanttChart({
             {/* タイムライン背景（グリッド線 + NOW/締切ライン）— ラベル列幅ぶん右にオフセット */}
             <div
               className="absolute top-0 pointer-events-none"
-              style={{ left: LABEL_COL_PX, width: totalWidth, height: gridHeight }}
+              style={{
+                left: LABEL_COL_PX,
+                width: totalWidth,
+                height: gridHeight,
+              }}
             >
               {/* 縦グリッド線 */}
               {ticks.map((t) => (
@@ -198,18 +203,20 @@ export function GanttChart({
                         }}
                         title={`${row.stepLabel}（${b.durationMinutes}分）`}
                       >
-                        {b.bandType === "saboru" && width > 40 && (
-                          <span className="text-[10px] font-bold whitespace-nowrap">
-                            さぼろう
-                          </span>
-                        )}
+                        {(b.bandType === "saboru" || b.bandType === "busy") &&
+                          width > 40 && (
+                            <span className="text-[10px] font-bold whitespace-nowrap truncate">
+                              {b.bandType === "saboru"
+                                ? "さぼろう"
+                                : row.stepLabel}
+                            </span>
+                          )}
                       </div>
                     );
                   })}
                 </div>
               </div>
             ))}
-
           </div>
         </div>
       </div>
@@ -218,7 +225,7 @@ export function GanttChart({
 }
 
 /** 凡例チップ */
-function Legend({ bandType }: { bandType: "saboru" | "work" | "decision" }) {
+function Legend({ bandType }: { bandType: BandType }) {
   const meta = BAND_META[bandType];
   return (
     <span className="flex items-center gap-1 text-saboru-ink-soft">

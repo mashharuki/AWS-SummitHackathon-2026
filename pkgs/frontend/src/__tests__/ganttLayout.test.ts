@@ -34,10 +34,11 @@ function block(
 }
 
 describe("BAND_META", () => {
-  it("3 バンド種別すべてにメタがある", () => {
+  it("4 バンド種別すべてにメタがある", () => {
     expect(BAND_META.saboru.label).toBe("さぼろう");
     expect(BAND_META.work.label).toBe("作業");
     expect(BAND_META.decision.label).toBe("意思決定");
+    expect(BAND_META.busy.label).toBe("予定");
   });
 });
 

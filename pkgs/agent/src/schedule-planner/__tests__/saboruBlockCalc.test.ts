@@ -206,4 +206,39 @@ describe("calcSchedule", () => {
     expect(result.totalSaboruMinutes).toBe(0);
     expect(result.blocks.every((b) => b.bandType !== "saboru")).toBe(true);
   });
+
+  it("カレンダー予定を busy ブロックとして可視化する（title 付き）", () => {
+    const result = calcSchedule({
+      steps: [step("s1", 30)],
+      busySlots: [{ startAt: at(60), endAt: at(90), title: "定例MTG" }],
+      now: NOW,
+      deadline: at(180),
+    });
+    const busy = result.blocks.find((b) => b.bandType === "busy");
+    expect(busy).toBeDefined();
+    expect(busy?.stepLabel).toBe("定例MTG");
+    expect(busy?.startAt).toBe(at(60));
+    expect(busy?.durationMinutes).toBe(30);
+  });
+
+  it("title 無しの予定は「予定」と表示する", () => {
+    const result = calcSchedule({
+      steps: [step("s1", 30)],
+      busySlots: [{ startAt: at(60), endAt: at(90) }],
+      now: NOW,
+      deadline: at(180),
+    });
+    const busy = result.blocks.find((b) => b.bandType === "busy");
+    expect(busy?.stepLabel).toBe("予定");
+  });
+
+  it("窓外の予定は busy ブロックにしない", () => {
+    const result = calcSchedule({
+      steps: [step("s1", 30)],
+      busySlots: [{ startAt: at(300), endAt: at(360), title: "範囲外" }],
+      now: NOW,
+      deadline: at(120),
+    });
+    expect(result.blocks.some((b) => b.bandType === "busy")).toBe(false);
+  });
 });

@@ -25,8 +25,9 @@ import { z } from "zod";
  * - saboru:   「さぼろう」区間（緑）。ステップ間の空き時間に決定論的に算出される
  * - work:     実際の作業区間（白枠）
  * - decision: 意思決定が必要な区間（黄）
+ * - busy:     カレンダー予定で埋まっている区間（グレー）。作業もサボりもできない
  */
-export const BandTypeSchema = z.enum(["saboru", "work", "decision"]);
+export const BandTypeSchema = z.enum(["saboru", "work", "decision", "busy"]);
 export type BandType = z.infer<typeof BandTypeSchema>;
 
 // ───────────────────────────────────────────
@@ -44,6 +45,11 @@ export const BusySlotSchema = z.object({
   startAt: z.string().datetime(),
   /** 予定終了時刻 ISO 8601 */
   endAt: z.string().datetime(),
+  /**
+   * 予定名（任意・表示用）。ガント上の busy ブロックに表示する。
+   * 揮発データとしてのみ扱い、DynamoDB には永続化しない。
+   */
+  title: z.string().optional(),
 });
 export type BusySlot = z.infer<typeof BusySlotSchema>;
 

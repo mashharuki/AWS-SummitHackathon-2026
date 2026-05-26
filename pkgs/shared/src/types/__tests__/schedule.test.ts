@@ -11,7 +11,7 @@ const ISO = "2026-05-24T15:00:00.000Z";
 const ISO2 = "2026-05-24T15:30:00.000Z";
 
 describe("BandTypeSchema", () => {
-  it.each(["saboru", "work", "decision"])("accepts %s", (v) => {
+  it.each(["saboru", "work", "decision", "busy"])("accepts %s", (v) => {
     expect(BandTypeSchema.safeParse(v).success).toBe(true);
   });
 
@@ -23,6 +23,15 @@ describe("BandTypeSchema", () => {
 describe("BusySlotSchema", () => {
   it("accepts valid slot", () => {
     const result = BusySlotSchema.safeParse({ startAt: ISO, endAt: ISO2 });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts slot with title", () => {
+    const result = BusySlotSchema.safeParse({
+      startAt: ISO,
+      endAt: ISO2,
+      title: "定例MTG",
+    });
     expect(result.success).toBe(true);
   });
 

@@ -33,6 +33,12 @@ export const BAND_META: Record<
     border: "#F79009",
     text: "#93370D",
   },
+  busy: {
+    label: "予定",
+    fill: "#E5E7EB", // グレー（塗り）— カレンダー予定で埋まっている
+    border: "#6B7280",
+    text: "#374151",
+  },
 };
 
 /** 時間軸の目盛り 1 つ */

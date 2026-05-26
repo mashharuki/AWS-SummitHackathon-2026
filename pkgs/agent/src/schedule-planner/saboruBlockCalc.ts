@@ -172,6 +172,17 @@ export function calcSchedule(params: {
     }
   }
 
+  // カレンダー予定を busy ブロックとしてガントに可視化する（避けるだけでなく見せる）。
+  // 窓内にかかる予定を、title 付きで busy バンドとして追加する。
+  let busySeq = 0;
+  for (const slot of busySlots) {
+    const slotStart = Math.max(new Date(slot.startAt).getTime(), windowStart);
+    const slotEnd = Math.min(new Date(slot.endAt).getTime(), windowEnd);
+    if (slotEnd > slotStart) {
+      blocks.push(buildBusyBlock(busySeq++, slotStart, slotEnd, slot.title));
+    }
+  }
+
   // 時系列順にソート（はみ出しステップを正しい位置へ）
   blocks.sort(
     (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
@@ -205,6 +216,27 @@ function buildSaboruBlock(
     stepId: `saboru_${seq}`,
     stepLabel: "さぼろう",
     bandType: "saboru",
+    startAt: toIso(startMs),
+    endAt: toIso(endMs),
+    durationMinutes: Math.round((endMs - startMs) / MS_PER_MIN),
+  };
+}
+
+/**
+ * カレンダー予定の busy ブロックを作る。
+ * stepLabel には予定名（title）を使い、無ければ「予定」と表示する。
+ */
+function buildBusyBlock(
+  seq: number,
+  startMs: number,
+  endMs: number,
+  title?: string,
+): ScheduleBlock {
+  const label = title?.trim() || "予定";
+  return {
+    stepId: `busy_${seq}`,
+    stepLabel: label,
+    bandType: "busy",
     startAt: toIso(startMs),
     endAt: toIso(endMs),
     durationMinutes: Math.round((endMs - startMs) / MS_PER_MIN),

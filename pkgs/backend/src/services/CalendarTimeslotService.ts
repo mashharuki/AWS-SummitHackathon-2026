@@ -4,9 +4,11 @@
  * 3 バンドガントチャート機能のため、Google Calendar の予定を
  * 「時間区間（busy slot）」として取得する。
  *
- * PII 保護方針（DP-04 踏襲）:
- * - 予定タイトル（summary）・説明は一切読まない・保持しない・永続化しない。
- * - 開始/終了時刻（startAt / endAt）のみを返す。
+ * PII 保護方針（DP-04 踏襲・一部緩和）:
+ * - 予定の説明（description）は読まない。
+ * - 予定名（summary）はガント表示のため title として返すが、揮発データとしてのみ扱い、
+ *   DynamoDB には永続化しない（レスポンスで使い、保存はしない）。
+ * - 開始/終了時刻（startAt / endAt）と予定名（title）を返す。
  *
  * 設計:
  * - アクセストークンは呼び出し元（route）が GoogleTokenService で取得して渡す。
@@ -54,12 +56,23 @@ function allDayDateToSlot(
   };
 }
 
+/** title を付与して BusySlot を組み立てる（title が空なら省略） */
+function withTitle(
+  slot: { startAt: string; endAt: string },
+  summary?: string,
+): BusySlot {
+  const title = summary?.trim();
+  return title ? { ...slot, title } : slot;
+}
+
 /**
  * 予定 1 件の start / end から BusySlot を算出する。
  * dateTime（時刻あり）を優先し、なければ date（終日）を時間区間化する。
+ * 予定名（summary）は title として付与する（揮発・永続化しない）。
  * start / end のいずれかが取れない予定は null（呼び出し側でスキップ）。
  */
 function toBusySlot(item: {
+  summary?: string;
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
 }): BusySlot | null {
@@ -67,7 +80,10 @@ function toBusySlot(item: {
   const startDateTime = item.start?.dateTime;
   const endDateTime = item.end?.dateTime;
   if (startDateTime && endDateTime) {
-    return { startAt: startDateTime, endAt: endDateTime };
+    return withTitle(
+      { startAt: startDateTime, endAt: endDateTime },
+      item.summary,
+    );
   }
 
   // 終日予定（date のみ）を時間区間に変換する
@@ -80,7 +96,10 @@ function toBusySlot(item: {
       // 終了日（exclusive な date）も 0 時起点で扱う。
       // 単日終日予定は start=当日0時, end=翌日0時 のように Google が返すため、
       // start の startAt と end の startAt をそのまま使う。
-      return { startAt: startSlot.startAt, endAt: endSlot.startAt };
+      return withTitle(
+        { startAt: startSlot.startAt, endAt: endSlot.startAt },
+        item.summary,
+      );
     }
   }
 
@@ -95,10 +114,13 @@ function toBusySlot(item: {
       ? new Date(endStr).getTime()
       : new Date(`${endStr}T00:00:00.000Z`).getTime();
     if (!Number.isNaN(startMs) && !Number.isNaN(endMs)) {
-      return {
-        startAt: new Date(startMs).toISOString(),
-        endAt: new Date(endMs).toISOString(),
-      };
+      return withTitle(
+        {
+          startAt: new Date(startMs).toISOString(),
+          endAt: new Date(endMs).toISOString(),
+        },
+        item.summary,
+      );
     }
   }
 
@@ -150,9 +172,11 @@ export class CalendarTimeslotService {
       );
     }
 
-    // items の start/end のみを参照する。summary / description は読まない（PII 保護）。
+    // items の start/end/summary を参照する。description は読まない（PII 保護）。
+    // summary（予定名）はガント表示用に title として返すが永続化しない。
     const data = (await response.json()) as {
       items?: Array<{
+        summary?: string;
         start?: { dateTime?: string; date?: string };
         end?: { dateTime?: string; date?: string };
       }>;
