@@ -139,14 +139,14 @@ export function buildRows(schedule: SaboriSchedule): GanttRowData[] {
 
   const rows: GanttRowData[] = [];
 
-  // 最上段: さぼろう（ブロックがある場合のみ行を作る）
-  if (saboruBlocks.length > 0) {
-    rows.push({
-      stepLabel: "さぼろう",
-      bandType: "saboru",
-      blocks: saboruBlocks,
-    });
-  }
+  // 最上段: さぼろう行は常にトップに置く（ブロックが無くても空レーンを表示）。
+  // 「さぼろう」は SABOROU の主役なので、当日にさぼり時間が無くても
+  // レーン自体は常に見せて存在を示す。
+  rows.push({
+    stepLabel: "さぼろう",
+    bandType: "saboru",
+    blocks: saboruBlocks,
+  });
 
   // 作業ステップ: stepLabel ごとに1行（出現順を維持）
   const seen = new Map<string, GanttRowData>();

@@ -2,6 +2,7 @@ import { GanttChart } from "@/components/gantt/GanttChart";
 import { useGanttSchedule } from "@/hooks/useGanttSchedule";
 import { buildDummySchedule } from "@/lib/ganttLayout";
 import { calcGanttGrade } from "@/lib/ganttScoringUtils";
+import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -25,7 +26,7 @@ export function GanttPanel({
   className,
 }: GanttPanelProps) {
   const { t } = useTranslation();
-  const { schedule, isLoading } = useGanttSchedule(taskId);
+  const { schedule, isLoading, reload } = useGanttSchedule(taskId);
 
   // 取得中はローディング、未取得/失敗ならダミーで常時表示（空にしない）
   const effective = schedule ?? buildDummySchedule(taskId);
@@ -71,6 +72,21 @@ export function GanttPanel({
           >
             {grade.grade}
           </span>
+          {/* 手動再計算: 今のカレンダー状況で組み直す（普段はキャッシュ表示） */}
+          <button
+            type="button"
+            onClick={reload}
+            disabled={isLoading}
+            aria-label="スケジュールを再計算"
+            title="今のカレンダー状況でスケジュールを組み直す"
+            className="ml-1 w-7 h-7 flex items-center justify-center rounded-md border-2 border-saboru-heavy text-saboru-ink hover:bg-saboru-line-soft disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw
+              size={14}
+              className={isLoading ? "animate-spin" : undefined}
+              aria-hidden="true"
+            />
+          </button>
         </div>
       </div>
       {!effective.calendarUsed && (

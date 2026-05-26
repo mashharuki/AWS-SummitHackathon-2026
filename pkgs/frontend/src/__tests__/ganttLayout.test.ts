@@ -138,10 +138,13 @@ describe("buildRows", () => {
     expect(rows[0].stepLabel).toBe("さぼろう");
   });
 
-  it("さぼろうブロックが無ければさぼろう行を作らない", () => {
+  it("さぼろうブロックが無くても、さぼろう行を常にトップに置く（空レーン）", () => {
     const rows = buildRows(makeSchedule([block("s1", "work", 0, 30, "作業A")]));
-    expect(rows.every((r) => r.bandType !== "saboru")).toBe(true);
-    expect(rows).toHaveLength(1);
+    expect(rows[0].bandType).toBe("saboru");
+    expect(rows[0].stepLabel).toBe("さぼろう");
+    expect(rows[0].blocks).toHaveLength(0);
+    // さぼろう行 + 作業A行
+    expect(rows).toHaveLength(2);
   });
 
   it("複数さぼろうブロックを1行に集約する", () => {

@@ -1,8 +1,9 @@
 import { GanttPanel } from "@/components/gantt/GanttPanel";
+import { __clearGanttScheduleCache } from "@/hooks/useGanttSchedule";
 import apiClient from "@/lib/apiClient";
 import type { SaboriSchedule } from "@saboru/shared";
-import { render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const VIEW_START = "2026-05-24T05:00:00.000Z";
 const VIEW_END = "2026-05-24T08:00:00.000Z";
@@ -38,6 +39,11 @@ function makeSchedule(calendarUsed: boolean): SaboriSchedule {
     calendarUsed,
   };
 }
+
+beforeEach(() => {
+  // taskId 単位のセッションキャッシュをテスト間で持ち越さない
+  __clearGanttScheduleCache();
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -89,5 +95,43 @@ describe("GanttPanel", () => {
     expect(
       screen.queryByText(/カレンダー未連携のためサンプル配置/),
     ).not.toBeInTheDocument();
+  });
+
+  it("再マウント時はキャッシュから即表示し、再取得（再推論）しない", async () => {
+    // タブ切替でアンマウント→再マウントを再現する。
+    const spy = vi
+      .spyOn(apiClient, "getSchedule")
+      .mockResolvedValue(makeSchedule(true));
+
+    // 1回目のマウント: 取得が走る
+    const { unmount } = render(<GanttPanel taskId="t1" reasoningCount={3} />);
+    await waitFor(() => {
+      expect(screen.getByText("資料作成")).toBeInTheDocument();
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    // 別タブへ移動 = アンマウント
+    unmount();
+
+    // ガントタブへ戻る = 再マウント。キャッシュヒットで即表示・再取得しない
+    render(<GanttPanel taskId="t1" reasoningCount={3} />);
+    expect(screen.getByText("資料作成")).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledTimes(1); // 2回目は呼ばれない
+  });
+
+  it("再計算ボタンを押すとキャッシュを無視して再取得する", async () => {
+    const spy = vi
+      .spyOn(apiClient, "getSchedule")
+      .mockResolvedValue(makeSchedule(true));
+    render(<GanttPanel taskId="t1" reasoningCount={3} />);
+    await waitFor(() => {
+      expect(screen.getByText("資料作成")).toBeInTheDocument();
+    });
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByLabelText("スケジュールを再計算"));
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledTimes(2); // 手動再計算で再取得
+    });
   });
 });
