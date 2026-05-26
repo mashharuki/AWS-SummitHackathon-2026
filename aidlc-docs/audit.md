@@ -2,6 +2,14 @@
 
 ---
 
+## UPDATE-PLAN — 3バンドガントチャート + ゲーミフィケーション土台再編 計画書作成
+**Timestamp**: 2026-05-26T00:00:00Z
+**User Input**: "SABOROU（AWS Summit Japan 2026 ハッカソン作品 / pnpm モノレポ）に「3バンドガントチャート」機能を追加し、それを軸にゲーミフィケーションをプロダクトの土台として再編する大型改修の AI-DLC 実装計画書を作成してください。コードはまだ書かず、計画書（aidlc-docs/ 配下）の作成と Unit 分解までを行ってください。[背景・確定済みの方針: ピッチの中核UX「3バンドガント」が現実装に存在しない。ガントをゲーム盤面にする（3バンド構成・さぼろう帯・色: 緑=さぼろう/白枠=作業/黄=意思決定・青点線NOWライン・締切ライン）。さぼれた時間×根拠の質→スコア/グレード/演出連動。既存ゲーム資産は全て残す。世界観はゲームっぽく賑やか・バッジ/メーター/アイコンから押下して開く体験に再編。各タスクごとガント表示（タスク詳細ページ）。PC3ペイン（左:タスク文脈+判定/中央:ガント盤面/右:チャット）・スマホタブ切替縦圧縮。カレンダー連携制約: スケジュール生成API実行時にevents.listを呼び時間区間をLLM入力に使ってレスポンス後に破棄（PII方針維持）。スケジュール生成: 新規SchedulePlannerAgent（Bedrock Tool Use・saboriJudgmentTool踏襲・Zod二重検証）・さぼろう帯は決定論的算出・GET /api/tasks/:id/schedule新設。計画書に含めること: Unit分解/データモデル設計案/Bedrockツールスキーマ案/ガントゲーム盤面化数値設計/UI再編設計PC・スマホ/実装順序・マイルストーン/品質ゲート/リスクと未確定事項。]"
+**AI Response**: update-plan-20260526-gantt-gamification.md を aidlc-docs/update-plans/ に作成。Unit分解（U-G01〜U-G09の9Unit）・データモデル設計・Bedrockツールスキーマ・ゲーム数値設計・UI再編配置表・実装順序・品質ゲート・リスク一覧を記載。aidlc-state.md に更新計画エントリを追記。
+**Context**: UPDATE-PLAN作成 / 3バンドガントチャート + ゲーミフィケーション再編 / コード生成前の計画フェーズ
+
+---
+
 ## CONSTRUCTION — U-08 passkey-auth 設計・実装
 **Timestamp**: 2026-05-24T05:30:00Z
 **User Input**: "SABOROU の機能改修バックログ **項目8（G: パスキー認証）** を、AI-DLC の新 Unit **U-08: passkey-auth** として設計・実装してください。**現在のブランチ `feature/google-integration`（PR #39）にそのまま追加コミットする**（Fと同じPRに乗せる）。[確定方針: パスキーを追加し、パスワード認証はフォールバックとして残す。技術制約: Cognito Essentials フィーチャープラン必須、choice-based 認証 + マネージドログイン、WebAuthn RP ID = CloudFront ドメイン。CDK synth 成功・全テスト維持が必須条件。まだコミットはしない。]"

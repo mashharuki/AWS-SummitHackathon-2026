@@ -4,8 +4,8 @@
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
 - **プロジェクトタイプ**: Greenfield（新規）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: コードレビュー完了 + 修正適用済み（2026-05-17T21:57:00Z）。19件 Critical・主要 Warning 全修正・Lean 4 形式検証完了。517テスト全パス。次は OPERATIONS フェーズ（CDK デプロイ）
-- **ドキュメントバージョン**: v2.2.0（2026-05-17 コードレビュー修正・形式検証反映）
+- **現在のステージ**: UPDATE-PLAN 作成完了（2026-05-26T00:00:00Z）。3バンドガントチャート + ゲーミフィケーション土台再編 計画書作成済み。Unit U-G01〜U-G09 定義完了。コード生成前の計画フェーズ。
+- **ドキュメントバージョン**: v2.3.0（2026-05-26 ガント+ゲーミフィケーション再編計画追記）
 
 ## ワークスペース状態
 - **既存コード**: なし
@@ -158,6 +158,18 @@
 - [x] CDK操作ガイド（aidlc-docs/operations/cdk-operations.md）
 - [x] バックエンド操作ガイド（aidlc-docs/operations/backend-operations.md）
 - [x] フロントエンド操作ガイド（aidlc-docs/operations/frontend-operations.md）
+
+### UPDATE-PLAN: 3バンドガントチャート + ゲーミフィケーション土台再編（2026-05-26〜）
+- [x] 計画書作成（aidlc-docs/update-plans/update-plan-20260526-gantt-gamification.md）
+- [ ] U-G01: shared-schedule-types（pkgs/shared）
+- [ ] U-G02: calendar-timeslot-route（pkgs/backend）
+- [ ] U-G03: schedule-planner-agent（pkgs/agent）
+- [ ] U-G04: schedule-api-endpoint（pkgs/backend）
+- [ ] U-G05: gantt-chart-component（pkgs/frontend）
+- [ ] U-G06: gantt-game-score-logic（pkgs/frontend）
+- [ ] U-G07: ui-primitives（pkgs/frontend）
+- [ ] U-G08: task-detail-3pane（pkgs/frontend）
+- [ ] U-G09: tests-and-integration（全pkgs）
 
 ## Extension 設定
 - **Security Baseline**: 無効（Q23=B — PoC・プロトタイプ扱い。基本セキュリティは実装する）
