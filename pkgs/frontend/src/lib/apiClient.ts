@@ -5,6 +5,8 @@
  */
 import type {
   Proposal,
+  SaboriSchedule,
+  ScheduleApiResponse,
   ServiceConnection,
   Task,
   TaskCandidate,
@@ -231,6 +233,21 @@ export async function getProposal(taskId: string): Promise<Proposal | null> {
   }
 }
 
+/** GET /api/tasks/:id/schedule（3バンドガント用スケジュール取得） */
+export async function getSchedule(
+  taskId: string,
+): Promise<SaboriSchedule | null> {
+  try {
+    const res = await request<ScheduleApiResponse>(
+      `/api/tasks/${taskId}/schedule`,
+    );
+    return res.schedule;
+  } catch (err) {
+    if (err instanceof ApiError && err.isNotFound()) return null;
+    throw err;
+  }
+}
+
 /** POST /api/tasks/:id/honne（本音フィードバック送信） */
 export async function submitHonne(
   taskId: string,
@@ -410,6 +427,7 @@ export default {
   deleteTask,
   createTask,
   getProposal,
+  getSchedule,
   submitHonne,
   getConnections,
   getSlackAuthUrl,
