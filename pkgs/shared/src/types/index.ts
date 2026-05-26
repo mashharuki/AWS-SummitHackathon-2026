@@ -19,3 +19,19 @@ export type { Task } from "./task";
 export type { Proposal, PsychSignals, SignalLevel } from "./proposal";
 export type { HonneData } from "./honne-data";
 export type { Persona } from "./persona";
+
+// Schedule (gantt) — types + zod schemas
+export {
+  BandTypeSchema,
+  BusySlotSchema,
+  ScheduleBlockSchema,
+  SaboriScheduleSchema,
+  ScheduleApiResponseSchema,
+} from "./schedule";
+export type {
+  BandType,
+  BusySlot,
+  ScheduleBlock,
+  SaboriSchedule,
+  ScheduleApiResponse,
+} from "./schedule";
