@@ -262,10 +262,19 @@ describe("DynamoTaskCandidateRepository.approve", () => {
         durationMinutes: 45,
         bandType: "work" as const,
       },
+      {
+        stepId: "s2",
+        stepLabel: "上司確認",
+        durationMinutes: 10,
+        bandType: "decision" as const,
+        decisionAt: "2026-05-24T07:00:00.000Z",
+      },
     ];
     const task = await repo.approve("user1", "01CAND", { plannedSteps });
 
+    // decisionAt を含むステップがそのまま Task に保存される
     expect(task.plannedSteps).toEqual(plannedSteps);
+    expect(task.plannedSteps?.[1]?.decisionAt).toBe("2026-05-24T07:00:00.000Z");
     // marshall された Put item に plannedSteps (List) が含まれる
     expect(putItem?.plannedSteps).toBeDefined();
   });

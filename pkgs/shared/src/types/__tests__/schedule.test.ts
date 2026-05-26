@@ -109,6 +109,31 @@ describe("ScheduleStepSchema", () => {
       ScheduleStepSchema.safeParse({ ...validStep, stepId: "" }).success,
     ).toBe(false);
   });
+
+  it("accepts decision step with decisionAt (ISO time anchor)", () => {
+    expect(
+      ScheduleStepSchema.safeParse({
+        ...validStep,
+        bandType: "decision",
+        decisionAt: "2026-05-24T16:00:00.000Z",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts step without decisionAt (optional)", () => {
+    const result = ScheduleStepSchema.safeParse(validStep);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.decisionAt).toBeUndefined();
+    }
+  });
+
+  it("rejects non-ISO decisionAt", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, decisionAt: "16:00" })
+        .success,
+    ).toBe(false);
+  });
 });
 
 describe("ScheduleBlockSchema", () => {

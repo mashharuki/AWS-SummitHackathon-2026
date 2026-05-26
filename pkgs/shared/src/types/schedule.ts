@@ -55,10 +55,21 @@ export const ScheduleStepSchema = z.object({
   stepId: z.string().min(1).max(30),
   /** ステップ表示名（最大60文字。例:「議事録を文字起こし」） */
   stepLabel: z.string().min(1).max(60),
-  /** 所要時間（分、5〜480） */
+  /** 所要時間（分、5〜480）。work は実所要時間。decision は固定枠（描画用）。 */
   durationMinutes: z.number().int().min(5).max(480),
   /** バンド種別。work=手を動かす作業 / decision=判断・確認が必要な工程 */
   bandType: z.enum(["work", "decision"]),
+  /**
+   * 意思決定の実施時刻（ISO 8601）。decision ステップにのみ意味を持つ。
+   *
+   * SABOROU の思想: 意思決定は「何分かかるか」ではなく「何時に行うか」で決まる
+   * （例: 上司に16:00報告 / 田中さんに16:20確認依頼）。この時刻が時間軸上の
+   * アンカー（サブ締切）となり、手前の作業は逆算配置され、それまではサボれる。
+   *
+   * AI（Bedrock）が締切から逆算して提案し、ユーザーが承認モーダルで上書きできる。
+   * work ステップでは通常 undefined。
+   */
+  decisionAt: z.string().datetime().optional(),
   /** このステップが必要な理由（任意、最大200文字） */
   rationale: z.string().max(200).optional(),
 });

@@ -25,12 +25,46 @@ const DEFAULT_MINUTES = 30;
 interface StepEditorProps {
   steps: ScheduleStep[];
   onChange: (steps: ScheduleStep[]) => void;
+  /**
+   * decision の時刻（decisionAt）を組み立てる基準日（ISO）。
+   * 通常はタスクの締切日。time 入力（HH:MM）と組み合わせて ISO を作る。
+   */
+  baseDateIso?: string | null;
   /** Bedrock 下書き生成中 */
   isLoading?: boolean;
   /** 下書き生成に失敗したか */
   hasError?: boolean;
   /** 再生成ボタン押下時（任意。未指定なら再生成ボタンを出さない） */
   onRetry?: () => void;
+}
+
+/** ISO 8601 → time input 用 "HH:MM"（ローカル時刻）。無効なら空文字。 */
+function isoToTimeInput(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+/**
+ * time input "HH:MM" を、基準日（baseDateIso）と組み合わせて ISO 8601 にする。
+ * baseDateIso が無ければ今日の日付を使う。HH:MM が空/不正なら undefined。
+ */
+function timeInputToIso(
+  time: string,
+  baseDateIso: string | null | undefined,
+): string | undefined {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!m) return undefined;
+  const hours = Number(m[1]);
+  const minutes = Number(m[2]);
+  if (hours > 23 || minutes > 59) return undefined;
+  const base = baseDateIso ? new Date(baseDateIso) : new Date();
+  if (Number.isNaN(base.getTime())) return undefined;
+  base.setHours(hours, minutes, 0, 0);
+  return base.toISOString();
 }
 
 /** 新規ステップのデフォルト値。stepId はクライアント側で一意採番する。 */
@@ -46,6 +80,7 @@ function makeNewStep(index: number): ScheduleStep {
 export function StepEditor({
   steps,
   onChange,
+  baseDateIso,
   isLoading = false,
   hasError = false,
   onRetry,
@@ -115,6 +150,7 @@ export function StepEditor({
           <StepRow
             key={step.stepId}
             step={step}
+            baseDateIso={baseDateIso}
             onPatch={(patch) => updateStep(index, patch)}
             onRemove={() => removeStep(index)}
           />
@@ -139,30 +175,30 @@ export function StepEditor({
 
 interface StepRowProps {
   step: ScheduleStep;
+  baseDateIso?: string | null;
   onPatch: (patch: Partial<ScheduleStep>) => void;
   onRemove: () => void;
 }
 
 /**
- * StepRow — ステップ1行。所要時間の入力は編集途中の空文字を許容するため
- * ローカル文字列 state で管理し、blur 時に 5〜480 へ正規化して親へ確定する。
- * （onChange で即クランプすると「数字を全部消すと 5 になり消せない」UX になるため）
+ * StepRow — ステップ1行。
+ * - work: 所要時間（分）を入力。編集途中の空文字を許容するためローカル文字列 state で
+ *   管理し、blur 時に 5〜480 へ正規化して親へ確定する。
+ * - decision: 「何時に行うか」（decisionAt）を time 入力で指定する。SABOROU の思想に沿い
+ *   意思決定は所要時間ではなく時刻アンカーとして扱う。
  */
-function StepRow({ step, onPatch, onRemove }: StepRowProps) {
+function StepRow({ step, baseDateIso, onPatch, onRemove }: StepRowProps) {
   const { t } = useTranslation();
   // 分入力の生文字列。空文字や編集途中の値をそのまま保持できる。
   const [minutesText, setMinutesText] = useState(String(step.durationMinutes));
 
-  // 親の値が外から変わったら（再生成など）入力欄に同期する。
-  // durationMinutes はこの行以外の操作では変わらないため、値が変わったときのみ追従する。
+  // 親の durationMinutes が外から変わったら入力欄に同期する。
   useEffect(() => {
     setMinutesText(String(step.durationMinutes));
   }, [step.durationMinutes]);
 
   const handleMinutesChange = (raw: string) => {
     setMinutesText(raw);
-    // 有効な数値がそのまま範囲内なら即座に親へ反映（プレビュー追従）。
-    // 空・範囲外・編集途中はここでは確定せず、blur で正規化する。
     const n = Number.parseInt(raw, 10);
     if (!Number.isNaN(n) && n >= MIN_MINUTES && n <= MAX_MINUTES) {
       onPatch({ durationMinutes: n });
@@ -179,12 +215,32 @@ function StepRow({ step, onPatch, onRemove }: StepRowProps) {
 
   const isDecision = step.bandType === "decision";
 
+  // 作業⇄判断トグル。判断にするとき decisionAt が無ければ初期値を入れる。
+  const handleToggleKind = () => {
+    if (isDecision) {
+      onPatch({ bandType: "work" });
+    } else {
+      const patch: Partial<ScheduleStep> = { bandType: "decision" };
+      if (!step.decisionAt) {
+        // 既定の時刻提案: 基準日の 17:00（無ければ今日の17:00）。ユーザーが調整する。
+        const fallback = timeInputToIso("17:00", baseDateIso);
+        if (fallback) patch.decisionAt = fallback;
+      }
+      onPatch(patch);
+    }
+  };
+
+  const handleDecisionTimeChange = (time: string) => {
+    const iso = timeInputToIso(time, baseDateIso);
+    if (iso) onPatch({ decisionAt: iso });
+  };
+
   return (
     <li className="flex items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white p-2">
       {/* 作業 / 判断 トグル */}
       <button
         type="button"
-        onClick={() => onPatch({ bandType: isDecision ? "work" : "decision" })}
+        onClick={handleToggleKind}
         className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold transition-colors"
         style={
           isDecision
@@ -212,24 +268,40 @@ function StepRow({ step, onPatch, onRemove }: StepRowProps) {
         aria-label={t("approvalModal.stepLabelPlaceholder")}
       />
 
-      {/* 所要時間（分） */}
-      <div className="flex shrink-0 items-center gap-1">
-        <Input
-          type="number"
-          inputMode="numeric"
-          value={minutesText}
-          onChange={(e) => handleMinutesChange(e.target.value)}
-          onBlur={handleMinutesBlur}
-          min={MIN_MINUTES}
-          max={MAX_MINUTES}
-          step={5}
-          className="h-9 w-16 text-center"
-          aria-label={t("approvalModal.stepMinutes")}
-        />
-        <span className="text-[10px] text-[#9CA3AF]">
-          {t("approvalModal.stepMinutes")}
-        </span>
-      </div>
+      {isDecision ? (
+        /* 意思決定: 何時に行うか（decisionAt） */
+        <div className="flex shrink-0 items-center gap-1">
+          <Input
+            type="time"
+            value={isoToTimeInput(step.decisionAt)}
+            onChange={(e) => handleDecisionTimeChange(e.target.value)}
+            className="h-9 w-24"
+            aria-label={t("approvalModal.stepDecisionAt")}
+          />
+          <span className="text-[10px] text-[#9CA3AF]">
+            {t("approvalModal.stepDecisionBy")}
+          </span>
+        </div>
+      ) : (
+        /* 作業: 所要時間（分） */
+        <div className="flex shrink-0 items-center gap-1">
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={minutesText}
+            onChange={(e) => handleMinutesChange(e.target.value)}
+            onBlur={handleMinutesBlur}
+            min={MIN_MINUTES}
+            max={MAX_MINUTES}
+            step={5}
+            className="h-9 w-16 text-center"
+            aria-label={t("approvalModal.stepMinutes")}
+          />
+          <span className="text-[10px] text-[#9CA3AF]">
+            {t("approvalModal.stepMinutes")}
+          </span>
+        </div>
+      )}
 
       {/* 削除 */}
       <button

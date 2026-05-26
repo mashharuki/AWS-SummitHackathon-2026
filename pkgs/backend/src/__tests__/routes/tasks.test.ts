@@ -57,8 +57,10 @@ const sampleSteps = [
   {
     stepId: "s2",
     stepLabel: "上司へ確認依頼",
-    durationMinutes: 15,
+    durationMinutes: 10,
     bandType: "decision" as const,
+    // 意思決定は時刻アンカー（decisionAt）を持つ
+    decisionAt: "2026-05-24T07:00:00.000Z",
   },
 ];
 

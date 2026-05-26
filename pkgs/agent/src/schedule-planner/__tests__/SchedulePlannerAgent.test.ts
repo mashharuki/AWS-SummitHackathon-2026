@@ -146,25 +146,29 @@ describe("SchedulePlannerAgent.plan", () => {
     expect(schedule.viewEndAt).toBe("2026-05-24T08:00:00.000Z");
   });
 
-  it("カレンダー busy を避けて配置し calendarUsed=true を反映する", async () => {
+  it("カレンダー busy を避けて後ろ詰め配置し calendarUsed=true を反映する", async () => {
     const agent = new SchedulePlannerAgent(
       new MockBedrockClient(makeToolResponse(validSteps)),
     );
+    // 締切 08:00。後ろ詰めなら締切直前に作業が来るので、締切直前(07:30-08:00)を
+    // busy にすると、作業はそれを避けて手前へ詰められる。
     const schedule = await agent.plan({
       task: makeTask(),
       busySlots: [
         {
-          startAt: "2026-05-24T05:00:00.000Z",
-          endAt: "2026-05-24T05:30:00.000Z",
+          startAt: "2026-05-24T07:30:00.000Z",
+          endAt: "2026-05-24T08:00:00.000Z",
         },
       ],
       calendarUsed: true,
       now: NOW,
     });
     expect(schedule.calendarUsed).toBe(true);
+    // s2 は busy(07:30-08:00) を避け、その手前 07:00-07:30 に。s1 は 06:30-07:00。
+    const s2 = schedule.blocks.find((b) => b.stepId === "s2");
+    expect(s2?.endAt).toBe("2026-05-24T07:30:00.000Z");
     const s1 = schedule.blocks.find((b) => b.stepId === "s1");
-    // busy(0-30) を避け、s1 は 05:30 から
-    expect(s1?.startAt).toBe("2026-05-24T05:30:00.000Z");
+    expect(s1?.endAt).toBe("2026-05-24T07:00:00.000Z");
   });
 
   it("now 省略時は現在時刻を使う", async () => {
@@ -243,6 +247,40 @@ describe("SchedulePlannerAgent.plan", () => {
     expect(work.map((b) => b.stepId)).toEqual(["u1", "u2"]);
     // 窓 180 分 - 作業 60 分 = 120 分のさぼろう
     expect(schedule.totalSaboruMinutes).toBe(120);
+  });
+
+  it("confirmed な decision(decisionAt付き) は時刻アンカーに固定される", async () => {
+    const agent = new SchedulePlannerAgent(new ThrowingBedrockClient());
+    const schedule = await agent.plan({
+      task: makeTask({
+        // 締切 08:00（now+3h）。確認を 07:00 に固定、その手前に作業。
+        plannedSteps: [
+          {
+            stepId: "u1",
+            stepLabel: "初稿",
+            durationMinutes: 30,
+            bandType: "work",
+          },
+          {
+            stepId: "u2",
+            stepLabel: "上司確認",
+            durationMinutes: 10,
+            bandType: "decision",
+            decisionAt: "2026-05-24T07:00:00.000Z",
+          },
+        ],
+      }),
+      busySlots: [],
+      calendarUsed: false,
+      now: NOW,
+    });
+    const u2 = schedule.blocks.find((b) => b.stepId === "u2");
+    // decision は 07:00 に固定（10分枠）
+    expect(u2?.startAt).toBe("2026-05-24T07:00:00.000Z");
+    expect(u2?.bandType).toBe("decision");
+    const u1 = schedule.blocks.find((b) => b.stepId === "u1");
+    // 作業は decision(07:00) の直前へ後ろ詰め → 06:30-07:00
+    expect(u1?.endAt).toBe("2026-05-24T07:00:00.000Z");
   });
 
   it("plannedSteps が空配列なら従来通り Bedrock で分解する（後方互換）", async () => {
@@ -330,6 +368,38 @@ describe("SchedulePlannerAgent.generateStepDraft", () => {
         description: "y",
       }),
     ).rejects.toThrow(/schema validation/);
+  });
+
+  it("decision の decisionAt を保持して返す", async () => {
+    const withDecision = {
+      steps: [
+        {
+          stepId: "s1",
+          stepLabel: "初稿を起こす",
+          durationMinutes: 45,
+          bandType: "work",
+        },
+        {
+          stepId: "d1",
+          stepLabel: "上司へ確認",
+          durationMinutes: 10,
+          bandType: "decision",
+          decisionAt: "2026-05-24T07:00:00.000Z",
+        },
+      ],
+    };
+    const agent = new SchedulePlannerAgent(
+      new MockBedrockClient(makeToolResponse(withDecision)),
+    );
+    const steps = await agent.generateStepDraft({
+      title: "提案資料",
+      deadline: "2026-05-24T08:00:00.000Z",
+      description: "初稿を作って上司確認",
+      now: NOW,
+    });
+    const d1 = steps.find((s) => s.stepId === "d1");
+    expect(d1?.decisionAt).toBe("2026-05-24T07:00:00.000Z");
+    expect(d1?.bandType).toBe("decision");
   });
 });
 

@@ -35,8 +35,9 @@ const draftSteps: ScheduleStep[] = [
   {
     stepId: "s2",
     stepLabel: "上司へ確認依頼",
-    durationMinutes: 15,
+    durationMinutes: 10,
     bandType: "decision",
+    decisionAt: "2026-05-26T07:00:00.000Z",
   },
 ];
 
@@ -346,5 +347,81 @@ describe("TaskApprovalModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "確定して承認" }));
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0][1].plannedSteps[0].durationMinutes).toBe(90);
+  });
+
+  it("意思決定ステップは所要分ではなく時刻（time）入力を表示する", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[1]]);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={() => {}}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("上司へ確認依頼")).toBeInTheDocument();
+    });
+    // decision 行には時刻入力があり、分入力は無い
+    const timeInput = screen.getByLabelText("意思決定の時刻");
+    expect(timeInput).toHaveProperty("type", "time");
+    expect(screen.queryByLabelText("分")).not.toBeInTheDocument();
+  });
+
+  it("意思決定の時刻を変更すると decisionAt が overrides に反映される", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[1]]);
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("上司へ確認依頼")).toBeInTheDocument();
+    });
+
+    const timeInput = screen.getByLabelText("意思決定の時刻");
+    fireEvent.change(timeInput, { target: { value: "15:30" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "確定して承認" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    const step = onConfirm.mock.calls[0][1].plannedSteps[0];
+    expect(step.bandType).toBe("decision");
+    // decisionAt は ISO で、ローカル15:30 を指す
+    const d = new Date(step.decisionAt);
+    expect(d.getHours()).toBe(15);
+    expect(d.getMinutes()).toBe(30);
+  });
+
+  it("作業→判断トグルで decisionAt の初期値が入る", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue([draftSteps[0]]);
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("初稿を起こす")).toBeInTheDocument();
+    });
+
+    // work → decision
+    const list = screen.getByRole("list");
+    fireEvent.click(within(list).getByRole("button", { name: "作業" }));
+    // 時刻入力が出る
+    expect(screen.getByLabelText("意思決定の時刻")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "確定して承認" }));
+    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    const step = onConfirm.mock.calls[0][1].plannedSteps[0];
+    expect(step.bandType).toBe("decision");
+    // 初期 decisionAt が設定されている
+    expect(step.decisionAt).toBeTruthy();
   });
 });

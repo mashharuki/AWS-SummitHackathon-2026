@@ -25,6 +25,8 @@ export interface StepDraftInput {
   title: string;
   deadline: string | null;
   description: string;
+  /** 現在時刻 ISO（decisionAt 提案の基準。省略時は実行時の現在時刻） */
+  now?: string;
   /** ログ用の識別子（候補 ID / タスク ID のいずれか。任意） */
   refId?: string;
 }
@@ -78,6 +80,7 @@ export class SchedulePlannerAgent {
           title: task.title,
           deadline: task.deadline,
           description: task.description,
+          now,
           refId: task.taskId,
         });
 
@@ -134,7 +137,7 @@ export class SchedulePlannerAgent {
    * 失敗時は Error を投げる（呼び出し側でハンドリングする）。
    */
   async generateStepDraft(input: StepDraftInput): Promise<ScheduleStep[]> {
-    const todayIso = new Date().toISOString().slice(0, 10);
+    const nowIso = input.now ?? toIsoString(new Date());
     const deadlineText = input.deadline
       ? `締切: ${input.deadline}`
       : "締切: 未定";
@@ -154,8 +157,10 @@ export class SchedulePlannerAgent {
           content: [
             {
               text: [
-                `今日は ${todayIso}（Asia/Tokyo）です。`,
+                `現在時刻は ${nowIso}（Asia/Tokyo）です。`,
                 "次のタスクを作業ステップに分解してください。",
+                "意思決定（decision）には decisionAt（ISO 8601 の時刻）を、",
+                "現在時刻より後・締切より前で提案してください。",
                 "",
                 `タイトル: ${safeTitle}`,
                 deadlineText,

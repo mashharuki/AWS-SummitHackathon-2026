@@ -279,6 +279,10 @@ export function TaskApprovalModal({
             <StepEditor
               steps={steps}
               onChange={setSteps}
+              // decision の時刻は締切と同じ日に置く（編集中の締切を優先）。
+              baseDateIso={
+                deadline ? new Date(deadline).toISOString() : candidate.deadline
+              }
               isLoading={stepsLoading}
               hasError={stepsError}
               onRetry={handleRetry}

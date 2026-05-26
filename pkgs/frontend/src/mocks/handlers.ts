@@ -147,8 +147,9 @@ export const handlers = [
         {
           stepId: "s2",
           stepLabel: "上司へ確認依頼",
-          durationMinutes: 15,
+          durationMinutes: 10,
           bandType: "decision",
+          decisionAt: "2026-05-24T07:00:00.000Z",
           rationale: "方針確認が必要",
         },
       ],

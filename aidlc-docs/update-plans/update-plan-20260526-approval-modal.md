@@ -361,3 +361,39 @@ re-import する。frontend / backend も shared から使う。
 | frontend | `pkgs/frontend/src/lib/apiClient.ts` | 変更（シグネチャ変更 + fetchPlanSteps追加） |
 | frontend | `pkgs/frontend/src/pages/TaskListPage.tsx` | 変更（モーダル状態管理） |
 | frontend | `pkgs/frontend/src/mocks/handlers.ts` | 変更（plan-steps ハンドラ追加） |
+
+---
+
+# 追補 v1.1.0（2026-05-27）: 後ろ詰めスケジューリング ＋ 意思決定の時刻アンカー化
+
+## 背景・思想（SABOROU_pitch.md との整合）
+現在の配置は「前から貪欲に詰める」前詰めで、ピッチが**敵**と定義する「すぐ終わるから全部今やる＝自己消耗ループ」（pitch L53-57）と同じ形になっていた。
+ピッチの正解は「締切から逆算して作業を後ろに置き、手前を**公式サボり時間**にする」（pitch L122）であり、
+さらに意思決定は「**いつ判断するか**」＝時刻の問題（pitch L48-49 / L83 / L124）。
+本追補で配置を後ろ詰めに変え、decision を所要時間ではなく**時刻アンカー**として扱う。
+
+## 確定仕様
+- **配置 = 後ろ詰め（バックワード）**: 窓 `[now, deadline]` を decision の時刻で区間分割し、各区間の work を区間終端（次の decision / 締切）へ右寄せ配置。手前の空きが「さぼろう」帯になり、ステップ間にサボり余白が分散する。busy（カレンダー予定）は避ける＆可視化（従来踏襲）。
+- **decision = 時刻アンカー**: `ScheduleStep.decisionAt?`（ISO 8601）を追加。ガント上は**10分固定枠**で描画。AI（Bedrock）が締切から逆算して `decisionAt` を**提案**し、ユーザーがモーダルで「何時」を上書きできる（AI提案→ユーザー調整）。
+- **間に合わない時**: 区間に work が収まらなければ手前（過去側）へ押し出して配置（現状の「はみ出し許容」と同思想）。
+- **work**: 従来どおり所要分（durationMinutes）。
+
+## 影響ファイル
+| 種別 | ファイル | 変更 |
+|---|---|---|
+| shared | `types/schedule.ts` | `ScheduleStepSchema` に `decisionAt?: ISO` 追加 |
+| shared | `schemas/task.ts` | ApproveOverrides は ScheduleStepSchema 流用のため自動追従（テスト追加） |
+| agent | `schedule-planner/saboruBlockCalc.ts` | `calcSchedule` を後ろ詰め＋decisionアンカー区間配置に書き換え |
+| agent | `schedule-planner/tools.ts` | plan_schedule tool に `decisionAt` 追加、プロンプトに「decisionは時刻、締切から逆算」を明記 |
+| agent | `schedule-planner/SchedulePlannerAgent.ts` | generateStepDraft はツール出力をそのまま返すため自動追従（必要なら decisionAt 補完） |
+| frontend | `components/task/StepEditor.tsx` | decision 行は所要分入力ではなく**時刻入力（time）**に切替。work は分入力のまま |
+| frontend | `components/task/TaskApprovalModal.tsx` | 確定時の正規化で decisionAt を保持 |
+| frontend | `mocks/handlers.ts` | plan-steps ダミーに decisionAt を含める |
+
+## テスト方針
+- agent: 後ろ詰めの配置（手前サボり）/ decisionアンカー固定 / 区間ごとの逆算 / busy回避 / はみ出し / decisionなし(全部最終区間) を網羅
+- shared: ScheduleStepSchema に decisionAt（任意・ISO）を許容、不正値を弾く
+- frontend: decision行が時刻入力になる・work行は分入力・確定時に decisionAt が overrides に乗る
+
+## ステータス
+🚧 実装中（2026-05-27）。完了後に全パッケージ品質ゲート → コミット → cdk deploy → E2E。

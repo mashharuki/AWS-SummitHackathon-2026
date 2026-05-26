@@ -1,20 +1,25 @@
-import type { BusySlot, ScheduleBlock } from "@saboru/shared";
-import type { ScheduleStep } from "./tools.js";
+import type { BusySlot, ScheduleBlock, ScheduleStep } from "@saboru/shared";
 
 /**
- * saboruBlockCalc — さぼろう帯の決定論的算出
+ * saboruBlockCalc — 後ろ詰めスケジューリング ＋ さぼろう帯の決定論的算出
  *
- * LLM が返した作業ステップ（work/decision）を、now〜windowEnd の利用可能時間に
- * カレンダー予定（busy slot）を避けながら順番に配置する。
- * 作業ステップ以外の空き時間（利用可能区間内）が「さぼろう」帯になる。
+ * SABOROU の思想（SABOROU_pitch.md）に沿い、作業は「締切から逆算して後ろに置き、
+ * 手前を公式サボり時間にする」。意思決定（decision）は「いつ行うか」＝時刻アンカー
+ * （decisionAt）として時間軸に固定し、その手前の作業を逆算配置する。これにより
+ * 「アンカー（上司確認など）に間に合えば、それまではサボれる」が表現される。
  *
  * 設計方針:
  * - LLM には時間配置を任せない（ハルシネーション回避）。配置は決定論的に計算する。
- * - 純関数 + 単純な単一パスで実装し、全分岐をテストで網羅できるようにする。
+ * - 純関数として実装し、全分岐をテストで網羅できるようにする。
  * - busy 区間（カレンダー予定）はさぼろう帯にしない。空けておく（予定で埋まっている）。
+ * - さぼろう帯は「窓内の利用可能時間（busy除外）から、配置済みブロックを引いた残り」
+ *   として算出する。これにより作業/意思決定の合間に自然にサボり余白が分散する。
  */
 
 const MS_PER_MIN = 60_000;
+
+/** 意思決定（decision）ブロックのガント描画用の固定枠（分）。 */
+const DECISION_BLOCK_MIN = 10;
 
 /** 時間区間（ミリ秒エポック） */
 export interface Interval {
@@ -104,16 +109,105 @@ export function resolveWindowEnd(
   return dl;
 }
 
+/** 配置済みの 1 ステップ（時刻確定後） */
+interface PlacedBlock {
+  step: ScheduleStep;
+  start: number;
+  end: number;
+}
+
 /**
- * 作業ステップを利用可能スロットに配置し、さぼろう帯で埋めた ScheduleBlock 配列を返す。
+ * decision ステップの固定アンカー区間 [start, end] を求める。
+ * decisionAt があればその時刻、無ければ null（呼び出し側で work と同様に扱う）。
+ */
+function resolveDecisionAnchor(
+  step: ScheduleStep,
+  windowStart: number,
+  windowEnd: number,
+): Interval | null {
+  if (!step.decisionAt) return null;
+  const at = new Date(step.decisionAt).getTime();
+  if (Number.isNaN(at)) return null;
+  // 窓内にクランプ。終端は固定枠ぶん確保する。
+  const start = Math.min(Math.max(at, windowStart), windowEnd);
+  const lenMs = DECISION_BLOCK_MIN * MS_PER_MIN;
+  return { start, end: start + lenMs };
+}
+
+/**
+ * 区間 [segStartBound, segEnd) に work ステップ群を「後ろ詰め（右寄せ）」で配置する。
+ * busy（および既配置のブロック = occupied）を避け、segEnd 側から逆順に詰める。
  *
- * アルゴリズム（単一パス・貪欲法）:
- *   1. 利用可能スロット（busy除去後）を時系列で得る
- *   2. スロットを順に走査。各スロット内で:
- *      - 未配置ステップがあれば詰められるだけ詰める（収まらないステップは次スロットへ持ち越し）
- *      - ステップ配置後のスロット内残り = さぼろう帯
- *   3. 全ステップ配置後の利用可能空き = さぼろう帯
- *   4. ステップが余ったら（空き不足=締切超過）窓末尾に押し込む（はみ出し許容）
+ * @param works     配置する work ステップ（元の時系列順）
+ * @param segEnd    この区間の終端（次のアンカー開始 or 窓終端）
+ * @param occupied  既に埋まっている区間（busy + 配置済み decision など）。時刻順。
+ * @param windowStart 窓開始（これ以上は手前に押し出さない目安。はみ出しは許容）
+ * @returns 配置結果（時刻昇順）
+ */
+function backfillWorks(
+  works: ScheduleStep[],
+  segEnd: number,
+  occupied: Interval[],
+  windowStart: number,
+): PlacedBlock[] {
+  const placed: PlacedBlock[] = [];
+  // 後ろのステップから順に、cursor（空き終端）を手前へ動かしながら詰める。
+  let cursor = segEnd;
+  for (let i = works.length - 1; i >= 0; i--) {
+    const step = works[i];
+    const needMs = step.durationMinutes * MS_PER_MIN;
+    // cursor から手前に needMs ぶんの空きを探す（occupied を避ける）。
+    const slotStart = findBackwardSlot(cursor, needMs, occupied, windowStart);
+    placed.push({ step, start: slotStart, end: slotStart + needMs });
+    cursor = slotStart;
+  }
+  placed.reverse(); // 時刻昇順へ
+  return placed;
+}
+
+/**
+ * cursor（含む手前）に向かって、長さ needMs の連続空きの開始位置を返す。
+ * occupied（時刻順の埋まり区間）に重なる位置は飛ばし、その手前へ回り込む。
+ * windowStart より手前にはみ出すことは許容する（締切に間に合わない場合の保険）。
+ */
+function findBackwardSlot(
+  cursor: number,
+  needMs: number,
+  occupied: Interval[],
+  _windowStart: number,
+): number {
+  let end = cursor;
+  // 安全のため有限回で打ち切る（occupied 件数 + 1 回で必ず収束する）。
+  for (let guard = 0; guard <= occupied.length + 1; guard++) {
+    const start = end - needMs;
+    // [start, end) に重なる occupied を探す。
+    const conflict = occupied.find((o) => o.start < end && o.end > start);
+    if (!conflict) {
+      return start;
+    }
+    // 衝突した occupied の手前（start 側）に end を移動して再探索する。
+    end = conflict.start;
+  }
+  return end - needMs;
+}
+
+/** Interval を時刻順にソートしたコピーを返す。 */
+function sortedIntervals(intervals: Interval[]): Interval[] {
+  return [...intervals].sort((a, b) => a.start - b.start);
+}
+
+/**
+ * 作業ステップを「締切から逆算して後ろ詰め」し、意思決定を時刻アンカーに固定し、
+ * 合間をさぼろう帯で埋めた ScheduleBlock 配列を返す。
+ *
+ * アルゴリズム（後ろ詰め・決定論）:
+ *   1. windowEnd（締切）を決める。
+ *   2. decisionAt を持つ decision を固定アンカー（10分枠）として配置。
+ *   3. ステップを時系列に走査し、アンカーごとに work 群を区切る。
+ *      各 work 群は「次のアンカー開始 / 窓終端」へ右寄せ（後ろ詰め）で配置する。
+ *   4. 配置済み（work + decision + busy）以外の窓内利用可能時間を「さぼろう」帯にする。
+ *      → 作業・意思決定の合間にサボり余白が分散する。
+ *   5. busy をガントに可視化（避ける＋見せる）。
  */
 export function calcSchedule(params: {
   steps: ScheduleStep[];
@@ -124,56 +218,95 @@ export function calcSchedule(params: {
   const { steps, busySlots, now, deadline } = params;
 
   const windowStart = new Date(now).getTime();
-  const totalWorkMin = steps.reduce((s, st) => s + st.durationMinutes, 0);
+  // decision は固定枠ぶんを工数として見込み、窓終端の余裕を確保する。
+  const totalWorkMin = steps.reduce(
+    (s, st) =>
+      s +
+      (st.bandType === "decision" && st.decisionAt
+        ? DECISION_BLOCK_MIN
+        : st.durationMinutes),
+    0,
+  );
   const windowEnd = resolveWindowEnd(windowStart, deadline, totalWorkMin);
 
   const busy = normalizeBusySlots(busySlots, windowStart, windowEnd);
-  const available = buildAvailableSlots(windowStart, windowEnd, busy);
 
+  // フェーズ A: decision アンカーを確定し、work 群をアンカーで区切る。
+  const decisionPlaced: PlacedBlock[] = [];
+  // セグメント = { works, segEnd }。segEnd は「次のアンカー開始」or「窓終端」。
+  const segments: { works: ScheduleStep[]; segEnd: number }[] = [];
+  let pendingWorks: ScheduleStep[] = [];
+
+  for (const step of steps) {
+    if (step.bandType === "decision") {
+      const anchor = resolveDecisionAnchor(step, windowStart, windowEnd);
+      if (anchor) {
+        // ここまでの work 群は、このアンカー開始までに終える（後ろ詰め）。
+        segments.push({ works: pendingWorks, segEnd: anchor.start });
+        pendingWorks = [];
+        decisionPlaced.push({ step, start: anchor.start, end: anchor.end });
+        continue;
+      }
+      // decisionAt が無い decision は work と同様に扱う（durationMinutes で配置）。
+    }
+    pendingWorks.push(step);
+  }
+  // 残りの work 群は窓終端（締切）までに終える。
+  segments.push({ works: pendingWorks, segEnd: windowEnd });
+
+  // フェーズ B: 各セグメントを後ろ詰め配置（busy + 既配置 decision を避ける）。
+  const occupied: Interval[] = sortedIntervals([
+    ...busy,
+    ...decisionPlaced.map((d) => ({ start: d.start, end: d.end })),
+  ]);
+  const workPlaced: PlacedBlock[] = [];
+  for (const seg of segments) {
+    if (seg.works.length === 0) continue;
+    const placed = backfillWorks(seg.works, seg.segEnd, occupied, windowStart);
+    workPlaced.push(...placed);
+    // 配置した work も後続セグメントの occupied に加える（区間が重ならないように）。
+    for (const p of placed) {
+      occupied.push({ start: p.start, end: p.end });
+    }
+    occupied.sort((a, b) => a.start - b.start);
+  }
+
+  // フェーズ C: ブロック生成。
   const blocks: ScheduleBlock[] = [];
+  for (const p of workPlaced) {
+    blocks.push(buildWorkBlock(p.step, p.start, p.end));
+  }
+  for (const d of decisionPlaced) {
+    blocks.push(buildWorkBlock(d.step, d.start, d.end));
+  }
+
+  // フェーズ D: さぼろう帯 = 窓内利用可能時間（busy除外）から配置済みを引いた残り。
+  const occupiedForSaboru = sortedIntervals([
+    ...busy,
+    ...workPlaced.map((p) => ({ start: p.start, end: p.end })),
+    ...decisionPlaced.map((d) => ({ start: d.start, end: d.end })),
+  ]);
+  const mergedOccupied = mergeIntervals(occupiedForSaboru);
   let totalSaboruMinutes = 0;
   let saboruSeq = 0;
-  let stepIdx = 0;
-
-  const pushSaboru = (start: number, end: number): void => {
-    if (end <= start) return;
-    blocks.push(buildSaboruBlock(saboruSeq++, start, end));
-    totalSaboruMinutes += Math.round((end - start) / MS_PER_MIN);
-  };
-
-  // 各利用可能スロットを走査し、ステップを詰めていく
-  for (const slot of available) {
-    let cursor = slot.start;
-    while (stepIdx < steps.length) {
-      const step = steps[stepIdx];
-      const needMs = step.durationMinutes * MS_PER_MIN;
-      if (cursor + needMs <= slot.end) {
-        // このスロットに収まる
-        blocks.push(buildWorkBlock(step, cursor, cursor + needMs));
-        cursor += needMs;
-        stepIdx++;
-      } else {
-        // 収まらない: このステップは次スロットへ持ち越し
-        break;
+  let cursor = windowStart;
+  for (const occ of mergedOccupied) {
+    if (occ.start > cursor) {
+      const gapStart = cursor;
+      const gapEnd = Math.min(occ.start, windowEnd);
+      if (gapEnd > gapStart) {
+        blocks.push(buildSaboruBlock(saboruSeq++, gapStart, gapEnd));
+        totalSaboruMinutes += Math.round((gapEnd - gapStart) / MS_PER_MIN);
       }
     }
-    // スロット内に残った空きはさぼろう帯
-    pushSaboru(cursor, slot.end);
+    cursor = Math.max(cursor, occ.end);
+  }
+  if (cursor < windowEnd) {
+    blocks.push(buildSaboruBlock(saboruSeq++, cursor, windowEnd));
+    totalSaboruMinutes += Math.round((windowEnd - cursor) / MS_PER_MIN);
   }
 
-  // ステップが余った（締切までに収まらない）: 窓末尾以降に押し込む
-  if (stepIdx < steps.length) {
-    let cursor = windowEnd;
-    for (; stepIdx < steps.length; stepIdx++) {
-      const step = steps[stepIdx];
-      const needMs = step.durationMinutes * MS_PER_MIN;
-      blocks.push(buildWorkBlock(step, cursor, cursor + needMs));
-      cursor += needMs;
-    }
-  }
-
-  // カレンダー予定を busy ブロックとしてガントに可視化する（避けるだけでなく見せる）。
-  // 窓内にかかる予定を、title 付きで busy バンドとして追加する。
+  // フェーズ E: カレンダー予定を busy ブロックとして可視化する。
   let busySeq = 0;
   for (const slot of busySlots) {
     const slotStart = Math.max(new Date(slot.startAt).getTime(), windowStart);
@@ -183,12 +316,27 @@ export function calcSchedule(params: {
     }
   }
 
-  // 時系列順にソート（はみ出しステップを正しい位置へ）
+  // 時系列順にソート。
   blocks.sort(
     (a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
   );
 
   return { blocks, totalSaboruMinutes };
+}
+
+/** 時刻順の区間配列を重複/隣接マージする。 */
+function mergeIntervals(intervals: Interval[]): Interval[] {
+  const sorted = sortedIntervals(intervals);
+  const merged: Interval[] = [];
+  for (const cur of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && cur.start <= last.end) {
+      last.end = Math.max(last.end, cur.end);
+    } else {
+      merged.push({ ...cur });
+    }
+  }
+  return merged;
 }
 
 function buildWorkBlock(
