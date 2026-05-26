@@ -7,6 +7,26 @@
 
 ---
 
+## 実装ステータス（2026-05-26 完了）
+
+全 Unit（U-G01〜U-G09）実装完了。確定方針: 論点1=スコア/さぼり時間のみ保存方針へ（現状は揮発、フロントlocalStorage連動）/ 論点2=no-store / 論点3=ダミーで常時ガント表示 / 論点4=詳細ページ独立4タブ / 論点5=now起点。
+
+| Unit | 内容 | コミット |
+|------|------|---------|
+| U-G01 | shared スケジュール型(SaboriSchedule/ScheduleBlock/BandType/BusySlot) | c035bfa |
+| U-G02 | CalendarTimeslotService（PII維持・時間区間取得） | 2360102 |
+| U-G03 | SchedulePlannerAgent（Bedrock Tool Use + 決定論的さぼろう帯算出） | f72935b |
+| U-G04 | GET /api/tasks/:id/schedule | ef9395c |
+| U-G07 | 汎用UI部品 Drawer/Popover/BottomSheet | 4bf3f03 |
+| U-G05 | GanttChart（3バンド・NOW/締切ライン・凡例） | 71baba0 |
+| U-G06 | ガント結果→ゲームスコア連動 | 30a684e |
+| U-G08 | TaskDetailPage 3ペイン/4タブ再編・全ゲーム要素を押下開閉UXへ | e8b1b64 |
+| U-G09 | 統合・品質ゲート | — |
+
+**品質ゲート結果**: 全テスト 1123件パス（shared123/agent224/backend334/frontend373/cdk69）・全パッケージ typecheck エラーゼロ・全パッケージ build 成功・CDK synth(test) 成功・今回変更ファイルは Biome クリーン。agent/shared カバレッジ100%維持。
+
+---
+
 ## 1. 概要と目的
 
 ### 1.1 背景
