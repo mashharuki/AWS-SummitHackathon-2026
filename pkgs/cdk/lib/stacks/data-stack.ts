@@ -25,9 +25,18 @@ export interface DataStackExports {
   };
 }
 
+/**
+ * Data Stack — DynamoDB テーブルと Secrets Manager シークレットのスタック
+ */
 export class SaborouDataStack extends cdk.Stack {
   public readonly exports: DataStackExports;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 

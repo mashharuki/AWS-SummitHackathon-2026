@@ -32,7 +32,16 @@ export interface ConfigDeployStackProps extends cdk.StackProps {
   readonly oauthRedirectUri: string;
 }
 
+/**
+ * ConfigDeployStack — フロントエンドのランタイム設定ファイルをデプロイするスタック
+ */
 export class SaborouConfigDeployStack extends cdk.Stack {
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props: ConfigDeployStackProps) {
     super(scope, id, props);
 

@@ -40,9 +40,18 @@ export interface ApiStackExports {
   readonly apiUrl: string;
 }
 
+/**
+ * Saborou API Stack — HTTP API Gateway と Lambda バックエンド
+ */
 export class SaborouApiStack extends cdk.Stack {
   public readonly exports: ApiStackExports;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
 

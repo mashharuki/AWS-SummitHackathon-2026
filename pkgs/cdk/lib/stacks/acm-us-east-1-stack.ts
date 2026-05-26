@@ -32,9 +32,20 @@ export interface AcmUsEast1StackExports {
   readonly cloudfrontCertificate: acm.ICertificate;
 }
 
+/**
+ * ACM 証明書を us-east-1 に作成するスタック。
+ * CloudFront にカスタムドメインを設定するために必要。
+ * Route53 HostedZone を指定しないため手動 DNS 検証となる。
+ */
 export class AcmUsEast1Stack extends cdk.Stack {
   public readonly exports: AcmUsEast1StackExports;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     // crossRegionReferences: true を必ず設定する。
     // これにより CDK が SSM Parameter Store を仲介して us-east-1 の値を
