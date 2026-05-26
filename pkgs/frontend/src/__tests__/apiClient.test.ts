@@ -368,7 +368,7 @@ describe("apiClient — 401 自動トークンリフレッシュ", () => {
     vi.stubGlobal("location", originalLocation);
   });
 
-  it("トークンなし状態でリクエストするとAuthorizationヘッダーなしで送信される", async () => {
+  it("トークンもリフレッシュトークンも無い状態ではAuthorizationヘッダーなしで送信される", async () => {
     clearTokens();
     let receivedAuthHeader: string | null = null;
 
@@ -389,6 +389,69 @@ describe("apiClient — 401 自動トークンリフレッシュ", () => {
 
     await getMe();
     expect(receivedAuthHeader).toBeNull();
+  });
+
+  it("アクセストークンが無くてもリフレッシュトークンがあれば、送信前にリフレッシュしてヘッダーを付与する（リロード直後のレース対策）", async () => {
+    // リロード直後の状態を再現: メモリのトークンは消え、refresh_token だけ localStorage に残る
+    clearTokens();
+    setRefreshToken("valid-refresh-token");
+
+    let oauthCalls = 0;
+    let receivedAuthHeader: string | null = null;
+
+    server.use(
+      http.post("*/oauth2/token", () => {
+        oauthCalls++;
+        // Cognito の refresh_token grant は id_token も返す
+        return HttpResponse.json({
+          access_token: "refreshed-access-token",
+          id_token: "refreshed-id-token",
+          expires_in: 3600,
+        });
+      }),
+      http.get("*/api/users/me", ({ request }) => {
+        receivedAuthHeader = request.headers.get("authorization");
+        return HttpResponse.json({
+          PK: "USER#test-sub",
+          SK: "PROFILE",
+          cognitoSub: "test-sub",
+          email: "test@example.com",
+          name: "田中 ユカ",
+          createdAt: "2026-05-17T00:00:00Z",
+          updatedAt: "2026-05-17T00:00:00Z",
+        });
+      }),
+    );
+
+    const user = await getMe();
+    expect(user.cognitoSub).toBe("test-sub");
+    // 送信前リフレッシュが1回走り、id_token がヘッダーに載っていること
+    expect(oauthCalls).toBe(1);
+    expect(receivedAuthHeader).toBe("Bearer refreshed-id-token");
+  });
+
+  it("送信前リフレッシュが失敗した場合はヘッダーなしで送信を試みる（無限ループしない）", async () => {
+    clearTokens();
+    setRefreshToken("invalid-refresh-token");
+
+    const originalLocation = window.location;
+    const locationMock = { href: "" } as Location;
+    vi.stubGlobal("location", locationMock);
+
+    server.use(
+      http.post("*/oauth2/token", () => {
+        return new HttpResponse(null, { status: 400 });
+      }),
+      http.get("*/api/users/me", () => {
+        return new HttpResponse(null, { status: 401 });
+      }),
+    );
+
+    // 送信前リフレッシュ失敗 → ヘッダーなしで送信 → 401 → リトライ時に再リフレッシュ失敗 → ログアウト
+    await expect(getMe()).rejects.toBeInstanceOf(ApiError);
+    expect(locationMock.href).toBe("/login");
+
+    vi.stubGlobal("location", originalLocation);
   });
 
   it("有効なトークンがあればAuthorizationヘッダーを付与する", async () => {
