@@ -193,11 +193,7 @@ describe("CalendarTimeslotService.fetchBusySlots", () => {
     expect(slots[0].title).toBe("デザイン変更締め切り");
     expect(slots[0].startAt).toBe("2026-05-25T09:00:00.000Z");
     // 返り値キーは startAt / endAt / title のみ（description は含まない）
-    expect(Object.keys(slots[0]).sort()).toEqual([
-      "endAt",
-      "startAt",
-      "title",
-    ]);
+    expect(Object.keys(slots[0]).sort()).toEqual(["endAt", "startAt", "title"]);
 
     // description（説明文）は漏れていない
     const serialized = JSON.stringify(slots);
