@@ -93,13 +93,14 @@ export function GanttChart({
         </div>
       </div>
 
-      {/* 本体: 横スクロール領域 */}
+      {/* 本体: 横スクロール領域（左ラベル列は sticky 固定） */}
       <div className="overflow-x-auto">
         <div style={{ minWidth: LABEL_COL_PX + totalWidth }}>
           {/* 時間軸ヘッダー */}
           <div className="flex" style={{ height: HEADER_HEIGHT }}>
+            {/* 左ラベルセル（sticky 固定・スクロールしても左に残る） */}
             <div
-              className="shrink-0 border-r-[3px] border-saboru-heavy bg-saboru-line-soft"
+              className="shrink-0 sticky left-0 z-20 border-r-[3px] border-saboru-heavy bg-saboru-line-soft"
               style={{ width: LABEL_COL_PX }}
             />
             <div
@@ -118,30 +119,12 @@ export function GanttChart({
             </div>
           </div>
 
-          {/* 行領域 */}
-          <div className="flex">
-            {/* 左: ステップラベル列 */}
+          {/* 行領域: 各行を「sticky ラベルセル + タイムラインセル」の横並びで構成 */}
+          <div className="relative">
+            {/* タイムライン背景（グリッド線 + NOW/締切ライン）— ラベル列幅ぶん右にオフセット */}
             <div
-              className="shrink-0 border-r-[3px] border-saboru-heavy"
-              style={{ width: LABEL_COL_PX }}
-            >
-              {rows.map((row) => (
-                <div
-                  key={`${row.stepLabel}-${row.blocks[0]?.stepId}`}
-                  className="flex items-center px-2 text-[11px] font-bold text-saboru-ink border-b border-saboru-line"
-                  style={{ height: ROW_HEIGHT }}
-                >
-                  <span className="line-clamp-2 leading-tight">
-                    {row.stepLabel}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* 右: タイムライン（グリッド + バンド + NOW/締切ライン） */}
-            <div
-              className="relative"
-              style={{ width: totalWidth, height: gridHeight }}
+              className="absolute top-0 pointer-events-none"
+              style={{ left: LABEL_COL_PX, width: totalWidth, height: gridHeight }}
             >
               {/* 縦グリッド線 */}
               {ticks.map((t) => (
@@ -151,13 +134,49 @@ export function GanttChart({
                   style={{ left: t.leftPx }}
                 />
               ))}
-
-              {/* 行ごとの横線 + バンド */}
-              {rows.map((row, rowIdx) => (
+              {/* NOWライン（青点線 + チップ） */}
+              {nowInRange && (
                 <div
-                  key={`row-${row.stepLabel}-${row.blocks[0]?.stepId}`}
-                  className="absolute left-0 right-0 border-b border-saboru-line"
-                  style={{ top: rowIdx * ROW_HEIGHT, height: ROW_HEIGHT }}
+                  className="absolute top-0 z-10"
+                  style={{ left: nowLeftPx, height: gridHeight }}
+                  data-testid="gantt-now-line"
+                >
+                  <div className="absolute top-0 bottom-0 border-l-2 border-dashed border-[#2E90FA]" />
+                  <div className="absolute -top-[22px] -translate-x-1/2 bg-[#2E90FA] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                    {formatNowChip(nowDate)}
+                  </div>
+                </div>
+              )}
+              {/* 締切ライン（赤実線） */}
+              {deadlineInRange && (
+                <div
+                  className="absolute top-0 bottom-0 border-l-2 border-[#EF4444] z-10"
+                  style={{ left: deadlineLeftPx }}
+                  data-testid="gantt-deadline-line"
+                />
+              )}
+            </div>
+
+            {/* 各行: sticky ラベル + バンド配置領域 */}
+            {rows.map((row) => (
+              <div
+                key={`row-${row.stepLabel}-${row.blocks[0]?.stepId}`}
+                className="flex border-b border-saboru-line"
+                style={{ height: ROW_HEIGHT }}
+              >
+                {/* 左ラベル（sticky 固定） */}
+                <div
+                  className="shrink-0 sticky left-0 z-20 flex items-center px-2 text-[11px] font-bold text-saboru-ink border-r-[3px] border-saboru-heavy bg-saboru-paper"
+                  style={{ width: LABEL_COL_PX }}
+                >
+                  <span className="line-clamp-2 leading-tight">
+                    {row.stepLabel}
+                  </span>
+                </div>
+                {/* バンド配置領域 */}
+                <div
+                  className="relative"
+                  style={{ width: totalWidth, height: ROW_HEIGHT }}
                 >
                   {row.blocks.map((b) => {
                     const meta = BAND_META[b.bandType];
@@ -188,31 +207,9 @@ export function GanttChart({
                     );
                   })}
                 </div>
-              ))}
+              </div>
+            ))}
 
-              {/* NOWライン（青点線 + チップ） */}
-              {nowInRange && (
-                <div
-                  className="absolute top-0 z-10"
-                  style={{ left: nowLeftPx, height: gridHeight }}
-                  data-testid="gantt-now-line"
-                >
-                  <div className="absolute top-0 bottom-0 border-l-2 border-dashed border-[#2E90FA]" />
-                  <div className="absolute -top-[22px] -translate-x-1/2 bg-[#2E90FA] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                    {formatNowChip(nowDate)}
-                  </div>
-                </div>
-              )}
-
-              {/* 締切ライン（赤実線） */}
-              {deadlineInRange && (
-                <div
-                  className="absolute top-0 bottom-0 border-l-2 border-[#EF4444] z-10"
-                  style={{ left: deadlineLeftPx }}
-                  data-testid="gantt-deadline-line"
-                />
-              )}
-            </div>
           </div>
         </div>
       </div>
