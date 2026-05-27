@@ -20,7 +20,7 @@
  */
 
 import type { SchedulePlannerAgent, SchedulePlannerInput } from "@saboru/agent";
-import type { BusySlot } from "@saboru/shared";
+import type { BusySlot, Task } from "@saboru/shared";
 import { toIsoString } from "@saboru/shared";
 import { Hono } from "hono";
 import { NotFoundError } from "../errors.js";
@@ -40,6 +40,55 @@ function logError(data: Record<string, unknown>): void {
 
 /** 締切不明時のデフォルト取得ウィンドウ（現在時刻 + 8h） */
 const DEFAULT_WINDOW_MS = 8 * 60 * 60 * 1000;
+
+/** 他タスクの意思決定を busy ブロック化するときの固定枠（分）。ガント描画と揃える。 */
+const CROSS_TASK_DECISION_BLOCK_MIN = 10;
+
+/**
+ * 他タスクの「意思決定（decisionAt）」を、当タスクのガントの busy slot に変換する。
+ *
+ * SABOROU フェーズ2「タスク間でサボり時間を融通」の第一歩。確定時刻である意思決定
+ * （例: 別タスクの 16:00 上司確認）だけを予定として相互反映する。作業時間は後ろ詰めで
+ * 動的に決まる（永続化していない）ため含めない。
+ *
+ * @param otherTasks   同ユーザーの承認済みタスク（当タスク含む可・下で除外）
+ * @param currentTaskId 当タスク ID（自分自身の予定は反映しない）
+ * @param windowStart  取得ウィンドウ開始（ms）。これより前の意思決定は除外
+ * @param windowEnd    取得ウィンドウ終了（ms）。これより後の意思決定は除外
+ * @returns BusySlot 配列（10分固定枠・title は「予定: <ステップ名>」）
+ */
+export function buildCrossTaskDecisionSlots(
+  otherTasks: Task[],
+  currentTaskId: string,
+  windowStart: number,
+  windowEnd: number,
+): BusySlot[] {
+  const slots: BusySlot[] = [];
+  const lenMs = CROSS_TASK_DECISION_BLOCK_MIN * 60_000;
+
+  for (const task of otherTasks) {
+    if (task.taskId === currentTaskId) continue; // 自分自身は除外
+    if (!Array.isArray(task.plannedSteps)) continue;
+
+    for (const step of task.plannedSteps) {
+      if (step.bandType !== "decision" || !step.decisionAt) continue;
+      const startMs = new Date(step.decisionAt).getTime();
+      if (Number.isNaN(startMs)) continue;
+      // ウィンドウ外（開始前 / 終了後）は反映しない
+      if (startMs < windowStart || startMs >= windowEnd) continue;
+
+      const label = step.stepLabel?.trim()
+        ? `予定: ${step.stepLabel.trim()}`
+        : "予定";
+      slots.push({
+        startAt: new Date(startMs).toISOString(),
+        endAt: new Date(startMs + lenMs).toISOString(),
+        title: label,
+      });
+    }
+  }
+  return slots;
+}
 
 /**
  * アクセストークン取得関数の型。
@@ -114,6 +163,27 @@ export function createScheduleRoute(
       calendarUsed = false;
     }
 
+    // 他タスクの意思決定（decisionAt）を予定（busy）として反映する。
+    // SABOROU フェーズ2「タスク間でサボり時間を融通」。取得失敗は握りつぶして続行。
+    let crossTaskSlotCount = 0;
+    try {
+      const otherTasks = await taskRepository.findApprovedByUserId(userId);
+      const crossTaskSlots = buildCrossTaskDecisionSlots(
+        otherTasks,
+        taskId,
+        now.getTime(),
+        windowEndMs,
+      );
+      crossTaskSlotCount = crossTaskSlots.length;
+      busySlots = [...busySlots, ...crossTaskSlots];
+    } catch (err) {
+      logError({
+        action: "schedule_cross_task_fetch_failed",
+        taskId,
+        error: String(err),
+      });
+    }
+
     // スケジュール生成
     const input: SchedulePlannerInput = {
       task,
@@ -128,6 +198,7 @@ export function createScheduleRoute(
       taskId,
       calendarUsed,
       busySlotCount: busySlots.length,
+      crossTaskSlotCount,
       blockCount: result.blocks.length,
     });
 

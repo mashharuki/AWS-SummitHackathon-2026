@@ -15,6 +15,7 @@ import type { DynamoServiceConnectionRepository } from "../../repositories/Dynam
 import type { DynamoTaskRepository } from "../../repositories/DynamoTaskRepository.js";
 import {
   type GetAccessTokenFn,
+  buildCrossTaskDecisionSlots,
   createScheduleRoute,
 } from "../../routes/schedule.js";
 import type { CalendarTimeslotService } from "../../services/CalendarTimeslotService.js";
@@ -249,5 +250,176 @@ describe("GET /tasks/:taskId/schedule", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.schedule).toEqual(sampleSchedule);
+  });
+
+  it("他タスクの意思決定が busy として plan の busySlots に合流する", async () => {
+    // 締切は 2099 なので now〜締切のウィンドウは十分広い。
+    const otherTask: Task = {
+      ...sampleTask,
+      taskId: "T02",
+      title: "別タスク",
+      plannedSteps: [
+        {
+          stepId: "s1",
+          stepLabel: "資料作成",
+          durationMinutes: 30,
+          bandType: "work",
+        },
+        {
+          stepId: "d1",
+          stepLabel: "上司確認",
+          durationMinutes: 10,
+          bandType: "decision",
+          // now より十分後・締切より前（2099）に置く
+          decisionAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        },
+      ],
+    };
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      findApprovedByUserId: vi.fn().mockResolvedValue([sampleTask, otherTask]),
+    };
+    const connectionRepo = {
+      findByUserAndService: vi.fn().mockResolvedValue(null),
+    };
+    const mockPlan = vi.fn().mockResolvedValue(sampleSchedule);
+    const agent = { plan: mockPlan };
+    const app = buildTestApp(taskRepo, connectionRepo, agent);
+
+    const res = await app.request("/tasks/T01/schedule");
+    expect(res.status).toBe(200);
+
+    const planArg = mockPlan.mock.calls[0][0];
+    // 他タスク T02 の decision が busy として 1 件入る（自分 T01 は除外）
+    expect(planArg.busySlots).toHaveLength(1);
+    expect(planArg.busySlots[0].title).toBe("予定: 上司確認");
+  });
+
+  it("findApprovedByUserId が throw しても 500 にせず続行する", async () => {
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      findApprovedByUserId: vi.fn().mockRejectedValue(new Error("ddb down")),
+    };
+    const connectionRepo = {
+      findByUserAndService: vi.fn().mockResolvedValue(null),
+    };
+    const mockPlan = vi.fn().mockResolvedValue(sampleSchedule);
+    const agent = { plan: mockPlan };
+    const app = buildTestApp(taskRepo, connectionRepo, agent);
+
+    const res = await app.request("/tasks/T01/schedule");
+    expect(res.status).toBe(200);
+    // 他タスク取得が失敗しても busySlots はカレンダー分のみ（ここでは空）で続行
+    expect(mockPlan.mock.calls[0][0].busySlots).toEqual([]);
+  });
+});
+
+describe("buildCrossTaskDecisionSlots", () => {
+  const W_START = new Date("2026-05-24T05:00:00.000Z").getTime();
+  const W_END = new Date("2026-05-24T18:00:00.000Z").getTime();
+
+  function taskWith(taskId: string, steps: Task["plannedSteps"]): Task {
+    return { ...sampleTask, taskId, plannedSteps: steps };
+  }
+
+  it("他タスクの decision を 10分枠の busy に変換する", () => {
+    const slots = buildCrossTaskDecisionSlots(
+      [
+        taskWith("T02", [
+          {
+            stepId: "d1",
+            stepLabel: "上司確認",
+            durationMinutes: 10,
+            bandType: "decision",
+            decisionAt: "2026-05-24T16:00:00.000Z",
+          },
+        ]),
+      ],
+      "T01",
+      W_START,
+      W_END,
+    );
+    expect(slots).toHaveLength(1);
+    expect(slots[0].startAt).toBe("2026-05-24T16:00:00.000Z");
+    expect(slots[0].endAt).toBe("2026-05-24T16:10:00.000Z");
+    expect(slots[0].title).toBe("予定: 上司確認");
+  });
+
+  it("自分自身のタスクは除外する", () => {
+    const slots = buildCrossTaskDecisionSlots(
+      [
+        taskWith("T01", [
+          {
+            stepId: "d1",
+            stepLabel: "自分の確認",
+            durationMinutes: 10,
+            bandType: "decision",
+            decisionAt: "2026-05-24T16:00:00.000Z",
+          },
+        ]),
+      ],
+      "T01",
+      W_START,
+      W_END,
+    );
+    expect(slots).toHaveLength(0);
+  });
+
+  it("work ステップ・decisionAt 無しは無視する", () => {
+    const slots = buildCrossTaskDecisionSlots(
+      [
+        taskWith("T02", [
+          {
+            stepId: "s1",
+            stepLabel: "作業",
+            durationMinutes: 30,
+            bandType: "work",
+          },
+          {
+            stepId: "d1",
+            stepLabel: "decisionAt無し",
+            durationMinutes: 10,
+            bandType: "decision",
+          },
+        ]),
+      ],
+      "T01",
+      W_START,
+      W_END,
+    );
+    expect(slots).toHaveLength(0);
+  });
+
+  it("ウィンドウ外（開始前・終了後）の decision は除外する", () => {
+    const slots = buildCrossTaskDecisionSlots(
+      [
+        taskWith("T02", [
+          {
+            stepId: "d1",
+            stepLabel: "窓前",
+            durationMinutes: 10,
+            bandType: "decision",
+            decisionAt: "2026-05-24T04:00:00.000Z", // W_START 前
+          },
+          {
+            stepId: "d2",
+            stepLabel: "窓後",
+            durationMinutes: 10,
+            bandType: "decision",
+            decisionAt: "2026-05-24T19:00:00.000Z", // W_END 後
+          },
+        ]),
+      ],
+      "T01",
+      W_START,
+      W_END,
+    );
+    expect(slots).toHaveLength(0);
+  });
+
+  it("plannedSteps 無しタスク・空配列は安全に無視する", () => {
+    const noSteps = { ...sampleTask, taskId: "T03" };
+    const slots = buildCrossTaskDecisionSlots([noSteps], "T01", W_START, W_END);
+    expect(slots).toHaveLength(0);
   });
 });
