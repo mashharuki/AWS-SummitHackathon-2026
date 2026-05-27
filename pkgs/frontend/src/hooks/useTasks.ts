@@ -1,4 +1,4 @@
-import apiClient from "@/lib/apiClient";
+import apiClient, { type ApproveOverridesPayload } from "@/lib/apiClient";
 import { toUserMessage } from "@/lib/utils";
 import type { Task, TaskCandidate } from "@saboru/shared";
 /**
@@ -34,9 +34,15 @@ export function useTasks() {
     void fetchAll();
   }, [fetchAll]);
 
-  /** NFR-DESIGN-3: 楽観的承認 */
+  /**
+   * NFR-DESIGN-3: 楽観的承認
+   *
+   * 承認確認モーダルで「確定して承認」されたタイミングで呼ばれる。
+   * overrides にはモーダルで編集された内容（title/deadline/description/plannedSteps）が入る。
+   * 楽観的削除はこの呼び出し時点（＝確定時点）で行う。モーダルを開いただけでは消さない。
+   */
   const approveCandidate = useCallback(
-    async (candidateId: string) => {
+    async (candidateId: string, overrides?: ApproveOverridesPayload) => {
       // スナップショット
       const rollbackCandidates = [...candidates];
       const rollbackTasks = [...tasks];
@@ -47,7 +53,10 @@ export function useTasks() {
       );
 
       try {
-        const approved = await apiClient.approveCandidate(candidateId);
+        const approved = await apiClient.approveCandidate(
+          candidateId,
+          overrides,
+        );
         setTasks((prev) => [...prev, approved]);
         showToast("タスクを承認しました", "success");
       } catch (err) {

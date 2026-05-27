@@ -6,6 +6,7 @@ import apiClient, {
   decrementDependencyScore,
   deleteTask,
   disconnectService,
+  fetchPlanSteps,
   getCandidates,
   getConnections,
   getDependencyScore,
@@ -96,6 +97,39 @@ describe("apiClient — 正常系エンドポイント", () => {
   it("approveCandidate 名前付きエクスポートでも動作する", async () => {
     const task = await approveCandidate("01JDBC001");
     expect(task.taskId).toBeTruthy();
+  });
+
+  it("approveCandidate に overrides を渡すと反映される", async () => {
+    const task = await approveCandidate("01JDBC001", {
+      title: "編集後タイトル",
+      deadline: "2026-06-10T00:00:00.000Z",
+      description: "編集後の内容",
+      plannedSteps: [
+        {
+          stepId: "s1",
+          stepLabel: "初稿を起こす",
+          durationMinutes: 45,
+          bandType: "work",
+        },
+      ],
+    });
+    expect(task.title).toBe("編集後タイトル");
+    expect(task.deadline).toBe("2026-06-10T00:00:00.000Z");
+    expect(task.description).toBe("編集後の内容");
+    expect(task.plannedSteps).toHaveLength(1);
+    expect(task.plannedSteps?.[0]?.stepLabel).toBe("初稿を起こす");
+  });
+
+  it("POST /api/tasks/candidates/:id/plan-steps でステップ下書きを取得できる", async () => {
+    const steps = await apiClient.fetchPlanSteps("01JDBC001");
+    expect(steps).toHaveLength(2);
+    expect(steps[0]?.stepId).toBe("s1");
+    expect(steps[1]?.bandType).toBe("decision");
+  });
+
+  it("fetchPlanSteps 名前付きエクスポートでも動作する", async () => {
+    const steps = await fetchPlanSteps("01JDBC001");
+    expect(steps.length).toBeGreaterThan(0);
   });
 
   it("DELETE /api/tasks/candidates/:id で候補を削除できる（204 No Content）", async () => {

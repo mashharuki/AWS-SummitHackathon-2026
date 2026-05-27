@@ -12,7 +12,9 @@
  */
 
 import { zValidator } from "@hono/zod-validator";
+import type { SchedulePlannerAgent } from "@saboru/agent";
 import {
+  ApproveOverridesSchema,
   CreateTaskSchema,
   SOURCE_TYPE,
   UpdateTaskSchema,
@@ -27,6 +29,7 @@ import type { AppEnv } from "../types.js";
 export function createTasksRoute(
   taskRepository: DynamoTaskRepository,
   candidateRepository: DynamoTaskCandidateRepository,
+  schedulePlannerAgent: SchedulePlannerAgent,
 ): Hono<AppEnv> {
   const tasks = new Hono<AppEnv>();
 
@@ -79,6 +82,55 @@ export function createTasksRoute(
     return c.json({ candidates: items });
   });
 
+  /**
+   * POST /tasks/candidates/:id/plan-steps — 承認モーダル用のステップ下書き生成
+   *
+   * 承認確認モーダルを開いたタイミングで呼ばれ、Bedrock で作業ステップ案を生成して返す。
+   * ユーザーはこの下書きを編集して「確定して承認」する。確定後のガント生成では
+   * このステップ（の編集結果）が Task.plannedSteps として使われ、Bedrock 再呼び出しは
+   * 行われない（精度最大化）。
+   *
+   * - 候補が無ければ 404
+   * - Bedrock 呼び出し失敗時は 503（フロントは手動入力へフォールバック可能）
+   */
+  tasks.post("/candidates/:id/plan-steps", async (c) => {
+    const userId = c.get("userId");
+    const candidateId = c.req.param("id");
+
+    const candidate = await candidateRepository.findById(userId, candidateId);
+    if (!candidate) {
+      throw new NotFoundError(`Task candidate ${candidateId} not found`);
+    }
+
+    try {
+      const steps = await schedulePlannerAgent.generateStepDraft({
+        title: candidate.title,
+        deadline: candidate.deadline,
+        description: candidate.description,
+        refId: candidateId,
+      });
+      return c.json({ steps });
+    } catch (err) {
+      console.log(
+        JSON.stringify({
+          level: "ERROR",
+          action: "plan_steps_generation_failed",
+          candidateId,
+          error: String(err),
+        }),
+      );
+      return c.json(
+        {
+          error: {
+            code: "STEP_DRAFT_FAILED",
+            message: "ステップ案の生成に失敗しました",
+          },
+        },
+        503,
+      );
+    }
+  });
+
   /** POST /tasks/candidates/:id/approve — Approve candidate */
   tasks.post("/candidates/:id/approve", async (c) => {
     const userId = c.get("userId");
@@ -89,7 +141,34 @@ export function createTasksRoute(
       throw new NotFoundError(`Task candidate ${candidateId} not found`);
     }
 
-    const approvedTask = await candidateRepository.approve(userId, candidateId);
+    // 承認モーダルで編集された内容（overrides）を任意で受け取る。
+    // ボディ無し／overrides 無しは後方互換（候補の元値で承認）。
+    let overrides: ReturnType<typeof ApproveOverridesSchema.parse> | undefined;
+    const raw = await c.req.json().catch(() => null);
+    if (raw && typeof raw === "object" && "overrides" in raw) {
+      const parsed = ApproveOverridesSchema.safeParse(
+        (raw as { overrides: unknown }).overrides,
+      );
+      if (!parsed.success) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid overrides",
+              details: parsed.error.flatten(),
+            },
+          },
+          400,
+        );
+      }
+      overrides = parsed.data;
+    }
+
+    const approvedTask = await candidateRepository.approve(
+      userId,
+      candidateId,
+      overrides,
+    );
     return c.json(approvedTask, 201);
   });
 

@@ -23,6 +23,7 @@ export type { Persona } from "./persona";
 // Schedule (gantt) — types + zod schemas
 export {
   BandTypeSchema,
+  ScheduleStepSchema,
   BusySlotSchema,
   ScheduleBlockSchema,
   SaboriScheduleSchema,
@@ -30,6 +31,7 @@ export {
 } from "./schedule";
 export type {
   BandType,
+  ScheduleStep,
   BusySlot,
   ScheduleBlock,
   SaboriSchedule,

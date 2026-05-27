@@ -19,6 +19,7 @@ export type {
   HonneData,
   Persona,
   BandType,
+  ScheduleStep,
   BusySlot,
   ScheduleBlock,
   SaboriSchedule,
@@ -28,6 +29,7 @@ export type {
 // Schedule (gantt) zod schemas — runtime validation
 export {
   BandTypeSchema,
+  ScheduleStepSchema,
   BusySlotSchema,
   ScheduleBlockSchema,
   SaboriScheduleSchema,
@@ -63,6 +65,7 @@ export type {
   IUserRepository,
   IServiceConnectionRepository,
   ITaskCandidateRepository,
+  ApproveOverrides,
   ITaskRepository,
   ITransactionalTaskRepository,
   ApprovedTask,
@@ -74,11 +77,13 @@ export type {
 export {
   CreateTaskSchema,
   UpdateTaskSchema,
+  ApproveOverridesSchema,
   CreateHonneSchema,
 } from "./schemas";
 export type {
   CreateTaskInput,
   UpdateTaskInput,
+  ApproveOverridesInput,
   CreateHonneInput,
 } from "./schemas";
 

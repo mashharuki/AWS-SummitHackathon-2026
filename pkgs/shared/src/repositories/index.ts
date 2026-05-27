@@ -1,7 +1,10 @@
 export type { IHonneRepository } from "./interface/IHonneRepository";
 export type { IProposalRepository } from "./interface/IProposalRepository";
 export type { IServiceConnectionRepository } from "./interface/IServiceConnectionRepository";
-export type { ITaskCandidateRepository } from "./interface/ITaskCandidateRepository";
+export type {
+  ApproveOverrides,
+  ITaskCandidateRepository,
+} from "./interface/ITaskCandidateRepository";
 export type {
   ApprovedTask,
   ITaskRepository,

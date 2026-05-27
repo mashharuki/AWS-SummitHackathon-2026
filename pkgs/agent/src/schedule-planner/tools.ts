@@ -1,4 +1,5 @@
 import type { Tool } from "@aws-sdk/client-bedrock-runtime";
+import { ScheduleStepSchema } from "@saboru/shared";
 import { z } from "zod";
 
 /**
@@ -16,15 +17,15 @@ import { z } from "zod";
 
 export const PLAN_SCHEDULE_TOOL_NAME = "plan_schedule";
 
-/** LLM が返す 1 ステップのスキーマ */
-export const ScheduleStepSchema = z.object({
-  stepId: z.string().min(1).max(30),
-  stepLabel: z.string().min(1).max(60),
-  durationMinutes: z.number().int().min(5).max(480),
-  bandType: z.enum(["work", "decision"]),
-  rationale: z.string().max(200).optional(),
-});
-export type ScheduleStep = z.infer<typeof ScheduleStepSchema>;
+/**
+ * LLM が返す 1 ステップのスキーマ。
+ *
+ * 単一情報源（R-5）として shared が所有する `ScheduleStepSchema` を re-export する。
+ * 承認モーダルでの確認・編集とガント生成時の Task.plannedSteps が同じ型を共有するため、
+ * ここで agent 独自に定義しない。
+ */
+export { ScheduleStepSchema };
+export type { ScheduleStep } from "@saboru/shared";
 
 /** plan_schedule ツール出力スキーマ（LLM が返す） */
 export const PlanScheduleOutputSchema = z.object({
@@ -73,6 +74,11 @@ export const PLAN_SCHEDULE_TOOL: Tool = {
                   description:
                     "work=手を動かす作業 / decision=判断・確認が必要な工程",
                 },
+                decisionAt: {
+                  type: "string",
+                  description:
+                    "意思決定（decision）を行う時刻（ISO 8601）。bandType=decision のときのみ指定する。締切から逆算し、相手や予定の都合を踏まえて『何時に判断・確認するか』を提案する（例: 上司確認 16:00）。work では指定しない。",
+                },
                 rationale: {
                   type: "string",
                   description: "このステップが必要な理由（任意、最大200文字）",
@@ -107,6 +113,16 @@ export const SCHEDULE_SYSTEM_PROMPT = `あなたはタスクの「段取り逆�
 - work: 資料作成・文章作成・コーディングなど、実際に手を動かす工程
 - decision: 上司確認・関係者へのレビュー依頼・方針判断など、判断が絡む工程
 
+## 意思決定（decision）の時刻
+- decision は「何分かかるか」ではなく「何時に行うか」が重要な工程。
+- decision には decisionAt（ISO 8601 の時刻）を必ず提案する。締切から逆算し、
+  相手や段取りの都合を踏まえて現実的な時刻を置く（例: 締切18:00なら上司確認は16:00頃）。
+- decisionAt は「今」より後、かつ「締切」より前にする。複数あれば時系列に並べる。
+- work には decisionAt を付けない。
+
+## 後ろ詰めの思想（重要）
+- 作業は前倒しせず、締切（および各 decision の時刻）から逆算して後ろに置く前提で見積もる。
+- ステップ間の「空き時間」は呼び出し側が自動で「さぼろう」帯にする。あなたは空き時間を作らなくてよい。
+
 ## 注意
-- ステップ間の「空き時間」は呼び出し側が自動で「さぼろう」帯にするため、あなたは空き時間を作らなくてよい
 - 2〜8ステップの範囲で、過剰に細かくしない`;

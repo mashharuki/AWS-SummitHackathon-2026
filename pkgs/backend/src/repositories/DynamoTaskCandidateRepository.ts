@@ -19,6 +19,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import type {
+  ApproveOverrides,
   ApprovedTask,
   ITaskCandidateRepository,
   Task,
@@ -142,7 +143,11 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
     return item;
   }
 
-  async approve(userId: string, candidateId: string): Promise<ApprovedTask> {
+  async approve(
+    userId: string,
+    candidateId: string,
+    overrides?: ApproveOverrides,
+  ): Promise<ApprovedTask> {
     const candidate = await this.findById(userId, candidateId);
     if (!candidate) {
       throw new Error(`TaskCandidate not found: ${candidateId}`);
@@ -151,17 +156,30 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
     const taskId = generateUlid();
     const now = toIsoString(new Date());
 
+    // 承認モーダルでユーザーが編集した値があれば優先する。
+    // overrides 未指定／フィールド省略時は候補の元値を使う（後方互換）。
+    // plannedSteps は確定済みステップ。空配列／未指定なら保存せず、
+    // ガント生成時に Bedrock 分解へフォールバックする。
+    const plannedSteps =
+      overrides?.plannedSteps && overrides.plannedSteps.length > 0
+        ? overrides.plannedSteps
+        : undefined;
+
     const task: Task = {
       PK: `${DDB_PREFIX.USER}${userId}`,
       SK: `${DDB_PREFIX.TASK}${taskId}`,
       taskId,
       userId,
       status: TASK_STATUS.APPROVED,
-      title: candidate.title,
-      deadline: candidate.deadline,
+      title: overrides?.title ?? candidate.title,
+      deadline:
+        overrides?.deadline !== undefined
+          ? overrides.deadline
+          : candidate.deadline,
       requester: candidate.requester,
-      description: candidate.description,
+      description: overrides?.description ?? candidate.description,
       sourceType: candidate.sourceType,
+      ...(plannedSteps ? { plannedSteps } : {}),
       approvedAt: now,
       updatedAt: now,
     };

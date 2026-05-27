@@ -30,6 +30,17 @@ function step(
   };
 }
 
+/** decisionAt 付きの decision ステップ。 */
+function decisionStep(id: string, decisionAt: string): ScheduleStep {
+  return {
+    stepId: id,
+    stepLabel: `decision-${id}`,
+    durationMinutes: 10,
+    bandType: "decision",
+    decisionAt,
+  };
+}
+
 describe("normalizeBusySlots", () => {
   it("窓外を切り落とし、時刻順にソートする", () => {
     const busy: BusySlot[] = [
@@ -110,77 +121,119 @@ describe("resolveWindowEnd", () => {
   });
 });
 
-describe("calcSchedule", () => {
-  it("busy なし: ステップ配置後の余白がさぼろう帯になる", () => {
+describe("calcSchedule（後ろ詰め）", () => {
+  it("作業は締切に後ろ詰めされ、手前がさぼろう帯になる", () => {
     const result = calcSchedule({
-      steps: [step("s1", 30), step("s2", 30, "decision")],
+      steps: [step("s1", 30), step("s2", 30)],
       busySlots: [],
       now: NOW,
       deadline: at(180), // 3h 窓
     });
-    const work = result.blocks.filter((b) => b.bandType !== "saboru");
-    const saboru = result.blocks.filter((b) => b.bandType === "saboru");
-    expect(work).toHaveLength(2);
-    // 窓 180 分 - 作業 60 分 = 120 分のさぼろう
-    expect(result.totalSaboruMinutes).toBe(120);
-    expect(saboru.length).toBeGreaterThanOrEqual(1);
-    // 時系列ソート確認
-    expect(new Date(result.blocks[0].startAt).getTime()).toBe(nowMs);
-  });
-
-  it("busy 区間はさぼろうにせず避けて配置する", () => {
-    // 0-30 に busy。s1(30分) は 30 以降に配置される
-    const result = calcSchedule({
-      steps: [step("s1", 30)],
-      busySlots: [{ startAt: at(0), endAt: at(30) }],
-      now: NOW,
-      deadline: at(120),
-    });
-    const s1 = result.blocks.find((b) => b.stepId === "s1");
-    // s1 は busy 後（at(30)）から始まる
-    expect(s1?.startAt).toBe(at(30));
-  });
-
-  it("スロットに収まらないステップは次スロットへ持ち越す", () => {
-    // 利用可能: 0-20, 50-120（20-50がbusy）。s1=30分 は最初のスロット(20分)に入らず次へ
-    const result = calcSchedule({
-      steps: [step("s1", 30)],
-      busySlots: [{ startAt: at(20), endAt: at(50) }],
-      now: NOW,
-      deadline: at(120),
-    });
-    const s1 = result.blocks.find((b) => b.stepId === "s1");
-    expect(s1?.startAt).toBe(at(50));
-    // 最初のスロット 0-20 はさぼろう帯
-    const firstSaboru = result.blocks.find(
-      (b) => b.bandType === "saboru" && new Date(b.startAt).getTime() === nowMs,
+    const work = result.blocks.filter(
+      (b) => b.bandType === "work" || b.bandType === "decision",
     );
-    expect(firstSaboru?.durationMinutes).toBe(20);
+    expect(work).toHaveLength(2);
+    // 後ろ詰め: s2 が締切(180)に接して 150-180、s1 が 120-150
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    const s2 = result.blocks.find((b) => b.stepId === "s2");
+    expect(s2?.endAt).toBe(at(180));
+    expect(s2?.startAt).toBe(at(150));
+    expect(s1?.startAt).toBe(at(120));
+    // 手前 0-120 が一つのさぼろう帯
+    expect(result.totalSaboruMinutes).toBe(120);
+    const firstBlock = result.blocks[0];
+    expect(firstBlock.bandType).toBe("saboru");
+    expect(new Date(firstBlock.startAt).getTime()).toBe(nowMs);
+    expect(firstBlock.durationMinutes).toBe(120);
   });
 
-  it("空きが尽きたステップは窓末尾以降に押し込む（締切超過）", () => {
-    // 窓 30 分しかないが作業 60 分。s2 ははみ出す
+  it("decision は decisionAt の時刻に固定され、手前の作業はそこへ後ろ詰めされる", () => {
+    // 上司確認(decision)を 90 分後に固定。手前の作業 s1(30分) はその直前に。
+    const result = calcSchedule({
+      steps: [step("s1", 30), decisionStep("d1", at(90))],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const d1 = result.blocks.find((b) => b.stepId === "d1");
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // decision は 90 分後に 10 分固定枠
+    expect(d1?.startAt).toBe(at(90));
+    expect(d1?.durationMinutes).toBe(10);
+    expect(d1?.bandType).toBe("decision");
+    // s1 は decision 開始(90)に後ろ詰め → 60-90
+    expect(s1?.endAt).toBe(at(90));
+    expect(s1?.startAt).toBe(at(60));
+    // 0-60（s1手前）と 100-180（decision後〜締切）がさぼろう
+    const saboru = result.blocks.filter((b) => b.bandType === "saboru");
+    expect(saboru.length).toBe(2);
+    expect(result.totalSaboruMinutes).toBe(60 + 80);
+  });
+
+  it("decision の後にも作業があれば、その作業は締切へ後ろ詰めされる", () => {
+    // s1 → d1(90分) → s2。s2 は締切(180)へ後ろ詰め。
+    const result = calcSchedule({
+      steps: [step("s1", 30), decisionStep("d1", at(90)), step("s2", 30)],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const s2 = result.blocks.find((b) => b.stepId === "s2");
+    expect(s2?.endAt).toBe(at(180));
+    expect(s2?.startAt).toBe(at(150));
+    // decision(90-100) と s2(150-180) の間 100-150 はさぼろう
+    const midSaboru = result.blocks.find(
+      (b) =>
+        b.bandType === "saboru" &&
+        new Date(b.startAt).getTime() === nowMs + 100 * MIN,
+    );
+    expect(midSaboru?.durationMinutes).toBe(50);
+  });
+
+  it("busy 区間を避けて後ろ詰めする", () => {
+    // 締切180。busy 150-180。s1(30分) は busy を避け 120-150 に。
+    const result = calcSchedule({
+      steps: [step("s1", 30)],
+      busySlots: [{ startAt: at(150), endAt: at(180) }],
+      now: NOW,
+      deadline: at(180),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // 締切直前は busy なので、その手前 120-150 に置かれる
+    expect(s1?.endAt).toBe(at(150));
+    expect(s1?.startAt).toBe(at(120));
+  });
+
+  it("締切超過時は手前（過去側）へ押し出して配置する", () => {
+    // 窓 30 分しかないが作業 60 分。後ろ詰めで s2 が 0-30、s1 が手前(-30-0)へはみ出す
     const result = calcSchedule({
       steps: [step("s1", 30), step("s2", 30)],
       busySlots: [],
       now: NOW,
       deadline: at(30),
     });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
     const s2 = result.blocks.find((b) => b.stepId === "s2");
-    // s1 が 0-30 を埋め、s2 は窓末尾(30分)から
-    expect(s2?.startAt).toBe(at(30));
+    expect(s2?.endAt).toBe(at(30));
+    expect(s2?.startAt).toBe(at(0));
+    // s1 は窓開始より手前へ押し出される
+    expect(s1?.endAt).toBe(at(0));
+    expect(s1?.startAt).toBe(at(-30));
     expect(result.totalSaboruMinutes).toBe(0);
   });
 
-  it("締切 null でもフォールバック窓で算出される", () => {
+  it("締切 null でもフォールバック窓で後ろ詰め算出される", () => {
     const result = calcSchedule({
       steps: [step("s1", 30)],
       busySlots: [],
       now: NOW,
       deadline: null,
     });
-    // 窓 8h - 作業 30 分 = 450 分さぼろう
+    // 窓 8h - 作業 30 分 = 450 分さぼろう（手前にまとまる）
     expect(result.totalSaboruMinutes).toBe(450);
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // 窓終端 8h に後ろ詰め
+    expect(s1?.endAt).toBe(at(480));
   });
 
   it("rationale 付きステップは rationale を保持する", () => {
@@ -196,7 +249,7 @@ describe("calcSchedule", () => {
     expect(s2?.rationale).toBeUndefined();
   });
 
-  it("ステップがスロットをちょうど使い切ると末尾さぼろうは出ない", () => {
+  it("作業が窓をちょうど使い切るとさぼろうは出ない", () => {
     const result = calcSchedule({
       steps: [step("s1", 60)],
       busySlots: [],
@@ -240,5 +293,20 @@ describe("calcSchedule", () => {
       deadline: at(120),
     });
     expect(result.blocks.some((b) => b.bandType === "busy")).toBe(false);
+  });
+
+  it("decisionAt の無い decision は work と同様に後ろ詰めされる（後方互換）", () => {
+    // decisionAt を持たない decision は durationMinutes で配置される
+    const result = calcSchedule({
+      steps: [step("s1", 30), step("d_legacy", 30, "decision")],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const dLegacy = result.blocks.find((b) => b.stepId === "d_legacy");
+    // 締切に後ろ詰め（150-180）
+    expect(dLegacy?.endAt).toBe(at(180));
+    expect(dLegacy?.bandType).toBe("decision");
+    expect(result.totalSaboruMinutes).toBe(120);
   });
 });

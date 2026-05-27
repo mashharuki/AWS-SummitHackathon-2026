@@ -134,23 +134,62 @@ export const handlers = [
     return HttpResponse.json({ candidates: mockCandidates });
   }),
 
-  http.post("*/api/tasks/candidates/:id/approve", ({ params }) => {
-    const newTask: Task = {
-      PK: "USER#test-sub",
-      SK: `TASK#${String(params.id)}`,
-      taskId: String(params.id),
-      userId: "test-sub",
-      status: "approved",
-      title: "承認されたタスク",
-      deadline: "2026-05-25T09:00:00Z",
-      requester: "テスト",
-      description: "テストタスク",
-      sourceType: "slack",
-      approvedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return HttpResponse.json(newTask);
+  // 承認モーダル用: ステップ下書き生成（Bedrock 相当のダミー）
+  http.post("*/api/tasks/candidates/:id/plan-steps", () => {
+    return HttpResponse.json({
+      steps: [
+        {
+          stepId: "s1",
+          stepLabel: "初稿を起こす",
+          durationMinutes: 45,
+          bandType: "work",
+        },
+        {
+          stepId: "s2",
+          stepLabel: "上司へ確認依頼",
+          durationMinutes: 10,
+          bandType: "decision",
+          decisionAt: "2026-05-24T07:00:00.000Z",
+          rationale: "方針確認が必要",
+        },
+      ],
+    });
   }),
+
+  http.post(
+    "*/api/tasks/candidates/:id/approve",
+    async ({ params, request }) => {
+      // overrides があれば反映（モーダルで編集した内容を疑似的に反映）
+      const body = (await request.json().catch(() => null)) as {
+        overrides?: {
+          title?: string;
+          deadline?: string | null;
+          description?: string;
+          plannedSteps?: Task["plannedSteps"];
+        };
+      } | null;
+      const o = body?.overrides;
+      const newTask: Task = {
+        PK: "USER#test-sub",
+        SK: `TASK#${String(params.id)}`,
+        taskId: String(params.id),
+        userId: "test-sub",
+        status: "approved",
+        title: o?.title ?? "承認されたタスク",
+        deadline:
+          o?.deadline !== undefined ? o.deadline : "2026-05-25T09:00:00Z",
+        requester: "テスト",
+        description: o?.description ?? "テストタスク",
+        sourceType: "slack",
+        ...(o?.plannedSteps && o.plannedSteps.length > 0
+          ? { plannedSteps: o.plannedSteps }
+          : {}),
+        approvedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      return HttpResponse.json(newTask);
+    },
+  ),
 
   http.delete("*/api/tasks/candidates/:id", () => {
     return new HttpResponse(null, { status: 204 });

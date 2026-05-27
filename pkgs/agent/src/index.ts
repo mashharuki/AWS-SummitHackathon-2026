@@ -37,7 +37,10 @@ export type {
 
 // 段取り逆算エージェント (U-G03: schedule-planner)
 export { SchedulePlannerAgent } from "./schedule-planner/SchedulePlannerAgent.js";
-export type { SchedulePlannerInput } from "./schedule-planner/SchedulePlannerAgent.js";
+export type {
+  SchedulePlannerInput,
+  StepDraftInput,
+} from "./schedule-planner/SchedulePlannerAgent.js";
 export {
   calcSchedule,
   resolveWindowEnd,

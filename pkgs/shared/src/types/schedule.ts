@@ -31,6 +31,54 @@ export const BandTypeSchema = z.enum(["saboru", "work", "decision", "busy"]);
 export type BandType = z.infer<typeof BandTypeSchema>;
 
 // ───────────────────────────────────────────
+// ScheduleStep — AI が分解した作業ステップ（LLM 入出力 / 承認時の確定値）
+// ───────────────────────────────────────────
+
+/**
+ * ScheduleStep — タスクを構成する 1 作業ステップ
+ *
+ * 用途:
+ * - SchedulePlannerAgent が Bedrock（plan_schedule Tool）から受け取る出力の 1 要素
+ * - 承認モーダルでユーザーが確認・編集し、確定したものを Task.plannedSteps に保存
+ * - ガント生成時、Task.plannedSteps があれば Bedrock 再呼び出しを省略してそのまま配置
+ *
+ * 所有権メモ（R-5）:
+ * この型は agent / backend / frontend が共通で使うため shared が所有する。
+ * agent 側（plan_schedule Tool）は本スキーマを re-import する。
+ *
+ * 注意: saboru / busy はステップには含めない。
+ * - saboru: ステップ間の空き時間から呼び出し元が決定論的に算出する
+ * - busy:   カレンダー予定由来であり作業ステップではない
+ */
+export const ScheduleStepSchema = z.object({
+  /** ステップ ID（s1, s2, ... の形式。最大30文字） */
+  stepId: z.string().min(1).max(30),
+  /** ステップ表示名（最大60文字。例:「議事録を文字起こし」） */
+  stepLabel: z.string().min(1).max(60),
+  /** 所要時間（分、5〜480）。work は実所要時間。decision は固定枠（描画用）。 */
+  durationMinutes: z.number().int().min(5).max(480),
+  /** バンド種別。work=手を動かす作業 / decision=判断・確認が必要な工程 */
+  bandType: z.enum(["work", "decision"]),
+  /**
+   * 意思決定の実施時刻（ISO 8601）。decision ステップにのみ意味を持つ。
+   *
+   * SABOROU の思想: 意思決定は「何分かかるか」ではなく「何時に行うか」で決まる
+   * （例: 上司に16:00報告 / 田中さんに16:20確認依頼）。この時刻が時間軸上の
+   * アンカー（サブ締切）となり、手前の作業は逆算配置され、それまではサボれる。
+   *
+   * AI（Bedrock）が締切から逆算して提案し、ユーザーが承認モーダルで上書きできる。
+   * work ステップでは通常 undefined。
+   *
+   * 形式: タイムゾーンオフセット付き（例 +09:00）も許容する。LLM はオフセット付きで
+   * 返すことがあるため offset: true。配置側は new Date() で UTC 正規化して扱う。
+   */
+  decisionAt: z.string().datetime({ offset: true }).optional(),
+  /** このステップが必要な理由（任意、最大200文字） */
+  rationale: z.string().max(200).optional(),
+});
+export type ScheduleStep = z.infer<typeof ScheduleStepSchema>;
+
+// ───────────────────────────────────────────
 // BusySlot — カレンダー予定の時間区間（揮発・PII フリー）
 // ───────────────────────────────────────────
 

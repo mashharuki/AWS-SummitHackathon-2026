@@ -1,4 +1,5 @@
 import type { SourceType, TaskStatus } from "./enums";
+import type { ScheduleStep } from "./schedule";
 
 /**
  * Task entity (approved)
@@ -35,6 +36,15 @@ export interface Task {
   description: string;
   /** Original data source */
   sourceType: SourceType;
+  /**
+   * User-confirmed work steps (set via the approval modal).
+   *
+   * When present and non-empty, gantt generation reuses these steps directly
+   * and skips the Bedrock step-decomposition phase, guaranteeing that the
+   * gantt matches what the user confirmed. Absent/empty for legacy tasks
+   * approved before this feature, which fall back to Bedrock inference.
+   */
+  plannedSteps?: ScheduleStep[];
   /** Approval datetime (ISO 8601) */
   approvedAt: string;
   /** Update datetime (ISO 8601) */

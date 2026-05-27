@@ -5,6 +5,7 @@
  * テスト範囲: 一覧・作成・取得・更新・削除・候補承認/却下。
  */
 
+import type { SchedulePlannerAgent } from "@saboru/agent";
 import type { Task, TaskCandidate } from "@saboru/shared";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
@@ -20,6 +21,7 @@ const MOCK_USER_ID = "user-test-123";
 function buildTestApp(
   taskRepo: Partial<DynamoTaskRepository>,
   candidateRepo: Partial<DynamoTaskCandidateRepository>,
+  plannerAgent: Partial<SchedulePlannerAgent> = {},
 ) {
   const app = new Hono<AppEnv>();
 
@@ -38,11 +40,29 @@ function buildTestApp(
     createTasksRoute(
       taskRepo as DynamoTaskRepository,
       candidateRepo as DynamoTaskCandidateRepository,
+      plannerAgent as SchedulePlannerAgent,
     ),
   );
   app.onError(errorHandler);
   return app;
 }
+
+const sampleSteps = [
+  {
+    stepId: "s1",
+    stepLabel: "初稿を起こす",
+    durationMinutes: 45,
+    bandType: "work" as const,
+  },
+  {
+    stepId: "s2",
+    stepLabel: "上司へ確認依頼",
+    durationMinutes: 10,
+    bandType: "decision" as const,
+    // 意思決定は時刻アンカー（decisionAt）を持つ
+    decisionAt: "2026-05-24T07:00:00.000Z",
+  },
+];
 
 const sampleTask: Task = {
   PK: "USER#user-test-123",
@@ -180,11 +200,12 @@ describe("GET /tasks/candidates", () => {
 });
 
 describe("POST /tasks/candidates/:id/approve", () => {
-  it("approves candidate and returns 201", async () => {
+  it("approves candidate and returns 201 (no body — 後方互換)", async () => {
+    const approve = vi.fn().mockResolvedValue(sampleTask);
     const taskRepo = {};
     const candidateRepo = {
       findById: vi.fn().mockResolvedValue(sampleCandidate),
-      approve: vi.fn().mockResolvedValue(sampleTask),
+      approve,
     };
     const app = buildTestApp(taskRepo, candidateRepo);
 
@@ -194,6 +215,73 @@ describe("POST /tasks/candidates/:id/approve", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.taskId).toBe("01ABC");
+    // overrides 未指定（undefined）で approve が呼ばれる
+    expect(approve).toHaveBeenCalledWith(MOCK_USER_ID, "01CAND", undefined);
+  });
+
+  it("passes overrides through to approve()", async () => {
+    const approve = vi.fn().mockResolvedValue(sampleTask);
+    const taskRepo = {};
+    const candidateRepo = {
+      findById: vi.fn().mockResolvedValue(sampleCandidate),
+      approve,
+    };
+    const app = buildTestApp(taskRepo, candidateRepo);
+
+    const overrides = {
+      title: "編集後タイトル",
+      deadline: "2026-06-01T09:00:00Z",
+      description: "編集後の内容",
+      plannedSteps: sampleSteps,
+    };
+    const res = await app.request("/tasks/candidates/01CAND/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overrides }),
+    });
+    expect(res.status).toBe(201);
+    expect(approve).toHaveBeenCalledWith(MOCK_USER_ID, "01CAND", overrides);
+  });
+
+  it("returns 400 for invalid overrides (empty title)", async () => {
+    const approve = vi.fn();
+    const taskRepo = {};
+    const candidateRepo = {
+      findById: vi.fn().mockResolvedValue(sampleCandidate),
+      approve,
+    };
+    const app = buildTestApp(taskRepo, candidateRepo);
+
+    const res = await app.request("/tasks/candidates/01CAND/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overrides: { title: "" } }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(approve).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for invalid plannedSteps (saboru bandType)", async () => {
+    const approve = vi.fn();
+    const candidateRepo = {
+      findById: vi.fn().mockResolvedValue(sampleCandidate),
+      approve,
+    };
+    const app = buildTestApp({}, candidateRepo);
+
+    const res = await app.request("/tasks/candidates/01CAND/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        overrides: {
+          plannedSteps: [{ ...sampleSteps[0], bandType: "saboru" }],
+        },
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(approve).not.toHaveBeenCalled();
   });
 
   it("returns 404 when candidate not found", async () => {
@@ -207,6 +295,61 @@ describe("POST /tasks/candidates/:id/approve", () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("POST /tasks/candidates/:id/plan-steps", () => {
+  it("returns Bedrock step draft", async () => {
+    const generateStepDraft = vi.fn().mockResolvedValue(sampleSteps);
+    const candidateRepo = {
+      findById: vi.fn().mockResolvedValue(sampleCandidate),
+    };
+    const app = buildTestApp({}, candidateRepo, { generateStepDraft });
+
+    const res = await app.request("/tasks/candidates/01CAND/plan-steps", {
+      method: "POST",
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.steps).toHaveLength(2);
+    expect(body.steps[0].stepId).toBe("s1");
+    expect(generateStepDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: sampleCandidate.title,
+        deadline: sampleCandidate.deadline,
+        description: sampleCandidate.description,
+        refId: "01CAND",
+      }),
+    );
+  });
+
+  it("returns 404 when candidate not found", async () => {
+    const generateStepDraft = vi.fn();
+    const candidateRepo = { findById: vi.fn().mockResolvedValue(null) };
+    const app = buildTestApp({}, candidateRepo, { generateStepDraft });
+
+    const res = await app.request("/tasks/candidates/NOPE/plan-steps", {
+      method: "POST",
+    });
+    expect(res.status).toBe(404);
+    expect(generateStepDraft).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when Bedrock generation fails", async () => {
+    const generateStepDraft = vi
+      .fn()
+      .mockRejectedValue(new Error("bedrock down"));
+    const candidateRepo = {
+      findById: vi.fn().mockResolvedValue(sampleCandidate),
+    };
+    const app = buildTestApp({}, candidateRepo, { generateStepDraft });
+
+    const res = await app.request("/tasks/candidates/01CAND/plan-steps", {
+      method: "POST",
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe("STEP_DRAFT_FAILED");
   });
 });
 
