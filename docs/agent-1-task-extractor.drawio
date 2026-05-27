@@ -58,11 +58,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <!-- EventBridge → エージェント（Slack駆動） -->
-        <mxCell id="a3" value="Trigger" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=12;endArrow=block;endFill=1;" edge="1" parent="1" source="eb" target="agent">
+        <!-- EventBridge → エージェント（Slack駆動）。エージェント下辺に入れて a2(DynamoDB線)との交差を回避 -->
+        <mxCell id="a3" value="Trigger (Slack駆動)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=12;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="eb" target="agent">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="420" y="480" />
+              <mxPoint x="645" y="480" />
             </Array>
           </mxGeometry>
         </mxCell>

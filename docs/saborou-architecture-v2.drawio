@@ -110,7 +110,7 @@
           <mxGeometry x="1060" y="200" width="60" height="60" as="geometry" />
         </mxCell>
         <mxCell id="dynamo_note" value="users / connections / taskCandidates&#xa;tasks / proposals / honneData&#xa;personas / googleCalendarCache" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=9;fontColor=#1A6BAC;" vertex="1" parent="region">
-          <mxGeometry x="1000" y="270" width="190" height="48" as="geometry" />
+          <mxGeometry x="990" y="310" width="200" height="54" as="geometry" />
         </mxCell>
 
         <!-- Secrets Manager -->
