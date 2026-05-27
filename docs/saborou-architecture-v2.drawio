@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="SABOROU-Architecture-v2" id="saborou-arch-v2">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="1180" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title block -->
+        <mxCell id="title" value="サボロー (SABOROU) — AWS System Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="40" y="30" width="900" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="v2.0 | 2026-05 | サーバーレス構成 (VPCなし) | ap-northeast-1 | AWS Summit Hackathon 2026" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontStyle=0;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="66" width="900" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== 外部サービス（左・Region外） ===================== -->
+        <mxCell id="ext_group" value="外部サービス / クライアント" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;dashed=1;verticalAlign=top;fontSize=12;fontStyle=1;fontColor=#666666;container=1;pointerEvents=0;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="220" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="user" value="ユーザー (Browser)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#232F3E;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="ext_group">
+          <mxGeometry x="80" y="50" width="55" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="slack" value="Slack&#xa;(OAuth / Event API)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;fontColor=#4A148C;" vertex="1" parent="ext_group">
+          <mxGeometry x="40" y="180" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="g_oauth" value="Google OAuth&#xa;(accounts.google.com)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;fontColor=#4A148C;" vertex="1" parent="ext_group">
+          <mxGeometry x="40" y="300" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g_cal" value="Google Calendar API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;fontColor=#4A148C;" vertex="1" parent="ext_group">
+          <mxGeometry x="40" y="380" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="g_gmail" value="Gmail API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=11;fontColor=#4A148C;" vertex="1" parent="ext_group">
+          <mxGeometry x="40" y="460" width="140" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== エッジ（Region外） ===================== -->
+        <mxCell id="acm" value="AWS Certificate Manager&#xa;(us-east-1 / TLS)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#DD344C;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.certificate_manager;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="320" y="150" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cloudfront" value="Amazon CloudFront" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#8C4FFF;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudfront;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="320" y="280" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cognito" value="Amazon Cognito&#xa;(Passkey/WebAuthn)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#DD344C;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cognito;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="320" y="420" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== AWS Region ===================== -->
+        <mxCell id="region" value="AWS Region (ap-northeast-1)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_region;strokeColor=#232F3E;fillColor=#FFFFFF;verticalAlign=top;align=left;html=1;fontSize=13;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="460" y="120" width="1400" height="940" as="geometry" />
+        </mxCell>
+
+        <!-- S3 静的ホスティング -->
+        <mxCell id="s3" value="Amazon S3&#xa;(Static Hosting)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#3F8624;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="40" y="180" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway -->
+        <mxCell id="apigw" value="Amazon API Gateway&#xa;(HTTP API + JWT Auth)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#8C4FFF;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="40" y="330" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Web API フロー（同期）グループ ========== -->
+        <mxCell id="webapi_group" value="Web API フロー（同期）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FF9900;dashed=1;verticalAlign=top;align=left;fontSize=11;fontStyle=1;fontColor=#B8860B;container=1;pointerEvents=0;collapsible=0;" vertex="1" parent="region">
+          <mxGeometry x="190" y="160" width="520" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="hono" value="AWS Lambda&#xa;(Hono API / saborou-api)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#FF9900;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="webapi_group">
+          <mxGeometry x="40" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="planner" value="段取り逆算&#xa;(SchedulePlanner)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#FF9900;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda_function;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="webapi_group">
+          <mxGeometry x="220" y="40" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="proposer" value="免罪符生成&#xa;(SaboriProposer / SSE)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#FF9900;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda_function;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="webapi_group">
+          <mxGeometry x="220" y="150" width="50" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="webapi_note" value="ガント生成・承認・免罪符は&#xa;Hono Lambda 内で実行" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#B8860B;" vertex="1" parent="webapi_group">
+          <mxGeometry x="330" y="95" width="170" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ========== Webhook + AIエージェント フロー（非同期）グループ ========== -->
+        <mxCell id="async_group" value="Webhook + AIエージェント フロー（非同期）" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FCE4EC;strokeColor=#E7157B;dashed=1;verticalAlign=top;align=left;fontSize=11;fontStyle=1;fontColor=#AD1457;container=1;pointerEvents=0;collapsible=0;" vertex="1" parent="region">
+          <mxGeometry x="190" y="470" width="520" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="webhook" value="AWS Lambda&#xa;(Webhook Handler)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#FF9900;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="async_group">
+          <mxGeometry x="30" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="eventbridge" value="Amazon EventBridge" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="async_group">
+          <mxGeometry x="200" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="extractor" value="AWS Lambda&#xa;(Task Extractor)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#FF9900;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.lambda;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="async_group">
+          <mxGeometry x="370" y="50" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="scheduler" value="EventBridge Scheduler&#xa;(毎時 定期再評価)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="async_group">
+          <mxGeometry x="200" y="220" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dlq" value="Amazon SQS&#xa;(DLQ)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.sqs;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="async_group">
+          <mxGeometry x="375" y="225" width="50" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ========== AI / データ / セキュリティ（Region内・右） ========== -->
+        <mxCell id="bedrock_sonnet" value="Amazon Bedrock&#xa;(Claude Sonnet 4.6)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#01A88D;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="800" y="200" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bedrock_haiku" value="Amazon Bedrock&#xa;(Claude Haiku 4.5 / 口調変換)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#01A88D;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.bedrock;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="800" y="330" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- DynamoDB -->
+        <mxCell id="dynamo" value="Amazon DynamoDB&#xa;(8 テーブル + GSI)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#1A6BAC;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=11;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="1060" y="200" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="dynamo_note" value="users / connections / taskCandidates&#xa;tasks / proposals / honneData&#xa;personas / googleCalendarCache" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=9;fontColor=#1A6BAC;" vertex="1" parent="region">
+          <mxGeometry x="1000" y="270" width="190" height="48" as="geometry" />
+        </mxCell>
+
+        <!-- Secrets Manager -->
+        <mxCell id="secrets" value="AWS Secrets Manager&#xa;(Slack/Google トークン)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#DD344C;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.secrets_manager;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="1060" y="420" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- 可観測性 -->
+        <mxCell id="cloudwatch" value="Amazon CloudWatch&#xa;(Logs / Metrics)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="1280" y="200" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="xray" value="AWS X-Ray" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=none;fillColor=#E7157B;labelBackgroundColor=#ffffff;align=center;html=1;fontSize=10;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.xray;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;" vertex="1" parent="region">
+          <mxGeometry x="1280" y="330" width="60" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== エッジ（矢印） ===================== -->
+        <!-- ① ユーザー → CloudFront -->
+        <mxCell id="e1" value="① HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=11;" edge="1" parent="1" source="user" target="cloudfront">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- CloudFront → S3 -->
+        <mxCell id="e2" value="② 静的配信" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="cloudfront" target="s3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- ACM → CloudFront (管理) -->
+        <mxCell id="e_acm" value="TLS証明書" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;fontSize=9;" edge="1" parent="1" source="acm" target="cloudfront">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- ユーザー → Cognito 認証 -->
+        <mxCell id="e_auth" value="③ Passkey認証 → JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;startArrow=block;startFill=1;endArrow=block;endFill=1;" edge="1" parent="1" source="user" target="cognito">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- ユーザー → API Gateway -->
+        <mxCell id="e_api" value="④ API Request (JWT)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="user" target="apigw">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="290" y="690" />
+              <mxPoint x="520" y="690" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- API Gateway → Hono Lambda -->
+        <mxCell id="e_invoke" value="Invoke" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="apigw" target="hono">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Hono → Bedrock Sonnet (ガント/免罪符 converse) -->
+        <mxCell id="e_hono_sonnet" value="⑤ converse (段取り/判定)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="proposer" target="bedrock_sonnet">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- proposer → Bedrock Haiku (口調変換) -->
+        <mxCell id="e_hono_haiku" value="口調変換" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="proposer" target="bedrock_haiku">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Hono → DynamoDB -->
+        <mxCell id="e_hono_ddb" value="⑥ Query/Write" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="hono" target="dynamo">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Hono → Secrets -->
+        <mxCell id="e_hono_secrets" value="GetSecret (トークン)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#232F3E;fontSize=10;" edge="1" parent="1" source="hono" target="secrets">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="660" />
+              <mxPoint x="1520" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Google OAuth フロー: Hono ↔ Google OAuth -->
+        <mxCell id="e_g_oauth" value="⑦ OAuth認可/トークン交換" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673A6;fontSize=10;startArrow=block;startFill=1;endArrow=block;endFill=1;" edge="1" parent="1" source="g_oauth" target="hono">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="290" y="445" />
+              <mxPoint x="700" y="445" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Hono → Google Calendar API -->
+        <mxCell id="e_g_cal" value="⑧ events.list (busy slot)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673A6;fontSize=10;" edge="1" parent="1" source="hono" target="g_cal">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="500" />
+              <mxPoint x="290" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Hono → Gmail API -->
+        <mxCell id="e_g_gmail" value="⑨ messages.list (取り込み)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673A6;fontSize=10;" edge="1" parent="1" source="hono" target="g_gmail">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="690" y="520" />
+              <mxPoint x="290" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Slack → Webhook -->
+        <mxCell id="e_slack_wh" value="⑩ POST Webhook" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=10;" edge="1" parent="1" source="slack" target="webhook">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="290" y="600" />
+              <mxPoint x="700" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Webhook → EventBridge -->
+        <mxCell id="e_wh_eb" value="PutEvents" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=10;" edge="1" parent="1" source="webhook" target="eventbridge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- EventBridge → Task Extractor -->
+        <mxCell id="e_eb_ex" value="Trigger" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=10;" edge="1" parent="1" source="eventbridge" target="extractor">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Scheduler → EventBridge/Proposer (定期) -->
+        <mxCell id="e_sched" value="毎時 Invoke" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=10;" edge="1" parent="1" source="scheduler" target="proposer">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="690" y="850" />
+              <mxPoint x="690" y="365" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Extractor → Bedrock Sonnet -->
+        <mxCell id="e_ex_bedrock" value="converse (抽出)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=10;" edge="1" parent="1" source="extractor" target="bedrock_sonnet">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1090" y="590" />
+              <mxPoint x="1090" y="430" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Extractor → DynamoDB -->
+        <mxCell id="e_ex_ddb" value="Put 候補" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#E7157B;fontSize=10;" edge="1" parent="1" source="extractor" target="dynamo">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1120" y="590" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Extractor → DLQ -->
+        <mxCell id="e_ex_dlq" value="失敗時" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;fontSize=9;" edge="1" parent="1" source="extractor" target="dlq">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Lambda群 → CloudWatch (管理・監視) -->
+        <mxCell id="e_cw" value="Logs/Metrics" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;fontSize=9;" edge="1" parent="1" source="dynamo" target="cloudwatch">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_xray" value="Traces" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#999999;fontSize=9;" edge="1" parent="1" source="bedrock_haiku" target="xray">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ===================== 凡例 ===================== -->
+        <mxCell id="legend" value="凡例" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;verticalAlign=top;align=left;fontSize=11;fontStyle=1;fontColor=#232F3E;container=0;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="900" width="440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1" value="① 同期 API 呼び出し" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#232F3E;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="930" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg1e" value="" style="endArrow=classic;html=1;strokeColor=#232F3E;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1620" y="940" as="sourcePoint" />
+            <mxPoint x="1700" y="940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lg2" value="非同期 / イベント駆動" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#AD1457;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="960" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg2e" value="" style="endArrow=classic;html=1;dashed=1;strokeColor=#E7157B;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1620" y="970" as="sourcePoint" />
+            <mxPoint x="1700" y="970" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lg3" value="ログ / トレース / 管理" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="990" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="lg3e" value="" style="endArrow=classic;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1620" y="1000" as="sourcePoint" />
+            <mxPoint x="1700" y="1000" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lg4" value="紫枠=外部サービス (Slack / Google)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=10;fontColor=#9673A6;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="1015" width="300" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
