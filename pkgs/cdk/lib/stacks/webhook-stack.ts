@@ -24,9 +24,18 @@ export interface WebhookStackExports {
   readonly webhookUrl: string;
 }
 
+/**
+ * Webhook Stack — Slack からのイベント受け取りと EventBridge ルーティングのスタック
+ */
 export class SaborouWebhookStack extends cdk.Stack {
   public readonly exports: WebhookStackExports;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props: WebhookStackProps) {
     super(scope, id, props);
 

@@ -20,9 +20,18 @@ export interface CognitoStackProps extends cdk.StackProps {
   readonly passkeyRelyingPartyId?: string;
 }
 
+/**
+ * Congnito Stack — ユーザープールとマネージドログインのスタック
+ */
 export class SaborouCognitoStack extends cdk.Stack {
   public readonly exports: CognitoStackExports;
 
+  /**
+   * コンストラクター
+   * @param scope
+   * @param id
+   * @param props
+   */
   constructor(scope: Construct, id: string, props?: CognitoStackProps) {
     super(scope, id, props);
 
