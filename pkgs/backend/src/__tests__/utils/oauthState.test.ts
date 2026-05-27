@@ -6,6 +6,7 @@
  * - STATE_MAX_AGE_MS: 有効期限定数の確認
  */
 
+import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   STATE_MAX_AGE_MS,
@@ -40,7 +41,7 @@ describe("oauthState.verifyState — 改ざん検知", () => {
 
   it("state 文字列を改ざんした場合は null を返す", () => {
     const state = encodeState(USER_ID, SECRET);
-    const tampered = state.slice(0, -5) + "XXXXX";
+    const tampered = `${state.slice(0, -5)}XXXXX`;
     const result = verifyState(tampered, SECRET);
     expect(result).toBeNull();
   });
@@ -53,9 +54,6 @@ describe("oauthState.verifyState — 改ざん検知", () => {
   it("payload に userId が含まれない（型不正）場合は null を返す", () => {
     // issuedAt はあるが userId がない payload を手動で作成
     const payload = JSON.stringify({ nonce: "x", issuedAt: Date.now() });
-    const { createHmac } = require("node:crypto") as typeof import(
-      "node:crypto",
-    );
     const mac = createHmac("sha256", SECRET).update(payload).digest("hex");
     const state = Buffer.from(JSON.stringify({ payload, mac })).toString(
       "base64url",
@@ -67,9 +65,6 @@ describe("oauthState.verifyState — 改ざん検知", () => {
   it("payload に issuedAt が含まれない（型不正）場合は null を返す", () => {
     // userId はあるが issuedAt がない payload（古い形式）を手動で作成
     const payload = JSON.stringify({ userId: USER_ID, nonce: "x" });
-    const { createHmac } = require("node:crypto") as typeof import(
-      "node:crypto",
-    );
     const mac = createHmac("sha256", SECRET).update(payload).digest("hex");
     const state = Buffer.from(JSON.stringify({ payload, mac })).toString(
       "base64url",
