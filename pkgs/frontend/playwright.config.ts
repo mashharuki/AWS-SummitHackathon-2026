@@ -41,6 +41,18 @@ export default defineConfig({
       use: { ...devices["Desktop Safari"] },
     },
 
+    /* E2E フロー統合テスト専用（Chromium のみ・高速実行） */
+    {
+      name: "flows-chromium",
+      testMatch: "**/e2e-flows.spec.ts",
+      use: {
+        ...devices["Desktop Chrome"],
+        // 認証リダイレクトを含むフローでタイムアウトを延長
+        actionTimeout: 10_000,
+        navigationTimeout: 20_000,
+      },
+    },
+
     /* Test against mobile viewports. */
     // {
     //   name: 'Mobile Chrome',

@@ -257,6 +257,9 @@ export function GanttChart({
                           color: meta.text,
                         }}
                         title={`${row.stepLabel}（${b.durationMinutes}分）`}
+                        data-testid="gantt-block"
+                        data-band-type={b.bandType}
+                        data-step-label={row.stepLabel}
                       >
                         {(b.bandType === "saboru" || b.bandType === "busy") &&
                           width > 40 && (
