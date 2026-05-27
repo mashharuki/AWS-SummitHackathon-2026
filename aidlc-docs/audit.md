@@ -1708,3 +1708,9 @@ gamification-strategy-20260523.md を作成
 **Context**: OPERATIONS — plan-steps 503 を修正・デプロイ済み。ハードリロードで再確認をユーザーに依頼。
 
 ---
+
+Haruki 追記 (20260527追記)
+
+- AWSにデプロイ済み
+- APIの401エラー解消
+- ピッチスライドは別途作成中
