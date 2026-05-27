@@ -239,8 +239,11 @@ describe("env — Google OAuth / Calendar Cache getters (U-07a/b 追加分)", ()
   });
 
   it("returns value for GOOGLE_CLIENT_SECRET_ARN when set", () => {
-    process.env.GOOGLE_CLIENT_SECRET_ARN = "arn:aws:secretsmanager:ap-northeast-1:123:secret:google-client";
-    expect(env.GOOGLE_CLIENT_SECRET_ARN).toBe("arn:aws:secretsmanager:ap-northeast-1:123:secret:google-client");
+    process.env.GOOGLE_CLIENT_SECRET_ARN =
+      "arn:aws:secretsmanager:ap-northeast-1:123:secret:google-client";
+    expect(env.GOOGLE_CLIENT_SECRET_ARN).toBe(
+      "arn:aws:secretsmanager:ap-northeast-1:123:secret:google-client",
+    );
   });
 
   it("throws for GOOGLE_CLIENT_SECRET_ARN when missing", () => {
@@ -251,8 +254,11 @@ describe("env — Google OAuth / Calendar Cache getters (U-07a/b 追加分)", ()
   });
 
   it("returns value for GOOGLE_CLIENT_ID when set", () => {
-    process.env.GOOGLE_CLIENT_ID = "google-client-id-test.apps.googleusercontent.com";
-    expect(env.GOOGLE_CLIENT_ID).toBe("google-client-id-test.apps.googleusercontent.com");
+    process.env.GOOGLE_CLIENT_ID =
+      "google-client-id-test.apps.googleusercontent.com";
+    expect(env.GOOGLE_CLIENT_ID).toBe(
+      "google-client-id-test.apps.googleusercontent.com",
+    );
   });
 
   it("throws for GOOGLE_CLIENT_ID when missing", () => {
@@ -263,8 +269,11 @@ describe("env — Google OAuth / Calendar Cache getters (U-07a/b 追加分)", ()
   });
 
   it("returns value for DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE when set", () => {
-    process.env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE = "google-calendar-cache-table";
-    expect(env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE).toBe("google-calendar-cache-table");
+    process.env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE =
+      "google-calendar-cache-table";
+    expect(env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE).toBe(
+      "google-calendar-cache-table",
+    );
   });
 
   it("throws for DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE when missing", () => {

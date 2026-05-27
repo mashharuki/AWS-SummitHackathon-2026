@@ -18,10 +18,7 @@ describe("fetchWithTimeout", () => {
 
   it("正常系: fetch が成功した場合はレスポンスをそのまま返す", async () => {
     const mockResponse = { ok: true, status: 200 } as Response;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(mockResponse),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockResponse));
 
     const result = await fetchWithTimeout("https://example.com/api");
     expect(result).toBe(mockResponse);
@@ -32,10 +29,10 @@ describe("fetchWithTimeout", () => {
     const mockFetch = vi.fn().mockResolvedValue(mockResponse);
     vi.stubGlobal("fetch", mockFetch);
 
-    await fetchWithTimeout(
-      "https://example.com/api",
-      { method: "POST", headers: { "Content-Type": "application/json" } },
-    );
+    await fetchWithTimeout("https://example.com/api", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://example.com/api",
@@ -55,7 +52,9 @@ describe("fetchWithTimeout", () => {
           const signal = (init as RequestInit)?.signal;
           if (signal) {
             signal.addEventListener("abort", () => {
-              reject(new DOMException("The operation was aborted.", "AbortError"));
+              reject(
+                new DOMException("The operation was aborted.", "AbortError"),
+              );
             });
           }
         }),

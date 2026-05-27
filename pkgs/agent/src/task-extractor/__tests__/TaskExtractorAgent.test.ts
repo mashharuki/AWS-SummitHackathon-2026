@@ -381,7 +381,8 @@ describe("TaskExtractorAgent", () => {
       });
 
       expect(genericResult.skipped).toBe(false);
-      if (genericResult.skipped || slackResult.skipped) throw new Error("type narrowing");
+      if (genericResult.skipped || slackResult.skipped)
+        throw new Error("type narrowing");
 
       expect(genericResult.candidate.sourceType).toBe(
         slackResult.candidate.sourceType,
