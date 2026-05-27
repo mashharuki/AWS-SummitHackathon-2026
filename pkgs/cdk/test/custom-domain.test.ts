@@ -62,9 +62,7 @@ describe("SaborouFrontendStack — customDomain=false（デフォルト）", () 
       Properties: { DistributionConfig: { Aliases?: string[] } };
     };
     // Aliases が undefined または空配列であること
-    expect(
-      dist.Properties.DistributionConfig.Aliases ?? [],
-    ).toHaveLength(0);
+    expect(dist.Properties.DistributionConfig.Aliases ?? []).toHaveLength(0);
   });
 
   test("frontendUrl は CloudFront デフォルトドメイン（https://xxx.cloudfront.net）になること", () => {
@@ -123,9 +121,7 @@ describe("SaborouFrontendStack — customDomain=true", () => {
   });
 
   test("frontendUrl がカスタムドメインの https URL になること", () => {
-    expect(stack.exports.frontendUrl).toBe(
-      `https://${CUSTOM_DOMAIN.frontend}`,
-    );
+    expect(stack.exports.frontendUrl).toBe(`https://${CUSTOM_DOMAIN.frontend}`);
   });
 });
 
@@ -237,21 +233,15 @@ describe("AcmUsEast1Stack", () => {
   });
 
   test("証明書のドメイン名が saborou.agentic-jp.com であること", () => {
-    template.hasResourceProperties(
-      "AWS::CertificateManager::Certificate",
-      {
-        DomainName: CUSTOM_DOMAIN.frontend,
-      },
-    );
+    template.hasResourceProperties("AWS::CertificateManager::Certificate", {
+      DomainName: CUSTOM_DOMAIN.frontend,
+    });
   });
 
   test("証明書の検証方法が DNS であること", () => {
-    template.hasResourceProperties(
-      "AWS::CertificateManager::Certificate",
-      {
-        ValidationMethod: "DNS",
-      },
-    );
+    template.hasResourceProperties("AWS::CertificateManager::Certificate", {
+      ValidationMethod: "DNS",
+    });
   });
 
   test("CloudFrontCertificateArn の CfnOutput が存在すること", () => {

@@ -404,11 +404,9 @@ export function SettingsPage() {
                 >
                   {PERSONAS.find(
                     (p) =>
-                      p.id ===
-                      (user?.preferredPersonaId ?? "saboru_ottori"),
-                  )?.name[
-                    i18n.language.startsWith("ja") ? "ja" : "en"
-                  ] ?? t("settings.personaCurrent")}
+                      p.id === (user?.preferredPersonaId ?? "saboru_ottori"),
+                  )?.name[i18n.language.startsWith("ja") ? "ja" : "en"] ??
+                    t("settings.personaCurrent")}
                 </p>
                 <p
                   className="text-saboru-ink-muted mt-0.5"

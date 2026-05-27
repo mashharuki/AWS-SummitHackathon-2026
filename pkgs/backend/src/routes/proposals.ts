@@ -8,7 +8,11 @@
  * パターン 5 (NFR 設計): streamSSE + SaboriProposerAgent 非同期イテレータ
  */
 
-import type { CalendarContext, SaboriProposerAgent, TaskContext } from "@saboru/agent";
+import type {
+  CalendarContext,
+  SaboriProposerAgent,
+  TaskContext,
+} from "@saboru/agent";
 import { DEFAULT_PERSONA_ID } from "@saboru/shared";
 import { Hono } from "hono";
 import { stream, streamSSE } from "hono/streaming";

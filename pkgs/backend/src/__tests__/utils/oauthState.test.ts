@@ -53,9 +53,13 @@ describe("oauthState.verifyState — 改ざん検知", () => {
   it("payload に userId が含まれない（型不正）場合は null を返す", () => {
     // issuedAt はあるが userId がない payload を手動で作成
     const payload = JSON.stringify({ nonce: "x", issuedAt: Date.now() });
-    const { createHmac } = require("node:crypto") as typeof import("node:crypto");
+    const { createHmac } = require("node:crypto") as typeof import(
+      "node:crypto",
+    );
     const mac = createHmac("sha256", SECRET).update(payload).digest("hex");
-    const state = Buffer.from(JSON.stringify({ payload, mac })).toString("base64url");
+    const state = Buffer.from(JSON.stringify({ payload, mac })).toString(
+      "base64url",
+    );
     const result = verifyState(state, SECRET);
     expect(result).toBeNull();
   });
@@ -63,9 +67,13 @@ describe("oauthState.verifyState — 改ざん検知", () => {
   it("payload に issuedAt が含まれない（型不正）場合は null を返す", () => {
     // userId はあるが issuedAt がない payload（古い形式）を手動で作成
     const payload = JSON.stringify({ userId: USER_ID, nonce: "x" });
-    const { createHmac } = require("node:crypto") as typeof import("node:crypto");
+    const { createHmac } = require("node:crypto") as typeof import(
+      "node:crypto",
+    );
     const mac = createHmac("sha256", SECRET).update(payload).digest("hex");
-    const state = Buffer.from(JSON.stringify({ payload, mac })).toString("base64url");
+    const state = Buffer.from(JSON.stringify({ payload, mac })).toString(
+      "base64url",
+    );
     const result = verifyState(state, SECRET);
     expect(result).toBeNull();
   });
