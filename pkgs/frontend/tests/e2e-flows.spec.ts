@@ -270,28 +270,21 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
       });
     });
 
-    // サボり提案（SSE）— テスト高速化のため完了済みレスポンスを即返す
+    // 提案 API: GET（非ストリーム）は JSON、POST（?stream=true）は SSE を返す
     await page.route(`${API_BASE}/api/tasks/${MOCK_TASK_ID}/proposal*`, (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "text/event-stream",
-        body: [
-          `data: ${JSON.stringify({
-            type: "proposal",
-            proposal: {
-              proposalId: "prop-001",
-              taskId: MOCK_TASK_ID,
-              verdict: "can_saboru",
-              reasoning: ["締め切りまで4時間の余裕あり", "担当者は現在別作業中"],
-              summaryText: "今はサボってOK 🎉",
-              nextCheckOffsetMinutes: 120,
-              chatMessage: "大丈夫、余裕あるよ！",
-              createdAt: new Date().toISOString(),
-            },
-          })}\n\n`,
-          "data: [DONE]\n\n",
-        ].join(""),
-      });
+      if (route.request().url().includes("stream=true")) {
+        route.fulfill({
+          status: 200,
+          contentType: "text/event-stream",
+          body: "data: [DONE]\n\n",
+        });
+      } else {
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(MOCK_PROPOSAL_FLOW1),
+        });
+      }
     });
 
     // 本音一覧（空）
