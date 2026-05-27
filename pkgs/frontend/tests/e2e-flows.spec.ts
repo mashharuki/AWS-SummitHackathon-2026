@@ -32,6 +32,42 @@ const MOCK_ACCESS_TOKEN = "mock-access-token";
 const MOCK_TASK_ID = "task-e2e-001";
 
 // ─────────────────────────────────────────
+// フィクスチャ: モック提案データ
+// ─────────────────────────────────────────
+
+/** Flow 1 用モック提案（ガントテスト向け。VerdictBox のレンダリングに必要） */
+const MOCK_PROPOSAL_FLOW1 = {
+  PK: `TASK#${MOCK_TASK_ID}`,
+  SK: "PROPOSAL#2026-05-27T09:00:00.000Z",
+  taskId: MOCK_TASK_ID,
+  userId: "test-user-id",
+  verdict: "can_saboru",
+  summaryText: "今はサボってOK 🎉",
+  reasoning: ["締め切りまで4時間の余裕あり", "担当者は現在別作業中"],
+  chatMessage: "大丈夫、余裕あるよ！",
+  personaId: "saboru_ottori",
+  evaluatedAt: "2026-05-27T09:00:00.000Z",
+  nextCheckAt: "2026-05-27T11:00:00.000Z",
+  tokenCount: 100,
+};
+
+/** Flow 2 用モック提案（Slack タスク向け。SlackShareControl のレンダリングに必要） */
+const MOCK_PROPOSAL_SLACK = {
+  PK: "TASK#task-slack-001",
+  SK: "PROPOSAL#2026-05-27T09:00:00.000Z",
+  taskId: "task-slack-001",
+  userId: "test-user-id",
+  verdict: "can_saboru",
+  summaryText: "今はサボってOK！あとで見ればいいよ",
+  reasoning: ["田中さんは現在別のMTG中", "急ぎのPRではなく次スプリント対象"],
+  chatMessage: "大丈夫大丈夫、田中さん今MTGだし！",
+  personaId: "saboru_ottori",
+  evaluatedAt: "2026-05-27T09:00:00.000Z",
+  nextCheckAt: "2026-05-27T11:00:00.000Z",
+  tokenCount: 100,
+};
+
+// ─────────────────────────────────────────
 // ヘルパー: スケジュールフィクスチャ生成
 // ─────────────────────────────────────────
 
@@ -202,7 +238,7 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
               userId: "test-user-id",
               title: "クライアントへの提案書作成",
               description: "月末締め切りの提案書",
-              status: "active",
+              status: "approved",
               source: "manual",
               priority: "medium",
               dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
@@ -224,7 +260,7 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
           userId: "test-user-id",
           title: "クライアントへの提案書作成",
           description: "月末締め切りの提案書",
-          status: "active",
+          status: "approved",
           source: "manual",
           priority: "medium",
           dueAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
