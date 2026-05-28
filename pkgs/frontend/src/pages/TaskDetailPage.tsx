@@ -4,6 +4,7 @@ import { GanttPanel } from "@/components/gantt/GanttPanel";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskEditForm } from "@/components/task/TaskEditForm";
+import { TaskInfoSummary } from "@/components/task/TaskInfoSummary";
 import {
   AchievementToast,
   useAchievements,
@@ -71,7 +72,8 @@ const ChatPane = lazy(() =>
   import("@/components/chat/ChatPane").then((m) => ({ default: m.ChatPane })),
 );
 
-type MobileTab = "gantt" | "verdict" | "chat" | "game";
+// ガントとチャットは1タブに統合（gantt タブ内でガント上・チャット下に縦積み）。
+type MobileTab = "gantt" | "verdict" | "game";
 
 export function TaskDetailPage() {
   const { i18n, t } = useTranslation();
@@ -444,7 +446,6 @@ export function TaskDetailPage() {
         isStreaming={isStreaming}
         onQuickReply={handleQuickReply}
         onFreeText={(text) => void sendFreeText(text)}
-        showQuickReplies={chatMessages.length > 0}
       />
     </Suspense>
   );
@@ -545,11 +546,12 @@ export function TaskDetailPage() {
             {taskInfoBlock}
             {verdictBlock}
           </div>
-          {/* 中央: ガント盤面（主役） */}
-          <div className="flex-1 min-w-0 overflow-y-auto px-4 py-3">
+          {/* 中央: ガント盤面（主役）+ 直下にタスク情報サマリ */}
+          <div className="flex-1 min-w-0 overflow-y-auto px-4 py-3 flex flex-col gap-3">
             {taskId && (
               <GanttPanel taskId={taskId} reasoningCount={reasoningCount} />
             )}
+            <TaskInfoSummary task={task} />
           </div>
           {/* 右: チャット */}
           <div className="w-[360px] shrink-0 flex flex-col p-4 border-l-[3px] border-saboru-heavy">
@@ -557,23 +559,27 @@ export function TaskDetailPage() {
           </div>
         </div>
 
-        {/* ───────── スマホ: 4タブ ───────── */}
+        {/* ───────── スマホ: 3タブ（ガント＋チャット / 判定 / ゲーム） ───────── */}
         <div className="lg:hidden flex flex-col flex-1 min-h-0">
           <MobileTabBar tab={mobileTab} onChange={setMobileTab} />
           <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-24 pt-3 flex flex-col gap-3">
-            {mobileTab === "gantt" && taskId && (
-              <GanttPanel taskId={taskId} reasoningCount={reasoningCount} />
+            {mobileTab === "gantt" && (
+              <>
+                {taskId && (
+                  <GanttPanel taskId={taskId} reasoningCount={reasoningCount} />
+                )}
+                <TaskInfoSummary task={task} />
+                {/* ガント直下にチャットを縦積み（入力欄は ChatPane 内で最下部固定） */}
+                <div className="flex flex-col" style={{ minHeight: 480 }}>
+                  {chatBlock}
+                </div>
+              </>
             )}
             {mobileTab === "verdict" && (
               <>
                 {taskInfoBlock}
                 {verdictBlock}
               </>
-            )}
-            {mobileTab === "chat" && (
-              <div className="flex flex-col" style={{ minHeight: 480 }}>
-                {chatBlock}
-              </div>
             )}
             {mobileTab === "game" && gameContent}
           </div>
@@ -588,9 +594,8 @@ export function TaskDetailPage() {
 // ─────────────────────────────────────────────
 
 const MOBILE_TABS: { id: MobileTab; label: string }[] = [
-  { id: "gantt", label: "📊 ガント" },
+  { id: "gantt", label: "📊 ガント＋チャット" },
   { id: "verdict", label: "🦥 判定" },
-  { id: "chat", label: "💬 チャット" },
   { id: "game", label: "🎮 ゲーム" },
 ];
 

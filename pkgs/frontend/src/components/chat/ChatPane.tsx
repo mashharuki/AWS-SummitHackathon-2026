@@ -8,23 +8,21 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { ChatMessage, TypingIndicator } from "./ChatMessage";
 import { FreeTextInput } from "./FreeTextInput";
-import { QuickReplyButtons } from "./QuickReplyButtons";
 
 interface ChatPaneProps {
   messages: ChatMessageType[];
   isStreaming: boolean;
-  onQuickReply: (type: QuickReplyType, label: string) => void;
+  /**
+   * クイックリプライ選択ハンドラ。
+   * ボタン UI は撤去したが、将来再導入できるよう型・配線は残置している。
+   */
+  onQuickReply?: (type: QuickReplyType, label: string) => void;
   onFreeText: (text: string) => void;
+  /** 旧クイックリプライ表示フラグ（UI 撤去済みのため現在は未使用・後方互換で受容）。 */
   showQuickReplies?: boolean;
 }
 
-export function ChatPane({
-  messages,
-  isStreaming,
-  onQuickReply,
-  onFreeText,
-  showQuickReplies = true,
-}: ChatPaneProps) {
+export function ChatPane({ messages, isStreaming, onFreeText }: ChatPaneProps) {
   const { t } = useTranslation();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -74,22 +72,14 @@ export function ChatPane({
         <div ref={bottomRef} aria-hidden="true" />
       </div>
 
-      {/* クイックリプライ */}
-      {showQuickReplies && messages.length > 0 && (
-        <div
-          className="px-3 bg-saboru-paper"
-          style={{ borderTop: "1px solid #F3F4F6" }}
-        >
-          <QuickReplyButtons onSelect={onQuickReply} disabled={isStreaming} />
-        </div>
-      )}
-
-      {/* テキスト入力 */}
-      <FreeTextInput
-        onSend={onFreeText}
-        disabled={isStreaming}
-        placeholder={t("chat.messagePlaceholder")}
-      />
+      {/* テキスト入力（チャット欄の最下部に常駐） */}
+      <div className="sticky bottom-0 z-10 bg-saboru-paper">
+        <FreeTextInput
+          onSend={onFreeText}
+          disabled={isStreaming}
+          placeholder={t("chat.messagePlaceholder")}
+        />
+      </div>
     </section>
   );
 }
