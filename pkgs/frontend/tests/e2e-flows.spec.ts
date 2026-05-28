@@ -318,7 +318,7 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
 
     // ガントパネルが読み込まれるまで待機
     await expect(
-      page.locator('[aria-label="スケジュールを再計算"]'),
+      page.locator('[aria-label="スケジュールを再計算"]').first(),
     ).toBeVisible({ timeout: 15000 });
 
     // busy バンドのブロックが少なくとも1つ存在する
@@ -352,7 +352,7 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
 
     await page.goto(`/tasks/${MOCK_TASK_ID}`);
     await expect(
-      page.locator('[aria-label="スケジュールを再計算"]'),
+      page.locator('[aria-label="スケジュールを再計算"]').first(),
     ).toBeVisible({ timeout: 15000 });
 
     // calendarUsed=true のため未連携注釈は非表示であること
@@ -413,7 +413,7 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
 
     await page.goto(`/tasks/${MOCK_TASK_ID}`);
     await expect(
-      page.locator('[aria-label="スケジュールを再計算"]'),
+      page.locator('[aria-label="スケジュールを再計算"]').first(),
     ).toBeVisible({ timeout: 15000 });
 
     // カレンダー未連携の場合は注釈が表示される
@@ -444,7 +444,7 @@ test.describe("フロー1: カレンダー予定 → ガント busy ブロック
     // エラー時は buildDummySchedule でフォールバック表示
     // GanttPanel が存在（ガントが常に表示される論点3の設計）
     await expect(
-      page.locator('[aria-label="スケジュールを再計算"]'),
+      page.locator('[aria-label="スケジュールを再計算"]').first(),
     ).toBeVisible({ timeout: 15000 });
 
     // さぼろうブロックが表示されること（ダミースケジュール）
