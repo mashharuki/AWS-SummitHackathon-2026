@@ -322,6 +322,116 @@ describe("DynamoTaskCandidateRepository.approve", () => {
   });
 });
 
+describe("DynamoTaskCandidateRepository.approve — decisionAt 補完", () => {
+  it("decisionAt が欠けている decision ステップに補完時刻を焼き込む", async () => {
+    let callCount = 0;
+    let capturedPutItem: Record<string, unknown> | undefined;
+    const client = mockClient((command) => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem }; // findById
+      const input = (command as { input: { TransactItems: unknown[] } }).input;
+      capturedPutItem = (
+        input.TransactItems[1] as { Put: { Item: Record<string, unknown> } }
+      ).Put.Item;
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const plannedSteps = [
+      {
+        stepId: "s1",
+        stepLabel: "初稿作成",
+        durationMinutes: 60,
+        bandType: "work" as const,
+      },
+      {
+        stepId: "d1",
+        stepLabel: "上司確認",
+        durationMinutes: 10,
+        bandType: "decision" as const,
+        // decisionAt を意図的に省略 → 補完されるべき
+      },
+    ];
+
+    const task = await repo.approve("user1", "01CAND", {
+      plannedSteps,
+      deadline: "2026-05-28T09:00:00.000Z",
+    });
+
+    // decision ステップに decisionAt が補完されている
+    const d1 = task.plannedSteps?.find((s) => s.stepId === "d1");
+    expect(d1).toBeDefined();
+    expect(d1?.decisionAt).toBeDefined();
+    // 補完された時刻は ISO 8601 形式
+    expect(d1?.decisionAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    // work ステップは変更されていない
+    const s1 = task.plannedSteps?.find((s) => s.stepId === "s1");
+    expect(s1?.decisionAt).toBeUndefined();
+    // DynamoDB の Put Item にも反映されている
+    expect(capturedPutItem?.plannedSteps).toBeDefined();
+  });
+
+  it("decisionAt が既に揃っている場合は補完しない（元の値を保持）", async () => {
+    let callCount = 0;
+    const client = mockClient(() => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem };
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const FIXED_AT = "2026-05-28T07:00:00.000Z";
+    const plannedSteps = [
+      {
+        stepId: "s1",
+        stepLabel: "初稿",
+        durationMinutes: 30,
+        bandType: "work" as const,
+      },
+      {
+        stepId: "d1",
+        stepLabel: "上司確認",
+        durationMinutes: 10,
+        bandType: "decision" as const,
+        decisionAt: FIXED_AT, // 既存の値を保持するべき
+      },
+    ];
+
+    const task = await repo.approve("user1", "01CAND", { plannedSteps });
+    const d1 = task.plannedSteps?.find((s) => s.stepId === "d1");
+    // 元の decisionAt が保持されている
+    expect(d1?.decisionAt).toBe(FIXED_AT);
+  });
+
+  it("plannedSteps なし（フォールバック）の場合は補完処理自体をスキップする", async () => {
+    let callCount = 0;
+    const client = mockClient(() => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem };
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    // plannedSteps を省略（Bedrock フォールバックのケース）
+    const task = await repo.approve("user1", "01CAND");
+    expect(task.plannedSteps).toBeUndefined();
+    // TransactWriteItems は1回だけ（findById + approve で計2回）
+    expect(client.send).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("DynamoTaskCandidateRepository.createForUser", () => {
   it("creates candidate with auto-generated candidateId and ttl", async () => {
     const client = mockClient(() => ({}));

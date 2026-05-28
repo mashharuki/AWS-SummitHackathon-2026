@@ -2,6 +2,14 @@
 
 ---
 
+## Construction — decisionAt必須化 + マイグレーションスクリプト実装
+**Timestamp**: 2026-05-28T00:00:00Z
+**User Input**: "SABOROU（/Users/shineikikkawa/dev/hackson/AWS-SummitHackathon-2026）で2つの実装を行ってください。AI-DLCワークフローに準拠し、aidlc-docs/audit.md への記録、品質最優先（テスト込み）でお願いします。日本語で成果物を出力。コミットにClaude関与を残さないこと。[背景] 「他タスクの意思決定を予定として相互反映」機能（buildCrossTaskDecisionSlots）は、他タスクのplannedStepsのうちbandType===\"decision\" && decisionAtを持つステップだけを「予定（busy）」化する。実データ調査の結果、承認済みタスクのdecisionステップのほとんどがdecisionAt: nullで保存されており、機能がほぼ発火していなかった。ガント表示では、decisionAt無しのdecisionはwork同様に後ろ詰めで動的配置され時刻が見えるが、その時刻は永続化されない（SaboriScheduleは揮発・no-store）。[確定した設計方針] 案1: decisionAtを必須化する。補完タイミング: AI提案を優先し、欠けた場合のみ計算補完。generateStepDraftがdecisionAtを返せばそれを使う。欠けたdecisionステップは、承認保存時にcalcScheduleの後ろ詰め配置時刻で補完してdecisionAtに焼き込んで保存する。マイグレーション: 1回限りのスクリプトで全ユーザーの承認済みタスクを一括補完（ドライラン→本番）。[タスクA] generateStepDraftのプロンプト見直し + 承認保存パス（DynamoTaskCandidateRepository.approve）でdecisionAt欠落を補完保存 + ユニットテスト。[タスクB] pkgs/backend/scripts/等の適切な場所に1回限りのNodeスクリプト（--dry-runデフォルト / --applyで書き込み、全ユーザー横断、冪等、タスク単位エラー継続）。UIのドラッグ編集（PATCH API）は別エージェントが担当するので対象外。"
+**AI Response**: タスクA（generateStepDraftプロンプト強化 + 承認時decisionAt補完保存 + テスト追加）・タスクB（マイグレーションスクリプト作成）を実施。calcScheduleを純関数として共通化し、両者から利用。
+**Context**: Construction フェーズ / decisionAt必須化・マイグレーション / タスクA＆タスクB
+
+---
+
 ## UPDATE-PLAN — 3バンドガントチャート + ゲーミフィケーション土台再編 計画書作成
 **Timestamp**: 2026-05-26T00:00:00Z
 **User Input**: "SABOROU（AWS Summit Japan 2026 ハッカソン作品 / pnpm モノレポ）に「3バンドガントチャート」機能を追加し、それを軸にゲーミフィケーションをプロダクトの土台として再編する大型改修の AI-DLC 実装計画書を作成してください。コードはまだ書かず、計画書（aidlc-docs/ 配下）の作成と Unit 分解までを行ってください。[背景・確定済みの方針: ピッチの中核UX「3バンドガント」が現実装に存在しない。ガントをゲーム盤面にする（3バンド構成・さぼろう帯・色: 緑=さぼろう/白枠=作業/黄=意思決定・青点線NOWライン・締切ライン）。さぼれた時間×根拠の質→スコア/グレード/演出連動。既存ゲーム資産は全て残す。世界観はゲームっぽく賑やか・バッジ/メーター/アイコンから押下して開く体験に再編。各タスクごとガント表示（タスク詳細ページ）。PC3ペイン（左:タスク文脈+判定/中央:ガント盤面/右:チャット）・スマホタブ切替縦圧縮。カレンダー連携制約: スケジュール生成API実行時にevents.listを呼び時間区間をLLM入力に使ってレスポンス後に破棄（PII方針維持）。スケジュール生成: 新規SchedulePlannerAgent（Bedrock Tool Use・saboriJudgmentTool踏襲・Zod二重検証）・さぼろう帯は決定論的算出・GET /api/tasks/:id/schedule新設。計画書に含めること: Unit分解/データモデル設計案/Bedrockツールスキーマ案/ガントゲーム盤面化数値設計/UI再編設計PC・スマホ/実装順序・マイルストーン/品質ゲート/リスクと未確定事項。]"

@@ -33,6 +33,7 @@ import {
   generateUlid,
   toIsoString,
 } from "@saboru/shared";
+import { backfillDecisionAt } from "../utils/decisionAtBackfill.js";
 
 export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
   constructor(
@@ -160,10 +161,39 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
     // overrides 未指定／フィールド省略時は候補の元値を使う（後方互換）。
     // plannedSteps は確定済みステップ。空配列／未指定なら保存せず、
     // ガント生成時に Bedrock 分解へフォールバックする。
-    const plannedSteps =
+    const rawPlannedSteps =
       overrides?.plannedSteps && overrides.plannedSteps.length > 0
         ? overrides.plannedSteps
         : undefined;
+
+    // decisionAt 補完: AI が返した decisionAt を最優先し、欠けている場合のみ
+    // calcSchedule の後ろ詰め配置時刻で補完して焼き込む。
+    // これにより buildCrossTaskDecisionSlots が他タスクの decision を確実に拾える。
+    const effectiveDeadline =
+      overrides?.deadline !== undefined
+        ? overrides.deadline
+        : candidate.deadline;
+    let plannedSteps = rawPlannedSteps;
+    if (rawPlannedSteps && rawPlannedSteps.length > 0) {
+      const { steps: backfilled, backfilledCount } = backfillDecisionAt(
+        rawPlannedSteps,
+        now,
+        effectiveDeadline,
+      );
+      if (backfilledCount > 0) {
+        console.log(
+          JSON.stringify({
+            level: "INFO",
+            action: "decision_at_backfilled_on_approve",
+            taskId,
+            backfilledCount,
+            now,
+            deadline: effectiveDeadline,
+          }),
+        );
+        plannedSteps = backfilled;
+      }
+    }
 
     const task: Task = {
       PK: `${DDB_PREFIX.USER}${userId}`,
