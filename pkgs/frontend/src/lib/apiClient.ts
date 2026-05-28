@@ -49,6 +49,36 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * スロットリング（Lambda 同時実行上限超過）対策の自動リトライ設定。
+ *
+ * デモ環境は Lambda 同時実行上限が小さく、初回ロードで複数 GET が並列に
+ * 集中すると一時的に 429/503 が返ることがある。ユーザーにエラーを見せず、
+ * 短い指数バックオフ + ジッタで静かに再試行して吸収する。
+ * 副作用のある書き込み（GET 以外）は安全側で自動リトライしない。
+ */
+const TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
+const MAX_TRANSIENT_RETRIES = 3;
+const BASE_BACKOFF_MS = 250;
+
+function isTransientStatus(status: number): boolean {
+  return TRANSIENT_STATUSES.has(status);
+}
+
+/** GET（またはメソッド未指定＝GET）のみ自動リトライ対象とする。 */
+function isRetryableMethod(options?: RequestInit): boolean {
+  const method = (options?.method ?? "GET").toUpperCase();
+  return method === "GET";
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 指数バックオフ + ジッタ（attempt は 0 始まり）。 */
+function backoffDelayMs(attempt: number): number {
+  const expo = BASE_BACKOFF_MS * 2 ** attempt;
+  return expo + Math.random() * BASE_BACKOFF_MS;
+}
+
 let _refreshPromise: Promise<string | null> | null = null;
 
 /** 同時多発リクエストでも refresh は一度だけ走らせる（重複リフレッシュ防止） */
@@ -61,11 +91,16 @@ function refreshOnce(): Promise<string | null> {
   return _refreshPromise;
 }
 
-/** NFR-DESIGN-8: 認証付きリクエスト（401時はリフレッシュ + 1回リトライ） */
+/**
+ * NFR-DESIGN-8: 認証付きリクエスト。
+ * - 401: リフレッシュ + 1回リトライ
+ * - 429/502/503/504（GET のみ）: 指数バックオフで最大 MAX_TRANSIENT_RETRIES 回リトライ
+ */
 async function request<T>(
   path: string,
   options?: RequestInit,
   retry = true,
+  transientAttempt = 0,
 ): Promise<T> {
   // API Gateway JWT オーソライザーには id_token を送る（name/email クレームを含む）
   let token = getApiAuthToken();
@@ -104,6 +139,17 @@ async function request<T>(
     clearTokens();
     window.location.href = "/login";
     throw new ApiError(401, null);
+  }
+
+  // スロットリング等の一時エラー: GET のみ静かに指数バックオフでリトライする。
+  // 上限に達したら通常通り ApiError を投げる（呼び出し側のフォールバックに委ねる）。
+  if (
+    isTransientStatus(res.status) &&
+    isRetryableMethod(options) &&
+    transientAttempt < MAX_TRANSIENT_RETRIES
+  ) {
+    await sleep(backoffDelayMs(transientAttempt));
+    return request<T>(path, options, retry, transientAttempt + 1);
   }
 
   if (!res.ok) {
@@ -256,6 +302,25 @@ export async function updateTask(
 export async function deleteTask(taskId: string): Promise<void> {
   return request<void>(`/api/tasks/${taskId}`, {
     method: "DELETE",
+  });
+}
+
+/**
+ * PATCH /api/tasks/:taskId/planned-steps
+ *
+ * ガントUI のドラッグ/リサイズ編集結果を永続化する。
+ * plannedSteps 全体を上書きする（1〜8件）。
+ * decision ステップは decisionAt 必須（サーバ側でも検証）。
+ *
+ * @returns 更新後の Task
+ */
+export async function updatePlannedSteps(
+  taskId: string,
+  plannedSteps: ScheduleStep[],
+): Promise<Task> {
+  return request<Task>(`/api/tasks/${taskId}/planned-steps`, {
+    method: "PATCH",
+    body: JSON.stringify({ plannedSteps }),
   });
 }
 
@@ -477,6 +542,7 @@ export default {
   updateTask,
   deleteTask,
   createTask,
+  updatePlannedSteps,
   getProposal,
   getSchedule,
   submitHonne,
