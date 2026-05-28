@@ -46,8 +46,19 @@ export const EXTRACT_TASK_TOOL: Tool = {
           requester: {
             type: "string",
             description:
-              "Name or identifier of the person making the request. " +
-              "Use the Slack user ID if no name is available.",
+              "Identifier of the person who SENT/made the request (the message author). " +
+              "Prefer the Slack user ID in <@Uxxxxxxxx> form if present in the message metadata; " +
+              "otherwise use a name. Empty string if unknown.",
+          },
+          assignee: {
+            type: "string",
+            description:
+              "The single person the task is directed AT (the mention target / 宛先). " +
+              "If the message mentions someone like <@Uxxxxxxxx> or 'X さん' as the person who " +
+              "should do the work, return that one identifier (prefer <@Uxxxxxxxx> form). " +
+              "If there are multiple, return only the FIRST one. " +
+              "Return an empty string if the task is directed at the message author themselves " +
+              "(no explicit assignee).",
           },
           description: {
             type: "string",
@@ -57,7 +68,14 @@ export const EXTRACT_TASK_TOOL: Tool = {
               "Empty string if is_task is false.",
           },
         },
-        required: ["is_task", "title", "deadline", "requester", "description"],
+        required: [
+          "is_task",
+          "title",
+          "deadline",
+          "requester",
+          "assignee",
+          "description",
+        ],
       },
     },
   },
@@ -76,6 +94,8 @@ export const ExtractedTaskSchema = z.object({
   title: z.string().max(100),
   deadline: z.string().nullable(),
   requester: z.string(),
+  // 宛先（メンション先の先頭1名）。自分宛・宛先なしのときは空文字。
+  assignee: z.string(),
   description: z.string().max(300),
 });
 

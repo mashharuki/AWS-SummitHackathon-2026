@@ -48,6 +48,23 @@ export interface PostMessageParams {
   thread_ts?: string;
 }
 
+/**
+ * users.info が返すユーザープロフィール（表示名解決に必要なフィールドのみ）。
+ * Slack はフィールドが欠ける／空文字になることがあるため全て optional 扱い。
+ */
+export interface SlackUserProfile {
+  id: string;
+  /** ワークスペースのハンドル名（@... のもとになる） */
+  name?: string;
+  /** 本名（フルネーム） */
+  real_name?: string;
+  profile?: {
+    /** ユーザーが設定した表示名（最優先で使いたい） */
+    display_name?: string;
+    real_name?: string;
+  };
+}
+
 export class SlackApiError extends Error {
   constructor(
     public readonly slackError: string,
@@ -115,6 +132,39 @@ export class SlackClient {
 
     const data = await this.call<{ ts: string }>("chat.postMessage", body);
     return { ts: data.ts };
+  }
+
+  /**
+   * Slack ユーザー ID を表示名に解決する（users.info）。
+   * 必要スコープ: users:read
+   *
+   * 優先順位: profile.display_name → real_name → profile.real_name → name。
+   * いずれも空なら null を返す（呼び出し側で ID フォールバックする想定）。
+   * API 失敗時は SlackApiError を投げるため、呼び出し側で catch して
+   * タスク抽出自体は止めないこと。
+   *
+   * @param userId Slack の user ID（例: U12345678）
+   */
+  async usersInfo(userId: string): Promise<string | null> {
+    const body = new URLSearchParams({ user: userId });
+    const data = await this.call<{ user?: SlackUserProfile }>(
+      "users.info",
+      body,
+    );
+
+    const profile = data.user;
+    if (!profile) {
+      return null;
+    }
+
+    const displayName =
+      profile.profile?.display_name?.trim() ||
+      profile.real_name?.trim() ||
+      profile.profile?.real_name?.trim() ||
+      profile.name?.trim() ||
+      "";
+
+    return displayName.length > 0 ? displayName : null;
   }
 
   /** Slack Web API を呼び出し、ok:false / タイムアウトをエラー化する */

@@ -48,7 +48,9 @@ export interface ITaskCandidateRepository {
    * Create task candidate (on Webhook reception)
    * DynamoDB: PutItem PK=USER#<userId> SK=TASK_CAND#<ulid>
    * ULID generated with generateUlid() (BR-04)
-   * requester must be pseudonymized with pseudonymize() (BR-05)
+   * requester / assignee は users.info で解決した表示名を生で保存する
+   *   （旧 BR-05 のハッシュ化はデモ向けに実名表示を優先して廃止。
+   *    [[pseudonymize]] は未使用だが再利用できるよう残置）
    * TTL set to 30 days after creation (BR-13)
    */
   create(candidate: Omit<TaskCandidate, "PK" | "SK">): Promise<TaskCandidate>;

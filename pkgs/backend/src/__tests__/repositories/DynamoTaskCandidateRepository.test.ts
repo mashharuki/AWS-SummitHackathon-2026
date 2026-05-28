@@ -237,6 +237,58 @@ describe("DynamoTaskCandidateRepository.approve", () => {
     expect(putItem?.title).toEqual({ S: "編集後タイトル" });
   });
 
+  it("候補の assignee を承認後の Task に引き継ぐ", async () => {
+    const candWithAssignee = {
+      ...sampleCandItem,
+      requester: { S: "山田太郎" },
+      assignee: { S: "佐藤花子" },
+    };
+    let callCount = 0;
+    let putItem: Record<string, unknown> | undefined;
+    const client = mockClient((command) => {
+      callCount++;
+      if (callCount === 1) return { Item: candWithAssignee }; // findById
+      const input = (command as { input: { TransactItems: unknown[] } }).input;
+      putItem = (
+        input.TransactItems[1] as { Put: { Item: Record<string, unknown> } }
+      ).Put.Item;
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const task = await repo.approve("user1", "01CAND");
+    expect(task.requester).toBe("山田太郎");
+    expect(task.assignee).toBe("佐藤花子");
+    expect(putItem?.assignee).toEqual({ S: "佐藤花子" });
+  });
+
+  it("候補に assignee が無ければ Task に assignee を付けない", async () => {
+    let callCount = 0;
+    let putItem: Record<string, unknown> | undefined;
+    const client = mockClient((command) => {
+      callCount++;
+      if (callCount === 1) return { Item: sampleCandItem }; // findById（assignee なし）
+      const input = (command as { input: { TransactItems: unknown[] } }).input;
+      putItem = (
+        input.TransactItems[1] as { Put: { Item: Record<string, unknown> } }
+      ).Put.Item;
+      return {};
+    });
+    const repo = new DynamoTaskCandidateRepository(
+      client,
+      CAND_TABLE,
+      TASK_TABLE,
+    );
+
+    const task = await repo.approve("user1", "01CAND");
+    expect(task.assignee).toBeUndefined();
+    expect(putItem?.assignee).toBeUndefined();
+  });
+
   it("persists plannedSteps to the Task when provided", async () => {
     let callCount = 0;
     let putItem: Record<string, unknown> | undefined;

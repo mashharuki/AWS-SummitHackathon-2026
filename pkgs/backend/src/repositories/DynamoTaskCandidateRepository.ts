@@ -207,6 +207,7 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
           ? overrides.deadline
           : candidate.deadline,
       requester: candidate.requester,
+      ...(candidate.assignee ? { assignee: candidate.assignee } : {}),
       description: overrides?.description ?? candidate.description,
       sourceType: candidate.sourceType,
       ...(plannedSteps ? { plannedSteps } : {}),

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import apiClient, { type ApproveOverridesPayload } from "@/lib/apiClient";
+import { formatRequester } from "@/lib/utils";
 import type { ScheduleStep, TaskCandidate } from "@saboru/shared";
 import { X } from "lucide-react";
 /**
@@ -141,12 +142,12 @@ export function TaskApprovalModal({
 
   if (!isOpen || !candidate || !candidateId) return null;
 
-  // 依頼者は SHA-256 ハッシュ済み。生表示せず sourceType でマスクする（PII / R-3）。
-  const requesterText = candidate.requester
-    ? t("approvalModal.requesterMasked", {
-        source: candidate.sourceType === "slack" ? "Slack" : t("tasks.manual"),
-      })
-    : t("approvalModal.requesterUnknown");
+  // 依頼者は users.info 解決済みの表示名を生表示する（formatRequester に集約）。
+  const requesterText = formatRequester(
+    candidate.requester,
+    candidate.sourceType,
+    t,
+  );
 
   const handleRetry = () => {
     setStepsError(false);
@@ -319,6 +320,21 @@ export function TaskApprovalModal({
               {requesterText}
             </p>
           </div>
+
+          {/* 5. 誰宛か（assignee がある場合のみ表示） */}
+          {candidate.assignee && (
+            <div>
+              <span className="mb-1 block text-xs font-medium text-[#6B7280]">
+                {t("approvalModal.assignee")}
+              </span>
+              <p
+                className="rounded-xl bg-[#F9FAFB] px-3 py-2 text-sm text-[#6B7280]"
+                data-testid="assignee-display"
+              >
+                {t("approvalModal.assigneeValue", { name: candidate.assignee })}
+              </p>
+            </div>
+          )}
         </form>
 
         {/* フッター */}

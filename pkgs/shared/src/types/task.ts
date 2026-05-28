@@ -28,10 +28,15 @@ export interface Task {
   /** Deadline (ISO 8601 / null: unknown) */
   deadline: string | null;
   /**
-   * Requester name (pseudonymized, Q5 answer)
-   * SHA-256 hashed
+   * Requester display name (who asked).
+   * 候補から引き継ぐ表示名。users.info で解決済み、未解決なら Slack user ID。
    */
   requester: string;
+  /**
+   * Assignee display name (who it was asked to).
+   * 候補から引き継ぐ。メンションが無い場合は未設定（自分宛）。
+   */
+  assignee?: string;
   /** Work content */
   description: string;
   /** Original data source */
