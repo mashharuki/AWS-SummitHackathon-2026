@@ -230,6 +230,7 @@ export function normalizeToolDecisionAt(rawInput: unknown): unknown {
   if (!Array.isArray(obj.steps)) return rawInput;
 
   const steps = obj.steps.map((step) => {
+    /* c8 ignore next */
     if (!step || typeof step !== "object") return step;
     const s = step as Record<string, unknown>;
     if (typeof s.decisionAt !== "string") return step;

@@ -51,6 +51,21 @@ export const ApproveOverridesSchema = z.object({
     .optional(),
 });
 
+/**
+ * ガントUI のドラッグ/リサイズ編集結果を永続化するリクエストのバリデーション
+ * PATCH /api/tasks/:taskId/planned-steps のリクエストボディバリデーションに使用
+ *
+ * plannedSteps 全体を上書きする。1〜8件の制約は ApproveOverridesSchema と揃える。
+ * decision ステップの decisionAt はサーバ側でも必須チェックを行う。
+ */
+export const UpdatePlannedStepsSchema = z.object({
+  plannedSteps: z
+    .array(ScheduleStepSchema)
+    .min(1, "ステップは1件以上指定してください")
+    .max(8, "ステップは8件以内です"),
+});
+
 export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
 export type ApproveOverridesInput = z.infer<typeof ApproveOverridesSchema>;
+export type UpdatePlannedStepsInput = z.infer<typeof UpdatePlannedStepsSchema>;

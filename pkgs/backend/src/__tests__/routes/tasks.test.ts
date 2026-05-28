@@ -475,3 +475,220 @@ describe("DELETE /tasks/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("PATCH /tasks/:taskId/planned-steps", () => {
+  const validSteps = [
+    {
+      stepId: "s1",
+      stepLabel: "初稿を起こす",
+      durationMinutes: 45,
+      bandType: "work" as const,
+    },
+    {
+      stepId: "s2",
+      stepLabel: "上司へ確認依頼",
+      durationMinutes: 10,
+      bandType: "decision" as const,
+      decisionAt: "2026-05-24T07:00:00.000Z",
+    },
+  ];
+
+  it("正常更新: updatePlannedSteps が正しい引数で呼ばれ 200 を返す", async () => {
+    const updatedTask = { ...sampleTask, plannedSteps: validSteps };
+    const updatePlannedSteps = vi.fn().mockResolvedValue(updatedTask);
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: validSteps }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.taskId).toBe("01ABC");
+    // リポジトリが正しい引数で呼ばれることを確認
+    expect(updatePlannedSteps).toHaveBeenCalledWith(
+      MOCK_USER_ID,
+      "01ABC",
+      validSteps,
+    );
+  });
+
+  it("所有者確認: タスクが存在しない場合は 404 を返す", async () => {
+    const updatePlannedSteps = vi.fn();
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(null),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/NOTFOUND/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: validSteps }),
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.code).toBe("NOT_FOUND");
+    // 所有者確認で止まるためリポジトリ更新は呼ばれない
+    expect(updatePlannedSteps).not.toHaveBeenCalled();
+  });
+
+  it("バリデーション: plannedSteps が空配列の場合は 400 を返す", async () => {
+    const updatePlannedSteps = vi.fn();
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: [] }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(updatePlannedSteps).not.toHaveBeenCalled();
+  });
+
+  it("バリデーション: 9件以上のステップは 400 を返す", async () => {
+    const tooManySteps = Array.from({ length: 9 }, (_, i) => ({
+      stepId: `s${i + 1}`,
+      stepLabel: `ステップ${i + 1}`,
+      durationMinutes: 10,
+      bandType: "work" as const,
+    }));
+    const updatePlannedSteps = vi.fn();
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: tooManySteps }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(updatePlannedSteps).not.toHaveBeenCalled();
+  });
+
+  it("バリデーション: decision ステップに decisionAt が欠けている場合は 400 を返す", async () => {
+    const stepsWithoutDecisionAt = [
+      {
+        stepId: "s1",
+        stepLabel: "初稿を起こす",
+        durationMinutes: 45,
+        bandType: "work" as const,
+      },
+      {
+        stepId: "s2",
+        stepLabel: "上司へ確認依頼",
+        durationMinutes: 10,
+        bandType: "decision" as const,
+        // decisionAt なし
+      },
+    ];
+    const updatePlannedSteps = vi.fn();
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: stepsWithoutDecisionAt }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.details.stepIds).toContain("s2");
+    expect(updatePlannedSteps).not.toHaveBeenCalled();
+  });
+
+  it("anchorAt 付き work ステップが正常に保存される（work 移動の永続化）", async () => {
+    const stepsWithAnchorAt = [
+      {
+        stepId: "s1",
+        stepLabel: "初稿を起こす",
+        durationMinutes: 30,
+        bandType: "work" as const,
+        anchorAt: "2026-05-24T07:30:00.000Z", // ドラッグ移動で固定されたアンカー
+      },
+      {
+        stepId: "s2",
+        stepLabel: "上司へ確認依頼",
+        durationMinutes: 10,
+        bandType: "decision" as const,
+        decisionAt: "2026-05-24T09:00:00.000Z",
+      },
+    ];
+    const updatedTask = { ...sampleTask, plannedSteps: stepsWithAnchorAt };
+    const updatePlannedSteps = vi.fn().mockResolvedValue(updatedTask);
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: stepsWithAnchorAt }),
+    });
+
+    expect(res.status).toBe(200);
+    // anchorAt 付きステップが updatePlannedSteps に正しく渡されること
+    expect(updatePlannedSteps).toHaveBeenCalledWith(
+      MOCK_USER_ID,
+      "01ABC",
+      stepsWithAnchorAt,
+    );
+  });
+
+  it("anchorAt なし work ステップも正常に保存される（後方互換）", async () => {
+    const stepsWithoutAnchorAt = [
+      {
+        stepId: "s1",
+        stepLabel: "初稿を起こす",
+        durationMinutes: 45,
+        bandType: "work" as const,
+        // anchorAt なし → 後ろ詰めで配置
+      },
+    ];
+    const updatedTask = { ...sampleTask, plannedSteps: stepsWithoutAnchorAt };
+    const updatePlannedSteps = vi.fn().mockResolvedValue(updatedTask);
+    const taskRepo = {
+      findById: vi.fn().mockResolvedValue(sampleTask),
+      updatePlannedSteps,
+    };
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/planned-steps", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plannedSteps: stepsWithoutAnchorAt }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(updatePlannedSteps).toHaveBeenCalledWith(
+      MOCK_USER_ID,
+      "01ABC",
+      stepsWithoutAnchorAt,
+    );
+  });
+});

@@ -225,3 +225,71 @@ describe("DynamoTaskRepository.create — with deadline", () => {
     expect(task.deadline).toBe("2026-12-31");
   });
 });
+
+describe("DynamoTaskRepository.updatePlannedSteps", () => {
+  const plannedSteps = [
+    {
+      stepId: "s1",
+      stepLabel: "初稿を起こす",
+      durationMinutes: 45,
+      bandType: "work" as const,
+    },
+    {
+      stepId: "s2",
+      stepLabel: "上司へ確認依頼",
+      durationMinutes: 10,
+      bandType: "decision" as const,
+      decisionAt: "2026-05-24T07:00:00.000Z",
+    },
+  ];
+
+  it("UpdateItem を呼び出し更新後の Task を返す", async () => {
+    const client = mockClient(() => ({
+      Attributes: {
+        ...sampleTaskItem,
+        plannedSteps: {
+          L: plannedSteps.map((s) => ({
+            M: {
+              stepId: { S: s.stepId },
+              stepLabel: { S: s.stepLabel },
+              durationMinutes: { N: String(s.durationMinutes) },
+              bandType: { S: s.bandType },
+              ...("decisionAt" in s && s.decisionAt
+                ? { decisionAt: { S: s.decisionAt } }
+                : {}),
+            },
+          })),
+        },
+        updatedAt: { S: "2026-05-28T00:00:00.000Z" },
+      },
+    }));
+    const repo = new DynamoTaskRepository(client, TABLE);
+
+    const result = await repo.updatePlannedSteps(
+      "user1",
+      "01ABC",
+      plannedSteps,
+    );
+
+    expect(result.taskId).toBe("01ABC");
+    // UpdateItem が呼ばれたことを確認
+    expect(client.send).toHaveBeenCalledOnce();
+    // UpdateExpression に plannedSteps と updatedAt が含まれることを確認
+    const callArg = (client.send as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const input = callArg.input as {
+      UpdateExpression: string;
+      ExpressionAttributeValues: Record<string, unknown>;
+    };
+    expect(input.UpdateExpression).toContain("plannedSteps");
+    expect(input.UpdateExpression).toContain("updatedAt");
+  });
+
+  it("Attributes が返ってこない場合は Error をスローする", async () => {
+    const client = mockClient(() => ({})); // no Attributes
+    const repo = new DynamoTaskRepository(client, TABLE);
+
+    await expect(
+      repo.updatePlannedSteps("user1", "01ABC", plannedSteps),
+    ).rejects.toThrow("not found after updatePlannedSteps");
+  });
+});

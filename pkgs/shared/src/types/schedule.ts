@@ -73,6 +73,18 @@ export const ScheduleStepSchema = z.object({
    * 返すことがあるため offset: true。配置側は new Date() で UTC 正規化して扱う。
    */
   decisionAt: z.string().datetime({ offset: true }).optional(),
+  /**
+   * 作業ステップの開始時刻アンカー（ISO 8601）。work ステップにのみ意味を持つ。
+   *
+   * ガントUIでユーザーが work ブロックをドラッグ移動した際、その開始時刻を
+   * アンカーとして保存し、calcSchedule の後ろ詰め配置に優先する。
+   * anchorAt を持つ work は「その時刻に固定配置」され、decisionAt と同様の
+   * アンカー扱いになる。anchorAt が無い work は従来どおり後ろ詰めで動的配置される。
+   *
+   * 形式: タイムゾーンオフセット付き（例 +09:00）も許容（decisionAt と同じ流儀）。
+   * 後方互換: 既存データに anchorAt は無く、省略時は従来の後ろ詰め挙動となる。
+   */
+  anchorAt: z.string().datetime({ offset: true }).optional(),
   /** このステップが必要な理由（任意、最大200文字） */
   rationale: z.string().max(200).optional(),
 });
