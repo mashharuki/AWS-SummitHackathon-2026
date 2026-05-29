@@ -151,7 +151,7 @@ SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判�
 
 ### 4) ゲーミフィケーション — AI依存度スコアと称号システム
 
-「人をダメにする」をゲームループとして昇華した**AI依存度スコア（0〜100）**を実装しています。
+「人をダメにする」をゲームループとして昇華した **AI依存度スコア（0〜100）** を実装しています。
 
 | スコア帯 | 称号 | テーマ |
 |---|---|---|
@@ -319,8 +319,8 @@ sequenceDiagram
 
 📖 **詳細資料**:
 - AWS全体アーキテクチャ・セキュリティ境界・データフロー: [`aws-architecture.md`](./aidlc-docs/inception/application-design/aws-architecture.md)
-- コスト見積り（月額$30.94・NFR-06達成）: 同 §6
-- モニタリング・アラーム設計: 同 §7
+- コスト見積り（月額$30.94・NFR-06達成）: 同 6
+- モニタリング・アラーム設計: 同 7
 - AWS制約（リージョン・サーバーレス方針）: [`.claude/rules/aws-constraints.md`](./.claude/rules/aws-constraints.md)
 - アーキテクチャ方針: [`aidlc-inputs/03-aws-architecture-policy.md`](./aidlc-inputs/03-aws-architecture-policy.md)
 

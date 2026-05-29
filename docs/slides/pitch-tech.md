@@ -188,7 +188,7 @@ PersonaRenderer で
 
 <div class="highlight">
 
-EventBridge でイベント駆動連携 — Slack Webhook から <br/>SSE ストリーミング配信まで、3 Agents が<strong>疎結合で一気通貫</strong>
+イベント駆動のアーキテクチャ — Slack Webhook からSSE ストリーミング配信まで<br/>3つの AI Agents が<strong>疎結合で連携</strong>
 
 </div>
 
@@ -226,14 +226,9 @@ EventBridge でイベント駆動連携 — Slack Webhook から <br/>SSE スト
 
 <div class="card accent"><strong>Collective Effort Model</strong> 文脈欠損を検出</div>
 <div class="card accent"><strong>Identifiability Effect</strong> 監視度を評価</div>
-<div class="card accent"><strong>Self-Determination Theory</strong> <br/>外発プレッシャーを定量化</div>
+<div class="card accent"><strong>Self-Determination Theory</strong> <br/>外的プレッシャーを定量化</div>
 <div class="card accent"><strong>Expectancy Theory</strong> 今やる期待値を算出</div>
 <div class="card accent"><strong>Sucker Effect</strong> —損な役回りを検出</div>
-
-<div style="margin-top:10px; font-size:0.8em; color:#FF9900;">
-5理論中4理論に査読論文 DOI あり<br/>（Expectancy Theory は書籍）
-</div>
-
 </div>
 </div>
 

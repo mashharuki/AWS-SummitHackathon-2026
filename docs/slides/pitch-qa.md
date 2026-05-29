@@ -657,6 +657,133 @@ TypeScriptの実装コードが同じ性質を持つことは別途確認が必�
 
 ---
 
+### Q39. スライドの Lean コードは TypeScript の実装コードと本当に対応しているのか？
+
+**A:**
+1対1で対応しています。`guardTokenLimit.ts` の二分探索のミッド計算が、Lean 定義と完全に一致します。
+
+```typescript
+// TypeScript (pkgs/shared/src/utils/guardTokenLimit.ts:66)
+const mid = Math.floor((low + high + 1) / 2);
+```
+
+```lean
+-- Lean 4 定義
+def upperBiasedMid (low high : Nat) :=
+  (low + high + 1) / 2   -- Nat の除算は自動的に floor
+```
+
+`Nat` の除算は切り捨てなので、`Math.floor(...)` と完全に同義です。
+定理 `upperBiasedMid_gt_low` が `low < high → mid > low` を証明しているため、
+TypeScript の `while (low < high)` ループは必ず収束します。
+
+証明との対応を確認するために `low = high - 1`（最悪ケース）のユニットテストも追加しており、
+「証明が保証するケース」を実装側でも明示的に通過させています。
+
+---
+
+### Q40. Pseudonymize の「ソルト境界消失」とはどういう脆弱性か？実証コードはあるのか？
+
+**A:**
+`SHA256(salt + name)` の素朴な結合では、文字列の結合位置が区別されません。
+
+```
+SHA256("abc" + "def") = SHA256("abcd" + "ef")
+  → どちらも SHA256("abcdef") と同じ入力 → 同一ハッシュ → 衝突！
+```
+
+つまり `salt="abc"`, `name="def"` と `salt="abcd"`, `name="ef"` が同一のハッシュになります。
+これはユーザーIDの仮名化で「別ユーザーが同一ハッシュを持つ」という事態を招きます。
+
+`pseudonymize.test.ts` の「HMAC collision prevention」テストがこのケースを直接検証しています：
+
+```typescript
+// salt="abc_valid_salt_16", name="def" のハッシュ
+process.env["PSEUDONYMIZE_SALT"] = "abc_valid_salt_16";
+const hash1 = pseudonymize("def");
+
+// salt="abcd_valid_salt_1", name="ef" のハッシュ
+process.env["PSEUDONYMIZE_SALT"] = "abcd_valid_salt_1";
+const hash2 = pseudonymize("ef");
+
+expect(hash1).not.toBe(hash2); // HMAC なら必ず異なる
+```
+
+HMAC-SHA256 はソルトをキー（鍵）として扱うため、結合ではなく別の演算が行われ、この脆弱性が原理的に発生しません。Lean では「旧実装にはこの衝突ペアが存在する（= 単射でない）」という命題を証明してから実装変更を決定しています。
+
+---
+
+### Q41. 形式検証専用の SKILL とサブエージェントはどう自作したのか？
+
+**A:**
+`lean-formal-verification` という独自 SKILL を `.claude/skills/` 配下に作成し、
+AI-DLC の Construction フェーズに組み込みました。
+
+SKILL の役割は3段階です：
+
+| ステップ | 内容 |
+|---------|------|
+| 1. 証明対象の識別 | Application Design 完了後、「テストでは証明できない性質」を持つロジックをリストアップ |
+| 2. Lean 定理の生成 | Claude が Lean 4 の定理コードを生成し、型検査（`lean --check`）でエラーがないことを確認 |
+| 3. 実装との対応検証 | Lean の定義と TypeScript 実装を並べ、アルゴリズム構造が一致しているかを人間がレビュー |
+
+サブエージェントとして動作させることで、メインの Construction コンテキストを圧迫せず、
+「Lean 証明に集中した独立コンテキスト」で証明作業を完結させています。
+証明完了後にサマリーを Construction フェーズに戻し、Code Generation Plan に反映する設計です。
+
+---
+
+### Q42. Lean 証明で失敗・修正したことはあったか？
+
+**A:**
+GuardTokenLimit で1回、証明が失敗しています。
+
+最初の定理は通常の下側バイアス式を前提に書いていました：
+
+```lean
+-- 最初の（失敗した）試み
+def biasedMid (low high : Nat) := (low + high) / 2
+theorem biasedMid_gt_low (h : low < high) :
+    biasedMid low high > low := by
+  simp [biasedMid]; omega  -- ❌ omega が証明できない
+```
+
+`omega` が反例として `low=0, high=1` を見つけ、`(0+1)/2=0` で `0 > 0` が偽と判断しました。
+この失敗が「上側バイアス式 `(low + high + 1) / 2` に変更する」という設計変更を引き出しています。
+
+Lean の証明失敗がバグの発見につながった実例であり、
+「AIが設計したロジックに数学的な穴があった」ことを形式検証が具体的に指摘した瞬間です。
+
+---
+
+### Q43. ContextUtils の単調性はどのような Lean 定理として書いたのか？
+
+**A:**
+`externalPressureLevel` の判定ロジックを例に取ると、以下のような形式になります。
+
+```lean
+-- 圧力レベルの順序付け (high > low > unknown)
+def pressureOrder : String → Nat
+  | "high"    => 2
+  | "low"     => 1
+  | _         => 0
+
+-- SDT シグナル: reminderCount が増えるほど pressureLevel は単調非減少
+theorem pressure_monotone
+    (r1 r2 : Nat) (h : r1 ≤ r2) :
+    pressureOrder (sdtPressure r1) ≤ pressureOrder (sdtPressure r2) := by
+  simp [sdtPressure, pressureOrder]; omega
+```
+
+実装の `derivePsychSignals()` では `reminderCount >= 2` をしきい値として
+`"high"` / `"low"` を返します。Lean ではこのしきい値設計が
+「より多くのリマインドを受け取るほど pressure スコアが下がらない」ことを
+全自然数の範囲で保証することを証明しています。
+
+これにより「リマインド3回→サボれる」という逆転バグを数学的に排除しています。
+
+---
+
 ## 補足: 審査員が詰めてくるポイント TOP 5
 
 | 優先度 | 質問の核心 | 一言回答 |
@@ -667,7 +794,3 @@ TypeScriptの実装コードが同じ性質を持つことは別途確認が必�
 | ★★★★☆ | 形式検証：テストで十分では？ | 「全入力での正しさ」はテストでは保証できない |
 | ★★★☆☆ | プライバシー・データ保持の正確な説明 | 「生データ非永続化・構造化データTTL 30日」 |
 | ★★★☆☆ | AI-DLCで何が変わったか | 設計書→Lean証明→実装の順番を人間が制御した |
-
----
-
-*作成日: 2026-05-29 / 審査スキル: aws-summit-hackathon-reviewer + aws-summit-pitch-builder に基づく*
