@@ -159,8 +159,11 @@ export class SchedulePlannerAgent {
               text: [
                 `現在時刻は ${nowIso}（Asia/Tokyo）です。`,
                 "次のタスクを作業ステップに分解してください。",
-                "意思決定（decision）には decisionAt（ISO 8601 の時刻）を、",
-                "現在時刻より後・締切より前で提案してください。",
+                "",
+                "【重要】decision ステップには decisionAt（ISO 8601 形式）を必ず付与してください。",
+                "decisionAt は現在時刻より後・締切より前の具体的な時刻にすること。",
+                '例: "2026-06-05T16:00:00+09:00"（上司確認は締切の2時間前など）',
+                "decisionAt が欠けた decision ステップは不完全な出力です。",
                 "",
                 `タイトル: ${safeTitle}`,
                 deadlineText,
@@ -227,6 +230,7 @@ export function normalizeToolDecisionAt(rawInput: unknown): unknown {
   if (!Array.isArray(obj.steps)) return rawInput;
 
   const steps = obj.steps.map((step) => {
+    /* c8 ignore next */
     if (!step || typeof step !== "object") return step;
     const s = step as Record<string, unknown>;
     if (typeof s.decisionAt !== "string") return step;

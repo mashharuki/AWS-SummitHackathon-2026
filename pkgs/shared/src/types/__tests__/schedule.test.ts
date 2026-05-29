@@ -144,6 +144,40 @@ describe("ScheduleStepSchema", () => {
         .success,
     ).toBe(false);
   });
+
+  it("accepts work step with anchorAt (ISO 開始時刻アンカー)", () => {
+    expect(
+      ScheduleStepSchema.safeParse({
+        ...validStep,
+        bandType: "work",
+        anchorAt: "2026-05-24T14:00:00.000Z",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts anchorAt with timezone offset (decisionAt と同じ流儀)", () => {
+    expect(
+      ScheduleStepSchema.safeParse({
+        ...validStep,
+        bandType: "work",
+        anchorAt: "2026-05-24T14:00:00+09:00",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("anchorAt を省略しても valid（後方互換 — 後ろ詰め配置になる）", () => {
+    const result = ScheduleStepSchema.safeParse(validStep);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.anchorAt).toBeUndefined();
+    }
+  });
+
+  it("rejects non-ISO anchorAt", () => {
+    expect(
+      ScheduleStepSchema.safeParse({ ...validStep, anchorAt: "14:00" }).success,
+    ).toBe(false);
+  });
 });
 
 describe("ScheduleBlockSchema", () => {

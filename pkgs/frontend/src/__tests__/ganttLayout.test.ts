@@ -1,5 +1,6 @@
 import {
   BAND_META,
+  blocksOverlap,
   buildDummySchedule,
   buildRows,
   buildTimeTicks,
@@ -8,6 +9,9 @@ import {
   formatTick,
   getDayRange,
   isSameLocalDay,
+  pxToMinutes,
+  pxToTime,
+  snapToGrid,
   timeToPx,
   viewWidthPx,
 } from "@/lib/ganttLayout";
@@ -244,19 +248,22 @@ describe("getDayRange", () => {
     };
   }
 
-  it("今日が対象日なら開始は now、終了は締切（その日中）", () => {
+  it("今日が対象日なら開始は now、終了はその日の 23:59（左右無限・丸1日を保つ）", () => {
     const now = new Date(2026, 4, 26, 14, 0); // 今日 14:00
     const deadline = new Date(2026, 4, 26, 18, 0); // 今日 18:00
-    const viewEnd = new Date(2026, 4, 30, 23, 59); // 締切より後ろまでビューは伸びている
+    const viewEnd = new Date(2026, 4, 30, 23, 59);
     const s = localSchedule(now, viewEnd, deadline);
 
     const range = getDayRange(now, s, now);
     expect(new Date(range.startAt).getTime()).toBe(now.getTime());
-    // 夜まで伸ばさず締切まで
-    expect(new Date(range.endAt).getTime()).toBe(deadline.getTime());
+    // 締切で切らず、その日の終わりまで一定幅を保つ（締切ラインは軸上で示す）
+    const end = new Date(range.endAt);
+    expect(isSameLocalDay(end, now)).toBe(true);
+    expect(end.getHours()).toBe(23);
+    expect(end.getMinutes()).toBe(59);
   });
 
-  it("締切が翌日以降なら、当日の終了はその日の 23:59:59.999", () => {
+  it("締切が翌日以降でも、当日の終了はその日の 23:59:59.999", () => {
     const now = new Date(2026, 4, 26, 9, 0);
     const deadline = new Date(2026, 4, 28, 18, 0); // 締切は2日後
     const viewEnd = new Date(2026, 4, 28, 18, 0);
@@ -267,6 +274,20 @@ describe("getDayRange", () => {
     expect(isSameLocalDay(end, now)).toBe(true);
     expect(end.getHours()).toBe(23);
     expect(end.getMinutes()).toBe(59);
+  });
+
+  it("スケジュール期間外の過去日でも丸1日の範囲を返す（左右無限）", () => {
+    const now = new Date(2026, 4, 26, 9, 0);
+    const past = new Date(2026, 4, 20, 0, 0); // viewStart より前
+    const s = localSchedule(now, new Date(2026, 4, 28, 0, 0), null);
+
+    const range = getDayRange(past, s, now);
+    const start = new Date(range.startAt);
+    const end = new Date(range.endAt);
+    expect(isSameLocalDay(start, past)).toBe(true);
+    expect(start.getHours()).toBe(0);
+    expect(isSameLocalDay(end, past)).toBe(true);
+    expect(end.getHours()).toBe(23);
   });
 
   it("翌日を指定した場合は開始 00:00・終了 23:59（その日が締切日でなければ）", () => {
@@ -285,12 +306,14 @@ describe("getDayRange", () => {
   });
 
   it("開始が終了以上の異常時は最低1時間の窓を確保する", () => {
-    const now = new Date(2026, 4, 26, 23, 59);
-    const deadline = new Date(2026, 4, 26, 23, 59, 30); // ほぼ now と同時
-    const s = localSchedule(now, deadline, deadline);
+    // now が当日の終端ちょうど → 開始 == 終了 になる異常ケース。
+    // この場合でも最低1時間の窓を確保してガントが潰れないことを確認する。
+    const now = new Date(2026, 4, 26, 23, 59, 59, 999); // 当日の終端ちょうど
+    const s = localSchedule(now, now, null);
     const range = getDayRange(now, s, now);
-    expect(new Date(range.endAt).getTime()).toBeGreaterThan(
-      new Date(range.startAt).getTime(),
+    // 1時間の窓（startMs + 1h）が確保される
+    expect(new Date(range.endAt).getTime()).toBe(
+      new Date(range.startAt).getTime() + 60 * 60 * 1000,
     );
   });
 });
@@ -371,5 +394,32 @@ describe("filterScheduleByDay", () => {
     };
     const filtered = filterScheduleByDay(schedule, now, now);
     expect(filtered.totalSaboruMinutes).toBe(30);
+  });
+});
+
+describe("px↔時刻 逆変換（編集用）", () => {
+  it("pxToMinutes は durationToWidthPx の逆（pxPerHour=120 → 120px=60分）", () => {
+    expect(pxToMinutes(120, 120)).toBe(60);
+    expect(pxToMinutes(30, 120)).toBe(15);
+  });
+
+  it("snapToGrid は15分グリッドへ四捨五入する", () => {
+    expect(snapToGrid(7)).toBe(0);
+    expect(snapToGrid(8)).toBe(15);
+    expect(snapToGrid(22)).toBe(15);
+    expect(snapToGrid(23)).toBe(30);
+  });
+
+  it("pxToTime は timeToPx の逆（スナップ込み）", () => {
+    const vs = new Date("2026-05-24T05:00:00.000Z").getTime();
+    // 120px = 60分後 → 06:00
+    expect(pxToTime(120, vs, 120)).toBe("2026-05-24T06:00:00.000Z");
+    // 16px ≒ 8分 → 15分にスナップ
+    expect(pxToTime(16, vs, 120)).toBe("2026-05-24T05:15:00.000Z");
+  });
+
+  it("blocksOverlap は端の接触を重なりとみなさない", () => {
+    expect(blocksOverlap(0, 30, 30, 60)).toBe(false);
+    expect(blocksOverlap(0, 30, 15, 45)).toBe(true);
   });
 });

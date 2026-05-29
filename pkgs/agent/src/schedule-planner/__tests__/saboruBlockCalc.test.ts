@@ -41,6 +41,21 @@ function decisionStep(id: string, decisionAt: string): ScheduleStep {
   };
 }
 
+/** anchorAt 付きの work ステップ。 */
+function anchoredWorkStep(
+  id: string,
+  durationMinutes: number,
+  anchorAt: string,
+): ScheduleStep {
+  return {
+    stepId: id,
+    stepLabel: `work-${id}`,
+    durationMinutes,
+    bandType: "work",
+    anchorAt,
+  };
+}
+
 describe("normalizeBusySlots", () => {
   it("窓外を切り落とし、時刻順にソートする", () => {
     const busy: BusySlot[] = [
@@ -308,5 +323,167 @@ describe("calcSchedule（後ろ詰め）", () => {
     expect(dLegacy?.endAt).toBe(at(180));
     expect(dLegacy?.bandType).toBe("decision");
     expect(result.totalSaboruMinutes).toBe(120);
+  });
+
+  it("decisionAt が不正な ISO 文字列の場合、後ろ詰め扱い（NaN → null）", () => {
+    // decisionAt に不正値 → NaN → アンカー無効 → 後ろ詰めにフォールバック
+    const stepWithBadDecisionAt: ScheduleStep = {
+      stepId: "d1",
+      stepLabel: "不正決定",
+      durationMinutes: 10,
+      bandType: "decision",
+      decisionAt: "not-a-date" as string,
+    };
+    const result = calcSchedule({
+      steps: [step("s1", 30), stepWithBadDecisionAt],
+      busySlots: [],
+      now: NOW,
+      deadline: at(120),
+    });
+    const d1 = result.blocks.find((b) => b.stepId === "d1");
+    // 後ろ詰め: 締切(120)に接して 110-120
+    expect(d1?.endAt).toBe(at(120));
+    expect(d1?.bandType).toBe("decision");
+  });
+});
+
+describe("calcSchedule（anchorAt 付き work の固定配置）", () => {
+  it("anchorAt 付き work は指定時刻に固定配置される", () => {
+    // s1(30分) を 60分後に固定。s2(30分) は anchorAt なしで後ろ詰め。
+    const result = calcSchedule({
+      steps: [anchoredWorkStep("s1", 30, at(60)), step("s2", 30)],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // s1 は anchorAt(60) に固定配置
+    expect(s1?.startAt).toBe(at(60));
+    expect(s1?.endAt).toBe(at(90));
+    expect(s1?.durationMinutes).toBe(30);
+    expect(s1?.bandType).toBe("work");
+  });
+
+  it("anchorAt なし work は後ろ詰めのまま（後方互換）", () => {
+    const result = calcSchedule({
+      steps: [step("s1", 30), step("s2", 30)],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const s2 = result.blocks.find((b) => b.stepId === "s2");
+    // 後ろ詰め: s2 が締切(180)に接して 150-180
+    expect(s2?.endAt).toBe(at(180));
+  });
+
+  it("anchorAt 付き work がアンカーとなり、前後の後ろ詰め work が正しく分割される", () => {
+    // s1(30分)→ s2[anchorAt=90](30分) → s3(30分)
+    // s2 は 90-120 に固定。s1 は s2 開始(90)へ後ろ詰め → 60-90。s3 は締切(180)へ後ろ詰め → 150-180。
+    const result = calcSchedule({
+      steps: [
+        step("s1", 30),
+        anchoredWorkStep("s2", 30, at(90)),
+        step("s3", 30),
+      ],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    const s2 = result.blocks.find((b) => b.stepId === "s2");
+    const s3 = result.blocks.find((b) => b.stepId === "s3");
+
+    // s2 固定アンカー
+    expect(s2?.startAt).toBe(at(90));
+    expect(s2?.endAt).toBe(at(120));
+
+    // s1 は s2 開始(90)へ後ろ詰め
+    expect(s1?.endAt).toBe(at(90));
+    expect(s1?.startAt).toBe(at(60));
+
+    // s3 は締切(180)へ後ろ詰め
+    expect(s3?.endAt).toBe(at(180));
+    expect(s3?.startAt).toBe(at(150));
+  });
+
+  it("anchorAt 付き work と decision アンカーが混在しても決定論的に配置される", () => {
+    // s1[anchorAt=30](30分) → d1[decisionAt=90](10分) → s2(30分)
+    const result = calcSchedule({
+      steps: [
+        anchoredWorkStep("s1", 30, at(30)),
+        decisionStep("d1", at(90)),
+        step("s2", 30),
+      ],
+      busySlots: [],
+      now: NOW,
+      deadline: at(180),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    const d1 = result.blocks.find((b) => b.stepId === "d1");
+    const s2 = result.blocks.find((b) => b.stepId === "s2");
+
+    // s1 固定アンカー（30-60）
+    expect(s1?.startAt).toBe(at(30));
+    expect(s1?.endAt).toBe(at(60));
+
+    // d1 固定アンカー（90-100）
+    expect(d1?.startAt).toBe(at(90));
+    expect(d1?.endAt).toBe(at(100));
+
+    // s2 は締切(180)へ後ろ詰め（150-180）
+    expect(s2?.endAt).toBe(at(180));
+    expect(s2?.startAt).toBe(at(150));
+  });
+
+  it("anchorAt が窓外の場合、窓端にクランプされる", () => {
+    // s1[anchorAt=-60]（窓開始より前）→ 窓先頭(0)にクランプ
+    const result = calcSchedule({
+      steps: [anchoredWorkStep("s1", 30, at(-60))],
+      busySlots: [],
+      now: NOW,
+      deadline: at(120),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // クランプ: windowStart(0)に配置
+    expect(s1?.startAt).toBe(at(0));
+    expect(s1?.endAt).toBe(at(30));
+  });
+
+  it("anchorAt が不正な ISO 文字列の場合、後ろ詰め扱い（NaN → null）", () => {
+    // anchorAt に不正値が入った場合は後ろ詰めにフォールバックする
+    const stepWithBadAnchor: ScheduleStep = {
+      stepId: "s1",
+      stepLabel: "作業",
+      durationMinutes: 30,
+      bandType: "work",
+      // Zod バリデーション後の場合は正常値のみ来るが、型レベルでは string なので
+      // NaN になる値を強制的に渡してフォールバックをテストする
+      anchorAt: "not-a-date" as string,
+    };
+    // NaN になる anchorAt → アンカーとして登録されずに後ろ詰めされる
+    const result = calcSchedule({
+      steps: [stepWithBadAnchor],
+      busySlots: [],
+      now: NOW,
+      deadline: at(120),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // 後ろ詰め: 締切(120)に接して 90-120
+    expect(s1?.endAt).toBe(at(120));
+    expect(s1?.startAt).toBe(at(90));
+  });
+
+  it("anchorAt 付き work と busy が重なっても配置は行われる（重複許容・決定論）", () => {
+    // s1[anchorAt=60](30分)。busy 60-90 と重なるが固定配置する。
+    const result = calcSchedule({
+      steps: [anchoredWorkStep("s1", 30, at(60))],
+      busySlots: [{ startAt: at(60), endAt: at(90) }],
+      now: NOW,
+      deadline: at(120),
+    });
+    const s1 = result.blocks.find((b) => b.stepId === "s1");
+    // anchorAt 優先: busy と重なっても固定配置
+    expect(s1?.startAt).toBe(at(60));
+    expect(s1?.endAt).toBe(at(90));
   });
 });

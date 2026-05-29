@@ -78,12 +78,14 @@ export {
   CreateTaskSchema,
   UpdateTaskSchema,
   ApproveOverridesSchema,
+  UpdatePlannedStepsSchema,
   CreateHonneSchema,
 } from "./schemas";
 export type {
   CreateTaskInput,
   UpdateTaskInput,
   ApproveOverridesInput,
+  UpdatePlannedStepsInput,
   CreateHonneInput,
 } from "./schemas";
 

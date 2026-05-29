@@ -12,11 +12,11 @@ import { useToast } from "@/hooks/useToast";
  * 共有 HTML SettingsScreen 準拠（ネオブルータリズム）
  */
 import apiClient from "@/lib/apiClient";
-import { PERSONAS } from "@/lib/staticContent";
 import type {
   CalendarFetchResponse,
   GmailFetchResponse,
 } from "@/lib/apiClient";
+import { PERSONAS } from "@/lib/staticContent";
 import { getDisplayName, toUserMessage } from "@/lib/utils";
 import { ChevronRight, LogOut } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";

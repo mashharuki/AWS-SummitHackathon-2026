@@ -13,6 +13,7 @@ import apiClient, {
   getHonneSummary,
   getMe,
   getProposal,
+  getSchedule,
   getSlackAuthUrl,
   getSlackChannels,
   getTask,
@@ -20,6 +21,7 @@ import apiClient, {
   notifyTaskToSlack,
   rejectCandidate,
   submitHonne,
+  updatePlannedSteps,
   syncSlackMessages,
   updatePersona,
   updateTask,
@@ -333,6 +335,63 @@ describe("apiClient — エラー系", () => {
   });
 });
 
+describe("apiClient — スロットリング自動リトライ（GET）", () => {
+  beforeEach(() => {
+    setAccessToken("test-access-token", 3600);
+  });
+  afterEach(() => {
+    clearTokens();
+  });
+
+  it("503 が続いた後 200 が返れば自動リトライで成功する", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/tasks", () => {
+        calls += 1;
+        // 1,2回目は 503、3回目で 200（指数バックオフで吸収される想定）
+        if (calls < 3) return new HttpResponse(null, { status: 503 });
+        return HttpResponse.json({ tasks: [] });
+      }),
+    );
+
+    const tasks = await apiClient.getTasks();
+    expect(tasks).toEqual([]);
+    expect(calls).toBe(3);
+  });
+
+  it("リトライ上限を超えて 503 が続けば最終的に ApiError を投げる", async () => {
+    let calls = 0;
+    server.use(
+      http.get("*/api/tasks", () => {
+        calls += 1;
+        return new HttpResponse(null, { status: 503 });
+      }),
+    );
+
+    const err = (await apiClient.getTasks().catch((e) => e)) as ApiError;
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(503);
+    // 初回 + 最大リトライ回数（MAX_TRANSIENT_RETRIES=3）= 4 回呼ばれる
+    expect(calls).toBe(4);
+  });
+
+  it("POST（非冪等）は 503 でも自動リトライしない", async () => {
+    let calls = 0;
+    server.use(
+      http.post("*/api/tasks", () => {
+        calls += 1;
+        return new HttpResponse(null, { status: 503 });
+      }),
+    );
+
+    const err = (await createTask({ title: "x" }).catch((e) => e)) as ApiError;
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(503);
+    // リトライせず 1 回のみ
+    expect(calls).toBe(1);
+  });
+});
+
 describe("apiClient — 401 自動トークンリフレッシュ", () => {
   afterEach(() => {
     clearTokens();
@@ -625,5 +684,92 @@ describe("buildProposalStreamUrl", () => {
     expect(url).toContain("stream=true");
     expect(url).toContain("/api/tasks/task-456/proposal");
     expect(url).not.toContain("access_token=");
+  });
+});
+
+describe("apiClient — スケジュール（ガント）", () => {
+  beforeEach(() => {
+    setAccessToken("test-access-token", 3600);
+  });
+  afterEach(() => {
+    clearTokens();
+  });
+
+  it("GET /api/tasks/:id/schedule でスケジュールを取得できる", async () => {
+    const schedule = {
+      taskId: "t1",
+      generatedAt: "2026-05-24T05:00:00.000Z",
+      viewStartAt: "2026-05-24T05:00:00.000Z",
+      viewEndAt: "2026-05-24T08:00:00.000Z",
+      deadline: "2026-05-24T08:00:00.000Z",
+      blocks: [
+        {
+          stepId: "s1",
+          stepLabel: "資料作成",
+          bandType: "work",
+          startAt: "2026-05-24T05:00:00.000Z",
+          endAt: "2026-05-24T05:30:00.000Z",
+          durationMinutes: 30,
+        },
+      ],
+      totalSaboruMinutes: 0,
+      calendarUsed: true,
+    };
+    server.use(
+      http.get("*/api/tasks/t1/schedule", () =>
+        HttpResponse.json({ schedule }),
+      ),
+    );
+    const res = await getSchedule("t1");
+    expect(res?.taskId).toBe("t1");
+    expect(res?.blocks).toHaveLength(1);
+  });
+
+  it("404 のとき getSchedule は null を返す", async () => {
+    server.use(
+      http.get(
+        "*/api/tasks/none/schedule",
+        () => new HttpResponse(null, { status: 404 }),
+      ),
+    );
+    expect(await getSchedule("none")).toBeNull();
+  });
+
+  it("404以外のエラーは getSchedule でそのまま再スローされる", async () => {
+    server.use(
+      http.get(
+        "*/api/tasks/err/schedule",
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    );
+    await expect(getSchedule("err")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("PATCH /api/tasks/:id/planned-steps で plannedSteps を保存し更新後 Task を返す", async () => {
+    let received: unknown = null;
+    server.use(
+      http.patch("*/api/tasks/t1/planned-steps", async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ taskId: "t1", title: "更新後" });
+      }),
+    );
+    const plannedSteps = [
+      {
+        stepId: "s1",
+        stepLabel: "資料作成",
+        durationMinutes: 90,
+        bandType: "work" as const,
+      },
+      {
+        stepId: "s2",
+        stepLabel: "上司へ確認",
+        durationMinutes: 10,
+        bandType: "decision" as const,
+        decisionAt: "2026-05-24T07:30:00.000Z",
+      },
+    ];
+    const task = await updatePlannedSteps("t1", plannedSteps);
+    expect(task.taskId).toBe("t1");
+    expect(received).toEqual({ plannedSteps });
   });
 });

@@ -89,6 +89,7 @@ function makeTaskBedrockResponse(
     title?: string;
     deadline?: string | null;
     requester?: string;
+    assignee?: string;
     description?: string;
   } = {},
 ): ConverseCommandOutput {
@@ -97,6 +98,7 @@ function makeTaskBedrockResponse(
     title: "資料作成",
     deadline: "2026-05-20",
     requester: "U12345",
+    assignee: "",
     description: "来週のMTG資料を作成する",
     ...overrides,
   };
@@ -168,14 +170,79 @@ describe("TaskExtractorAgent", () => {
       expect(result.candidate.sourceType).toBe("slack");
     });
 
-    it("pseudonymizes requester name (does not store raw Slack user ID)", async () => {
+    it("リゾルバ未注入時は送信者 ID をそのまま requester に保存する", async () => {
       const result = await agent.extractTask(testEvent);
       if (result.skipped) throw new Error("type narrowing");
 
-      // 依頼者は生の "U12345" ではなく SHA-256 ハッシュ (64 文字) であるべき
-      expect(result.candidate.requester).not.toBe("U12345");
-      expect(result.candidate.requester).toHaveLength(64);
-      expect(result.candidate.requester).toMatch(/^[0-9a-f]{64}$/);
+      // 仮名化（ハッシュ化）は廃止。リゾルバ未注入なので送信者 ID 生値。
+      expect(result.candidate.requester).toBe("U12345");
+      expect(result.candidate.assignee).toBeUndefined();
+    });
+
+    it("リゾルバ注入時は requester を表示名に解決して生保存する", async () => {
+      const resolve = async (id: string) =>
+        id === "U12345" ? "山田太郎" : null;
+      const result = await agent.extractTask(testEvent, resolve);
+      if (result.skipped) throw new Error("type narrowing");
+
+      expect(result.candidate.requester).toBe("山田太郎");
+    });
+
+    it("解決失敗（null）時は送信者 ID にフォールバックする", async () => {
+      const resolve = async () => null;
+      const result = await agent.extractTask(testEvent, resolve);
+      if (result.skipped) throw new Error("type narrowing");
+
+      expect(result.candidate.requester).toBe("U12345");
+    });
+
+    it("リゾルバが例外を投げても抽出を止めず ID フォールバックする", async () => {
+      const resolve = async () => {
+        throw new Error("slack down");
+      };
+      const result = await agent.extractTask(testEvent, resolve);
+      expect(result.skipped).toBe(false);
+      if (result.skipped) throw new Error("type narrowing");
+      expect(result.candidate.requester).toBe("U12345");
+    });
+  });
+
+  describe("extractTask — 自分宛フィルタ", () => {
+    it("宛先が送信者と異なる依頼は取り込まない（自分が他人に投げた）", async () => {
+      mockBedrock.setResponse(
+        makeTaskBedrockResponse({ assignee: "<@U99999>" }),
+      );
+      const resolve = async (id: string) =>
+        ({ U12345: "自分", U99999: "佐藤花子" })[id] ?? null;
+      const result = await agent.extractTask(testEvent, resolve);
+
+      expect(result.skipped).toBe(true);
+      expect(mockRepo.created).toHaveLength(0);
+    });
+
+    it("宛先が送信者自身なら取り込む（自分宛の依頼）", async () => {
+      mockBedrock.setResponse(
+        makeTaskBedrockResponse({ assignee: "<@U12345>" }),
+      );
+      const resolve = async (id: string) => ({ U12345: "自分" })[id] ?? null;
+      const result = await agent.extractTask(testEvent, resolve);
+
+      expect(result.skipped).toBe(false);
+      if (result.skipped) throw new Error("type narrowing");
+      expect(result.candidate.requester).toBe("自分");
+      expect(result.candidate.assignee).toBe("自分");
+    });
+
+    it("宛先が素の名前で ID 解決できない場合は誤って弾かず取り込む", async () => {
+      mockBedrock.setResponse(
+        makeTaskBedrockResponse({ assignee: "佐藤さん" }),
+      );
+      const result = await agent.extractTask(testEvent);
+
+      expect(result.skipped).toBe(false);
+      if (result.skipped) throw new Error("type narrowing");
+      // 解決できないので Bedrock 抽出値（生の名前）をそのまま保存
+      expect(result.candidate.assignee).toBe("佐藤さん");
     });
 
     it("stores messageTs as sourceRef (not message body)", async () => {

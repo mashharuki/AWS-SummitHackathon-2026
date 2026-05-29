@@ -16,7 +16,7 @@ const candidate: TaskCandidate = {
   candidateId: "01CAND",
   title: "議事録の共有",
   deadline: "2026-05-26T09:00:00.000Z",
-  requester: "hashed-requester",
+  requester: "山田太郎",
   description: "上司確認後の初稿を共有する",
   sourceType: "slack",
   sourceRef: "msg-1",
@@ -68,7 +68,7 @@ describe("TaskApprovalModal", () => {
     expect(screen.getByDisplayValue("上司へ確認依頼")).toBeInTheDocument();
   });
 
-  it("requester はハッシュを生表示せず source でマスクする", async () => {
+  it("requester は解決済み表示名をそのまま表示する", async () => {
     vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue(draftSteps);
     render(
       <TaskApprovalModal
@@ -79,8 +79,35 @@ describe("TaskApprovalModal", () => {
       />,
     );
     const display = screen.getByTestId("requester-display");
-    expect(display).toHaveTextContent("Slack のメンバー");
-    expect(display).not.toHaveTextContent("hashed-requester");
+    expect(display).toHaveTextContent("山田太郎");
+  });
+
+  it("assignee があれば「{name} 宛」を表示する", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue(draftSteps);
+    render(
+      <TaskApprovalModal
+        candidate={{ ...candidate, assignee: "佐藤花子" }}
+        isOpen
+        onClose={() => {}}
+        onConfirm={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("assignee-display")).toHaveTextContent(
+      "佐藤花子 宛",
+    );
+  });
+
+  it("assignee が無ければ assignee 行を表示しない", async () => {
+    vi.spyOn(apiClient, "fetchPlanSteps").mockResolvedValue(draftSteps);
+    render(
+      <TaskApprovalModal
+        candidate={candidate}
+        isOpen
+        onClose={() => {}}
+        onConfirm={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId("assignee-display")).not.toBeInTheDocument();
   });
 
   it("「確定して承認」で編集後の内容＋確定ステップを overrides として渡す", async () => {

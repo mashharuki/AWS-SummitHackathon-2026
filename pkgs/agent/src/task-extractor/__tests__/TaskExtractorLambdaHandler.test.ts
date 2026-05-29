@@ -16,6 +16,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockConverse = vi.fn();
 const mockCreate = vi.fn();
 const mockFindCognitoSub = vi.fn();
+const mockGetSlackToken = vi.fn();
+const mockUsersInfo = vi.fn();
 
 vi.mock("../../bedrock/BedrockClientAdapter.js", () => ({
   BedrockClientAdapter: vi.fn(() => ({
@@ -26,6 +28,18 @@ vi.mock("../../bedrock/BedrockClientAdapter.js", () => ({
 vi.mock("../../repositories/DynamoSlackUserLookupRepository.js", () => ({
   DynamoSlackUserLookupRepository: vi.fn(() => ({
     findCognitoSubBySlackIdentity: mockFindCognitoSub,
+  })),
+}));
+
+// 表示名リゾルバ用: getSlackToken と SlackClient.usersInfo をモック化し、
+// 実 Secrets Manager / Slack API を呼ばないようにする。
+vi.mock("../../context-collector/ContextCollector.js", () => ({
+  getSlackToken: mockGetSlackToken,
+}));
+
+vi.mock("../../slack-client/SlackClient.js", () => ({
+  SlackClient: vi.fn(() => ({
+    usersInfo: mockUsersInfo,
   })),
 }));
 
@@ -57,6 +71,7 @@ function makeToolUseResponse(
     title?: string;
     deadline?: string | null;
     requester?: string;
+    assignee?: string;
     description?: string;
   } = {},
 ) {
@@ -65,6 +80,7 @@ function makeToolUseResponse(
     title: "資料を作成する",
     deadline: "2026-05-25",
     requester: "U99999",
+    assignee: "",
     description: "月曜のMTG用資料",
     ...overrides,
   };
@@ -119,6 +135,9 @@ describe("TaskExtractorLambdaHandler", () => {
     process.env.BEDROCK_REGION = "ap-northeast-1";
     // デフォルト: Slack identity は連携済みユーザーに解決される
     mockFindCognitoSub.mockResolvedValue("cognito-user-abc");
+    // デフォルト: Bot Token 取得成功・表示名は解決できない（ID フォールバック）
+    mockGetSlackToken.mockResolvedValue("xoxb-test");
+    mockUsersInfo.mockResolvedValue(null);
   });
 
   it("processes a valid task event without throwing", async () => {

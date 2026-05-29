@@ -1,13 +1,18 @@
 import { BedrockClientAdapter } from "../bedrock/BedrockClientAdapter.js";
+import { getSlackToken } from "../context-collector/ContextCollector.js";
 import { DynamoSlackUserLookupRepository } from "../repositories/DynamoSlackUserLookupRepository.js";
 import { DynamoTaskCandidateRepository } from "../repositories/DynamoTaskCandidateRepository.js";
+import { SlackClient } from "../slack-client/SlackClient.js";
 import {
   EventBridgeSlackBackfillSchema,
   EventBridgeSlackEventSchema,
   type SlackEventPayload,
 } from "../types/events.js";
 import { logError, logInfo } from "../utils/logger.js";
-import { TaskExtractorAgent } from "./TaskExtractorAgent.js";
+import {
+  type SlackNameResolver,
+  TaskExtractorAgent,
+} from "./TaskExtractorAgent.js";
 
 /**
  * TaskExtractor の Lambda ハンドラー (U-03a / C 拡張)
@@ -33,10 +38,31 @@ const bedrockClient = new BedrockClientAdapter(
 const repository = new DynamoTaskCandidateRepository();
 const slackUserLookup = new DynamoSlackUserLookupRepository();
 
+/**
+ * 表示名リゾルバを組み立てる。
+ *
+ * payload.userId（連携済み Cognito ユーザー）の Bot Token で SlackClient を作り、
+ * users.info で Slack user ID → 表示名を解決する。Bot Token 取得や API 呼び出しが
+ * 失敗しても抽出は止めず、解決を諦めて null を返す（エージェント側で ID フォールバック）。
+ */
+async function buildSlackNameResolver(
+  cognitoUserId: string,
+): Promise<SlackNameResolver | undefined> {
+  try {
+    const token = await getSlackToken(cognitoUserId);
+    const client = new SlackClient(token);
+    return (slackUserId: string) => client.usersInfo(slackUserId);
+  } catch (err) {
+    logError({ action: "slack_resolver_init_failed", err: String(err) });
+    return undefined;
+  }
+}
+
 /** Bedrock でタスク抽出を実行し結果をログする共通処理 */
 async function runExtraction(payload: SlackEventPayload): Promise<void> {
   const agent = new TaskExtractorAgent(bedrockClient, repository);
-  const result = await agent.extractTask(payload);
+  const resolveSlackName = await buildSlackNameResolver(payload.userId);
+  const result = await agent.extractTask(payload, resolveSlackName);
   if (result.skipped) {
     logInfo({ action: "skipped", sourceRef: payload.message.messageTs });
   } else {

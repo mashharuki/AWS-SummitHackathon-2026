@@ -135,6 +135,30 @@ function resolveDecisionAnchor(
 }
 
 /**
+ * anchorAt 付き work ステップの固定アンカー区間 [start, end] を求める。
+ * anchorAt があればその時刻から durationMinutes ぶんの幅で固定配置する。
+ * anchorAt が無い、または不正な場合は null（呼び出し側で後ろ詰め扱いにする）。
+ *
+ * decisionAt と同様の「固定アンカー」概念。差異は長さが durationMinutes で決まる点。
+ */
+function resolveWorkAnchor(
+  step: ScheduleStep,
+  windowStart: number,
+  windowEnd: number,
+): Interval | null {
+  // calcSchedule 内で step.anchorAt の存在を確認してから呼ぶため、このガードは
+  // 将来の直接呼び出し等への防御的コード。現在のコードパスでは到達しない。
+  /* c8 ignore next */
+  if (!step.anchorAt) return null;
+  const at = new Date(step.anchorAt).getTime();
+  if (Number.isNaN(at)) return null;
+  // 窓内にクランプ。終端は durationMinutes ぶん確保する。
+  const start = Math.min(Math.max(at, windowStart), windowEnd);
+  const lenMs = step.durationMinutes * MS_PER_MIN;
+  return { start, end: start + lenMs };
+}
+
+/**
  * 区間 [segStartBound, segEnd) に work ステップ群を「後ろ詰め（右寄せ）」で配置する。
  * busy（および既配置のブロック = occupied）を避け、segEnd 側から逆順に詰める。
  *
@@ -219,6 +243,7 @@ export function calcSchedule(params: {
 
   const windowStart = new Date(now).getTime();
   // decision は固定枠ぶんを工数として見込み、窓終端の余裕を確保する。
+  // anchorAt 付き work は durationMinutes をそのまま使う（後ろ詰め対象外だが工数は同じ）。
   const totalWorkMin = steps.reduce(
     (s, st) =>
       s +
@@ -231,33 +256,83 @@ export function calcSchedule(params: {
 
   const busy = normalizeBusySlots(busySlots, windowStart, windowEnd);
 
-  // フェーズ A: decision アンカーを確定し、work 群をアンカーで区切る。
-  const decisionPlaced: PlacedBlock[] = [];
-  // セグメント = { works, segEnd }。segEnd は「次のアンカー開始」or「窓終端」。
-  const segments: { works: ScheduleStep[]; segEnd: number }[] = [];
-  let pendingWorks: ScheduleStep[] = [];
+  // フェーズ A: 固定アンカー（decision の decisionAt + work の anchorAt）を確定し、
+  // アンカーで区切られたセグメントに残りの work 群を振り分ける。
+  //
+  // 「固定アンカー」とは: 特定の時刻に固定配置されるステップ。
+  //   - decision: decisionAt が指定されたもの（意思決定の時刻アンカー）
+  //   - work:     anchorAt が指定されたもの（ドラッグ移動でユーザーが固定した開始時刻）
+  //
+  // アンカー順（時刻順）にソートし、アンカー間の work 群を後ろ詰めで配置する。
+  // 未アンカーの work はアンカー時刻の手前（前のアンカー〜次のアンカー開始）に後ろ詰め。
 
+  // アンカー付きステップ（decision/work とも）を時刻順に解決する。
+  interface AnchorEntry {
+    step: ScheduleStep;
+    interval: Interval;
+  }
+  const anchorEntries: AnchorEntry[] = [];
   for (const step of steps) {
     if (step.bandType === "decision") {
       const anchor = resolveDecisionAnchor(step, windowStart, windowEnd);
       if (anchor) {
-        // ここまでの work 群は、このアンカー開始までに終える（後ろ詰め）。
-        segments.push({ works: pendingWorks, segEnd: anchor.start });
-        pendingWorks = [];
-        decisionPlaced.push({ step, start: anchor.start, end: anchor.end });
-        continue;
+        anchorEntries.push({ step, interval: anchor });
       }
-      // decisionAt が無い decision は work と同様に扱う（durationMinutes で配置）。
+      // decisionAt が無い decision は pendingWorks 側（後ろ詰め）で処理する
+    } else if (step.bandType === "work" && step.anchorAt) {
+      const anchor = resolveWorkAnchor(step, windowStart, windowEnd);
+      if (anchor) {
+        anchorEntries.push({ step, interval: anchor });
+      }
+      // anchorAt が不正な場合は後ろ詰め側で処理する
     }
-    pendingWorks.push(step);
   }
-  // 残りの work 群は窓終端（締切）までに終える。
+  // アンカーを時刻順にソート（混在しても決定論的に処理できるように）
+  anchorEntries.sort((a, b) => a.interval.start - b.interval.start);
+
+  // アンカーを「配置済み」として記録
+  const anchoredPlaced: PlacedBlock[] = anchorEntries.map((e) => ({
+    step: e.step,
+    start: e.interval.start,
+    end: e.interval.end,
+  }));
+
+  // アンカー付きステップの stepId セット（後ろ詰み対象から除外するため）
+  const anchoredStepIds = new Set(anchorEntries.map((e) => e.step.stepId));
+
+  // セグメント: アンカー間の「後ろ詰め対象 work 群」を区切る。
+  // steps の元順を維持しながら、アンカー境界でセグメント分割する。
+  // セグメント = { works: 後ろ詰め対象 steps, segEnd: このセグメントの右端時刻 }
+  const segments: { works: ScheduleStep[]; segEnd: number }[] = [];
+  let pendingWorks: ScheduleStep[] = [];
+  // アンカーの処理済みインデックス（steps を線形スキャンしながらアンカーを消費する）
+  let anchorIdx = 0;
+
+  for (const step of steps) {
+    if (anchoredStepIds.has(step.stepId)) {
+      // このステップはアンカー固定配置済み。
+      // ここまでの pendingWorks は「このアンカー開始」を右端として後ろ詰めする。
+      const anchorEntry = anchorEntries[anchorIdx];
+      if (anchorEntry) {
+        segments.push({
+          works: pendingWorks,
+          segEnd: anchorEntry.interval.start,
+        });
+        pendingWorks = [];
+        anchorIdx++;
+      }
+    } else {
+      // アンカーなし（後ろ詰め対象）
+      pendingWorks.push(step);
+    }
+  }
+  // 残りの未配置 work 群は窓終端（締切）までに後ろ詰めする。
   segments.push({ works: pendingWorks, segEnd: windowEnd });
 
-  // フェーズ B: 各セグメントを後ろ詰め配置（busy + 既配置 decision を避ける）。
+  // フェーズ B: 各セグメントを後ろ詰め配置（busy + 固定アンカー を避ける）。
   const occupied: Interval[] = sortedIntervals([
     ...busy,
-    ...decisionPlaced.map((d) => ({ start: d.start, end: d.end })),
+    ...anchoredPlaced.map((d) => ({ start: d.start, end: d.end })),
   ]);
   const workPlaced: PlacedBlock[] = [];
   for (const seg of segments) {
@@ -276,15 +351,15 @@ export function calcSchedule(params: {
   for (const p of workPlaced) {
     blocks.push(buildWorkBlock(p.step, p.start, p.end));
   }
-  for (const d of decisionPlaced) {
-    blocks.push(buildWorkBlock(d.step, d.start, d.end));
+  for (const a of anchoredPlaced) {
+    blocks.push(buildWorkBlock(a.step, a.start, a.end));
   }
 
   // フェーズ D: さぼろう帯 = 窓内利用可能時間（busy除外）から配置済みを引いた残り。
   const occupiedForSaboru = sortedIntervals([
     ...busy,
     ...workPlaced.map((p) => ({ start: p.start, end: p.end })),
-    ...decisionPlaced.map((d) => ({ start: d.start, end: d.end })),
+    ...anchoredPlaced.map((a) => ({ start: a.start, end: a.end })),
   ]);
   const mergedOccupied = mergeIntervals(occupiedForSaboru);
   let totalSaboruMinutes = 0;

@@ -81,6 +81,50 @@ export function durationToWidthPx(
   return Math.max(8, raw);
 }
 
+/** 編集時のスナップ単位（分） */
+export const SNAP_MINUTES = 15;
+
+/**
+ * px の長さ → 分に変換する（timeToPx / durationToWidthPx の逆）。
+ * ドラッグやリサイズの移動量（px）を時間量（分）に変換するのに使う。
+ */
+export function pxToMinutes(px: number, pxPerHour: number): number {
+  return (px / pxPerHour) * 60;
+}
+
+/**
+ * 分を SNAP_MINUTES（既定15分）グリッドにスナップする。
+ * 四捨五入で最も近いグリッドへ寄せる。
+ */
+export function snapToGrid(minutes: number, snap = SNAP_MINUTES): number {
+  return Math.round(minutes / snap) * snap;
+}
+
+/**
+ * ビュー開始からの px オフセット → 絶対時刻（ISO, スナップ込み）に変換する。
+ * timeToPx の逆変換。ドラッグ後の新しい開始時刻を求めるのに使う。
+ */
+export function pxToTime(
+  leftPx: number,
+  viewStartMs: number,
+  pxPerHour: number,
+  snap = SNAP_MINUTES,
+): string {
+  const rawMin = pxToMinutes(leftPx, pxPerHour);
+  const snappedMin = snapToGrid(rawMin, snap);
+  return new Date(viewStartMs + snappedMin * MS_PER_MIN).toISOString();
+}
+
+/** 2つのブロックが時間的に重なるか（端の接触は重なりとみなさない） */
+export function blocksOverlap(
+  aStartMs: number,
+  aEndMs: number,
+  bStartMs: number,
+  bEndMs: number,
+): boolean {
+  return aStartMs < bEndMs && aEndMs > bStartMs;
+}
+
 /**
  * HH:MM ラベルへ整形する（ローカルタイム）。
  */
@@ -224,34 +268,27 @@ export function isSameLocalDay(a: Date, b: Date): boolean {
 /**
  * 指定日の表示範囲（横軸の開始・終了）を算出する。
  *
+ * 「左右無限」方針: 任意の日（過去・未来）を 1 日ビューで開けるよう、
+ * スケジュールの viewStartAt / viewEndAt にはクランプしない。各日は常に
+ * その日の 00:00〜23:59:59.999 を基準とし、当日のみ開始を now に寄せる。
+ * 締切ラインはその日中に締切がある場合だけ軸上に出る（範囲は丸 1 日を保つ）。
+ *
  * - 開始: その日が「今日」なら now、それ以外はその日の 00:00。
- *   ただしスケジュールの viewStartAt より前にはしない。
- * - 終了: その日の 23:59:59.999 を基準に、締切がその日中ならそこまで（夜まで伸ばさない）。
- *   さらに schedule.viewEndAt を超えない。
+ * - 終了: その日の 23:59:59.999。
  */
 export function getDayRange(
   dayDate: Date,
-  schedule: SaboriSchedule,
+  _schedule: SaboriSchedule,
   now: Date = new Date(),
 ): DayRange {
-  const viewStartMs = new Date(schedule.viewStartAt).getTime();
-  const viewEndMs = new Date(schedule.viewEndAt).getTime();
-  const deadlineMs = schedule.deadline
-    ? new Date(schedule.deadline).getTime()
-    : null;
-
-  // 開始: 今日なら now、他日は 00:00。viewStartAt 以上にクランプ。
+  // 開始: 今日なら now、他日は 00:00。
   const dayStartBase = isSameLocalDay(dayDate, now)
     ? now
     : startOfLocalDay(dayDate);
-  const startMs = Math.max(dayStartBase.getTime(), viewStartMs);
+  const startMs = dayStartBase.getTime();
 
-  // 終了候補: その日の終わり / 締切（その日中なら）/ viewEnd の最小。
+  // 終了: その日の終わり（丸 1 日。締切や予定の有無に依らず一定幅を保つ）。
   let endMs = endOfLocalDay(dayDate).getTime();
-  if (deadlineMs !== null && isSameLocalDay(new Date(deadlineMs), dayDate)) {
-    endMs = Math.min(endMs, deadlineMs);
-  }
-  endMs = Math.min(endMs, viewEndMs);
 
   // 開始が終了を超える異常時は最低 1 時間の窓を確保（潰れ防止）。
   if (endMs <= startMs) {

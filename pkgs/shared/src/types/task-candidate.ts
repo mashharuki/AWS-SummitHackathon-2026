@@ -24,10 +24,17 @@ export interface TaskCandidate {
   /** Deadline (ISO 8601 / null: unknown) */
   deadline: string | null;
   /**
-   * Requester name (pseudonymized, Q5 answer)
-   * Stored as SHA-256 hash. Node.js crypto standard module used.
+   * Requester display name (who asked).
+   * Slack の送信者を users.info で解決した表示名を生で保存する。
+   * 解決できない場合は Slack user ID のままフォールバックする。
    */
   requester: string;
+  /**
+   * Assignee display name (who it was asked to).
+   * 本文中のメンション先（先頭1名）を users.info で解決した表示名。
+   * メンションが無い場合は未設定（自分宛とみなす）。
+   */
+  assignee?: string;
   /** Work content summary */
   description: string;
   /** Original data source */

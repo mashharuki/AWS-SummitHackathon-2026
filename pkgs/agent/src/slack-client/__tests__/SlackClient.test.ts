@@ -162,6 +162,83 @@ describe("SlackClient timeout", () => {
   });
 });
 
+describe("SlackClient.usersInfo", () => {
+  it("prefers profile.display_name", async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse({
+        user: {
+          id: "U1",
+          name: "handle",
+          real_name: "Real Name",
+          profile: { display_name: "ニックネーム", real_name: "Profile Real" },
+        },
+      }),
+    );
+
+    const client = new SlackClient("xoxb-test");
+    const name = await client.usersInfo("U1");
+
+    expect(name).toBe("ニックネーム");
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe("https://slack.com/api/users.info");
+    expect((init.body as string) ?? "").toContain("user=U1");
+  });
+
+  it("falls back to real_name when display_name is empty", async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse({
+        user: {
+          id: "U1",
+          name: "handle",
+          real_name: "山田太郎",
+          profile: { display_name: "   " },
+        },
+      }),
+    );
+
+    const client = new SlackClient("xoxb-test");
+    expect(await client.usersInfo("U1")).toBe("山田太郎");
+  });
+
+  it("falls back to profile.real_name then name", async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse({
+        user: { id: "U1", name: "handle", profile: { real_name: "P Real" } },
+      }),
+    );
+    const client = new SlackClient("xoxb-test");
+    expect(await client.usersInfo("U1")).toBe("P Real");
+
+    mockFetch.mockResolvedValueOnce(
+      okResponse({ user: { id: "U2", name: "handle-only" } }),
+    );
+    expect(await client.usersInfo("U2")).toBe("handle-only");
+  });
+
+  it("returns null when no usable name is present", async () => {
+    mockFetch.mockResolvedValueOnce(
+      okResponse({ user: { id: "U1", profile: {} } }),
+    );
+    const client = new SlackClient("xoxb-test");
+    expect(await client.usersInfo("U1")).toBeNull();
+  });
+
+  it("returns null when user object is absent", async () => {
+    mockFetch.mockResolvedValueOnce(okResponse({}));
+    const client = new SlackClient("xoxb-test");
+    expect(await client.usersInfo("U1")).toBeNull();
+  });
+
+  it("throws SlackApiError on ok:false (caller must catch)", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ok: false, error: "user_not_found" }),
+    });
+    const client = new SlackClient("xoxb-test");
+    await expect(client.usersInfo("U-bad")).rejects.toThrow("user_not_found");
+  });
+});
+
 describe("SlackClient.conversationsList", () => {
   it("returns channels on success", async () => {
     mockFetch.mockResolvedValueOnce(

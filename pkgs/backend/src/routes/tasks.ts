@@ -1,14 +1,15 @@
 /**
  * タスクルート
  *
- * GET    /tasks                      — 承認済みタスク一覧 (US-07)
- * POST   /tasks                      — タスク手動作成 (US-08)
- * GET    /tasks/candidates            — 保留中の候補一覧 (US-07)
- * POST   /tasks/candidates/:id/approve — 候補を承認 (US-07)
- * DELETE /tasks/candidates/:id        — 候補を却下
- * GET    /tasks/:id                   — 単一タスク取得
- * PATCH  /tasks/:id                   — タスクインライン編集 (US-08)
- * DELETE /tasks/:id                   — タスク論理削除 (US-08)
+ * GET    /tasks                               — 承認済みタスク一覧 (US-07)
+ * POST   /tasks                               — タスク手動作成 (US-08)
+ * GET    /tasks/candidates                    — 保留中の候補一覧 (US-07)
+ * POST   /tasks/candidates/:id/approve        — 候補を承認 (US-07)
+ * DELETE /tasks/candidates/:id               — 候補を却下
+ * GET    /tasks/:id                           — 単一タスク取得
+ * PATCH  /tasks/:id                           — タスクインライン編集 (US-08)
+ * DELETE /tasks/:id                           — タスク論理削除 (US-08)
+ * PATCH  /tasks/:taskId/planned-steps         — plannedSteps 更新（ガント編集永続化）
  */
 
 import { zValidator } from "@hono/zod-validator";
@@ -17,6 +18,7 @@ import {
   ApproveOverridesSchema,
   CreateTaskSchema,
   SOURCE_TYPE,
+  UpdatePlannedStepsSchema,
   UpdateTaskSchema,
 } from "@saboru/shared";
 import { Hono } from "hono";
@@ -236,6 +238,68 @@ export function createTasksRoute(
     await taskRepository.softDelete(userId, taskId);
     return c.body(null, 204);
   });
+
+  /**
+   * PATCH /tasks/:taskId/planned-steps — ガントUI ドラッグ/リサイズ編集結果を永続化
+   *
+   * リクエストボディ: { plannedSteps: ScheduleStep[] }
+   * - 1〜8件の制約（ApproveOverridesSchema と同一）
+   * - decision ステップは decisionAt 必須（欠けていれば 400）
+   * - 所有者以外のタスクは 404（findById で所有者確認）
+   * - 正常時は更新後の Task を返す
+   */
+  tasks.patch(
+    "/:taskId/planned-steps",
+    zValidator("json", UpdatePlannedStepsSchema, (result, c) => {
+      if (!result.success) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid request body",
+              details: result.error.flatten(),
+            },
+          },
+          400,
+        );
+      }
+    }),
+    async (c) => {
+      const userId = c.get("userId");
+      const taskId = c.req.param("taskId");
+      const { plannedSteps } = c.req.valid("json");
+
+      // decision ステップの decisionAt 必須チェック
+      const missingDecisionAt = plannedSteps.filter(
+        (s) => s.bandType === "decision" && !s.decisionAt,
+      );
+      if (missingDecisionAt.length > 0) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "decision ステップには decisionAt が必須です",
+              details: {
+                stepIds: missingDecisionAt.map((s) => s.stepId),
+              },
+            },
+          },
+          400,
+        );
+      }
+
+      // 所有者確認（他人のタスクは 404）
+      const existing = await taskRepository.findById(userId, taskId);
+      if (!existing) throw new NotFoundError(`Task ${taskId} not found`);
+
+      const updated = await taskRepository.updatePlannedSteps(
+        userId,
+        taskId,
+        plannedSteps,
+      );
+      return c.json(updated);
+    },
+  );
 
   return tasks;
 }

@@ -17,7 +17,11 @@ import {
   UpdateItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
-import type { ITransactionalTaskRepository, Task } from "@saboru/shared";
+import type {
+  ITransactionalTaskRepository,
+  ScheduleStep,
+  Task,
+} from "@saboru/shared";
 import {
   DDB_PREFIX,
   SOURCE_TYPE,
@@ -167,6 +171,42 @@ export class DynamoTaskRepository implements ITransactionalTaskRepository {
         ConditionExpression: "attribute_exists(PK)",
       }),
     );
+  }
+
+  /**
+   * ガントUI のドラッグ/リサイズ編集結果を永続化する。
+   * approve() と同じ SET plannedSteps 方式で updatedAt も更新する。
+   *
+   * @returns 更新後の Task
+   * @throws ConditionExpression 違反（タスク存在しない）時は Error
+   */
+  async updatePlannedSteps(
+    userId: string,
+    taskId: string,
+    plannedSteps: ScheduleStep[],
+  ): Promise<Task> {
+    const now = toIsoString(new Date());
+
+    const result = await this.client.send(
+      new UpdateItemCommand({
+        TableName: this.tableName,
+        Key: marshall({
+          PK: `${DDB_PREFIX.USER}${userId}`,
+          SK: `${DDB_PREFIX.TASK}${taskId}`,
+        }),
+        UpdateExpression: "SET plannedSteps = :steps, updatedAt = :updatedAt",
+        ExpressionAttributeValues: marshall(
+          { ":steps": plannedSteps, ":updatedAt": now },
+          { removeUndefinedValues: true },
+        ),
+        ConditionExpression: "attribute_exists(PK)",
+        ReturnValues: "ALL_NEW",
+      }),
+    );
+
+    if (!result.Attributes)
+      throw new Error(`Task ${taskId} not found after updatePlannedSteps`);
+    return unmarshall(result.Attributes) as Task;
   }
 
   /** Used internally by TransactWriteItems in TaskCandidateRepository.approve() */

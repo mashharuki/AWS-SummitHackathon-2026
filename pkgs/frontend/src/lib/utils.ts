@@ -1,5 +1,7 @@
 import i18n from "@/i18n";
+import type { SourceType } from "@saboru/shared";
 import { type ClassValue, clsx } from "clsx";
+import type { TFunction } from "i18next";
 import { twMerge } from "tailwind-merge";
 
 /** Tailwind CSS クラス名マージ */
@@ -29,6 +31,40 @@ export function formatDeadlineDisplay(isoString: string | null): string {
   const month = date.getMonth() + 1;
   const day = date.getDate();
   return `${year}/${month}/${day}`;
+}
+
+/**
+ * 依頼者の表示テキストを整形して返す。
+ *
+ * requester は users.info で解決した表示名を生で保存する方針に変更したため、
+ * そのまま表示する（旧仕様のハッシュ化＋マスクは廃止。実名表示を優先）。
+ * requester が空（未記録）の場合は取り込み元（sourceType）でフォールバック表示する。
+ *
+ * 承認モーダル（TaskApprovalModal）とタスク情報サマリ（TaskInfoSummary）で
+ * 同一の流儀を担保するため共通化している。
+ *
+ * @param requester 解決済み表示名（空文字なら未記録扱い）
+ * @param sourceType 取り込み元（slack / gmail / calendar / manual）
+ * @param t react-i18next の翻訳関数
+ */
+export function formatRequester(
+  requester: string,
+  sourceType: SourceType,
+  t: TFunction,
+): string {
+  if (requester) {
+    return requester;
+  }
+  // 未記録時のみ取り込み元ラベルでフォールバック（誰からか分からない場合）
+  const sourceLabel: Record<SourceType, string> = {
+    slack: "Slack",
+    gmail: t("approvalModal.sourceGmail"),
+    calendar: t("approvalModal.sourceCalendar"),
+    manual: t("tasks.manual"),
+  };
+  return t("approvalModal.requesterMasked", {
+    source: sourceLabel[sourceType],
+  });
 }
 
 /** 期限が過ぎているか */

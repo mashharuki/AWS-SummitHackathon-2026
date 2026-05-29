@@ -9,7 +9,6 @@ import {
   TASK_CANDIDATE_STATUS,
   TASK_CANDIDATE_TTL_DAYS,
   generateUlid,
-  pseudonymize,
   toIsoString,
 } from "@saboru/shared";
 import type { IBedrockClient } from "../bedrock/IBedrockClient.js";
@@ -21,6 +20,14 @@ import {
   EXTRACT_TASK_TOOL_NAME,
   ExtractedTaskSchema,
 } from "./extractTaskTool.js";
+
+/**
+ * Slack ユーザー ID を表示名に解決する関数。
+ * 解決できない / API 失敗の場合は null を返す（抽出は止めない）。
+ * Lambda ハンドラーが SlackClient + Bot Token から組み立てて注入する。
+ * テストではモック関数を渡す（未注入なら解決を行わず ID をそのまま使う）。
+ */
+export type SlackNameResolver = (slackUserId: string) => Promise<string | null>;
 
 /**
  * 汎用タスク抽出入力 — Slack 以外のソース（Gmail等）からタスク抽出を行う際に使用。
@@ -37,6 +44,30 @@ export interface GenericExtractInput {
   sourceRef: string;
   /** 依頼者のヒント（Slack: slackUserId、Gmail: From アドレスなど）。省略時は空文字 */
   requesterHint?: string;
+  /**
+   * メッセージ送信者の Slack user ID（Slack ソースのみ）。
+   * 自分宛フィルタ（assignee が送信者と異なる依頼を除外）と
+   * requester 表示名解決に使う。Slack 以外では未指定。
+   */
+  senderSlackUserId?: string;
+  /**
+   * Slack 表示名リゾルバ（Slack ソースのみ）。
+   * 注入された場合のみ requester / assignee の <@Uxxx> を表示名に解決する。
+   * 未注入時は解決せず、抽出値（ID 等）をそのまま保存する。
+   */
+  resolveSlackName?: SlackNameResolver;
+}
+
+/** Slack メンション記法 <@U12345678> から user ID を取り出す（先頭1件）。 */
+const SLACK_MENTION_RE = /<@([A-Z0-9]+)(?:\|[^>]*)?>/;
+
+/** 文字列が Slack メンション or 素の user ID を含むなら user ID を返す。 */
+function extractSlackUserId(raw: string): string | null {
+  const m = raw.match(SLACK_MENTION_RE);
+  if (m) return m[1];
+  // 素の user ID（U/W から始まる英数字）にもフォールバック対応する。
+  const bare = raw.trim().match(/^([UW][A-Z0-9]{6,})$/);
+  return bare ? bare[1] : null;
 }
 
 /**
@@ -58,8 +89,9 @@ export type ExtractionResult =
  * 2. toolChoice.tool 強制で Bedrock converse API を呼び出す (DP-02)
  * 3. Zod で Bedrock 出力をバリデーション (DP-03)
  * 4. 生メッセージテキストを破棄し sourceRef のみ保存 (DP-04)
- * 5. 依頼者名の仏名化 (BR-05)
- * 6. リポジトリ経由で TaskCandidate を永続化 (DP-05 円等性はリポジトリで処理)
+ * 5. requester / assignee を users.info で表示名解決し生保存（実名表示優先）
+ * 6. 自分宛フィルタ: 宛先が送信者と異なる依頼は取り込まない（Slack のみ）
+ * 7. リポジトリ経由で TaskCandidate を永続化 (DP-05 冪等性はリポジトリで処理)
  */
 export class TaskExtractorAgent {
   constructor(
@@ -78,7 +110,15 @@ export class TaskExtractorAgent {
   async extractTaskFromSource(
     input: GenericExtractInput,
   ): Promise<ExtractionResult> {
-    const { userId, text, sourceType, sourceRef, requesterHint = "" } = input;
+    const {
+      userId,
+      text,
+      sourceType,
+      sourceRef,
+      requesterHint = "",
+      senderSlackUserId,
+      resolveSlackName,
+    } = input;
 
     // requesterHint はユーザー制御可能（Gmail の From アドレスなど）なためサニタイズする。
     // 改行・制御文字・プロンプト制御トークンに使われる山括弧を除去し、最大160文字に制限する。
@@ -161,7 +201,54 @@ export class TaskExtractorAgent {
       return { skipped: true };
     }
 
-    // [5] Build and persist TaskCandidate (DP-04: raw text discarded after this point)
+    // [5] assignee（宛先）の Slack user ID を取り出す。
+    // Bedrock は <@Uxxx> 形式 or 「〜さん」を返す。ID として解釈できるものだけ拾う。
+    const assigneeSlackId =
+      extracted.assignee.length > 0
+        ? extractSlackUserId(extracted.assignee)
+        : null;
+
+    // [6] 自分宛フィルタ（Slack のみ）:
+    // 送信者が分かっていて、宛先 user ID が送信者と異なる場合は
+    // 「自分が他人に投げた依頼」なので自分のタスク一覧には取り込まない。
+    // 宛先が解決できない（素の名前のみ）場合は、誤って弾かないよう取り込む側に倒す。
+    if (
+      sourceType === SOURCE_TYPE.SLACK &&
+      senderSlackUserId &&
+      assigneeSlackId &&
+      assigneeSlackId !== senderSlackUserId
+    ) {
+      logInfo({
+        action: "skipped_assigned_to_other",
+        sourceRef,
+        bedrockDurationMs,
+      });
+      return { skipped: true };
+    }
+
+    // [7] requester / assignee を表示名に解決する（Slack のみ・リゾルバ注入時）。
+    // 失敗時は元の値（ID 等）にフォールバックし、抽出を止めない。
+    const requester = await this.resolveName(
+      // 送信者 ID が分かっていればそれを優先（確実に解決できる）。
+      // 無ければ Bedrock 抽出 requester を使う。
+      senderSlackUserId ?? extractSlackUserId(extracted.requester) ?? "",
+      extracted.requester,
+      sourceType,
+      resolveSlackName,
+    );
+
+    const assignee =
+      extracted.assignee.length > 0
+        ? await this.resolveName(
+            assigneeSlackId ?? "",
+            extracted.assignee,
+            sourceType,
+            resolveSlackName,
+          )
+        : undefined;
+
+    // [8] Build and persist TaskCandidate (DP-04: raw text discarded after this point)
+    // requester / assignee は表示名を生で保存する（実名表示優先・[[pseudonymize]] は未使用）。
     const now = new Date();
     const candidateId = generateUlid();
 
@@ -172,7 +259,8 @@ export class TaskExtractorAgent {
         candidateId,
         title: extracted.title,
         deadline: extracted.deadline,
-        requester: pseudonymize(extracted.requester), // BR-05: pseudonymize
+        requester,
+        ...(assignee ? { assignee } : {}),
         description: extracted.description,
         sourceType,
         sourceRef, // only reference ID, not message body (DP-04)
@@ -195,12 +283,51 @@ export class TaskExtractorAgent {
   }
 
   /**
+   * Slack user ID を表示名に解決する。失敗時はフォールバック値を返す。
+   *
+   * - Slack 以外、またはリゾルバ未注入なら解決せず fallback を返す。
+   * - slackUserId が空（メンションでなく素の名前）の場合も fallback を返す。
+   * - users.info が失敗（例外）した場合はログのみで fallback に倒す（抽出は止めない）。
+   *
+   * @param slackUserId 解決対象の Slack user ID（空なら解決しない）
+   * @param fallback 解決できないときに使う値（Bedrock 抽出値など）
+   */
+  private async resolveName(
+    slackUserId: string,
+    fallback: string,
+    sourceType: SourceType,
+    resolveSlackName?: SlackNameResolver,
+  ): Promise<string> {
+    if (sourceType !== SOURCE_TYPE.SLACK || !resolveSlackName || !slackUserId) {
+      return fallback;
+    }
+    try {
+      const name = await resolveSlackName(slackUserId);
+      return name ?? fallback;
+    } catch (err) {
+      logError({
+        action: "slack_name_resolve_failed",
+        slackUserId,
+        err: String(err),
+      });
+      return fallback;
+    }
+  }
+
+  /**
    * Slack イベントからタスクを抽出する（後方互換ラッパー）
    *
    * 既存の Slack フローとテストを壊さないよう維持する。
    * 内部では extractTaskFromSource() を呼び出す。
+   *
+   * @param event Slack イベントペイロード
+   * @param resolveSlackName 表示名リゾルバ（Lambda ハンドラーが注入。
+   *   省略時は表示名解決を行わず、送信者/宛先の ID をそのまま保存する）
    */
-  async extractTask(event: SlackEventPayload): Promise<ExtractionResult> {
+  async extractTask(
+    event: SlackEventPayload,
+    resolveSlackName?: SlackNameResolver,
+  ): Promise<ExtractionResult> {
     const { text, messageTs, userId: slackUserId } = event.message;
     const { userId } = event;
 
@@ -210,6 +337,8 @@ export class TaskExtractorAgent {
       sourceType: SOURCE_TYPE.SLACK,
       sourceRef: messageTs,
       requesterHint: slackUserId,
+      senderSlackUserId: slackUserId,
+      resolveSlackName,
     });
   }
 
