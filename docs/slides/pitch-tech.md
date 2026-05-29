@@ -135,7 +135,7 @@ style: |
 
 ---
 
-![height:700](./../saborou-architecture.drawio.png)
+![height:700](./../drawio/saborou-architecture.drawio.png)
 
 ---
 
