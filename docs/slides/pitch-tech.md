@@ -66,8 +66,8 @@ style: |
   section.dark strong { color: #FF9900; }
   section.dark em { color: #60a5fa; }
   section.dark code { background: #1a2a45; border-color: #2a3a55; color: #94a3b8; }
-  section.dark td { border-color: #2a3a55; }
-  section.dark tr:nth-child(even) td { background: #1a2a45; }
+  section.dark td { border-color: #2a3a55; color: #FF9900; }
+  section.dark tr:nth-child(even) td { background: #1a2a45; color: #FF9900; }
   section.dark blockquote { background: #1a2a45; border-color: #FF9900; color: #94a3b8; }
   section.dark th { background: #FF9900; }
 
@@ -202,13 +202,7 @@ EventBridge でイベント駆動連携 — Slack Webhook から <br/>SSE スト
 
 ### 構造化出力を強制する設計
 
-```typescript
-// Tool Use で LLM の出力形式を保証
-toolChoice: { type: "tool",
-              name: "sabori_judgment" }
-```
-
-判定結果は必ずこの5フィールドで返る:
+判定結果のスキーマ：
 
 <table>
 <thead><tr><th>フィールド</th><th>内容</th></tr></thead>
@@ -220,6 +214,8 @@ toolChoice: { type: "tool",
 <tr><td style="color:#FF9900;"><code>nextCheckOffsetMinutes</code></td><td style="color:#FF9900;">次に確認する分数</td></tr>
 </tbody>
 </table>
+
+<br/>
 
 > AIが<strong>何を根拠に判断したか</strong>をユーザーに開示。<br/>ブラックボックスにしない設計
 
@@ -251,13 +247,13 @@ toolChoice: { type: "tool",
 ### AWS CDK v2 — 7スタック構成
 
 <div class="cdkgrid">
-<div class="cdk-item"><strong>CognitoStack</strong> 認証・Google OAuth</div>
-<div class="cdk-item"><strong>DataStack</strong> DynamoDB 8テーブル</div>
-<div class="cdk-item"><strong>ApiStack</strong> Hono on Lambda</div>
-<div class="cdk-item"><strong>AgentStack</strong> 3 AI Agents</div>
-<div class="cdk-item"><strong>WebhookStack</strong> EventBridge</div>
-<div class="cdk-item"><strong>FrontendStack</strong> CloudFront+S3</div>
-<div class="cdk-item"><strong>ConfigDeployStack</strong> 環境設定・デプロイ制御</div>
+<div class="cdk-item"><strong>CognitoStack</strong> <br/>認証・Google OAuth</div>
+<div class="cdk-item"><strong>DataStack</strong> <br/>DynamoDB 8テーブル</div>
+<div class="cdk-item"><strong>ApiStack</strong> <br/>Hono on Lambda</div>
+<div class="cdk-item"><strong>AgentStack</strong><br/> 3 AI Agents</div>
+<div class="cdk-item"><strong>WebhookStack</strong> <br/>EventBridge</div>
+<div class="cdk-item"><strong>FrontendStack</strong> <br/>CloudFront+S3</div>
+<div class="cdk-item"><strong>ConfigDeployStack</strong> <br/>環境設定・デプロイ制御</div>
 </div>
 
 <div style="margin-top:10px; margin-bottom:6px;">
@@ -266,12 +262,9 @@ toolChoice: { type: "tool",
 <span class="aws-badge">Bedrock</span>
 <span class="aws-badge">EventBridge</span>
 <span class="aws-badge">Cognito</span>
+<span class="aws-badge">S3</span>
+<span class="aws-badge">CloudFront</span>
 <span class="aws-badge">CDK v2</span>
-</div>
-
-<div style="font-size:0.72em; color:#64748b; line-height:1.7;">
-Lambda = サーバーレスでコスト最適 / DynamoDB = On-Demand で0→スケール対応<br>
-Bedrock = モデルガバナンスとTool Use強制 / EventBridge = Agent間の疎結合
 </div>
 
 </div>
@@ -288,15 +281,11 @@ Bedrock = モデルガバナンスとTool Use強制 / EventBridge = Agent間の�
 <span class="stat-value green">0</span>
 <span class="stat-label">cdk-nag エラー</span>
 </div>
-<div class="stat-item">
-<span class="stat-value blue">$31</span>
-<span class="stat-label">月額コスト</span>
-</div>
 </div>
 
 <div class="highlight">
 
-Cognito PKCE + <strong>HMAC-SHA256 署名</strong>付き OAuth state でCSRF対策済み。Slack Webhook 署名検証。<strong>入力生データは永続化せず、構造化データをTTL 30日保持</strong>
+Cognito PKCE + <strong>HMAC-SHA256 署名</strong><br/>付き OAuth state でCSRF対策済み。<br/>Slack Webhook 署名検証。<strong>入力生データは永続化せず、構造化データをTTL 30日保持</strong>
 
 </div>
 

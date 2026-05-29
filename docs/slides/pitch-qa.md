@@ -197,7 +197,84 @@ Haiku では推論深度が不足し、verdictの整合性が低下すること�
 **A:**
 5理論中4理論に査読論文DOIがあります。
 Expectancy Theory（Vroom, 1964）は書籍（*Work and Motivation*, Wiley）であるためDOIが存在しません。
-残る4理論はいずれも*Journal of Personality and Social Psychology*等に掲載された査読済み論文です。
+残る4理論はいずれも *Journal of Personality and Social Psychology* 等に掲載された査読済み論文です。
+
+#### 各理論の査読論文詳細
+
+---
+
+**① Collective Effort Model（集団努力モデル）**
+
+| 項目 | 内容 |
+|------|------|
+| 著者 | Steven J. Karau（スティーブン・J・カロー）& Kipling D. Williams（キプリング・D・ウィリアムズ） |
+| 年 | 1993 |
+| タイトル | Social loafing: A meta-analytic review and theoretical integration |
+| タイトル（訳） | 社会的手抜き：メタ分析レビューと理論的統合 |
+| 掲載誌 | *Journal of Personality and Social Psychology*, 65(4), 681–706 |
+| DOI | [10.1037/0022-3514.65.4.681](https://doi.org/10.1037/0022-3514.65.4.681) |
+
+**概要:** 78件の社会的手抜き研究を統合したメタ分析。個人の貢献が集団の成果に埋没するほど、努力の期待価値が下がり手抜きが起きるという CEM を定式化。SABOROU では「文脈が不足したタスク依頼（contextCoverage低下）」がこのシグナルに対応し、集団内での個人責任の薄さをスコア化している。
+
+---
+
+**② Identifiability Effect（識別可能性効果）**
+
+| 項目 | 内容 |
+|------|------|
+| 著者 | Kipling D. Williams（キプリング・D・ウィリアムズ）, Stephen G. Harkins（スティーブン・G・ハーキンズ）, & Bibb Latané（ビブ・ラタネ） |
+| 年 | 1981 |
+| タイトル | Identifiability as a deterrent to social loafing: Two cheering experiments |
+| タイトル（訳） | 社会的手抜きの抑止としての識別可能性：2つの応援実験 |
+| 掲載誌 | *Journal of Personality and Social Psychology*, 40(2), 303–311 |
+| DOI | [10.1037/0022-3514.40.2.303](https://doi.org/10.1037/0022-3514.40.2.303) |
+
+**概要:** 個人パフォーマンスが識別・評価可能になると社会的手抜きが消失することを実験で実証。依頼者（上司・同僚）が自分の行動を観察できない状況では努力が低下する。SABOROU では `requesterActiveStatus`（依頼者がオフラインかどうか）として実装しており、依頼者が離席中であれば「識別されない＝サボれる」とスコアに反映する。
+
+---
+
+**③ Sucker Effect（カモ回避効果）**
+
+| 項目 | 内容 |
+|------|------|
+| 著者 | Norbert L. Kerr（ノーバート・L・カー） |
+| 年 | 1983 |
+| タイトル | Motivation losses in small groups: A social dilemma analysis |
+| タイトル（訳） | 小集団における動機づけの損失：社会的ジレンマ分析 |
+| 掲載誌 | *Journal of Personality and Social Psychology*, 45(4), 819–828 |
+| DOI | [10.1037/0022-3514.45.4.819](https://doi.org/10.1037/0022-3514.45.4.819) |
+
+**概要:** 他のメンバーがサボっているときに自分だけ頑張ると「カモ（Sucker）」になるため、人は努力量を意図的に引き下げることを示した。依頼者本人が最近タスクを完了していない場合、「損な役回りを引き受ける必要はない」という判断が働く。SABOROU では依頼者のアクティビティ履歴を `requesterActiveStatus` で評価し、この効果をスコアに組み込んでいる。
+
+---
+
+**④ Self-Determination Theory（自己決定理論）**
+
+| 項目 | 内容 |
+|------|------|
+| 著者 | Richard M. Ryan（リチャード・M・ライアン）& Edward L. Deci（エドワード・L・デシ） |
+| 年 | 2000 |
+| タイトル | Self-determination theory and the facilitation of intrinsic motivation, social development, and well-being |
+| タイトル（訳） | 自己決定理論と内発的動機づけ・社会的発達・ウェルビーイングの促進 |
+| 掲載誌 | *American Psychologist*, 55(1), 68–78 |
+| DOI | [10.1037/0003-066X.55.1.68](https://doi.org/10.1037/0003-066X.55.1.68) |
+
+**概要:** 人間の動機づけには「自律性・有能感・関係性」の3基本欲求が必要であり、外発的コントロール（監視・プレッシャー・リマインド）はむしろ内発的動機づけを阻害することを示した。SABOROU では `reminderCount`（リマインド回数）が高いほど「強制されている感＝やりたくない」としてスコアに反映し、外圧が動機を逆説的に下げることを理論的根拠にしている。
+
+---
+
+**⑤ Expectancy Theory（期待理論）**
+
+| 項目 | 内容 |
+|------|------|
+| 著者 | Victor H. Vroom（ビクター・H・ブルーム） |
+| 年 | 1964 |
+| タイトル | *Work and Motivation*（ワーク・アンド・モチベーション） |
+| タイトル（訳） | 働くことと動機づけ |
+| 出版社 | Wiley, New York |
+| DOI | なし（書籍のため） |
+
+**概要:** 動機づけ＝期待（努力→成果）× 手段性（成果→報酬）× 誘意性（報酬の価値）という E×I×V モデルを提唱。締切が遠すぎる・または近すぎて諦めている場合、「今やっても意味がない」という低い期待値が成立しサボりを正当化できる。SABOROU では `deadlineMinutes` から期待値を推定し、このシグナルをスコアに組み込んでいる。
 
 ---
 
