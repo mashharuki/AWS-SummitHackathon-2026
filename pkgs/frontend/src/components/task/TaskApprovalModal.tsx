@@ -191,11 +191,20 @@ export function TaskApprovalModal({
     <dialog
       open
       ref={modalRef}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex h-full w-full items-end justify-center bg-black/40 p-4 sm:items-center"
       aria-labelledby="approve-task-title"
-      style={{ border: "none", maxWidth: "none", margin: 0, padding: 0 }}
+      style={{
+        border: "none",
+        maxWidth: "none",
+        maxHeight: "none",
+        width: "100%",
+        height: "100%",
+        margin: 0,
+        padding: 0,
+        inset: 0,
+      }}
     >
-      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         {/* ヘッダー（モック準拠: eyebrow + タイトル、温かみのある背景） */}
         <div
           className="flex items-start justify-between p-4"
