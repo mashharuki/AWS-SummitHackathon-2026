@@ -48,7 +48,7 @@ style: |
   hr { border: none; border-top: 2px solid var(--border); margin: 14px 0; }
 
   /* === Slide class variants === */
-  section.title { background: linear-gradient(145deg, #0a1628 0%, #1a3a6a 55%, #0a2040 100%); color: white; justify-content: flex-end; padding-bottom: 64px; }
+  section.title { background: linear-gradient(145deg, #1c0a00 0%, #3d1f00 55%, #150800 100%); color: white; justify-content: flex-end; padding-bottom: 64px; }
   section.title::before { height: 6px; }
   section.title h1 { color: white; font-size: 2.4em; letter-spacing: -0.03em; max-width: 86%; border-bottom: none; margin-bottom: 0; }
   section.title h2 { color: rgba(255,255,255,0.65); font-size: 1.0em; font-weight: 400; border-bottom: none; margin-top: 12px; }
@@ -131,7 +131,7 @@ style: |
 
 ## 技術アーキテクチャー
 
-心理学 × AI Agents × フルサーバーレス
+心理学 × AI Agent × フルサーバーレス
 
 ---
 
@@ -147,7 +147,7 @@ style: |
 
 ---
 
-![height:700](./../imgs/agent-3-saboru-proposer.png)
+![height:600](./../imgs/agent-3-saboru-proposer.png)
 
 ---
 
@@ -167,7 +167,7 @@ Bedrock Tool Use で
 <div class="card warn">
 
 ### Agent ② 整理
-<strong>TaskOrganizerAgent</strong>
+<strong>SchedulePlannerAgent</strong>
 
 依存関係を解析し
 心理学5理論で
@@ -208,14 +208,18 @@ toolChoice: { type: "tool",
               name: "sabori_judgment" }
 ```
 
-判定結果は必ずこの4フィールドで返る:
+判定結果は必ずこの5フィールドで返る:
 
-| フィールド | 内容 |
-|---|---|
-| `verdict` | skip / delay / do_it |
-| `reasoning` | 判断の根拠（自然言語） |
-| `summaryText` | 1行サマリ |
-| `nextCheckOffset` | 次に確認する分数 |
+<table>
+<thead><tr><th>フィールド</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td style="color:#FF9900;"><code>verdict</code></td><td style="color:#FF9900;">can_saboru / borderline / must_do</td></tr>
+<tr><td style="color:#FF9900;"><code>reasoning</code></td><td style="color:#FF9900;">判断の根拠（自然言語）</td></tr>
+<tr><td style="color:#FF9900;"><code>summaryText</code></td><td style="color:#FF9900;">1行サマリ</td></tr>
+<tr><td style="color:#FF9900;"><code>rawChatMessage</code></td><td style="color:#FF9900;">元の入力メッセージ</td></tr>
+<tr><td style="color:#FF9900;"><code>nextCheckOffsetMinutes</code></td><td style="color:#FF9900;">次に確認する分数</td></tr>
+</tbody>
+</table>
 
 > AIが<strong>何を根拠に判断したか</strong>をユーザーに開示。<br/>ブラックボックスにしない設計
 
@@ -224,14 +228,14 @@ toolChoice: { type: "tool",
 
 ### 心理学5理論をContextSignalに変換
 
-<div class="card accent"><strong>Collective Effort Model</strong>—文脈欠損を検出</div>
-<div class="card accent"><strong>Identifiability Effect</strong>—依頼者の監視度を評価</div>
-<div class="card accent"><strong>Self-Determination Theory</strong>-外発プレッシャーを定量化</div>
-<div class="card accent"><strong>Expectancy Theory</strong>—今やる期待値を算出</div>
-<div class="card accent"><strong>Sucker Effect</strong>—損な役回りを検出</div>
+<div class="card accent"><strong>Collective Effort Model</strong> 文脈欠損を検出</div>
+<div class="card accent"><strong>Identifiability Effect</strong> 監視度を評価</div>
+<div class="card accent"><strong>Self-Determination Theory</strong> <br/>外発プレッシャーを定量化</div>
+<div class="card accent"><strong>Expectancy Theory</strong> 今やる期待値を算出</div>
+<div class="card accent"><strong>Sucker Effect</strong> —損な役回りを検出</div>
 
 <div style="margin-top:10px; font-size:0.8em; color:#FF9900;">
-5理論すべてに査読論文 DOI あり
+5理論中4理論に査読論文 DOI あり<br/>（Expectancy Theory は書籍）
 </div>
 
 </div>
@@ -244,7 +248,7 @@ toolChoice: { type: "tool",
 <div class="columns">
 <div>
 
-### AWS CDK v2 — 6スタック構成
+### AWS CDK v2 — 7スタック構成
 
 <div class="cdkgrid">
 <div class="cdk-item"><strong>CognitoStack</strong> 認証・Google OAuth</div>
@@ -253,6 +257,7 @@ toolChoice: { type: "tool",
 <div class="cdk-item"><strong>AgentStack</strong> 3 AI Agents</div>
 <div class="cdk-item"><strong>WebhookStack</strong> EventBridge</div>
 <div class="cdk-item"><strong>FrontendStack</strong> CloudFront+S3</div>
+<div class="cdk-item"><strong>ConfigDeployStack</strong> 環境設定・デプロイ制御</div>
 </div>
 
 <div style="margin-top:10px; margin-bottom:6px;">
@@ -276,7 +281,7 @@ Bedrock = モデルガバナンスとTool Use強制 / EventBridge = Agent間の�
 
 <div class="stat-grid">
 <div class="stat-item">
-<span class="stat-value">542</span>
+<span class="stat-value">1,322</span>
 <span class="stat-label">テスト全パス</span>
 </div>
 <div class="stat-item">
@@ -291,7 +296,7 @@ Bedrock = モデルガバナンスとTool Use強制 / EventBridge = Agent間の�
 
 <div class="highlight">
 
-Cognito PKCE + <strong>HMAC-SHA256 署名</strong>付き OAuth state でCSRF対策済み。Slack Webhook 署名検証。<strong>外部データは処理後即削除</strong>
+Cognito PKCE + <strong>HMAC-SHA256 署名</strong>付き OAuth state でCSRF対策済み。Slack Webhook 署名検証。<strong>入力生データは永続化せず、構造化データをTTL 30日保持</strong>
 
 </div>
 
@@ -371,8 +376,8 @@ Vitest・Playwright・Biome を設定済みに
 ### 証明した3つのコアロジック
 
 <div class="card accent"><strong>GuardTokenLimit</strong> <br/>　— 二分探索の<strong>終了性</strong>と境界値安全性</div>
-<div class="card accent"><strong>Pseudonymize</strong><br/> 　— 仮名化の<strong>冪等性</strong>・SHA-256 決定性</div>
-<div class="card accent"><strong>ContextUtils</strong><br/> 　— スコアの<strong>単調性</strong>・ゼロ除算不発生</div>
+<div class="card accent"><strong>Pseudonymize</strong><br/> 　— <strong>旧実装の衝突存在</strong>・HMAC 単射性</div>
+<div class="card accent"><strong>ContextUtils</strong><br/> 　— スコアの<strong>単調性</strong></div>
 
 ### 専用 SKILL + サブエージェントを自作
 
