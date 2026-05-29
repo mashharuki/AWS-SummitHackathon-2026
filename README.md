@@ -8,6 +8,8 @@
 
 Slack やメール、カレンダーなど外部サービスからタスクを取り込み、チャットの流れ・未返信・予定の前後といった**文脈ごと**に、AI が「いまどうサボるのが一番うまいか」を根拠付きで提案します。増やすのではなく、**いま手を離してよい線引き**を見つけるためのエージェントです。
 
+さらに、タスクを AI が作業ステップに分解し、Google Calendar の空き時間を自動検出して**3バンドガント（作業 / 意思決定 / さぼろう）**でスケジューリング。「いつサボれるか」まで根拠付きで示します。
+
 **想定ユーザー**
 
 AI でこなせる仕事が増えた結果、**逆にタスクの絶対量が増え続けている社会人**。効率化の先に「やる量のインフレ」が来ている人を想定しています。
@@ -105,18 +107,33 @@ AI でこなせる仕事が増えた結果、**逆にタスクの絶対量が増
 
 ## コアロジック
 
-SABOROU の中核は、**サボり判定エンジン**です。
+SABOROU の中核は、**サボり判定エンジン**と**スケジュール自動生成エンジン**の2本柱です。
 
-### 1) 3フェーズ判定フロー
+### 1) サボり判定 — 3フェーズ判定フロー
 
 ```mermaid
 graph TD
-	P1[Phase 1: ContextCollector<br/>Slack/Gmail/Calendar文脈収集] --> P2[Phase 2: Bedrock Tool Use<br/>sabori_judgment構造化出力]
-	P2 --> P3[Phase 3: PersonaRenderer<br/>おっとり口調へ変換]
+	P1[Phase 1: ContextCollector<br/>Slack/Gmail/Calendar文脈収集] --> P2[Phase 2: Bedrock Tool Use<br/>sabori_judgment構造化出力<br/>Claude Sonnet 4.6]
+	P2 --> P3[Phase 3: PersonaRenderer<br/>ペルソナ口調へ変換<br/>Claude Haiku 4.5]
 	P3 --> OUT[Proposal出力<br/>verdict + reasoning + chatMessage]
 ```
 
-### 2) 心理学研究の組み込み（サボり判定への応用）
+### 2) スケジュール自動生成 — SchedulePlannerAgent (AG-03)
+
+```mermaid
+graph TD
+	S1[タスク詳細 + 締切] --> S2[Bedrock Tool Use<br/>作業ステップ分解<br/>Claude Sonnet 4.6]
+	S2 --> S3[Google Calendar<br/>Busy Slot 取得]
+	S3 --> S4[saboruBlockCalc<br/>決定論的スケジューリング]
+	S4 --> S5[3バンドガント<br/>作業 / 意思決定 / さぼろう]
+```
+
+- タスク締切から逆算し、Google Calendar の予定を避けてステップを配置
+- 他タスクの「意思決定時刻（decisionAt）」もbusyスロットとして相互反映
+- 「さぼろう」帯は確保された自由時間として可視化
+- スケジュールは揮発データ（DynamoDB 非永続・PII保護）、ガント編集結果は `plannedSteps` として永続化
+
+### 3) 心理学研究の組み込み（サボり判定への応用）
 
 SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判定に入力します。
 
@@ -128,13 +145,34 @@ SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判�
 | Self-Determination Theory | Ryan & Deci (2000) | `reminderCount`, `urgencyLevel` | 外発的プレッシャー強度を評価 |
 | Expectancy Theory | Vroom (1964) | `deadlineMinutes`, `contextCoverage` | 今努力する期待値を評価 |
 
-### 3) AIにどう出力させているか
+### 4) ゲーミフィケーション — AI依存度スコアと称号システム
 
-- Bedrock `converse` + Tool Use で `sabori_judgment` スキーマを強制
-- LLM は `verdict` / `reasoning` / `summaryText` / `nextCheckOffsetMinutes` を構造化で返却
-- 最後に PersonaRenderer が `rawChatMessage` を「サボロー口調」に変換
+「人をダメにする」をゲームループとして昇華した**AI依存度スコア（0〜100）**を実装しています。
 
-これにより、**科学的根拠 × 説明可能性 × キャラクター体験**を同時に成立させています。
+| スコア帯 | 称号 | テーマ |
+|---|---|---|
+| 0〜20 | AI見習い | 水色 — AI提案に驚く段階 |
+| 21〜40 | サボり常習者 | 黄色 — 提案パターンを学習し始める段階 |
+| 41〜60 | 依存気味 | オレンジ — 自己判断が委縮し始める段階 |
+| 61〜80 | AI奴隷 | 赤紫 — ほぼAIに従う段階 |
+| 81〜100 | 存在する怠惰 | 金色（カオス演出）— 完全委譲の段階 |
+
+**実装済みゲーミフィケーション要素:**
+- 実績バッジ（COMMON / RARE / EPIC / LEGENDARY レアリティ付き）
+- コンボカウンター（連続サボり成功数）
+- ストリークバッジ（連日サボり継続）
+- ウィークリーチャレンジカード
+- シーズンバナー
+- ジャックポットオーバーレイ（高得点時の演出）
+- PvP・ギルド（モックUI / 将来機能）
+
+### 5) マルチペルソナ — 同じ判定を、違う口調で
+
+ユーザーが好みのAIペルソナを選択でき、サボり提案がそのキャラクター口調で生成されます。
+
+### 6) サボり癖レポート（取扱説明書）
+
+本音データの蓄積から、ユーザー自身の「サボりパターン」を分析・可視化。AI依存が深まるほどレポートが育つ仕様です。
 
 <details>
 <summary>心理学理論の詳細（DOI付き）</summary>
@@ -161,14 +199,19 @@ SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判�
 
 | 要件ID | 機能 | 優先度 | 連携/依存 | デモ対象 |
 |---|---|---|---|---|
-| FR-01 | 外部サービス連携・タスク自動抽出 | MUST | Slack / Gmail / Google Calendar / EventBridge | Yes |
+| FR-01 | 外部サービス連携・タスク自動抽出 | MUST | Slack Webhook / EventBridge | Yes |
 | FR-02 | タスク候補の承認・編集・削除 | MUST | DynamoDB TaskCandidates/Tasks | Yes |
-| FR-03 | 文脈読解・サボり提案生成 | MUST | Bedrock AgentCore / PersonaRenderer | Yes |
+| FR-03 | 文脈読解・サボり提案生成（SSEストリーム） | MUST | Bedrock Claude Sonnet 4.6 / Claude Haiku 4.5 | Yes |
 | FR-04 | サボり提案のリアルタイム更新 | MUST | On-demand + EventBridge Scheduler | Yes |
-| FR-05 | 本音データ収集 | MUST | DynamoDB HonneData | Yes |
+| FR-05 | 本音データ収集・サボり癖レポート | MUST | DynamoDB HonneData → ManualPage分析 | Yes |
 | FR-06 | タスク一覧の1行サマリ表示 | MUST | Proposal summaryText | Yes |
 | FR-07 | 認証・外部連携管理 | MUST | Cognito + Google OAuth + Secrets Manager | Yes |
 | FR-08 | 手動タスク追加 | SHOULD | Hono API + DynamoDB | Optional |
+| FR-09 | 作業ステップ分解 + 3バンドガントスケジュール | MUST | SchedulePlannerAgent + Google Calendar | Yes |
+| FR-10 | マルチペルソナ選択 | MUST | PersonaRenderer + DynamoDB Personas | Yes |
+| FR-11 | AI依存度ゲーミフィケーション | MUST | 称号・実績・ストリーク・コンボ | Yes |
+| FR-12 | PWA対応（インストール可能） | SHOULD | vite-plugin-pwa + Workbox | Yes |
+| FR-13 | 日英多言語対応 | SHOULD | i18next / react-i18next | Yes |
 
 📖 **詳細資料**:
 - FR-01〜FR-08 の完全仕様（受入基準・根拠Q番号）: [`requirements.md`](./aidlc-docs/inception/requirements/requirements.md) §3
@@ -184,16 +227,18 @@ SABOROU は以下 5 理論を `ContextSignals` にマッピングし、LLM 判�
 ```mermaid
 sequenceDiagram
 	participant U as User
-	participant FE as Web Frontend
+	participant FE as Web Frontend (React 19 / PWA)
 	participant API as Hono API
 	participant WH as WebhookHandler
 	participant TE as TaskExtractorAgent
-	participant DB as DynamoDB
 	participant SP as SaboriProposerAgent
+	participant SCH as SchedulePlannerAgent
+	participant DB as DynamoDB (8テーブル)
 	participant BR as Amazon Bedrock
+	participant GC as Google Calendar API
 
-	WH->>TE: Slack/Gmail/Calendar イベント転送
-	TE->>BR: タスク候補抽出
+	WH->>TE: Slack イベント転送 (EventBridge)
+	TE->>BR: タスク候補抽出（Claude Sonnet 4.6）
 	BR-->>TE: TaskCandidate
 	TE->>DB: TaskCandidates 保存
 
@@ -201,23 +246,50 @@ sequenceDiagram
 	FE->>API: POST /api/tasks/candidates/:id/approve
 	API->>DB: Tasks 保存
 
-	U->>FE: タスク詳細を開く
+	U->>FE: タスク詳細を開く（サボり提案）
 	FE->>API: GET /api/tasks/:id/proposal?stream=true
 	API->>SP: proposeStream(taskId)
-	SP->>BR: 文脈読解 + 判定
+	SP->>BR: 文脈読解 + 判定（Claude Sonnet 4.6）
 	BR-->>SP: verdict/reasoning/summary
+	SP->>BR: 口調変換（Claude Haiku 4.5）
+	BR-->>SP: chatMessage（ペルソナ口調）
 	SP->>DB: Proposals 保存
 	API-->>FE: SSE delta 配信
-	FE-->>U: サボロー提案表示
+	FE-->>U: サボロー提案表示（ストリーミング）
+
+	U->>FE: ガントスケジュールを確認
+	FE->>API: GET /api/tasks/:id/schedule
+	API->>GC: busy slot 取得（Google Calendar）
+	GC-->>API: BusySlot[]
+	API->>SCH: plan(task, busySlots)
+	SCH->>BR: 作業ステップ分解（Claude Sonnet 4.6）
+	BR-->>SCH: ScheduleStep[]
+	SCH-->>API: SaboriSchedule（3バンドガント）
+	API-->>FE: { schedule } (no-store)
+	FE-->>U: 3バンドガント表示（編集可）
 
 	U->>FE: 本音を返信
 	FE->>API: POST /api/tasks/:id/honne
-	API->>DB: HonneData 保存
+	API->>DB: HonneData 保存（AI依存度スコア更新）
 ```
 
 📖 **詳細資料**:
 - 全7シーケンス図（タスク抽出 / サボり提案 / 本音記録 / 再評価 / 認証 / 連携設定 / エラーハンドリング）: [`application-design.md`](./aidlc-docs/inception/application-design/application-design.md) §7.1〜7.7
-- API 14エンドポイント仕様: 同 §6
+- API エンドポイント仕様: 同 §6
+
+---
+
+## 画面構成（実装済みページ）
+
+| ページ | パス | 説明 |
+|---|---|---|
+| ログイン | `/login` | Google OAuth（Cognito PKCE対応） |
+| タスク一覧 | `/tasks` | 候補承認・1行サマリ・AI依存度スコア |
+| タスク詳細 | `/tasks/:id` | サボり提案（SSEストリーム）+ 3バンドガント + 本音チャット |
+| 設定 | `/settings` | Slack / Google Calendar 連携管理 |
+| ペルソナ選択 | `/settings/persona` | AIキャラクター選択（口調変更） |
+| 取扱説明書 | `/manual` | サボり癖レポート（本音データ傾向分析） |
+| ロードマップ | `/roadmap` | プロダクトロードマップ（日英対応） |
 
 ---
 
@@ -225,17 +297,21 @@ sequenceDiagram
 
 | カテゴリ | サービス | 用途 | 選定理由 |
 |---|---|---|---|
-| フロント配信 | CloudFront | HTTPS終端 + CDN配信 | 低遅延・グローバル配信 |
-| フロント配信 | S3 | 静的アセットホスティング | シンプル・低コスト |
-| 認証 | Cognito User Pools | ユーザー認証 / Google IdP連携 | OAuth実装をマネージド化 |
+| フロント配信 | CloudFront | HTTPS終端 + CDN配信 + カスタムドメイン | 低遅延・グローバル配信 |
+| フロント配信 | S3 | 静的アセットホスティング（PWA含む） | シンプル・低コスト |
+| 認証 | Cognito User Pools | ユーザー認証 / Google IdP連携 / Passkey | OAuth実装をマネージド化 |
 | API | API Gateway HTTP API | REST入口 + Authorizer | Lambda統合が容易 |
-| コンピュート | Lambda | Hono API / Agent実行 | サーバーレスでコスト最適 |
-| オーケストレーション | EventBridge | イベント中継 | 疎結合・拡張容易 |
+| コンピュート | Lambda | Hono API / Agent実行 / Webhook受信 | サーバーレスでコスト最適 |
+| オーケストレーション | EventBridge | イベント中継（Slack→TaskExtractor） | 疎結合・拡張容易 |
 | スケジューリング | EventBridge Scheduler | 再評価ジョブ定期実行 | 運用負荷が低い |
-| AI | Amazon Bedrock | タスク抽出 / サボり判定 | モデル利用とガバナンスの両立 |
-| データ | DynamoDB | タスク・提案・本音データ保存 | On-Demandでハッカソン向き |
+| キュー | SQS | TaskExtractor DLQ（障害時リトライ） | イベント損失防止 |
+| AI | Amazon Bedrock | タスク抽出 / サボり判定 / スケジュール分解 / 口調変換 | クロスリージョン推論プロファイル活用 |
+| データ | DynamoDB | タスク・提案・本音・ペルソナ・Calendarキャッシュ保存 | On-Demandでハッカソン向き |
 | シークレット | Secrets Manager | OAuthトークン・署名鍵保管 | 秘密情報の安全管理 |
+| パラメータ | SSM Parameter Store | 仮名化ソルト管理 | 軽量な設定値管理 |
+| 証明書 | ACM | CloudFront・API Gateway カスタムドメイン用TLS | us-east-1 + ap-northeast-1 |
 | 監視 | CloudWatch | ログ・メトリクス・アラート | AWS標準の監視基盤 |
+| セキュリティ | cdk-nag | CDKデプロイ時のAWS Solutions Checks | セキュリティ品質担保 |
 
 📖 **詳細資料**:
 - AWS全体アーキテクチャ・セキュリティ境界・データフロー: [`aws-architecture.md`](./aidlc-docs/inception/application-design/aws-architecture.md)
@@ -254,40 +330,42 @@ sequenceDiagram
 graph TD
 	subgraph External[外部サービス]
 		Slack[Slack API]
-		Gmail[Gmail API]
 		GCal[Google Calendar API]
 		User[ユーザー]
 	end
 
 	subgraph Edge[エッジ層]
-		CF[CloudFront]
-		S3[S3]
+		CF[CloudFront + カスタムドメイン]
+		S3[S3 / PWA]
 	end
 
 	subgraph Auth[認証]
-		Cognito[Cognito]
+		Cognito[Cognito / Google OAuth / Passkey]
 	end
 
 	subgraph API[API層]
-		APIGW[API Gateway]
+		APIGW[API Gateway HTTP API]
 		HonoLambda[Lambda: Hono API]
 		WebhookLambda[Lambda: Webhook]
 	end
 
 	subgraph Agent[AIエージェント]
-		TaskExtractor[TaskExtractorAgent]
-		SaboriProposer[SaboriProposerAgent]
-		Bedrock[Amazon Bedrock]
+		TaskExtractor[TaskExtractorAgent<br/>Claude Sonnet 4.6]
+		SaboriProposer[SaboriProposerAgent<br/>Sonnet 4.6 + Haiku 4.5]
+		SchedulePlanner[SchedulePlannerAgent<br/>Claude Sonnet 4.6]
+		Bedrock[Amazon Bedrock<br/>JP Cross-Region Inference]
 	end
 
 	subgraph Data[データ層]
-		DDB[DynamoDB]
+		DDB[DynamoDB<br/>8テーブル]
 		SM[Secrets Manager]
+		SSM[SSM Parameter Store]
 	end
 
 	subgraph Orchestration[オーケストレーション]
 		EB[EventBridge]
 		EBScheduler[EventBridge Scheduler]
+		DLQ[SQS DLQ]
 	end
 
 	User --> CF
@@ -295,7 +373,10 @@ graph TD
 	CF --> APIGW
 	APIGW --> HonoLambda
 	HonoLambda --> SaboriProposer
+	HonoLambda --> SchedulePlanner
 	SaboriProposer --> Bedrock
+	SchedulePlanner --> Bedrock
+	SchedulePlanner --> GCal
 	HonoLambda <--> DDB
 	HonoLambda --> SM
 
@@ -304,34 +385,102 @@ graph TD
 	EB --> TaskExtractor
 	TaskExtractor --> Bedrock
 	TaskExtractor --> DDB
+	TaskExtractor -.-> DLQ
 
 	EBScheduler --> SaboriProposer
-	Gmail --> SaboriProposer
-	GCal --> SaboriProposer
 	Cognito --> APIGW
+```
+
+### DynamoDB テーブル構成（8テーブル）
+
+| テーブル名 | 用途 | 特記事項 |
+|---|---|---|
+| saborou-users | ユーザー情報・ペルソナ設定 | |
+| saborou-service-connections | 外部サービス連携状態 | |
+| saborou-task-candidates | Slack/Gmail 抽出タスク候補 | TTL付き（承認待ち失効） |
+| saborou-tasks | 承認済みタスク・plannedSteps | ガント編集結果を永続化 |
+| saborou-proposals | サボり提案キャッシュ | nextCheckAt で再生成判定 |
+| saborou-honne-data | 本音データ・クイックリプライ履歴 | AI依存度スコア計算元 |
+| saborou-personas | AIペルソナ定義 | |
+| saborou-google-calendar-cache | Google Calendar取得キャッシュ | TTL=24h / PII保護 |
+
+### CDK スタック構成（8スタック）
+
+```mermaid
+graph LR
+	ACM[AcmUsEast1Stack<br/>us-east-1 証明書] --> FE
+	FE[FrontendStack<br/>S3 + CloudFront] --> Cognito
+	Cognito[CognitoStack<br/>ユーザープール] --> Api
+	Data[DataStack<br/>DynamoDB + Secrets] --> Api
+	Api[ApiStack<br/>API GW + Lambda] --> Agent
+	Agent[AgentStack<br/>TaskExtractor + SaboriProposer + SchedulePlanner] --> Webhook
+	Data --> Webhook
+	Webhook[WebhookStack<br/>Slack + EventBridge + SQS]
+	Api --> Config
+	FE --> Config
+	Cognito --> Config
+	Config[ConfigDeployStack<br/>env-config.json → S3]
 ```
 
 📖 **詳細資料**:
 - コンポーネント詳細（FE-01〜08 / BE-01〜06 / AG-01〜04 / INF-01〜06）: [`application-design.md`](./aidlc-docs/inception/application-design/application-design.md) §4
 - 各コンポーネントのメソッド定義: [`component-methods/`](./aidlc-docs/inception/application-design/component-methods/)
 - コンポーネント依存関係図: [`component-dependency.md`](./aidlc-docs/inception/application-design/component-dependency.md)
-- DynamoDB 7テーブル設計: [`application-design.md`](./aidlc-docs/inception/application-design/application-design.md) §5
 - Unit of Work（U-01〜U-05）と実装スケジュール: [`unit-of-work.md`](./aidlc-docs/inception/units/unit-of-work.md)
 
 ---
 
 ## 技術スタック (Tech Stack)
 
-- フロントエンド: React, TypeScript, Vite, shadcn/ui, Tailwind CSS
-- バックエンド: Hono on AWS Lambda, API Gateway HTTP API
-- Slack連携: @slack/bolt（Webhook受信・署名検証）
-- チャットUI: Vercel AI SDK / useChat フック（サボローチャット ストリーミング表示）
-- AI: Amazon Bedrock（Claude Sonnet）, Bedrock AgentCore
-- データ: DynamoDB（On-Demand）
-- 認証: Amazon Cognito（Google OAuth）— PKCE (Proof Key for Code Exchange) 対応済み、CSRF対策に HMAC-SHA256 署名付き OAuth state を使用
-- シークレット管理: AWS Secrets Manager
-- インフラ: AWS CDK v2（TypeScript）
-- リージョン: ap-northeast-1（東京）
+### フロントエンド
+
+| 技術 | バージョン | 用途 |
+|---|---|---|
+| React | 19 | UIフレームワーク |
+| TypeScript | 6.0 | 型安全 |
+| Vite | 8 | ビルドツール / Dev Server |
+| Tailwind CSS | 4 | スタイリング |
+| shadcn/ui（カスタム実装） | — | UIコンポーネント（button / card / badge 等） |
+| Three.js + @react-three/fiber + drei | 0.177 / 9.6 / 10.7 | 3Dキャラクター（SaborouCharacter3D） |
+| i18next + react-i18next | 25.6 / 16.2 | 日英多言語対応 |
+| Vercel AI SDK (`ai`) | 4.3 | サボローチャット SSEストリーミング（useChat） |
+| react-router-dom | 7.6 | SPA ルーティング |
+| vite-plugin-pwa + workbox-window | 1.3 / 7.4 | PWA対応（インストール可能） |
+| amazon-cognito-identity-js | 6.3 | Cognito PKCE認証 |
+
+### バックエンド
+
+| 技術 | バージョン | 用途 |
+|---|---|---|
+| Hono | 4.12 | APIフレームワーク（Lambda上） |
+| TypeScript | 5.7 | 型安全 |
+| Zod | 3.25 | スキーマバリデーション |
+| esbuild | 0.21 | Lambda向けバンドル |
+| @hono/zod-validator | 0.4 | リクエストバリデーション |
+| @hono/swagger-ui | 0.6 | Swagger UI（ローカル開発） |
+
+### AIエージェント
+
+| 技術 | バージョン | 用途 |
+|---|---|---|
+| @aws-sdk/client-bedrock-runtime | 3.826 | Bedrock converse / Tool Use |
+| Claude Sonnet 4.6（JP推論プロファイル） | jp.anthropic.claude-sonnet-4-6 | タスク抽出・サボり判定・スケジュール分解 |
+| Claude Haiku 4.5（JP推論プロファイル） | jp.anthropic.claude-haiku-4-5-20251001-v1:0 | ペルソナ口調変換（コスト最適化） |
+| Zod | 3.23 | LLM出力バリデーション |
+
+### インフラ・共通
+
+| 技術 | バージョン | 用途 |
+|---|---|---|
+| AWS CDK v2 | 2.x | IaC（TypeScript） |
+| cdk-nag | — | AWS Solutions Checks（セキュリティ準拠） |
+| pnpm workspaces | — | モノレポ管理 |
+| Biome | — | Linter / Formatter |
+| Vitest | 4.x (frontend) / 2.x (agent/shared) | ユニットテスト |
+| Playwright | 1.60 | E2Eテスト |
+
+- リージョン: `ap-northeast-1`（東京）、Bedrock クロスリージョン推論で AP全域を活用
+- 認証: Cognito（Google OAuth PKCE + HMAC-SHA256署名付きOAuth State CSRF対策）
 
 📖 **詳細資料**:
 - 確定済み技術スタック（フロント/バック/AWS/開発ツールチェーン）: [`requirements.md`](./aidlc-docs/inception/requirements/requirements.md) §6.1〜6.5
@@ -488,7 +637,7 @@ graph TD
 
 	起動後、 `http://localhost:3000`にてAPIが起動する
 
-	また、`http://localhost:3000`にてSwagger UIが起動するのでそこからもAPIのテストができる
+	また、`http://localhost:3000/ui`にてSwagger UIが起動するのでそこからもAPIのテストができる
 
 ### フロントエンド
 
@@ -504,8 +653,20 @@ graph TD
 	pnpm frontend run test
 	```
 
+- E2Eテスト
+
+	```bash
+	pnpm frontend run e2e
+	```
+
 - ローカルでサーバー起動
 
 	```bash
 	pnpm frontend run dev
+	```
+
+- モックモードで起動（バックエンド不要）
+
+	```bash
+	pnpm frontend run dev:mock
 	```
