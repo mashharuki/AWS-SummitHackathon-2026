@@ -1721,3 +1721,19 @@ Haruki 追記 (20260527追記)
 
 - AWSにデプロイ済み
 - ピッチスライドは別途作成中
+
+---
+
+## Workspace Detection / Requirements Analysis — Codex サブエージェント設定作成
+**Timestamp**: 2026-06-06T00:03:23Z
+**User Input**: ".agents/agents にはサブエージェントの設定ファイルがいくつか存在します。これらと同じサブエージェントの設定ファイルをCodex向けに作成してください！！"
+**AI Response**: "AI-DLC workflow started. Loaded repository-local AI-DLC common rules from .aws-aidlc-rule-details because the four AGENTS.md-listed rule-detail roots were absent. Displayed welcome message, inspected aidlc-state.md, confirmed existing brownfield monorepo state, and selected minimal adaptive depth for a narrow agent-configuration conversion request. Next action: inspect source agent formats and create Codex-facing equivalents outside aidlc-docs/."
+**Context**: INCEPTION — Workspace Detection complete; Requirements Analysis minimal; no clarifying questions required because source files and likely target conventions are discoverable locally.
+
+---
+
+## Code Generation — Codex サブエージェント設定作成完了
+**Timestamp**: 2026-06-06T00:12:17Z
+**User Input**: ".agents/agents にはサブエージェントの設定ファイルがいくつか存在します。これらと同じサブエージェントの設定ファイルをCodex向けに作成してください！！"
+**AI Response**: "Created .codex/agents/ and copied all five existing sub-agent configuration files from .agents/agents/: aidlc-specialist.md, apple-style-ui-designer.md, aws-specialist.md, frontend-specialist.md, source-code-reviewer.md. Validated that the copied Codex files are byte-for-byte equivalent to the source directory using diff -qr. No application code changed."
+**Context**: CONSTRUCTION — Minimal Code Generation for repository-local Codex agent configuration. Content validation: Markdown/frontmatter only; no Mermaid or ASCII diagrams present.
