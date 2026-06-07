@@ -1,0 +1,117 @@
+{
+  "skill_name": "xmss-signatures",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "AWS Lambda + DynamoDB でXMSS-SHA2_10_256署名システムを構築したいです。Lambda関数のPythonコードと、CDKでのインフラ定義を書いてください。DynamoDBで鍵インデックスを原子的に管理する部分が重要です。",
+      "expected_output": "Lambda関数（DynamoDB条件付き書き込みによる原子的idx更新）とCDKスタック定義が含まれた完全な実装コード。セキュリティ上重要なidx重複防止ロジックが適切に実装されていること。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "DynamoDBの条件付き書き込み（ConditionExpression）が実装されている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "KeyExhaustedException等の鍵枯渇エラーハンドリングが含まれている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "CDKスタックにDynamoDBテーブルとLambda関数の定義が含まれている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "最小権限IAMポリシーが設定されている",
+          "passed": null,
+          "evidence": ""
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "XMSSパラメータセットの選択で悩んでいます。PKIルートCA用途で年間500枚の証明書を発行し、10年間運用する予定です。どのパラメータセットを選ぶべきでしょうか？セキュリティレベルと鍵生成時間のトレードオフも教えてください。",
+      "expected_output": "必要な署名数（500×10=5000回）の計算からXMSS-SHA2_16_256を推奨する回答。h=16で65536回署名可能な点、鍵生成時間（約6秒）、署名サイズ（約2.7KB）の説明が含まれること。SHA-256 vs SHA-512のセキュリティ比較も含まれること。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "必要署名回数（5000回）の計算が含まれている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "XMSS-SHA2_16_256または類似パラメータセットが推奨されている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "署名可能回数（2^h）の説明が含まれている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "鍵生成時間またはパフォーマンスのトレードオフが言及されている",
+          "passed": null,
+          "evidence": ""
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "XMSS実装のセキュリティレビューをしてほしいです。以下のコードを確認してください：\n\n```python\nimport pickle\nimport os\n\ndef sign_document(doc, sk_path):\n    with open(sk_path, 'rb') as f:\n        sk = pickle.load(f)\n    sig = xmss_sign(sk, doc)\n    # 署名完了\n    return sig\n```\n\nこのコードに問題はありますか？",
+      "expected_output": "重大な脆弱性として（1）署名後にskのidxが更新されているが永続化されていない→同じidxで再署名される危険、（2）pickleによるデシリアライゼーション攻撃リスク、を指摘。修正コード（sk更新後の永続化を署名前にfsyncで保証）を提示すること。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "署名後にsk（更新済みインデックス）が永続化されていない問題を指摘している",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "インデックス重複使用の危険性（セキュリティ崩壊）が説明されている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "修正コードまたは修正方針が提示されている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "pickleのセキュリティリスクまたは安全なシリアライズ方法が言及されている",
+          "passed": null,
+          "evidence": ""
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "XMSS vs CRYSTALS-Dilithium vs SPHINCS+ の比較をしてください。今から新しいPKIシステムを設計するとして、どれを選ぶべきでしょうか？特にXMSSを選ぶべき場面と避けるべき場面を教えてください。",
+      "expected_output": "3方式の比較表（署名サイズ・ステートフル/ステートレス・量子耐性の根拠・NIST標準化状況）。XMSSを選ぶべき場面（長期保証・ハッシュのみ依存の強固なセキュリティ証明・PKIルートCA）と避けるべき場面（ステート管理困難・署名回数予測不可）の具体的な説明が含まれること。",
+      "files": [],
+      "assertions": [
+        {
+          "text": "3方式（XMSS・Dilithium・SPHINCS+）の比較が含まれている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "XMSSのステートフル性（最重要の制約）が説明されている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "XMSSを推奨する具体的なユースケースが示されている",
+          "passed": null,
+          "evidence": ""
+        },
+        {
+          "text": "NIST標準化状況（FIPS 204/205/206）が言及されている",
+          "passed": null,
+          "evidence": ""
+        }
+      ]
+    }
+  ]
+}
