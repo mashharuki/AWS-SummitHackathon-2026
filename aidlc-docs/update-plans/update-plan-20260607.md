@@ -169,8 +169,204 @@ SABOROUを使い続けることで起きること:
   https://www.businessinsider.jp/article/285546/
 
 ## 現状の課題
-- 外部のAPIやMCPサーバーに音声データを送れる音声デバイスがまだ見つかっていない
-- 最悪11ElevenlabsのSDKを使ったPWAなどのアプリになりそう。
+
+| 課題 | 状態 | 解決策 |
+|------|------|--------|
+| 外部APIに音声データを送れるウェアラブルが見つかっていない | ✅ **解決済み** | **Omi Consumer (CV1)** を採用。Webhook経由でリアルタイム文字起こしを外部APIに送信できる |
+| ElevenLabs PWA がフォールバック案だった | ✅ **フォールバック確保** | Omi が本番デバイス。**ElevenLabs SDK は Omi 未着・障害時のバックアップとして維持** |
+
+---
+
+## Omi採用後の実装計画（2026-06-07 更新版）
+
+### 音声デバイス決定: Omi Consumer (CV1)
+
+**採用理由**:
+- Webhook 経由でリアルタイム文字起こしを外部 API に即送信できる
+- **Omi が文字起こしを内部で実施** → Amazon Transcribe 不要（スタックが大幅シンプル化）
+- ペンダント型でデモ中に装着したまま話せる → 審査員が「本物だ」と実感できる
+- オープンソースハードウェア → 技術的信頼性・拡張可能性をアピールできる
+- Consumer (CV1): nRF5340 + Wi-Fi 6 + デュアルマイク → 安定した音声認識
+
+---
+
+### 更新後のシステムアーキテクチャ
+
+```
+[Omi Consumer CV1]  ← ペンダント装着・常時録音
+      │ BLE
+      ▼
+[Omi Mobile App]
+      │
+      ├─ Webhook (Real-time Transcript)  ─→ 各セグメントをリアルタイム送信
+      │
+      └─ Webhook (Memory Creation)       ─→ 会話完了時に構造化データを送信
+                  │
+                  ▼
+      [API Gateway] (ap-northeast-1)
+                  │
+                  ▼
+      [Lambda (FastAPI/Mangum)]
+                  │
+         ┌────────┼─────────────┐
+         ▼        ▼             ▼
+  [Bedrock     [DynamoDB]    [SNS]
+  AgentCore]  会話履歴DB   Mobile Push
+  話者識別                  スマホ通知
+  感情分析
+  一言生成
+         │
+         ▼
+  [Bedrock AgentCore Gateway]
+  SABOROU API を MCP サーバー化
+  (OpenAPI仕様 yaml で定義)
+```
+
+**Amazon Transcribe が不要になった理由**:
+Omi デバイスが録音から文字起こしまで内部処理し、テキスト済みデータを Webhook で送ってくれる。Lambda は最初からテキストを受け取るため、Transcribe の呼び出しが不要。
+
+---
+
+### 確定スコープ（Must 4 + Nice to have 1）
+
+| 機能 | 優先度 | Omi との関係 | 実装難易度 |
+|------|--------|------------|-----------|
+| **Omi Webhook 統合** (Memory + Real-time) | Must ★★★ | Omi が入り口 | ★★☆ |
+| **Bedrock AgentCore 分析パイプライン** (話者識別・感情・一言生成) | Must ★★★ | Webhook受信後に処理 | ★★★☆ |
+| **DynamoDB 会話履歴ストア** (人物ごとのデータ管理) | Must ★★★ | 既存CDK流用 | ★★☆ |
+| **AgentCore Gateway MCP化** (SABOROU API の OpenAPI仕様化) | Must ★★★ | デュアルMCP構成の一角 | ★★★☆ |
+| **KMS 暗号化** (会話データの保護) | Nice to have | データ保護 | ★★☆ |
+
+**削除したスコープ**:
+- ~~Amazon Transcribe~~ → Omi が代替
+- ~~ZKP暗号化~~ → KMS のみで十分
+- ~~スマートウォッチ通知~~ → SNS + Mobile Push で代替
+
+**フォールバックとして維持**:
+- **ElevenLabs SDK（音声録音 → テキスト変換）**: Omi デバイス未着・当日障害時のバックアップ。Webhook 受信インターフェースは共通化し、音声入力元を Omi / ElevenLabs のどちらでも切り替え可能な設計にする
+
+---
+
+### デュアル MCP アーキテクチャ（差別化ポイント）
+
+```
+Bedrock Agent
+    │
+    ├─── Omi MCP Server (omi-mcp-server)
+    │        search_memories / get_conversations
+    │        → Omi の生の会話データに直接アクセス
+    │
+    └─── SABOROU MCP (AgentCore Gateway)
+             searchMemories / notifyMemory
+             → SABOROU が構造化・分析した人物データにアクセス
+```
+
+**なぜこれが凄いか**: Omi の生データ（会話ログ）と SABOROU の分析データ（人物プロファイル・一言提案）を Bedrock Agent が同時に参照できる。審査員の誰もまだ見ていない構成。
+
+---
+
+### 更新後のデモシナリオ（15分完全版）
+
+```
+0:00 ─ オープニング
+       「最悪の記憶力で、最高の人間関係を。」
+       Omi ペンダントを首にかけてステージに登場
+
+1:30 ─ 課題提示（チャールズの話）
+       「友人のチャールズは久しぶりに会った誰にでも
+        "あの時の話、今でも覚えてるよ"——と言えます。
+        AIがそれをやったら？」
+
+2:30 ─ デモ開始
+       「これが Omi です。今もここで動いています」
+       ← Omi が発表者の声をリアルタイム文字起こし中（スクリーン表示）
+       「鶴崎さんと久しぶりに会った想定でやってみます」
+       → 「久しぶり！鶴崎さん！東大王の収録どうでした？」と話す
+
+3:30 ─ リアルタイム処理を可視化（「これもやってくれるんだ」①）
+       → Webhook 受信ログがリアルタイムで画面に流れる
+       → Bedrock AgentCore が話者識別・感情分析中
+
+4:00 ─ 「ヒットしました！」（「これもやってくれるんだ」②）
+       → 「鶴崎さん 2026/01/15 赤坂 - IQ165の話・数学の研究の話・嬉しそう」
+       → 提案: "博士論文の発表、本当に素晴らしかったですよね！"
+       → スマホにプッシュ通知が届く（リアルタイム）
+
+5:00 ─ 「これで記憶力はダメになります」（テーマ体現）
+       → 5ステップ図: ①丸投げ→②努力放棄→③能力喪失→④AI補完→⑤関係豊か
+
+6:00 ─ 技術スタックの説明（「これもやってくれるんだ」③）
+       → デュアルMCPアーキテクチャを図で説明
+       → AgentCore Gateway の OpenAPI yaml を見せる
+       「Omi MCP と SABOROU MCP の2つが同時に動いています」
+
+8:00 ─ SABOROU ブランド拡張
+       v1（仕事をサボる）→ v2（記憶をサボる）の進化を説明
+
+10:00 ─ ビジネス展望（塚田さん向け）
+        「記憶外部化市場 × CRM の個人版。継続利用率が高い設計理由」
+
+12:00 ─ AI-DLC プロセス（福井さん向け）
+        audit.md の複数サイクル・今回の方針転換の証拠として提示
+
+13:30 ─ まとめ
+        「最悪の記憶力で、最高の人間関係を——SABOROU Memory」
+
+15:00 ─ Q&A
+```
+
+---
+
+### Omi セットアップ手順（実装着手前チェックリスト）
+
+```
+□ Omi Consumer (CV1) を購入・届いたら充電
+□ Omi アプリ (iOS/Android) をインストール
+□ Bluetooth ペアリング完了
+□ Omi アプリ → Settings → Developer → API Keys → Create
+□ OMI_API_KEY を環境変数に設定
+□ pip install omi-cli → omi memories list で動作確認
+□ Omi アプリ → Apps → + → Integration でWebhookを登録
+□ 日本語プロンプトアプリを作成（メモリの日本語化）
+□ バックアップ動画の録画
+```
+
+---
+
+### 更新後の実装スケジュール（残り19日）
+
+| 期間 | 作業 | 担当 |
+|------|------|------|
+| **6/8-9（2日）** | Omi デバイス受取・セットアップ・Webhook 動作確認 | 全員 |
+| **6/10-12（3日）** | Lambda + API Gateway + DynamoDB CDK スタック追加 | バックエンド |
+| **6/13-15（3日）** | Bedrock AgentCore 分析パイプライン実装 | AI |
+| **6/16-18（3日）** | AgentCore Gateway OpenAPI yaml + MCP化 | AI |
+| **6/19-21（3日）** | フロントエンドUI（管理ダッシュボード）・通知機能 | フロント |
+| **6/22-24（3日）** | 統合テスト・デモリハーサル・負荷テスト | 全員 |
+| **6/25（1日）** | バックアップ動画収録・最終チェック | 全員 |
+| **6/26（当日）** | 決勝本番 @幕張メッセ | 全員 |
+
+---
+
+### PWA Web Push 通知 — 実装参考資料
+
+ElevenLabs SDK フォールバックおよびデモ用プッシュ通知実装に利用する。
+
+| 資料 | 内容 | 優先度 |
+|------|------|--------|
+| [Web Push 通知の仕組みと実装](https://zenn.dev/aobaiwaki/articles/8629c5b9764aac) | Service Worker + Push API の基礎・実装手順 | ★★★ |
+| [iOS Safari の Web Push 対応（iOS 16.4+）](https://gihyo.jp/article/2023/02/ios-webpush) | iOS で Web Push を受け取るための設定・注意点 | ★★★ |
+| [Next.js + PWA + OneSignal 実装例](https://github.com/alpaca1231/example-next-pwa-onesignal) | Next.js App Router での PWA Push 実装サンプル | ★★★ |
+| [PWA Push 通知 実装まとめ](https://zenn.dev/kazhack/articles/43e1ebdd75bef1) | VAPID キー生成・Service Worker 登録・通知送信の一連の流れ | ★★☆ |
+| [Web Push 通知 実装ガイド（Qiita）](https://qiita.com/hirooka622/items/171a1b77d03ed3df4042) | バックエンド（Node.js/web-push ライブラリ）からの Push 送信 | ★★☆ |
+| [PWA Web Push 導入解説](https://backapp.co.jp/blog/12558) | PWA の Web Push 全体像・ユースケース解説 | ★☆☆ |
+
+**実装方針メモ**:
+- **本番通知ルート**: Omi Webhook → Lambda → **Amazon SNS Mobile Push** (APNs/FCM) → スマホネイティブ通知
+- **PWA フォールバックルート**: ElevenLabs SDK で録音 → Lambda → **VAPID + Web Push API** → ブラウザ通知（Service Worker）
+- iOS は iOS 16.4 以降で Web Push 対応済み。ただし PWA をホーム画面に追加している必要あり（上記 gihyo 記事参照）
+- VAPID キーは環境変数で管理（`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`）。ハードコード禁止
+- デモ会場想定: OneSignal 経由なら iOS/Android 両対応でセットアップが最速（上記 GitHub サンプル流用可）
 
 ---
 
@@ -429,3 +625,90 @@ Week 3（6/22-25）
 
 これができれば、去年のKanpAIを超えられるだけのポテンシャルがあります。Inceptionフェーズのドキュメント作成に入る前に、まずこの3点の意思決
 定をお願いします。
+
+---
+
+## 更新レビュー（Omi採用後 — 2026-06-07）
+
+### 総合評価（更新版）
+
+**総合スコア**: **A-（優勝射程圏内）**
+**決勝準備状況**: **要実装着手（設計完了・課題3つのうち2つ解決済み）**
+**去年の優勝チーム比**: **複数軸で上回る可能性あり** → UI品質の作り込みが最後の鍵
+
+---
+
+### Issueの解決状況
+
+| Issue | 前回状態 | 更新状態 |
+|-------|---------|---------|
+| #1 「人をダメにする」ナラティブ | 🔴 弱い | ✅ **解決** キャッチコピー確定・逆説フレーム完成 |
+| #2 ハードウェア未解決 | 🔴 デモ不成立リスク | ✅ **解決** Omi Consumer (CV1) 採用決定 |
+| #3 スコープ過大 | 🟡 19日でリスク | ✅ **大幅削減** Transcribe不要・ZKP削除・Watch削除 |
+
+---
+
+### 審査員別 想定評価（更新版）
+
+| 審査員 | 前回 | 更新後 | 評価変化の理由 |
+|--------|------|--------|-------------|
+| 塚田さん | ⭐⭐⭐ | ⭐⭐⭐⭐ | Omiという最新オープンソースHWを使ったスタートアップ的アプローチが加点 |
+| 伊沢さん | ⭐⭐ | ⭐⭐⭐⭐ | キャッチコピー確定・逆説ナラティブ・ペンダント装着デモの視覚インパクト |
+| 鶴崎さん | ⭐⭐⭐ | ⭐⭐⭐⭐ | デュアルMCP構成の独自性・Omi + Bedrock の技術スタック美しさ |
+| 福井さん | ⭐⭐⭐ | ⭐⭐⭐⭐ | AgentCore Gateway MCP化 + Omi MCP のダブルMCP。AI-DLC方針転換サイクルがaudit.mdに残る |
+
+---
+
+### Omi採用による新たな差別化ポイント
+
+1. **「本物のウェアラブルデモ」**: ステージ上でペンダントを装着しながら話す → 審査員全員が「これは本当に動いている」と実感する視覚インパクト。去年のKanpAIの電話連携に相当する「本物感」。
+
+2. **「Omi × AWS の組み合わせ」は国内未例**: Omi（米国発）× Bedrock AgentCore（AWS最新）× AgentCore Gateway（MCP化）という組み合わせは、国内ハッカソンで初出になる可能性が高い。
+
+3. **スタックの大幅シンプル化**: Omiが文字起こしを内部処理するため Amazon Transcribe が不要。Lambda は最初からテキストを受け取る。構成が美しくなり、説明もシンプルになる。
+
+4. **デュアルMCPの独自性**: Omi MCP（生の会話データ）+ SABOROU MCP（分析済み人物データ）という2層構造。「Omiが記憶の収集係、SABOROUが分析・提案係」という役割分担が明確。
+
+---
+
+### 残存リスクと対処
+
+| リスク | 深刻度 | 対処策 |
+|--------|--------|--------|
+| Omi デバイスの到着遅れ | 🔴 高 | 今日中に注文。届かない場合は Omi アプリ（スマホ単体）でデモ可能 |
+| 日本語音声認識の精度 | 🟡 中 | Consumer (CV1) のデュアルマイク推奨。静かな環境でリハーサル |
+| UI品質が去年の優勝に届かない | 🟡 中 | `apple-style-ui-designer` スキルで Week2 集中的に作り込み |
+| デモ当日の Wi-Fi 不安定 | 🟡 中 | Omi は BLE でスマホ経由通信 → スマホのモバイル回線で動作可 |
+| AgentCore Gateway の実装遅れ | 🟡 中 | OpenAPI yaml を Week1 で先行作成。MCP化はWeek2で完成 |
+
+---
+
+### 去年の優勝チーム比較（更新版）
+
+| 評価軸 | 去年のKanpAI | 今年のSABOROU（Omi採用後） | 差分判定 |
+|--------|------------|-------------|---------|
+| UI完成度 | 商用プロダクト級 | apple-style-ui-designer で作り込み予定 | **Week2次第** |
+| 機能の深さ | 6エージェント×深い実装 | Omi→Webhook→Bedrock→DynamoDB→Push の完全連鎖 | **同水準以上** |
+| テーマ体現度 | AI で飲み会を限界まで代行 | キャッチコピー確定・逆説ナラティブで完璧 | **上回る** |
+| 外部連携の本物感 | LINE + 電話 + 予約 | **実物ウェアラブル (Omi)** + AWS 最新サービス | **上回る** |
+| 技術独自性 | Amazon Connect 電話連携 | デュアル MCP + AgentCore Gateway (国内未例) | **上回る** |
+| プレゼン インパクト | 幹事 AI の自動化デモ | ペンダント装着でライブデモ | **同水準以上** |
+
+---
+
+### 次のアクション（更新版・今日中）
+
+- [ ] **Omi Consumer (CV1) を今日中に注文する** (公式サイト $89 + 送料)
+- [ ] **Omi アプリをインストールしてAPI キーを取得する**
+- [ ] **ElevenLabs SDK をフォールバックとして実装維持**（Omi 未着・デモ当日障害時に即切替できる状態を保つ）
+- [ ] ~~ZKP~~ → **廃止（KMSのみ）**
+- [ ] ~~スマートウォッチ通知~~ → **廃止（SNS + Push に変更）**
+- [ ] Inception フェーズドキュメントの再作成を `aidlc-specialist` に委譲する
+
+### 総括（更新版）
+
+Omiの採用によって**3つの重大課題がすべて解決**しました。
+
+「最悪の記憶力で、最高の人間関係を」というキャッチコピー、Omiペンダントを装着してのライブデモ、Bedrock AgentCore + AgentCore Gateway のデュアルMCP構成——この3要素が揃えば、去年の優勝チームを明確に超えられます。
+
+**残る唯一の課題はUI品質**。Week2の `apple-style-ui-designer` での集中作り込みが優勝の鍵です。
