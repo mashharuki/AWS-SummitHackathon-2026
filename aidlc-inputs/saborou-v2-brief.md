@@ -141,6 +141,8 @@ Chrome の Side Panel に常駐するサボローが、**ページの文脈を�
 | Cognito 認証（継続） | Google OAuth PKCE | v1 資産流用 |
 | Slack OAuth トークン管理 | Secrets Manager per-user | v1 ContextCollector.ts 流用 |
 | Bedrock 連携（Claude Sonnet 4.6） | サボり判定・返信文生成 | v1 BedrockClientAdapter.ts 流用 |
+| ElevenLabs JS SDK（フロントエンド） | `pkgs/extension` に `@11labs/client`（Conversational AI SDK）を組み込み。STT・TTS・会話フロー・MCP クライアントを統合管理。Web Speech API + 個別 TTS 呼び出しを Conversational AI SDK で一本化 | 音声対話体験の主制御 |
+| Amazon Bedrock AgentCore Gateway | SABOROU Hono API の OpenAPI スキーマ（S3）から MCP サーバーを自動生成。`{gatewayId}.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com` を MCP エンドポイントとして公開。ElevenLabs Conversational AI SDK が MCP クライアントとして呼び出す | ElevenLabs SDK ↔ SABOROU API の MCP 接続基盤 |
 
 ### MVP OUT（意図的に外す）
 
@@ -191,12 +193,14 @@ Chrome の Side Panel に常駐するサボローが、**ページの文脈を�
 | FR-V2-07 | 返信文・断り文生成（Bedrock Sonnet 4.6） | MUST | Yes |
 | FR-V2-08 | 進捗報告の定期自動生成（EventBridge Scheduler） | SHOULD | Yes |
 | FR-V2-09 | 朝の仕分けフロー（マルチメッセージ一括処理） | SHOULD | Optional |
+| FR-V2-10 | ElevenLabs Conversational AI SDK のフロントエンド組み込み（STT/TTS/会話フロー統合） | MUST | Yes |
+| FR-V2-11 | Amazon Bedrock AgentCore Gateway による SABOROU API の MCP サーバー化と ElevenLabs SDK からの MCP 呼び出し | MUST | Yes |
 
 ---
 
 ## 6. 流用資産マップ
 
-**重要: このコードベースに MCP サーバーは存在しません。外部連携は全て直接 API 実装です。**
+**重要: v1 コードベースに MCP サーバーは存在しません。外部連携は全て直接 API 実装です。v2 では Amazon Bedrock AgentCore Gateway を用いて SABOROU Hono API を MCP サーバーとして外部公開します（§7.6 参照）。**
 
 | v1 資産 | ファイルパス | v2 での再利用方針 | 変更要否 |
 |--------|------------|-----------------|---------|
@@ -238,14 +242,45 @@ React 19 / Vite / Tailwind 4 / shadcn 風コンポーネント群は、Chrome �
 
 ### 7.2 ElevenLabs 連携
 
+#### フロントエンド（Chrome 拡張）での ElevenLabs Conversational AI SDK 直接利用
+
+v2 では ElevenLabs SDK をフロントエンド（`pkgs/extension`）にも組み込み、音声対話を Conversational AI SDK で一元管理します。
+
+| 項目 | 内容 |
+|------|------|
+| 使用パッケージ | `@11labs/client`（ElevenLabs Conversational AI SDK） |
+| 配置 | `pkgs/extension/src/panel/hooks/useConversationalAgent.ts` |
+| 担当機能 | STT（マイク入力 → テキスト変換）・TTS（テキスト → 音声再生）・会話フロー管理・MCP クライアント（AgentCore Gateway への接続） |
+| MCP 接続先 | Amazon Bedrock AgentCore Gateway の MCP エンドポイント（§7.6 参照） |
+| 認証 | Cognito JWT を `authToken` として渡す。API キーは拡張機能内に保持しない |
+| 設計上の優位点 | Web Speech API（精度限界あり）と個別 TTS Lambda 呼び出しを Conversational AI SDK が統合することで、音声認識精度向上・会話コンテキスト管理・ツール呼び出しを一括処理できる |
+
+```typescript
+// pkgs/extension/src/panel/hooks/useConversationalAgent.ts（概略）
+import { useConversation } from "@11labs/client";
+
+export function useConversationalAgent(cognitoJwt: string) {
+  return useConversation({
+    agentId: process.env.ELEVENLABS_AGENT_ID!,
+    clientTools: {
+      mcp: {
+        serverUrl: `https://${AGENTCORE_GATEWAY_ID}.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com/mcp`,
+        authToken: cognitoJwt,
+      },
+    },
+  });
+}
+```
+
+#### バックエンド連携（Lambda プロキシ）
+
 | 論点 | 選択肢 A | 選択肢 B | 推奨 |
 |------|---------|---------|------|
-| TTS の呼び出し元 | Lambda（Hono API 経由）でプロキシ | Chrome 拡張から ElevenLabs に直接呼び出し | **A（Lambda 経由）** |
-| 推奨理由 | API キーを Chrome 拡張に含めるとリポジトリ・パッキングで漏洩リスク。Lambda 経由なら Secrets Manager で管理できる | 直接呼び出しはレイテンシが低いが API キー漏洩リスクがある | |
-| STT の実装 | Web Speech API（ブラウザ内蔵・無料） | ElevenLabs STT API（有料・高精度） | **Web Speech API（MVP）** |
-| 推奨理由 | MVP ではブラウザ内蔵 STT で十分。デモ環境のネットワーク品質が安定していれば精度問題なし | ElevenLabs STT は精度が高いがコストが増加。デモ品質で問題が出たら差し替え | |
+| TTS の呼び出し元 | Lambda（Hono API 経由）でプロキシ | Chrome 拡張から ElevenLabs に直接呼び出し | **A（Lambda 経由）をフォールバックとして温存** |
+| 推奨理由 | Conversational AI SDK が主制御となるが、SDK 非対応シナリオ（スケジュール通知など非インタラクティブな読み上げ）では Lambda プロキシを継続使用 | 直接呼び出しはレイテンシが低いが API キー漏洩リスクがある | |
+| STT の実装 | Conversational AI SDK に内包（ElevenLabs STT 使用） | Web Speech API（フォールバック） | **Conversational AI SDK（MVP）** |
 | API キー管理 | Secrets Manager（`saborou/elevenlabs-api-key`）に保管。Lambda から取得 | — | **Secrets Manager 一択** |
-| 音声生成レイテンシ | Lambda cold start 考慮。Lambda@Edge では ElevenLabs は呼べないため通常 Lambda | — | Provisioned Concurrency も検討（論点 TP-02） |
+| 音声生成レイテンシ | Lambda cold start 考慮。Provisioned Concurrency も検討（論点 TP-02） | — | SDK 経由はブラウザ内で直接再生するためレイテンシ改善 |
 
 ### 7.3 Slack メッセージのリアルタイム検知
 
@@ -273,6 +308,59 @@ React 19 / Vite / Tailwind 4 / shadcn 風コンポーネント群は、Chrome �
 | Slack の送信ボタンクリック | `click()` イベントを dispatch | タイミング制御（入力完了を待つ）が必要 |
 | DM / チャンネルの判別 | URL パターン（`/messages/UXXXXXXX` が DM、`/messages/C` がチャンネル）から判定 | |
 
+### 7.6 Amazon Bedrock AgentCore Gateway（SABOROU API の MCP サーバー化）
+
+**目的**: SABOROU の Hono REST API を MCP サーバーとして公開し、ElevenLabs Conversational AI SDK の MCP クライアントから呼び出せるようにする。AgentCore Gateway が OpenAPI スキーマを読み込み、各エンドポイントを MCP ツールとして自動生成する。
+
+#### MCP として公開するツール（想定）
+
+| MCP ツール名 | 対応 Hono API エンドポイント | 役割 |
+|------------|--------------------------|------|
+| `saborou_judge_sabori` | `POST /api/proposals/stream` | サボり判定・返信文生成（Bedrock / SaboriProposerAgent 呼び出し） |
+| `saborou_send_slack_reply` | `POST /api/slack/reply` | Slack メッセージへの自動返信送信（承認後） |
+| `saborou_get_tasks` | `GET /api/tasks` | 現在のタスク一覧取得（文脈収集用） |
+| `saborou_schedule_report` | `POST /api/tasks/{id}/report` | 進捗報告のスケジューリング（UC-03） |
+
+#### AgentCore Gateway セットアップ手順（概要）
+
+1. **OpenAPI スキーマ生成**: Hono のルート定義から OpenAPI 3.1 スキーマを生成（`@hono/zod-openapi` 活用）
+2. **S3 アップロード**: スキーマを `saborou-agentcore-schema` バケットにアップロード（`aws s3api put-object`）
+3. **Credential Provider 作成**: Cognito JWT 検証のための OAuth2 Credential Provider を作成（`aws bedrock-agentcore-control create-oauth2-credential-provider`）。クライアントシークレットはサービスが Secrets Manager に自動保管するため手動作成不要
+4. **Gateway Target 作成**: `aws bedrock-agentcore-control create-gateway-target` で Hono API を MCP ツール群として登録。OpenAPI スキーマの `operationId` と `description` が MCP ツール名・説明に自動変換されるため、スキーマの記述品質が重要
+5. **MCP エンドポイント確認**: `aws bedrock-agentcore-control get-gateway-target` でステータスが `ACTIVE` になるまで待機
+
+#### アーキテクチャにおける位置づけ
+
+```
+[ElevenLabs Conversational AI SDK（Chrome 拡張）]
+        │ MCP プロトコル + Cognito JWT
+        ▼
+[Amazon Bedrock AgentCore Gateway]
+        │ HTTPS（REST）
+        ▼
+[Hono API Lambda（API Gateway 経由）]
+        │
+        ├──▶ SaboriProposerAgent Lambda → Bedrock Claude Sonnet 4.6
+        ├──▶ DynamoDB（tasks / proposals / honne-data）
+        └──▶ Slack API（postMessage）
+```
+
+#### セキュリティ設計
+
+| 項目 | 方針 |
+|------|------|
+| API キー管理 | AgentCore Gateway の Credential Provider が内部的に Secrets Manager で管理。Chrome 拡張には渡さない |
+| 認証フロー | ElevenLabs SDK → AgentCore Gateway: Cognito JWT（Bearer）。Gateway → Hono API: OAuth2 Credential Provider 経由 |
+| IAM 最小権限 | Gateway サービスロールは `execute-api:Invoke` の特定 ARN のみに制限 |
+| CloudTrail | `bedrock-agentcore-control` API 呼び出しを全記録 |
+
+#### 技術論点（追加）
+
+| リスク ID | 内容 | 対応方針 |
+|---------|------|---------|
+| TP-05 | AgentCore Gateway の `ap-northeast-1` での MCP エンドポイント GA 確認 | `aws bedrock-agentcore-control list-gateways --region ap-northeast-1` で確認。GA 前の場合は `us-east-1` で Gateway を立て、Hono API を CORS 対応でリージョン越しに呼び出す |
+| TP-06 | ElevenLabs Conversational AI SDK の MCP クライアント設定方法（SDK バージョン依存） | `@11labs/client` の `clientTools.mcp` オプションを使用。最新ドキュメントで `serverUrl` / `authToken` パラメータ名を確認してから実装 |
+
 ---
 
 ## 8. AWS アーキテクチャ方針
@@ -284,16 +372,15 @@ React 19 / Vite / Tailwind 4 / shadcn 風コンポーネント群は、Chrome �
 ```mermaid
 graph TD
     subgraph Browser["Chrome ブラウザ"]
-        SP["Side Panel<br/>(React チャット UI)"]
+        SP["Side Panel<br/>(React + ElevenLabs Conversational AI SDK)"]
         CS["content script<br/>(DOM 監視 + 入力)"]
-        WS["Web Speech API<br/>(STT: 音声入力)"]
         SP <--> CS
-        SP <--> WS
     end
 
     subgraph AWS["AWS (ap-northeast-1)"]
+        ACGateway["Amazon Bedrock AgentCore Gateway<br/>(SABOROU MCP サーバー)"]
         APIGW["API Gateway HTTP API"]
-        HonoLambda["Lambda: Hono API<br/>(プロキシ + ElevenLabs 代理呼び出し)"]
+        HonoLambda["Lambda: Hono API<br/>(プロキシ + ElevenLabs TTS フォールバック)"]
         AgentLambda["Lambda: SaboriProposerAgent<br/>(判定 + 返信文生成)"]
         EBScheduler["EventBridge Scheduler<br/>(進捗報告 定期起動)"]
         Bedrock["Amazon Bedrock<br/>Claude Sonnet 4.6 (JP推論プロファイル)"]
@@ -304,13 +391,15 @@ graph TD
 
     subgraph External["外部サービス"]
         Slack["Slack API<br/>(postMessage)"]
-        EL["ElevenLabs API<br/>(TTS)"]
+        EL["ElevenLabs API<br/>(Conversational AI / TTS / STT)"]
     end
 
-    SP -->|"HTTPS + JWT"| APIGW
+    SP -->|"MCP + Cognito JWT"| ACGateway
+    ACGateway -->|"REST (OpenAPI ツール呼び出し)"| APIGW
+    SP -->|"HTTPS + JWT (直接呼び出し)"| APIGW
     APIGW --> HonoLambda
     HonoLambda --> AgentLambda
-    HonoLambda --> EL
+    HonoLambda -->|"TTS フォールバック"| EL
     AgentLambda --> Bedrock
     AgentLambda --> DDB
     AgentLambda --> SM
@@ -318,7 +407,7 @@ graph TD
     HonoLambda -->|"postMessage (補助)"| Slack
     EBScheduler --> AgentLambda
     Cognito --> APIGW
-    HonoLambda --> EL
+    EL <-->|"Conversational AI SDK (STT/TTS/会話)"| SP
 ```
 
 ### 境界設計
@@ -395,6 +484,8 @@ graph TD
 | BZ-02 | ビジネス | ElevenLabs コスト（デモ中の連続呼び出し） | 低 | デモ用レート制限（1 分 10 回まで）をアプリ側で実装 |
 | DX-01 | デモ体験 | 音声認識が会場で動かなかった場合のデモ崩壊 | 高 | バックアップとして「いいよ」ボタンを Side Panel に常時表示。音声なしでも全フローが動くようにする |
 | DX-02 | デモ体験 | Slack DOM 変更によるデモ当日の動作不確認 | 中 | デモ 1 時間前に動作確認を必ず実施。スクリーンキャプチャ動画をバックアップとして準備 |
+| TP-05 | 技術 | AgentCore Gateway の `ap-northeast-1` での MCP エンドポイント利用可否（GA 状況） | 中 | `aws bedrock-agentcore-control list-gateways --region ap-northeast-1` で確認。未対応の場合は `us-east-1` に Gateway を立て、Hono API を CORS 対応でリージョン越しに呼び出す |
+| TP-06 | 技術 | ElevenLabs Conversational AI SDK（`@11labs/client`）の MCP クライアント設定方法が SDK バージョンによって変わるリスク | 中 | 実装前に最新 ElevenLabs ドキュメントで `clientTools.mcp` のパラメータ仕様を確認。SDK バージョンを package.json で固定し、Renovate 等で自動更新しない |
 
 ---
 
