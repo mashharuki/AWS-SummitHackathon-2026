@@ -2057,3 +2057,11 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: 継続セッション。v2 Construction 完了後の Serena プロジェクトメモリー再同期。AI-DLC ルール詳細ディレクトリは指定4候補に存在しなかったため、AGENTS.md と既存 aidlc-state.md / audit.md に従って実施。
 
 ---
+
+## ElevenLabs Signed URL 設定確認
+**Timestamp**: 2026-06-15T13:55:41Z
+**User Input**: "VITE_ELEVENLABS_SIGNED_URLはどんな値をセットすればいいですか？？"
+**AI Response**: "公開Agentでは空にして VITE_ELEVENLABS_AGENT_ID を使う。非公開Agentの signed URL は ElevenLabs API からサーバー側で都度取得する15分間有効の一時WebSocket URLであり、Vite環境変数へ固定保存しない。"
+**Context**: ElevenLabs公式ドキュメントと `pkgs/extension/src/panel/hooks/useConversationalAgent.ts` の接続優先順位を照合。
+
+---
