@@ -47,8 +47,10 @@ import * as agentClient from "@/panel/lib/agentClient";
 
 describe("App (Side Panel)", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     // デフォルト: 未認証（getValidToken が null を返す）
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(null);
+    vi.mocked(chrome.runtime.sendMessage).mockResolvedValue(undefined);
     // デフォルト: disconnected agent
     vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
       {
@@ -616,6 +618,9 @@ describe("App (Side Panel)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("send-success")).toBeInTheDocument(),
     );
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+      type: "TASK_REPLY_COMPLETED",
+    });
 
     addListenerSpy.mockRestore();
   });
@@ -674,8 +679,56 @@ describe("App (Side Panel)", () => {
     expect(screen.getByTestId("send-error")).toHaveTextContent(
       "Slack API エラー",
     );
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith({
+      type: "TASK_REPLY_COMPLETED",
+    });
 
     addListenerSpy.mockRestore();
+  });
+
+  it("パネル起動時に保留タスクを復元して判定処理を再開する", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
+    vi.mocked(chrome.runtime.sendMessage).mockImplementation(
+      async (message: unknown) => {
+        if (
+          typeof message === "object" &&
+          message !== null &&
+          "type" in message &&
+          message.type === "GET_PENDING_TASK"
+        ) {
+          return {
+            task: {
+              text: "保留されていたタスクです",
+              sender: "復元ユーザー",
+              channelId: "C-PENDING",
+              threadTs: "1717900999.999999",
+              detectedAt: "2026-06-15T14:00:00.000Z",
+            },
+          };
+        }
+        return undefined;
+      },
+    );
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("slack-message-notification"),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("slack-message-text")).toHaveTextContent(
+      "保留されていたタスクです",
+    );
+    await waitFor(() =>
+      expect(agentClient.judgeTask).toHaveBeenCalledWith(
+        {
+          message: "保留されていたタスクです",
+          senderName: "復元ユーザー",
+        },
+        "fake-id-token",
+      ),
+    );
   });
 
   it("NEW_SLACK_MESSAGE 受信時に agent.pushContext が呼ばれる", async () => {

@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v2 Construction フェーズ完了（2026-06-15）。全 9 Unit 実装・統合・検証完了。実 AWS デプロイ + 外部キー登録待ち（手順書あり）。
-- **ドキュメントバージョン**: v4.0.0（2026-06-15 v2 スプリント Construction 完了）
+- **現在のステージ**: v2 Construction 追加 Unit「Chrome Notifications」完了（2026-06-15）。拡張168テスト・全体1,559テスト本体通過。
+- **ドキュメントバージョン**: v4.1.0（2026-06-15 Chrome通知機能追加）
 
 ---
 
@@ -31,6 +31,7 @@
 - [x] U-V2-07: progress-report（EventBridge Scheduler 追加）— POST /api/tasks/:id/report、Schedule(17:00JST/DISABLED)
 - [x] U-V2-08: extension-auth（Cognito PKCE Chrome 拡張対応）— cognitoAuth(PKCE S256/getValidToken/refresh)、test45
 - [x] U-V2-09: integration-and-demo（統合・検証）— 全6パッケージ約1,528テスト全パス、typecheck全0、Chrome拡張dist完全構成(icons含む)、v2-setup-and-demo-guide.md 作成
+- [x] U-V2-10: chrome-notifications（追加 Unit）— タスク検知/返信完了OS通知、Side Panel抑制、保留復元、設定UI、通知クリック復帰。extension 168テスト・typecheck・Biome・build通過
 - [x] Build and Test — 全パッケージ統合検証完了。v1完全非破壊(frontend464テスト維持)
 
 **v2 Construction 成果サマリ**:

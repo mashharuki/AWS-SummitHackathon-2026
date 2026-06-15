@@ -29,7 +29,8 @@
     "sidePanel",
     "storage",
     "activeTab",
-    "identity"
+    "identity",
+    "notifications"
   ],
 
   "host_permissions": [

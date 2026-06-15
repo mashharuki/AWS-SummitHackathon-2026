@@ -2,6 +2,88 @@
 
 ---
 
+## Chrome Notifications Code Generation Complete
+**Timestamp**: 2026-06-15T14:58:27Z
+**User Input**: "(No additional user input; continued execution of the approved Chrome notifications plan.)"
+**AI Response**: "Chrome通知機能を実装。backgroundへ通知生成・重複防止・保留タスク・クリック復帰を集約し、Side Panelへ長期Port接続・保留復元・完了イベント・通知設定UIを追加した。extension 168テスト、typecheck、Biome、buildが成功。全体1,559テスト本体と全パッケージbuild/typecheckを確認した。"
+**Context**: Code Generation Part 2 complete. `aidlc-docs/construction/chrome-notifications/code/code-generation-summary.md` に成果とSecurity Baseline準拠を記録。
+
+### Verification
+- Extension tests: 168 passed
+- Shared tests: 149 passed
+- Agent tests: 306 passed; known coverage gate exits non-zero at 99.87% versus configured 100%
+- Backend tests: 393 passed
+- Frontend tests: 464 passed
+- CDK tests: 79 passed
+- Total test bodies passed: 1,559
+- Extension typecheck/Biome/build: passed
+- Repository package typechecks/builds: passed
+- Repository-wide Biome: blocked by pre-existing invalid `.agents/skills/lean-formal-verification/evals/evals.json`; changed extension files pass
+
+### Extension Compliance
+- Security Baseline: Compliant for all applicable rules; non-applicable rules documented in the code generation summary
+- Property-Based Testing: Skipped because the extension is disabled in `aidlc-state.md`
+
+---
+
+## Chrome Notifications Code Generation Resume
+**Timestamp**: 2026-06-15T14:47:59Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# Chrome通知機能の追加
+
+## Summary
+- Chrome Notifications APIで「タスク検知」と「返信送信完了」をOS通知する。
+- 検知通知はSide Panel表示中のみ抑制し、完了通知は常に表示する。
+- 通知クリックで対象ウィンドウを前面化し、SABOROUのSide Panelを開く。
+
+## Implementation
+- Manifestへ`notifications`権限を追加する。
+- background service workerへ通知生成を集約する。
+  - 検知通知: `新しいタスクを読み取りました`
+  - 本文: 送信者名＋正規化した先頭80文字
+  - 完了通知: `タスク対応が完了しました`
+  - 通常通知、音はOS設定に従う
+- Side Panelは長期接続Portで開閉状態をbackgroundへ通知する。
+- パネル非表示時に検知したタスクは`chrome.storage.session`へ一時保存し、次回起動時にカード表示と判定処理を再開する。
+- 返信API成功後のみ完了イベントをbackgroundへ送り、失敗時は完了通知を出さない。
+- ヘッダーへ通知設定UIを追加する。
+  - 通知全体
+  - タスク検知
+  - 返信完了
+  - 初期値はすべて有効
+  - `chrome.storage.local`へ永続保存
+  - OS側で通知が拒否されている場合は設定案内を表示
+- 通知クリック時は保存したwindow IDを利用し、利用不能なら最後に使用したChromeウィンドウを開く。
+
+## Interfaces
+- 共通メッセージ型を追加し、content・panel・backgroundで共有する。
+  - `NEW_SLACK_MESSAGE`
+  - `TASK_REPLY_COMPLETED`
+  - `GET_PENDING_TASK`
+- 設定型:
+  `NotificationSettings { enabled, taskDetected, taskCompleted }`
+- 通知本文へSlackメッセージ全文、JWT、メールアドレスなどは含めない。
+
+## Test Plan
+- 検知時に通知が作成され、同一タスクが重複通知されない。
+- Side Panel表示中は検知通知が抑制される。
+- 完了通知はSide Panel表示中でも作成される。
+- 返信失敗時には完了通知されない。
+- 各設定スイッチが保存・復元され、無効なイベントは通知されない。
+- 通知クリックでウィンドウが前面化し、Side Panelが開く。
+- パネル非表示中のタスクが次回起動時に復元される。
+- 全拡張テスト、型検査、Biome、ビルドを実行する。
+
+## Assumptions
+- 「タスク完了」はSlackへの返信API成功を指す。
+- Chrome拡張の通知権限はインストール時に付与され、OS側の拒否状態は検出して案内する。
+- Chrome公式の[`chrome.notifications`](https://developer.chrome.com/docs/extensions/reference/api/notifications)を使用する。"
+**AI Response**: "既存AI-DLC状態を継続し、承認済み計画を `chrome-notifications-code-generation-plan.md` に具体化。Chrome公式APIと既存拡張構成を照合し、実装・テスト・回帰検証を開始した。"
+**Context**: v2 Construction完了後の追加Code Generation Unit。Security Baselineは有効、Property-Based Testingは無効。
+
+---
+
 ## Chrome 拡張マイク権限エラー修正
 **Timestamp**: 2026-06-15T14:16:58Z
 **User Input**: "音声接続エラー: Permission dismissed 音声を呼び出そうとしたらこんなエラーが出てきました"

@@ -4,8 +4,15 @@ import {
   signIn,
   signOut,
 } from "@/auth/cognitoAuth";
-import type { ContentToSidePanelMessage } from "@/content/index";
 import { cn } from "@/lib/utils";
+import type {
+  ExtensionRuntimeMessage,
+  NewSlackMessagePayload,
+  PendingTaskResponse,
+  SidePanelReadyMessage,
+} from "@/messages";
+import { SIDE_PANEL_PORT_NAME } from "@/messages";
+import { NotificationSettingsMenu } from "@/panel/NotificationSettingsMenu";
 import { useConversationalAgent } from "@/panel/hooks/useConversationalAgent";
 import { useVoiceApproval } from "@/panel/hooks/useVoiceApproval";
 import { judgeTask, sendSlackReply } from "@/panel/lib/agentClient";
@@ -40,13 +47,7 @@ interface UserInfo {
 }
 
 /** content script から受信した Slack メッセージの通知 */
-interface SlackMessageNotification {
-  text: string;
-  sender: string;
-  channelId: string;
-  threadTs: string;
-  detectedAt: string;
-}
+type SlackMessageNotification = NewSlackMessagePayload;
 
 /** judge 処理の状態 */
 type JudgeStatus = "idle" | "loading" | "ready" | "error";
@@ -127,44 +128,45 @@ export function App() {
   // Content script message bridge (U-V2-02) + non-voice judge flow
   // ---------------------------------------------------------------------------
 
+  const handleNewSlackMessage = useCallback(
+    (payload: NewSlackMessagePayload) => {
+      setLatestSlackMessage(payload);
+      agent.pushContext(
+        `Slack から新着メッセージが届きました。送信者: ${payload.sender}、内容: ${payload.text}`,
+      );
+
+      const jwt = sessionJwtRef.current;
+      if (!jwt) return;
+
+      setReplyDraft(null);
+      setJudgeError(null);
+      setSendStatus("idle");
+      setSendError(null);
+      setJudgeStatus("loading");
+
+      judgeTask({ message: payload.text, senderName: payload.sender }, jwt)
+        .then((result) => {
+          setReplyDraft(result.replyDraft);
+          setJudgeStatus("ready");
+          startListeningRef.current();
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : "judge API エラー";
+          console.error("[SABOROU] judgeTask failed:", msg);
+          setJudgeError(msg);
+          setJudgeStatus("error");
+        });
+    },
+    [agent.pushContext],
+  );
+
   useEffect(() => {
     const listener = (
-      message: ContentToSidePanelMessage,
+      message: ExtensionRuntimeMessage,
       _sender: chrome.runtime.MessageSender,
     ) => {
       if (message.type === "NEW_SLACK_MESSAGE") {
-        const { payload } = message;
-        setLatestSlackMessage(payload);
-
-        // 音声セッションにコンテキスト注入（音声フロー）
-        agent.pushContext(
-          `Slack から新着メッセージが届きました。送信者: ${payload.sender}、内容: ${payload.text}`,
-        );
-
-        // 非音声フロー: judge API を呼んで返信案を自動生成
-        const jwt = sessionJwtRef.current;
-        if (jwt) {
-          setReplyDraft(null);
-          setJudgeError(null);
-          setSendStatus("idle");
-          setSendError(null);
-          setJudgeStatus("loading");
-
-          judgeTask({ message: payload.text, senderName: payload.sender }, jwt)
-            .then((result) => {
-              setReplyDraft(result.replyDraft);
-              setJudgeStatus("ready");
-              // 返信案が出たら承認待ち状態に遷移（ref 経由で最新版を呼ぶ）
-              startListeningRef.current();
-            })
-            .catch((err: unknown) => {
-              const msg =
-                err instanceof Error ? err.message : "judge API エラー";
-              console.error("[SABOROU] judgeTask failed:", msg);
-              setJudgeError(msg);
-              setJudgeStatus("error");
-            });
-        }
+        handleNewSlackMessage(message.payload);
       }
     };
 
@@ -172,10 +174,44 @@ export function App() {
     return () => {
       chrome.runtime.onMessage.removeListener(listener);
     };
-    // agent は依存配列から除外（agent オブジェクトは毎回再生成されないため安定している）
-    // voiceApproval は startListening のみ使用するため安定した ref で参照している
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agent.pushContext]);
+  }, [handleNewSlackMessage]);
+
+  useEffect(() => {
+    const port = chrome.runtime.connect({ name: SIDE_PANEL_PORT_NAME });
+    chrome.windows
+      .getCurrent()
+      .then((currentWindow) => {
+        const readyMessage: SidePanelReadyMessage = {
+          type: "PANEL_READY",
+          windowId: currentWindow.id,
+        };
+        port.postMessage(readyMessage);
+      })
+      .catch(() => {
+        port.postMessage({
+          type: "PANEL_READY",
+        } satisfies SidePanelReadyMessage);
+      });
+
+    return () => {
+      port.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+
+    chrome.runtime
+      .sendMessage({ type: "GET_PENDING_TASK" })
+      .then((response: PendingTaskResponse | undefined) => {
+        if (response?.task) {
+          handleNewSlackMessage(response.task);
+        }
+      })
+      .catch((err: unknown) => {
+        console.warn("[SABOROU] Failed to restore pending task:", err);
+      });
+  }, [authLoading, handleNewSlackMessage]);
 
   // ---------------------------------------------------------------------------
   // Auth
@@ -294,6 +330,11 @@ export function App() {
         jwt,
       );
       setSendStatus("sent");
+      chrome.runtime
+        .sendMessage({ type: "TASK_REPLY_COMPLETED" })
+        .catch((err: unknown) => {
+          console.warn("[SABOROU] Completion notification failed:", err);
+        });
 
       // 補助経路: content script DOM 送信（Slack UI に反映させる）
       chrome.runtime
@@ -321,6 +362,7 @@ export function App() {
           </h1>
           <p className="text-xs text-[#6b7280]">サボりの最適解</p>
         </div>
+        <NotificationSettingsMenu />
         {/* 認証状態表示 */}
         {!authLoading && (
           <div data-testid="auth-status">

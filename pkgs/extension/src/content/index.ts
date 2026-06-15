@@ -13,6 +13,11 @@
  * - 読み取り（監視）は常時実行
  */
 
+import type {
+  NewSlackMessage,
+  NewSlackMessagePayload,
+  SendSlackReplyMessage,
+} from "@/messages";
 import { MESSAGE_CONTAINER } from "./selectors";
 import {
   clickSendButton,
@@ -20,33 +25,6 @@ import {
   isMentionedToMe,
   typeIntoSlackInput,
 } from "./slackDom";
-
-// ---------------------------------------------------------------------------
-// Message types
-// ---------------------------------------------------------------------------
-
-/** content script → Side Panel */
-export interface NewSlackMessagePayload {
-  text: string;
-  sender: string;
-  channelId: string;
-  threadTs: string;
-  /** 検知時刻（ISO 8601） */
-  detectedAt: string;
-}
-
-export interface ContentToSidePanelMessage {
-  type: "NEW_SLACK_MESSAGE";
-  payload: NewSlackMessagePayload;
-}
-
-/** Side Panel → content script */
-export interface SendSlackReplyMessage {
-  type: "SEND_SLACK_REPLY";
-  text: string;
-}
-
-export type SidePanelToContentMessage = SendSlackReplyMessage;
 
 // ---------------------------------------------------------------------------
 // State
@@ -118,7 +96,7 @@ function scanForNewMessages(): void {
  * chrome.runtime.sendMessage のラッパー（エラーを握り潰す）
  * Side Panel が開いていない場合にエラーが発生するため
  */
-function sendMessageToSidePanel(message: ContentToSidePanelMessage): void {
+function sendMessageToSidePanel(message: NewSlackMessage): void {
   chrome.runtime.sendMessage(message).catch((err: unknown) => {
     // Side Panel が開いていない場合: Could not establish connection.
     // この場合は無視する（次回の監視で再試行される）
@@ -206,7 +184,7 @@ if (document.readyState === "loading") {
 
 chrome.runtime.onMessage.addListener(
   (
-    message: SidePanelToContentMessage,
+    message: SendSlackReplyMessage,
     _sender: chrome.runtime.MessageSender,
     sendResponse: (response: { ok: boolean; error?: string }) => void,
   ) => {
