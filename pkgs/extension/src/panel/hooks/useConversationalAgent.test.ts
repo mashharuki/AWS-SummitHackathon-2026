@@ -34,13 +34,28 @@ vi.mock("@/panel/lib/agentClient", () => ({
 }));
 
 import { Conversation } from "@11labs/client";
-import { useConversationalAgent } from "./useConversationalAgent";
+import {
+  requestMicrophoneAccess,
+  useConversationalAgent,
+} from "./useConversationalAgent";
 
 describe("useConversationalAgent", () => {
+  const mockTrackStop = vi.fn();
+  const mockGetUserMedia = vi.fn().mockResolvedValue({
+    getTracks: () => [{ stop: mockTrackStop }],
+  });
+
   beforeEach(() => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: mockGetUserMedia },
+    });
     vi.mocked(Conversation.startSession).mockResolvedValue(
       mockConversation as unknown as InstanceType<typeof Conversation>,
     );
+    mockGetUserMedia.mockResolvedValue({
+      getTracks: () => [{ stop: mockTrackStop }],
+    });
     mockIsOpen.mockReturnValue(true);
     mockEndSession.mockResolvedValue(undefined);
     vi.clearAllMocks();
@@ -102,6 +117,10 @@ describe("useConversationalAgent", () => {
       await result.current.connect();
     });
 
+    expect(mockGetUserMedia).toHaveBeenCalledWith({ audio: true });
+    expect(mockTrackStop).toHaveBeenCalledOnce();
+    expect(Conversation.startSession).toHaveBeenCalledOnce();
+
     // Restore
     // @ts-expect-error mutating readonly env for test
     import.meta.env.VITE_ELEVENLABS_AGENT_ID = originalEnv;
@@ -152,6 +171,42 @@ describe("useConversationalAgent", () => {
 
     // @ts-expect-error restore
     import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;
+  });
+
+  it("shows recovery guidance when microphone permission is dismissed", async () => {
+    // @ts-expect-error mutating readonly env for test
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = "test-agent-id";
+    mockGetUserMedia.mockRejectedValueOnce(
+      new DOMException("Permission dismissed", "NotAllowedError"),
+    );
+
+    const { result } = renderHook(() =>
+      useConversationalAgent({ sessionJwt: "valid-jwt" }),
+    );
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.error).toContain("マイク許可用のタブを開きました");
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: "chrome-extension://test-extension/mic-permission.html",
+    });
+    expect(Conversation.startSession).not.toHaveBeenCalled();
+
+    // @ts-expect-error restore
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;
+  });
+
+  it("requestMicrophoneAccess reports unsupported environments", async () => {
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: undefined,
+    });
+
+    await expect(requestMicrophoneAccess()).rejects.toThrow(
+      "この環境ではマイクを利用できません",
+    );
   });
 
   it("pushContext is a no-op when no active session", () => {

@@ -1,8 +1,8 @@
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
 import { copyFileSync, mkdirSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { build, defineConfig, type Plugin } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { type Plugin, build, defineConfig } from "vite";
 
 /**
  * Chrome 拡張ビルド設定（手動マルチエントリ方式）
@@ -93,6 +93,8 @@ export default defineConfig({
       input: {
         // Side Panel エントリ
         panel: resolve(__dirname, "panel.html"),
+        // Side Panelで許可UIを表示できない場合に使うマイク権限取得ページ
+        micPermission: resolve(__dirname, "mic-permission.html"),
         // Service Worker エントリ（ESM。manifest.json の "type": "module" と対応）
         background: resolve(__dirname, "src/background/index.ts"),
       },

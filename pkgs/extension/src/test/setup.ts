@@ -1,13 +1,18 @@
 import "@testing-library/jest-dom";
+import { vi } from "vitest";
 
 // chrome API モック（Chrome 拡張環境のシミュレーション）
 const chromeMock = {
   runtime: {
+    getURL: (path: string) => `chrome-extension://test-extension/${path}`,
     sendMessage: () => Promise.resolve(),
     onMessage: {
       addListener: () => {},
       removeListener: () => {},
     },
+  },
+  tabs: {
+    create: vi.fn(() => Promise.resolve()),
   },
   storage: {
     local: {

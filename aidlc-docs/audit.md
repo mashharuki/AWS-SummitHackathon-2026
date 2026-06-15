@@ -2,6 +2,14 @@
 
 ---
 
+## Chrome 拡張マイク権限エラー修正
+**Timestamp**: 2026-06-15T14:16:58Z
+**User Input**: "音声接続エラー: Permission dismissed 音声を呼び出そうとしたらこんなエラーが出てきました"
+**AI Response**: "ElevenLabs接続前に navigator.mediaDevices.getUserMedia({ audio: true }) でマイク許可を明示的に取得し、確認用ストリームを解放してから接続するよう修正した。Permission dismissed / denied / NotAllowedError はChrome設定から再許可するための日本語メッセージへ変換する。回帰テスト2件を追加した。"
+**Context**: `pkgs/extension/src/panel/hooks/useConversationalAgent.ts`。検証結果: extension全151テスト成功、typecheck成功、Biome成功、build成功、dist完全構成。
+
+---
+
 ## ElevenLabs AI Agent システムプロンプト設計
 **Timestamp**: 2026-06-15T13:40:05Z
 **User Input**: "11Elevenlab 上でAI Agentを作成しようと考えています。このプロジェクトに最適なシステムプロンプトを作成して"
@@ -2063,5 +2071,13 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **User Input**: "VITE_ELEVENLABS_SIGNED_URLはどんな値をセットすればいいですか？？"
 **AI Response**: "公開Agentでは空にして VITE_ELEVENLABS_AGENT_ID を使う。非公開Agentの signed URL は ElevenLabs API からサーバー側で都度取得する15分間有効の一時WebSocket URLであり、Vite環境変数へ固定保存しない。"
 **Context**: ElevenLabs公式ドキュメントと `pkgs/extension/src/panel/hooks/useConversationalAgent.ts` の接続優先順位を照合。
+
+---
+
+## ElevenLabs 音声接続のマイク権限修正
+**Timestamp**: 2026-06-15T14:23:43Z
+**User Input**: "音声接続エラー: マイクの使用が許可されませんでした。Chromeの設定 > プライバシーとセキュリティ > サイトの設定 > マイクでSABOROUを許可し、もう一度音声接続してください。 拡張昨日は許可できないのでしょうか？ SABOROUが出てき前sん"
+**AI Response**: "Chrome拡張のSide Panelが通常サイトの権限一覧にSABOROUとして表示されない問題へ対応し、音声接続時に専用のマイク許可タブを開く処理を実装した。許可タブでgetUserMediaを実行し、許可後にSide Panelから再接続できるよう案内を追加した。対象テスト12件、全151テスト、typecheck、Biome、本番buildを通過し、dist/mic-permission.htmlの生成を確認した。"
+**Context**: ElevenLabs音声接続のChrome拡張マイク権限リカバリー。`pkgs/extension` の接続フック、専用許可ページ、Viteマルチエントリ、テストを更新。
 
 ---

@@ -84,6 +84,53 @@ function isAgentConfigured(): boolean {
   return Boolean(getAgentId() || getSignedUrl());
 }
 
+const MICROPHONE_PERMISSION_ERROR =
+  "マイク許可用のタブを開きました。そのタブで「マイクを許可」を押し、許可後にSABOROUへ戻ってもう一度音声接続してください。";
+
+async function openMicrophonePermissionPage(): Promise<void> {
+  if (typeof chrome === "undefined" || !chrome.runtime?.getURL) return;
+
+  const url = chrome.runtime.getURL("mic-permission.html");
+  if (chrome.tabs?.create) {
+    await chrome.tabs.create({ url });
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/**
+ * Request microphone permission while the connect button's user gesture is
+ * still active. ElevenLabs requests the microphone internally as well, but a
+ * separate preflight lets us provide a useful recovery message when Chrome's
+ * permission prompt is dismissed or blocked.
+ */
+export async function requestMicrophoneAccess(): Promise<void> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error(
+      "この環境ではマイクを利用できません。Chromeの最新版でSABOROUを開いてください。",
+    );
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    for (const track of stream.getTracks()) {
+      track.stop();
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const isPermissionError =
+      (error instanceof DOMException && error.name === "NotAllowedError") ||
+      /permission|dismissed|denied|not allowed/i.test(message);
+
+    if (isPermissionError) {
+      await openMicrophonePermissionPage();
+      throw new Error(MICROPHONE_PERMISSION_ERROR);
+    }
+    throw error;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -207,6 +254,8 @@ export function useConversationalAgent(
     setState((prev) => ({ ...prev, status: "connecting", error: null }));
 
     try {
+      await requestMicrophoneAccess();
+
       const agentId = getAgentId();
       const signedUrl = getSignedUrl();
 
