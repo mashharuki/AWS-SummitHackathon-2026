@@ -32,6 +32,11 @@ export interface ApiStackProps extends cdk.StackProps {
 
 export interface ApiStackExports {
   readonly httpApiUrl: string;
+  /**
+   * HTTP API の API ID。AgentCore Gateway の execute-api ARN を
+   * 最小権限で構築するために使用する。
+   */
+  readonly httpApiId: string;
   readonly honoFn: lambda.Function;
   /**
    * カスタムドメイン有効時の API URL（https://saborou-api.agentic-jp.com）。
@@ -250,13 +255,14 @@ export class SaborouApiStack extends cdk.Stack {
     // --- HTTP API ---
     const httpApi = new apigatewayv2.HttpApi(this, "HttpApi", {
       apiName: `saborou-api-${environment}`,
+      // CORS preflight は API Gateway が処理する（OPTIONS は JWT Authorizer を通さない）。
+      // 注意: API Gateway v2 は chrome-extension:// 形式の個別オリジンを
+      // allowOrigins に受け付けない（"Invalid format for origin"）。
+      // Chrome 拡張（Side Panel）からのアクセスを許可するため allowOrigins は
+      // ワイルドカード "*" を使う。credentials を使わない（JWT は Authorization
+      // ヘッダで送るが Cookie は使わない）ため "*" + Authorization の併用が可能。
       corsPreflight: {
-        allowOrigins: [
-          "http://localhost:5173",
-          ...(props.frontendDomainName
-            ? [`https://${props.frontendDomainName}`]
-            : []),
-        ],
+        allowOrigins: ["*"],
         allowMethods: [apigatewayv2.CorsHttpMethod.ANY],
         allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
         maxAge: cdk.Duration.hours(1),
@@ -407,6 +413,7 @@ export class SaborouApiStack extends cdk.Stack {
 
     this.exports = {
       httpApiUrl: httpApi.apiEndpoint,
+      httpApiId: httpApi.apiId,
       honoFn,
       apiUrl,
     };

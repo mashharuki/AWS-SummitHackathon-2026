@@ -109,6 +109,11 @@ export class SaborouCognitoStack extends cdk.Stack {
           ...(props?.frontendDomainName
             ? [`https://${props.frontendDomainName}/auth/callback`]
             : []),
+          // Chrome 拡張（Side Panel）の固定 Extension ID のコールバック。
+          // manifest.json の固定 key により全員同一 ID になる。
+          // 追加 ID は context extensionIds（カンマ区切り）で渡せる。
+          "https://klnbcafcphlnmbdbjgmpdjfeimenokmj.chromiumapp.org/",
+          ...extensionCallbackUrls(this),
         ],
         logoutUrls: [
           "http://localhost:5173/login",
@@ -210,4 +215,18 @@ export class SaborouCognitoStack extends cdk.Stack {
 
     this.exports = { userPool, userPoolClient, userPoolDomain };
   }
+}
+
+/**
+ * context の extensionIds（カンマ区切りの Chrome 拡張 ID）を
+ * Cognito コールバック URL（https://<id>.chromiumapp.org/）に変換する。
+ * 例: cdk deploy ... -c extensionIds=abc123,def456
+ */
+function extensionCallbackUrls(scope: Construct): string[] {
+  const raw = (scope.node.tryGetContext("extensionIds") as string) ?? "";
+  return raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .map((id) => `https://${id}.chromiumapp.org/`);
 }

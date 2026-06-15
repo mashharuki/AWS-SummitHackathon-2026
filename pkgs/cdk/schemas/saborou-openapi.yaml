@@ -1,0 +1,346 @@
+openapi: 3.1.0
+info:
+  title: SABOROU API
+  version: 2.0.0
+  description: >-
+    SABOROU task management and Slack reply API exposed as MCP tools through
+    Amazon Bedrock AgentCore Gateway. Each operation becomes a callable MCP tool
+    for the ElevenLabs voice agent. operationId and description fields are used
+    verbatim as MCP tool names and descriptions, so they are written for an AI
+    consumer.
+servers:
+  - url: https://api.saborou.example.com
+    description: >-
+      Placeholder server URL. The AgentCore Gateway rewrites the request host to
+      the real API Gateway HTTP API endpoint at invocation time using the
+      configured gateway IAM role; this value is only used to satisfy the
+      OpenAPI 3.1 schema requirement and is not contacted directly.
+paths:
+  /api/tasks:
+    get:
+      operationId: listTasks
+      summary: List the current user's tasks
+      description: >-
+        Retrieve the list of the authenticated user's tasks. Use this to gather
+        context about what the user is currently working on before drafting a
+        Slack reply, judging whether a request can be declined, or generating a
+        progress report. Returns tasks with their title, status, due date, and
+        assignee so the agent can reason about workload and priorities.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: >-
+            Optional filter to return only tasks in the given status. One of
+            "active", "completed", or "pending". Omit to return all tasks.
+          schema:
+            type: string
+            enum:
+              - active
+              - completed
+              - pending
+      responses:
+        "200":
+          description: A list of the user's tasks.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    description: The user's tasks.
+                    items:
+                      $ref: "#/components/schemas/Task"
+                required:
+                  - tasks
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/proposals/stream:
+    post:
+      operationId: streamProposal
+      summary: Judge a sabori request and generate a reply or decline draft
+      description: >-
+        Run the SaboriProposerAgent over an incoming Slack message to judge
+        whether it is a request the user should accept or can politely decline,
+        and to generate a draft reply. Use this when the user receives a Slack
+        message and wants SABOROU to propose how to respond. Returns the
+        judgment, a suggested reply draft, and a short text-to-speech friendly
+        summary the voice agent can read aloud for approval.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messageText:
+                  type: string
+                  description: The full text of the incoming Slack message to judge.
+                channelId:
+                  type: string
+                  description: The Slack channel or DM id the message was received in.
+                mode:
+                  type: string
+                  description: >-
+                    The generation mode. "sabori_judgment" judges and proposes,
+                    "reply_draft" only drafts a reply, "decline_draft" drafts a
+                    polite decline.
+                  enum:
+                    - sabori_judgment
+                    - reply_draft
+                    - decline_draft
+              required:
+                - messageText
+      responses:
+        "200":
+          description: The judgment and generated draft.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proposal"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/proposals/judge:
+    post:
+      operationId: judgeSabori
+      summary: Judge a Slack message and draft a reply
+      description: >-
+        Given the raw text of an incoming Slack message, draft a polite business
+        Japanese reply, score how much the user can sabori (slack off), and
+        produce a short text-to-speech friendly summary the voice agent can read
+        aloud for approval. Use this when the user receives a Slack message and
+        wants SABOROU to immediately propose a reply draft without selecting a
+        specific task first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  description: The full text of the incoming Slack message to judge.
+                senderName:
+                  type: string
+                  description: >-
+                    Optional name of the message sender, used as additional
+                    context when drafting the reply.
+              required:
+                - message
+      responses:
+        "200":
+          description: The reply draft, sabori score, and TTS summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  replyDraft:
+                    type: string
+                    description: The drafted reply text to send to Slack.
+                  saboriScore:
+                    type: number
+                    description: >-
+                      How much the user can sabori (slack off), from 0.0 to 1.0.
+                  ttsSummary:
+                    type: string
+                    description: >-
+                      A short text-to-speech friendly summary of the reply draft.
+                required:
+                  - replyDraft
+                  - saboriScore
+                  - ttsSummary
+        "400":
+          description: The request body failed validation.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          description: The sabori judge agent is not configured.
+  /api/slack/reply:
+    post:
+      operationId: sendSlackReply
+      summary: Send an approved reply to Slack
+      description: >-
+        Post a reply message to Slack on the user's behalf after the user has
+        explicitly approved the draft. Only call this once the user has confirmed
+        the reply text, because it sends the message immediately and irreversibly.
+        Returns the Slack message timestamp on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                taskId:
+                  type: string
+                  description: The id of the task this reply is associated with.
+                replyText:
+                  type: string
+                  description: The exact, user-approved reply text to post to Slack.
+                channelId:
+                  type: string
+                  description: The Slack channel or DM id to post the reply to.
+                threadTs:
+                  type: string
+                  description: >-
+                    Optional parent message timestamp to post the reply into a
+                    thread.
+              required:
+                - replyText
+                - channelId
+      responses:
+        "200":
+          description: The reply was posted to Slack.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    description: Whether the message was posted successfully.
+                  ts:
+                    type: string
+                    description: The Slack message timestamp of the posted reply.
+                  taskId:
+                    type: string
+                    description: The associated task id, echoed back if provided.
+                required:
+                  - ok
+        "400":
+          description: The request body failed validation.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "502":
+          description: The Slack API rejected the message (e.g. channel_not_found).
+  /api/tasks/{id}/report:
+    post:
+      operationId: scheduleProgressReport
+      summary: Generate a progress report draft for a task
+      description: >-
+        Generate a polite Japanese progress report draft for the given task,
+        summarizing that the work is currently being checked and coordinated.
+        The draft is returned for the user to review and approve (by voice or
+        button) before it is sent to Slack via sendSlackReply. A recurring daily
+        17:00 JST schedule also exists (defined but disabled by default) to
+        trigger this generation automatically. Use this when the user asks
+        SABOROU to keep a stakeholder updated on a task's progress.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The id of the task to generate a progress report for.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: {}
+      responses:
+        "200":
+          description: The progress report draft was generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId:
+                    type: string
+                    description: The id of the task the report was generated for.
+                  reportText:
+                    type: string
+                    description: The generated progress report draft (Japanese).
+                  tone:
+                    type: string
+                    description: The tone of the report (formal, polite, or casual).
+                    enum:
+                      - formal
+                      - polite
+                      - casual
+                  reasoning:
+                    type: array
+                    description: The rationale behind the generated report.
+                    items:
+                      type: string
+                required:
+                  - taskId
+                  - reportText
+                  - reasoning
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: The task was not found or is not owned by the caller.
+        "503":
+          description: Progress report generation is unavailable or failed.
+components:
+  responses:
+    Unauthorized:
+      description: The request lacked a valid Cognito JWT.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: The error message.
+            required:
+              - message
+  schemas:
+    Task:
+      type: object
+      description: A SABOROU task.
+      properties:
+        id:
+          type: string
+          description: The unique task id.
+        title:
+          type: string
+          description: The task title.
+        status:
+          type: string
+          description: The task status.
+          enum:
+            - active
+            - completed
+            - pending
+        dueDate:
+          type: string
+          description: The task due date in ISO 8601 format, if set.
+        assignee:
+          type: string
+          description: The display name of the task assignee, if set.
+      required:
+        - id
+        - title
+        - status
+    Proposal:
+      type: object
+      description: The result of a sabori judgment and draft generation.
+      properties:
+        judgment:
+          type: string
+          description: >-
+            The judgment of the request. One of "accept", "decline", or
+            "needs_review".
+          enum:
+            - accept
+            - decline
+            - needs_review
+        replyDraft:
+          type: string
+          description: The generated draft reply text.
+        ttsSummary:
+          type: string
+          description: >-
+            A short (<= 100 character) text-to-speech friendly summary the voice
+            agent reads aloud to ask the user for approval.
+      required:
+        - judgment
+        - replyDraft

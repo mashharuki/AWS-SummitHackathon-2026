@@ -2,10 +2,59 @@
 
 ## プロジェクト情報
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
-- **プロジェクトタイプ**: Greenfield（新規）
+- **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: UPDATE-PLAN 作成完了（2026-05-26T08:00:00Z）。タスク承認前確認・編集モーダル（ガント精度向上）計画書作成済み。ユーザー確認待ち。実装未着手。
-- **ドキュメントバージョン**: v2.4.0（2026-05-26 承認モーダル update-plan 追記）
+- **v2 スプリント開始**: 2026-06-14T00:00:00Z
+- **現在のステージ**: v2 Construction フェーズ完了（2026-06-15）。全 9 Unit 実装・統合・検証完了。実 AWS デプロイ + 外部キー登録待ち（手順書あり）。
+- **ドキュメントバージョン**: v4.0.0（2026-06-15 v2 スプリント Construction 完了）
+
+---
+
+## v2 スプリント状態（2026-06-14〜2026-06-26）
+
+### INCEPTION フェーズ（v2）
+- [x] Workspace Detection — 完了（2026-06-14）。Brownfield 判定（v1 全 Unit 完了済み）。
+- [x] Reverse Engineering — 完了（2026-06-14）。v1 流用資産サマリ作成。実コード照合済み。
+- [x] Requirements Analysis — 完了（2026-06-14）。Comprehensive 深度。FR-V2-01〜11 / NFR-V2-P1〜T1 定義。Security Baseline 有効化判断。
+- [x] User Stories — 完了（2026-06-14）。E-V2-01〜05 / US-V2-01〜10 / DS-V2-01（デモストーリー）作成。
+- [x] Workflow Planning — 完了（2026-06-14）。execution-plan.md 作成。9 Unit 分解・タイムライン・カットライン設計。
+- [x] Application Design — 完了（2026-06-14）。全体アーキテクチャ / AgentCore Gateway CDK 設計 / ElevenLabs SDK Hook 設計 / content script 設計 / シーケンス図 作成。
+- [x] Units Generation — 完了（2026-06-14）。U-V2-01〜09 の 9 Unit 定義。依存関係・実装順序・v1 との関係を明記。
+
+### CONSTRUCTION フェーズ（v2）— ✅ 完了（2026-06-15）
+- [x] U-V2-01: extension-scaffold（pkgs/extension 新規）— build/tsc/test10/biome 全通過
+- [x] U-V2-02: content-script（Slack DOM 監視）— slackDom/selectors/index、test144、自動入力二段構え
+- [x] U-V2-03: voice-agent-hook（ElevenLabs SDK）— @11labs/client@0.2.0、useVoiceApproval、MCP/API フォールバック
+- [x] U-V2-04: agentcore-gateway（AgentCore CDK スタック）— L1 CfnGateway/CfnGatewayTarget、synth成功、test9、enableAgentCore フラグ
+- [x] U-V2-05: sabori-proposer-v2（SaboriProposerAgent 拡張）— SaboriProposerAgentV2(新規)、reply_draft/decline_draft、renderForVoice、v1非破壊
+- [x] U-V2-06: slack-reply-endpoint（Hono 新 Route）— POST /api/slack/reply、operationId sendSlackReply
+- [x] U-V2-07: progress-report（EventBridge Scheduler 追加）— POST /api/tasks/:id/report、Schedule(17:00JST/DISABLED)
+- [x] U-V2-08: extension-auth（Cognito PKCE Chrome 拡張対応）— cognitoAuth(PKCE S256/getValidToken/refresh)、test45
+- [x] U-V2-09: integration-and-demo（統合・検証）— 全6パッケージ約1,528テスト全パス、typecheck全0、Chrome拡張dist完全構成(icons含む)、v2-setup-and-demo-guide.md 作成
+- [x] Build and Test — 全パッケージ統合検証完了。v1完全非破壊(frontend464テスト維持)
+
+**v2 Construction 成果サマリ**:
+- pkgs/extension（新規）: Manifest V3 / Side Panel / content script / ElevenLabs音声 / Cognito PKCE認証 — 144テスト
+- pkgs/agent: SaboriProposerAgentV2 + reply/decline draft + renderForVoice — 306テスト
+- pkgs/backend: slack/reply + tasks/report エンドポイント — 386テスト
+- pkgs/cdk: AgentCore Gateway(L1) + 進捗報告Schedule — 79テスト
+- 外部依存（ElevenLabs Agent ID / AgentCore実デプロイ）は手順書に集約。キー登録で動作する状態
+- 詳細手順: `aidlc-docs/construction/v2/v2-setup-and-demo-guide.md`
+
+## Extension 設定（v2 で更新）
+- **Security Baseline**: **有効（v2 で変更）** — Chrome 拡張・AgentCore Gateway・ElevenLabs SDK の新規攻撃面増加のため
+- **Property-Based Testing**: 無効（継続）
+
+## v2 成果物ディレクトリ
+- `aidlc-docs/inception/v2/reverse-engineering/v1-asset-summary.md`
+- `aidlc-docs/inception/v2/requirements/requirements.md`
+- `aidlc-docs/inception/v2/user-stories/personas.md`
+- `aidlc-docs/inception/v2/user-stories/user-stories.md`
+- `aidlc-docs/inception/v2/plans/execution-plan.md`
+- `aidlc-docs/inception/v2/application-design/application-design.md`
+- `aidlc-docs/inception/v2/units/unit-of-work.md`
+
+---
 
 ## ワークスペース状態
 - **既存コード**: なし

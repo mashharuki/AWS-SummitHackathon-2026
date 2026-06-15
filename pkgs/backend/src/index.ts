@@ -25,6 +25,7 @@
  * PATCH  /tasks/:id                      — インライン編集
  * DELETE /tasks/:id                      — 論理削除
  * GET    /tasks/:taskId/proposal         — サボり提案 (SSE / 同期)
+ * POST   /api/proposals/judge            — 返信文ドラフト生成 (Chrome 拡張向け)
  * GET    /tasks/:taskId/schedule         — スケジュール (3バンドガント) 生成
  * POST   /tasks/:taskId/honne            — 本音記録
  * GET    /connections                    — サービス接続
@@ -38,6 +39,7 @@ import {
   BedrockClientAdapter,
   PersonaRenderer,
   SaboriProposerAgent,
+  SaboriProposerAgentV2,
   SchedulePlannerAgent,
   TaskExtractorAgent,
 } from "@saboru/agent";
@@ -121,6 +123,9 @@ const taskExtractorAgent = new TaskExtractorAgent(
 // Initialize SchedulePlannerAgent (3バンドガント生成で使用 / U-G04)
 const schedulePlannerAgent = new SchedulePlannerAgent(bedrockClient);
 
+// Initialize SaboriProposerAgentV2 (進捗報告文生成で使用 / U-V2-07)
+const saboriProposerAgentV2 = new SaboriProposerAgentV2(bedrockClient);
+
 /**
  * Google アクセストークン取得のデフォルト実装（U-G04 schedule ルート用）。
  * google.ts と同じ手順: clientSecret ARN → JSON parse → GoogleTokenService.getValidAccessToken。
@@ -162,7 +167,12 @@ export function createApp() {
   app.route("/api/auth", createGoogleAuthRoute(connectionRepository));
   app.route(
     "/api/tasks",
-    createTasksRoute(taskRepository, candidateRepository, schedulePlannerAgent),
+    createTasksRoute(
+      taskRepository,
+      candidateRepository,
+      schedulePlannerAgent,
+      saboriProposerAgentV2,
+    ),
   );
   // Proposal and honne share the /api/tasks prefix for :taskId param
   app.route(
@@ -173,6 +183,20 @@ export function createApp() {
       saboriProposerAgent,
       userRepository,
       googleCalendarCacheRepository,
+      saboriProposerAgentV2,
+    ),
+  );
+  // Chrome 拡張（agentClient.judgeTask）が呼ぶ POST /api/proposals/judge を提供する。
+  // 同一ルートを /api/proposals にもマウントし、/judge ハンドラーを公開する。
+  app.route(
+    "/api/proposals",
+    createProposalsRoute(
+      taskRepository,
+      proposalRepository,
+      saboriProposerAgent,
+      userRepository,
+      googleCalendarCacheRepository,
+      saboriProposerAgentV2,
     ),
   );
   app.route(

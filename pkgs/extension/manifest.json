@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "SABOROU",
+  "version": "2.0.0",
+  "description": "SABOROU — サボりの最適解。Slack メッセージへの音声承認・自動返信を支援するアシスタント",
+
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqrgHnV2EZ+jknKa0Bweqt49DZJDn33Cvzg1XxiKv11HdKrUMKX2AhAN0iWw8wY+3HWaBvqRS8wrMQbxLstT2zY5jKlmdnCrKqzP5ykvwGLTELm6DT4MMbXbXvk4Y1ZusYxOGhUt+V9eTrJ+tLnEJm+KkA2aiE4M1dTtn8J3GtLVvOUePSkW0NMgZFZY954SzOxU1RLr0YvQWcbFGGLhO1Kj8ZNcnwl/ExSiudy2h/bVFEuWsRC9SoCxm6zIV3FHXQidSoBzOQ8HXm4j3OYVEa/NBu2XGx28QvNLfYfJQDTtYkI0wkyb6w+2CxHXur7BRAInt7ND30Wk7A5lwVvpk5QIDAQAB",
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+
+  "action": {
+    "default_title": "SABOROU を開く"
+  },
+
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab",
+    "identity"
+  ],
+
+  "host_permissions": [
+    "https://*.auth.ap-northeast-1.amazoncognito.com/*",
+    "https://app.slack.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["https://app.slack.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.amazonaws.com https://*.auth.ap-northeast-1.amazoncognito.com https://api.elevenlabs.io wss://api.elevenlabs.io"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

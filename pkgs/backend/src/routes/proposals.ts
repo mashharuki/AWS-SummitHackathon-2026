@@ -8,14 +8,17 @@
  * パターン 5 (NFR 設計): streamSSE + SaboriProposerAgent 非同期イテレータ
  */
 
+import { zValidator } from "@hono/zod-validator";
 import type {
   CalendarContext,
   SaboriProposerAgent,
+  SaboriProposerAgentV2,
   TaskContext,
 } from "@saboru/agent";
 import { DEFAULT_PERSONA_ID } from "@saboru/shared";
 import { Hono } from "hono";
 import { stream, streamSSE } from "hono/streaming";
+import { z } from "zod";
 import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoGoogleCalendarCacheRepository } from "../repositories/DynamoGoogleCalendarCacheRepository.js";
@@ -24,12 +27,24 @@ import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.
 import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../types.js";
 
+/**
+ * POST /judge リクエストボディの Zod スキーマ（Chrome 拡張 agentClient の契約に準拠）
+ * message: Slack から受信したメッセージ本文（必須）
+ * senderName: 送信者名（任意・文脈ヒントに使用）
+ */
+const JudgeSaboriSchema = z.object({
+  message: z.string().min(1),
+  senderName: z.string().optional(),
+});
+
 export function createProposalsRoute(
   taskRepository: DynamoTaskRepository,
   proposalRepository: DynamoProposalRepository,
   agent: SaboriProposerAgent,
   userRepository: DynamoUserRepository,
   calendarCacheRepository?: DynamoGoogleCalendarCacheRepository,
+  // 末尾オプショナル引数として追加（既存呼び出し・テストの後方互換を維持）
+  saboriProposerAgentV2?: SaboriProposerAgentV2,
 ): Hono<AppEnv> {
   const proposals = new Hono<AppEnv>();
 
@@ -202,6 +217,73 @@ export function createProposalsRoute(
       }
     });
   });
+
+  /**
+   * POST /judge
+   *
+   * Chrome 拡張（agentClient.judgeTask）向けエンドポイント。
+   * Slack で受信したメッセージ本文から返信文ドラフト・サボってよい度・TTS 要約を返す。
+   *
+   * このルートは index.ts で /api/proposals にマウントされるため、
+   * 最終的なパスは POST /api/proposals/judge となる。
+   *
+   * リクエスト: { message: string, senderName?: string }
+   * レスポンス: { replyDraft: string, saboriScore: number, ttsSummary: string }
+   */
+  proposals.post(
+    "/judge",
+    zValidator("json", JudgeSaboriSchema, (result, c) => {
+      if (!result.success) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid judge request",
+              details: result.error.flatten(),
+            },
+          },
+          400,
+        );
+      }
+    }),
+    async (c) => {
+      if (!saboriProposerAgentV2) {
+        // V2 エージェント未注入時は機能未提供として 503 を返す
+        return c.json(
+          {
+            error: {
+              code: "SERVICE_UNAVAILABLE",
+              message: "Sabori judge agent is not configured",
+            },
+          },
+          503,
+        );
+      }
+
+      const { message, senderName } = c.req.valid("json");
+
+      const draft = await saboriProposerAgentV2.draftReply({
+        incomingMessage: message,
+        contextHint: senderName ? `送信者: ${senderName}` : undefined,
+      });
+
+      // ttsSummary: 返信文ドラフトを TTS 向けに短縮（先頭 100 字程度）
+      const ttsSummary =
+        draft.replyText.length > 100
+          ? `${draft.replyText.slice(0, 100)}…`
+          : draft.replyText;
+
+      // TODO(v2): saboriScore（サボってよい度 0-1）を専用 judge ロジックで算出する。
+      // 現状 draftReply は本値を返さないため、デモ表示用に固定値 0.5 を返す。
+      const saboriScore = 0.5;
+
+      return c.json({
+        replyDraft: draft.replyText,
+        saboriScore,
+        ttsSummary,
+      });
+    },
+  );
 
   return proposals;
 }

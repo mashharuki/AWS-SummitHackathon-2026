@@ -13,7 +13,10 @@
  */
 
 import { zValidator } from "@hono/zod-validator";
-import type { SchedulePlannerAgent } from "@saboru/agent";
+import type {
+  SaboriProposerAgentV2,
+  SchedulePlannerAgent,
+} from "@saboru/agent";
 import {
   ApproveOverridesSchema,
   CreateTaskSchema,
@@ -32,6 +35,11 @@ export function createTasksRoute(
   taskRepository: DynamoTaskRepository,
   candidateRepository: DynamoTaskCandidateRepository,
   schedulePlannerAgent: SchedulePlannerAgent,
+  /**
+   * 進捗報告文生成エージェント (U-V2-07)。POST /:id/report で使用する。
+   * v1 後方互換のため任意とし、未指定時は /report が 503 を返す。
+   */
+  saboriProposerAgentV2?: SaboriProposerAgentV2,
 ): Hono<AppEnv> {
   const tasks = new Hono<AppEnv>();
 
@@ -195,6 +203,84 @@ export function createTasksRoute(
     const task = await taskRepository.findById(userId, taskId);
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
     return c.json(task);
+  });
+
+  /**
+   * POST /tasks/:id/report — タスクの進捗報告文を生成する (API-V2-02 / U-V2-07)
+   *
+   * operationId: scheduleProgressReport（MCP ツール `saborou_schedule_report`）。
+   * UC-03「進捗報告 → 音声承認 → 送信」で使う。タスクの締切・説明から
+   * SaboriProposerAgentV2.draftReply で「現在確認・調整中です」系の丁寧な報告文を生成し、
+   * 文面のみを返す（Slack への送信は拡張側の承認後に POST /api/slack/reply で行う）。
+   *
+   * 設計判断（デモ堅牢性）: EventBridge による完全自動の定期送信は副作用が大きく
+   * デモで制御しづらい。MVP では「手動トリガー可能な報告文生成エンドポイント」を主軸とし、
+   * 17:00 JST のスケジュールルールは CDK に定義（DISABLED フラグ）して将来拡張に備える。
+   * これにより拡張側 Side Panel は任意タイミングでこの endpoint を叩いて報告文を取得できる。
+   *
+   * Errors:
+   * - 404 NOT_FOUND: タスクが存在しない / 所有者でない
+   * - 503 REPORT_GENERATION_FAILED: Bedrock 呼び出し失敗、または agent 未注入
+   */
+  tasks.post("/:id/report", async (c) => {
+    const userId = c.get("userId");
+    const taskId = c.req.param("id");
+
+    // 所有者確認（他人のタスクは 404）
+    const task = await taskRepository.findById(userId, taskId);
+    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+
+    if (!saboriProposerAgentV2) {
+      return c.json(
+        {
+          error: {
+            code: "REPORT_GENERATION_FAILED",
+            message: "進捗報告の生成機能が利用できません",
+          },
+        },
+        503,
+      );
+    }
+
+    // タスク状況を自然言語で組み立てる（draftReply の taskStatus に渡す）
+    const statusLines = [`タスク名: ${task.title}`];
+    if (task.deadline) statusLines.push(`締切: ${task.deadline}`);
+    if (task.description) statusLines.push(`内容: ${task.description}`);
+    if (task.requester) statusLines.push(`依頼者: ${task.requester}`);
+
+    try {
+      const draft = await saboriProposerAgentV2.draftReply({
+        // 「進捗を教えてほしい」という想定受信メッセージに対する返信として生成する
+        incomingMessage: `「${task.title}」の進捗状況を教えてください。`,
+        taskStatus: statusLines.join("\n"),
+        contextHint:
+          "現在確認・調整中であることを丁寧に伝える進捗報告。具体的な期日を断定せず、引き続き対応中である旨を添える。",
+      });
+      return c.json({
+        taskId,
+        reportText: draft.replyText,
+        ...(draft.tone ? { tone: draft.tone } : {}),
+        reasoning: draft.reasoning,
+      });
+    } catch (err) {
+      console.log(
+        JSON.stringify({
+          level: "ERROR",
+          action: "progress_report_generation_failed",
+          taskId,
+          error: String(err),
+        }),
+      );
+      return c.json(
+        {
+          error: {
+            code: "REPORT_GENERATION_FAILED",
+            message: "進捗報告文の生成に失敗しました",
+          },
+        },
+        503,
+      );
+    }
   });
 
   /** PATCH /tasks/:id — Inline edit */

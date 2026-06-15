@@ -35,6 +35,27 @@ export type {
   TaskContext,
 } from "./sabori-proposer/types.js";
 
+// サボリ提案エージェント v2 — 返信文 / 断り文生成 (U-V2-05)
+export { SaboriProposerAgentV2 } from "./sabori-proposer/SaboriProposerAgentV2.js";
+export type {
+  DeclineDraftInput,
+  ReplyDraftInput,
+} from "./sabori-proposer/SaboriProposerAgentV2.js";
+export {
+  REPLY_DRAFT_SYSTEM_PROMPT,
+  REPLY_DRAFT_TOOL,
+  REPLY_DRAFT_TOOL_NAME,
+  ReplyDraftSchema,
+} from "./sabori-proposer/replyDraftTool.js";
+export type { ReplyDraft } from "./sabori-proposer/replyDraftTool.js";
+export {
+  DECLINE_DRAFT_SYSTEM_PROMPT,
+  DECLINE_DRAFT_TOOL,
+  DECLINE_DRAFT_TOOL_NAME,
+  DeclineDraftSchema,
+} from "./sabori-proposer/declineDraftTool.js";
+export type { DeclineDraft } from "./sabori-proposer/declineDraftTool.js";
+
 // 段取り逆算エージェント (U-G03: schedule-planner)
 export { SchedulePlannerAgent } from "./schedule-planner/SchedulePlannerAgent.js";
 export type {

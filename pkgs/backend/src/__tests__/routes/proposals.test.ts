@@ -2,7 +2,7 @@
  * GET /tasks/:taskId/proposal のテスト
  */
 
-import type { SaboriProposerAgent } from "@saboru/agent";
+import type { SaboriProposerAgent, SaboriProposerAgentV2 } from "@saboru/agent";
 import type { Proposal, Task } from "@saboru/shared";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
@@ -24,14 +24,18 @@ function buildTestApp(
     findById: vi.fn().mockResolvedValue(null),
   },
   calendarCacheRepo?: Partial<DynamoGoogleCalendarCacheRepository>,
+  agentV2?: Partial<SaboriProposerAgentV2>,
+  withAuth = true,
 ) {
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
-    (c as unknown as { env: unknown }).env = {
-      requestContext: {
-        authorizer: { jwt: { claims: { sub: MOCK_USER_ID } } },
-      },
-    };
+    (c as unknown as { env: unknown }).env = withAuth
+      ? {
+          requestContext: {
+            authorizer: { jwt: { claims: { sub: MOCK_USER_ID } } },
+          },
+        }
+      : {};
     await next();
   });
   app.route(
@@ -42,6 +46,7 @@ function buildTestApp(
       agent as SaboriProposerAgent,
       userRepo as DynamoUserRepository,
       calendarCacheRepo as DynamoGoogleCalendarCacheRepository | undefined,
+      agentV2 as SaboriProposerAgentV2 | undefined,
     ),
   );
   app.onError(errorHandler);
@@ -588,5 +593,158 @@ describe("POST /tasks/:taskId/proposal — calendarContext 注入 (BR-G-05)", ()
     // catch ブロックが console.error を呼ぶが、ストリームはクローズされる
     expect(res.status).toBe(200);
     expect(mockPropose).toHaveBeenCalledOnce();
+  });
+});
+
+describe("POST /judge — Chrome 拡張向け返信文ドラフト生成", () => {
+  const sampleDraft = {
+    replyText: "ご連絡ありがとうございます。確認のうえ折り返します。",
+    tone: "polite" as const,
+    reasoning: ["依頼内容を確認"],
+  };
+
+  function buildJudgeApp(
+    draftReply: ReturnType<typeof vi.fn>,
+    withAuth = true,
+  ) {
+    return buildTestApp(
+      { findById: vi.fn() },
+      { findLatestByTaskId: vi.fn() },
+      {},
+      undefined,
+      undefined,
+      { draftReply } as Partial<SaboriProposerAgentV2>,
+      withAuth,
+    );
+  }
+
+  it("正常系: message から replyDraft/saboriScore/ttsSummary を返す", async () => {
+    const draftReply = vi.fn().mockResolvedValue(sampleDraft);
+    const app = buildJudgeApp(draftReply);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "明日までに資料お願いできますか",
+        senderName: "山田",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.replyDraft).toBe(sampleDraft.replyText);
+    expect(typeof body.saboriScore).toBe("number");
+    expect(body.saboriScore).toBeGreaterThanOrEqual(0);
+    expect(body.saboriScore).toBeLessThanOrEqual(1);
+    expect(typeof body.ttsSummary).toBe("string");
+    expect(body.ttsSummary.length).toBeGreaterThan(0);
+
+    // contextHint に送信者名が渡されること
+    expect(draftReply).toHaveBeenCalledOnce();
+    const [arg] = draftReply.mock.calls[0];
+    expect(arg.incomingMessage).toBe("明日までに資料お願いできますか");
+    expect(arg.contextHint).toBe("送信者: 山田");
+  });
+
+  it("senderName 省略時は contextHint を undefined にする", async () => {
+    const draftReply = vi.fn().mockResolvedValue(sampleDraft);
+    const app = buildJudgeApp(draftReply);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "テスト依頼" }),
+    });
+
+    expect(res.status).toBe(200);
+    const [arg] = draftReply.mock.calls[0];
+    expect(arg.contextHint).toBeUndefined();
+  });
+
+  it("長い replyText は ttsSummary で 100 字程度に短縮される", async () => {
+    const longText = "あ".repeat(250);
+    const draftReply = vi
+      .fn()
+      .mockResolvedValue({ replyText: longText, reasoning: ["r"] });
+    const app = buildJudgeApp(draftReply);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "長文依頼" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.replyDraft).toBe(longText);
+    // 100 字 + 省略記号
+    expect(body.ttsSummary.length).toBeLessThanOrEqual(101);
+    expect(body.ttsSummary.endsWith("…")).toBe(true);
+  });
+
+  it("認証なしの場合 401 を返す", async () => {
+    const draftReply = vi.fn();
+    const app = buildJudgeApp(draftReply, false);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "テスト" }),
+    });
+
+    expect(res.status).toBe(401);
+    expect(draftReply).not.toHaveBeenCalled();
+  });
+
+  it("message 欠落時は 400 バリデーションエラー", async () => {
+    const draftReply = vi.fn();
+    const app = buildJudgeApp(draftReply);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ senderName: "山田" }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(draftReply).not.toHaveBeenCalled();
+  });
+
+  it("空文字 message は 400 バリデーションエラー", async () => {
+    const draftReply = vi.fn();
+    const app = buildJudgeApp(draftReply);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "" }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(draftReply).not.toHaveBeenCalled();
+  });
+
+  it("V2 エージェント未注入時は 503 を返す", async () => {
+    const app = buildTestApp(
+      { findById: vi.fn() },
+      { findLatestByTaskId: vi.fn() },
+      {},
+      undefined,
+      undefined,
+      undefined, // agentV2 未注入
+    );
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "テスト依頼" }),
+    });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe("SERVICE_UNAVAILABLE");
   });
 });

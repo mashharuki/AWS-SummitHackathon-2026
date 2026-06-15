@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import type * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
@@ -6,7 +7,6 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import { NagSuppressions } from "cdk-nag";
 import type { Construct } from "constructs";
-import * as path from "node:path";
 import type { CUSTOM_DOMAIN } from "./acm-us-east-1-stack";
 
 // 他スタックへの依存を持たないシンプルなProps

@@ -26,8 +26,19 @@ const {
   mockConversationsList: vi.fn(),
 }));
 
+class MockSlackApiError extends Error {
+  constructor(
+    public readonly slackError: string,
+    public readonly method: string,
+  ) {
+    super(`Slack API error: ${slackError} (${method})`);
+    this.name = "SlackApiError";
+  }
+}
+
 vi.mock("@saboru/agent", () => ({
   getSlackToken: mockGetSlackToken,
+  SlackApiError: MockSlackApiError,
   SlackClient: class {
     conversationsHistory = mockConversationsHistory;
     postMessage = mockPostMessage;
@@ -310,5 +321,102 @@ describe("GET /api/slack/channels", () => {
       { id: "C2", name: "dev" },
     ]);
     expect(mockGetSlackToken).toHaveBeenCalledWith(MOCK_USER_ID);
+  });
+});
+
+describe("POST /api/slack/reply", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSlackToken.mockResolvedValue("xoxb-test");
+    mockPostMessage.mockResolvedValue({ ts: "12.34" });
+  });
+
+  it("posts the approved reply text and returns ts", async () => {
+    const app = await buildApp(vi.fn());
+    const res = await app.request("/api/slack/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: "t1",
+        replyText: "承知しました。引き続き対応いたします。",
+        channelId: "C1",
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.ts).toBe("12.34");
+    expect(body.taskId).toBe("t1");
+    expect(mockGetSlackToken).toHaveBeenCalledWith(MOCK_USER_ID);
+    const arg = mockPostMessage.mock.calls[0][0];
+    expect(arg.channel).toBe("C1");
+    expect(arg.text).toBe("承知しました。引き続き対応いたします。");
+  });
+
+  it("passes threadTs for threaded replies", async () => {
+    const app = await buildApp(vi.fn());
+    await app.request("/api/slack/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        replyText: "了解です",
+        channelId: "C1",
+        threadTs: "1.1",
+      }),
+    });
+
+    expect(mockPostMessage.mock.calls[0][0].thread_ts).toBe("1.1");
+  });
+
+  it("works without taskId (taskId is optional)", async () => {
+    const app = await buildApp(vi.fn());
+    const res = await app.request("/api/slack/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ replyText: "OKです", channelId: "C1" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.taskId).toBeUndefined();
+  });
+
+  it("returns 400 when replyText is missing", async () => {
+    const app = await buildApp(vi.fn());
+    const res = await app.request("/api/slack/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channelId: "C1" }),
+    });
+    expect(res.status).toBe(400);
+    expect(mockPostMessage).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when channelId is missing", async () => {
+    const app = await buildApp(vi.fn());
+    const res = await app.request("/api/slack/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ replyText: "hello" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 502 when Slack API fails", async () => {
+    mockPostMessage.mockRejectedValueOnce(
+      new MockSlackApiError("channel_not_found", "chat.postMessage"),
+    );
+    const app = await buildApp(vi.fn());
+    const res = await app.request("/api/slack/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ replyText: "hi", channelId: "C-bad" }),
+    });
+
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error.code).toBe("SLACK_API_ERROR");
   });
 });
