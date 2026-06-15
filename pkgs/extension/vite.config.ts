@@ -4,6 +4,56 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { type Plugin, build, defineConfig } from "vite";
 
+const ELEVENLABS_WORKLET_LOADER_START = "const b=new Map;function k(e,t){";
+const ELEVENLABS_WORKLET_LOADER_END = '}const C=k("raw-audio-processor",';
+
+/**
+ * @11labs/client 0.2.0 creates AudioWorklets from blob:/data: URLs. Chrome
+ * Manifest V3 extension pages reject both under the required CSP, so point the
+ * SDK at equivalent worklet files packaged with the extension.
+ */
+function elevenLabsExtensionWorkletsPlugin(): Plugin {
+  let transformed = false;
+
+  return {
+    name: "elevenlabs-extension-worklets",
+    enforce: "pre",
+    transform(code, id) {
+      if (
+        !id.endsWith("/dist/lib.modern.js") ||
+        !code.includes("raw-audio-processor") ||
+        !code.includes("Failed to load the")
+      ) {
+        return null;
+      }
+
+      const start = code.indexOf(ELEVENLABS_WORKLET_LOADER_START);
+      const end = code.indexOf(ELEVENLABS_WORKLET_LOADER_END, start);
+      if (start === -1 || end === -1) {
+        throw new Error(
+          "Unable to patch the ElevenLabs AudioWorklet loader. Check the installed @11labs/client version.",
+        );
+      }
+
+      transformed = true;
+      const loader =
+        "const b=new Map;function k(e,t){return async n=>{const s=chrome.runtime.getURL(`worklets/${e}.js`);return n.addModule(s)}}";
+
+      return {
+        code: `${code.slice(0, start)}${loader}${code.slice(end + 1)}`,
+        map: null,
+      };
+    },
+    buildEnd() {
+      if (!transformed) {
+        throw new Error(
+          "The ElevenLabs AudioWorklet loader was not found during the extension build.",
+        );
+      }
+    },
+  };
+}
+
 /**
  * Chrome 拡張ビルド設定（手動マルチエントリ方式）
  *
@@ -76,7 +126,12 @@ function chromeExtensionPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), react(), chromeExtensionPlugin()],
+  plugins: [
+    tailwindcss(),
+    react(),
+    elevenLabsExtensionWorkletsPlugin(),
+    chromeExtensionPlugin(),
+  ],
 
   resolve: {
     alias: {

@@ -120,6 +120,12 @@ describe("useConversationalAgent", () => {
     expect(mockGetUserMedia).toHaveBeenCalledWith({ audio: true });
     expect(mockTrackStop).toHaveBeenCalledOnce();
     expect(Conversation.startSession).toHaveBeenCalledOnce();
+    const sessionConfig = vi.mocked(Conversation.startSession).mock
+      .calls[0]?.[0];
+    expect(sessionConfig).toEqual(
+      expect.objectContaining({ agentId: "test-agent-id" }),
+    );
+    expect(sessionConfig).not.toHaveProperty("authorization");
 
     // Restore
     // @ts-expect-error mutating readonly env for test
@@ -168,6 +174,32 @@ describe("useConversationalAgent", () => {
     await waitFor(() => {
       expect(result.current.error).toBe("WebSocket failed");
     });
+
+    // @ts-expect-error restore
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;
+  });
+
+  it("does not expose JWTs from WebSocket errors", async () => {
+    // @ts-expect-error mutating readonly env for test
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = "test-agent-id";
+    vi.mocked(Conversation.startSession).mockRejectedValueOnce(
+      new Error(
+        "Failed to construct 'WebSocket': The subprotocol 'bearer.Bearer eyJheader.payload.signature' is invalid.",
+      ),
+    );
+
+    const { result } = renderHook(() =>
+      useConversationalAgent({ sessionJwt: "valid-jwt" }),
+    );
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(result.current.error).toBe(
+      "ElevenLabs接続の認証設定が不正です。拡張機能を更新して、もう一度音声接続してください。",
+    );
+    expect(result.current.error).not.toContain("eyJheader");
 
     // @ts-expect-error restore
     import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;

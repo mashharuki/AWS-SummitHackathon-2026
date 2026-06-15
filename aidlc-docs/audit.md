@@ -2081,3 +2081,19 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: ElevenLabs音声接続のChrome拡張マイク権限リカバリー。`pkgs/extension` の接続フック、専用許可ページ、Viteマルチエントリ、テストを更新。
 
 ---
+
+## ElevenLabs WebSocket 認証修正
+**Timestamp**: 2026-06-15T14:28:03Z
+**User Input**: "音声接続エラー: Failed to construct 'WebSocket': The subprotocol 'bearer.Bearer [REDACTED_COGNITO_JWT]' is invalid. サ"
+**AI Response**: "ElevenLabs SDK の authorization に Cognito JWT を `Bearer` 付きで渡していたため、WebSocketサブプロトコルが `bearer.Bearer <JWT>` となる不具合を特定した。ElevenLabs接続からCognito JWTを除外し、JWTはSABOROUバックエンドAPI認証だけに限定した。接続エラーにJWTが含まれても表示・ログへ露出しないサニタイズも追加した。全152テスト、typecheck、Biome、本番buildを通過した。"
+**Context**: 認証情報をリポジトリへ永続化しないため、User Input内のCognito JWTのみ意図的に伏せ字化した。公開ElevenLabs AgentはagentId、非公開Agentはサーバー取得のsignedUrlを使用する。
+
+---
+
+## ElevenLabs AudioWorklet CSP 修正
+**Timestamp**: 2026-06-15T14:36:50Z
+**User Input**: "音声接続エラー: Failed to load the raw-audio-processor worklet module. Make sure the browser supports AudioWorklets."
+**AI Response**: "@11labs/client 0.2.0 が AudioWorklet を blob: URL、失敗時に data: URLからロードするため、Chrome Manifest V3拡張ページのCSPで拒否されることを特定した。Viteビルド時にSDKのworkletローダーをchrome.runtime.getURLによる拡張内静的ファイル参照へ置換し、raw-audio-processor.jsとaudio-concat-processor.jsをdist/workletsへ同梱した。全152テスト、Biome、typecheck、本番buildを通過し、成果物に静的ローダーと両workletが存在し、ElevenLabsのblob/dataフォールバックが残っていないことを確認した。"
+**Context**: Chrome Manifest V3のCSPを緩和せず、ElevenLabs音声入出力用AudioWorkletを拡張自身のオリジンからロードする互換対応。
+
+---

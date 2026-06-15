@@ -87,6 +87,19 @@ function isAgentConfigured(): boolean {
 const MICROPHONE_PERMISSION_ERROR =
   "マイク許可用のタブを開きました。そのタブで「マイクを許可」を押し、許可後にSABOROUへ戻ってもう一度音声接続してください。";
 
+function sanitizeConnectionError(message: string): string {
+  if (/subprotocol.*invalid/i.test(message) && /bearer/i.test(message)) {
+    return "ElevenLabs接続の認証設定が不正です。拡張機能を更新して、もう一度音声接続してください。";
+  }
+
+  return message
+    .replace(/bearer\.Bearer\s+[^\s'"]+/gi, "bearer.[REDACTED]")
+    .replace(
+      /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+      "[REDACTED_JWT]",
+    );
+}
+
 async function openMicrophonePermissionPage(): Promise<void> {
   if (typeof chrome === "undefined" || !chrome.runtime?.getURL) return;
 
@@ -275,10 +288,11 @@ export function useConversationalAgent(
           setState((prev) => ({ ...prev, status: "disconnected", mode: null }));
         },
         onError: (message: string) => {
-          console.error("[SABOROU] ElevenLabs error:", message);
+          const safeMessage = sanitizeConnectionError(message);
+          console.error("[SABOROU] ElevenLabs error:", safeMessage);
           setState((prev) => ({
             ...prev,
-            error: message,
+            error: safeMessage,
             status: "disconnected",
           }));
         },
@@ -308,8 +322,6 @@ export function useConversationalAgent(
         sessionConfig.signedUrl = signedUrl;
       } else if (agentId) {
         sessionConfig.agentId = agentId;
-        // Pass Cognito JWT in the authorization header
-        sessionConfig.authorization = `Bearer ${sessionJwt}`;
       }
 
       const conv = await Conversation.startSession(
@@ -317,7 +329,9 @@ export function useConversationalAgent(
       );
       conversationRef.current = conv;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = sanitizeConnectionError(
+        err instanceof Error ? err.message : String(err),
+      );
       console.error("[SABOROU] Failed to start ElevenLabs session:", message);
       setState((prev) => ({
         ...prev,
