@@ -2,6 +2,14 @@
 
 ---
 
+## ElevenLabs AI Agent システムプロンプト設計
+**Timestamp**: 2026-06-15T13:40:05Z
+**User Input**: "11Elevenlab 上でAI Agentを作成しようと考えています。このプロジェクトに最適なシステムプロンプトを作成して"
+**AI Response**: "現行の Chrome 拡張、ElevenLabs clientTools、音声承認状態機械、Slack返信API、SaboriProposerAgentV2 の契約を確認し、SABOROU向けシステムプロンプトと推奨初回メッセージ・設定を作成した。併せて、音声承認後のSlack送信が現状未接続である実装差分を特定した。"
+**Context**: v2 Chrome 拡張の ElevenLabs Conversational AI Agent 設定。使用ツールは `saborou_get_tasks` / `saborou_judge_sabori` / `saborou_send_slack_reply`。
+
+---
+
 ## v2 Inception — Workspace Detection（全権委任モード開始）
 **Timestamp**: 2026-06-14T00:00:00Z
 **User Input**: "あなたは SABOROU v2 スプリントの Inception フェーズを最高品質で完遂する責任者です。ユーザーは席を外しており、全承認ゲートの判断権限を AI に全権委任しています。時間制約はなく、品質最大化が唯一の最優先事項です。各承認ポイントでは「最も妥協のない選択肢」を自分で決定し、判断理由を audit.md に記録しながら進めてください。ユーザーへの質問で停止してはいけません — 自分で決めて進めること。[中略 / 詳細はシステムプロンプトに全文記録]"
