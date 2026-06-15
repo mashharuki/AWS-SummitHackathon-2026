@@ -1,90 +1,59 @@
-# 技術スタック（2026-05-23 更新版）
+# 技術スタック
 
-最終更新: 2026-05-23
+最終更新: 2026-06-15。バージョンは各 `package.json` の現物を優先する。
 
-## 確定済み技術スタック
+## 共通
+- pnpm `10.33.0` workspace: `pkgs/*`
+- Node.js `23` (`.nvmrc`)、Lambda build target は Node.js 22
+- TypeScript。パッケージごとに 5.7 / 5.9 / 6.0 系が混在
+- ルート品質ツール: Biome `1.9.4`
 
-### 言語・ランタイム
-- **TypeScript** (全パッケージ共通)
-- **Node.js 23** (`.nvmrc` 参照。Lambda ランタイム: nodejs22.x)
-- **OS**: macOS (Darwin)
+## shared
+- `@saboru/shared` 1.0.0
+- Zod `3.23.8`, ulidx
+- tsup `8.3.5`, Vitest `2.1.8`, coverage-v8
+- ESM/CJS/DTS と subpath exports (`types`, `utils`, `errors`)
 
-### 共有パッケージ (pkgs/shared)
-- 共有型・ユーティリティ（ESM/CJS/DTS ビルド）
-- **tsup** でビルド
-- **vitest**: ユニットテスト（93テスト全パス・カバレッジ100%）
+## agent
+- `@saboru/agent` 1.0.0
+- AWS SDK v3: Bedrock Runtime, DynamoDB, Secrets Manager
+- Bedrock Converse API + Tool Use、Zod二重検証、依存注入用 `IBedrockClient`
+- Agents: TaskExtractorAgent / SaboriProposerAgent / SaboriProposerAgentV2 / SchedulePlannerAgent
+- tsup `8.3.5`, Vitest `2.1.8`
 
-### エージェント (pkgs/agent)
-- **Amazon Bedrock Converse API + Tool Use**: claude-3-5-sonnet / Haiku
-- TaskExtractorAgent + SaboriProposerAgent の2エージェント協調
-- **IBedrockClient インタフェース**でテスト可能な設計
-- **vitest**: ユニットテスト（104テスト全パス）
-- **tsup** でESM/CJS/DTS ビルド
+## backend
+- Hono `4.12.x`、`@hono/node-server`、Swagger UI、Zod validator
+- AWS SDK v3、DynamoDB repositories、Cognito JWT、Slack API、Google OAuth/Calendar/Gmail
+- esbuild `0.21.x` で `dist/index.js` と `dist/webhook.js` を Node 22 向け生成
+- Vitest `4.1.6`
 
-### バックエンド (pkgs/backend)
-- **Hono ^4.x**: Web フレームワーク（Lambda + ローカル両対応）
-- **Slack OAuth + Webhook**: HMAC-SHA256 署名検証
-- **Zod**: バリデーション
-- **esbuild**: Lambda 向けバンドル（ARM64 最適化）
-- **Secrets Manager キャッシュ** (TTL=5分)
-- **vitest**: ユニットテスト（172テスト全パス）
-- 2エントリーポイント: `dist/index.js` (API) / `dist/webhook.js` (Slack Webhook)
+## frontend
+- React / React DOM `19.2.6`
+- Vite `8.0.12`, TypeScript `6.0.x`, Vitest `4.1.6`, Playwright `1.60`
+- Tailwind CSS `4.1.x`
+- react-router-dom `7.6.x`
+- Three.js `0.177`, react-three-fiber `9.6`, drei `10.7`
+- i18next/react-i18next、MSW、vite-plugin-pwa、Workbox
+- Cognito: `amazon-cognito-identity-js`
+- ゲーミフィケーション、3バンドガント、2D/3Dキャラクター
 
-### フロントエンド (pkgs/frontend)
-- **React ^19.2.6** + **react-dom ^19.2.6**
-- **Vite**: ビルドツール
-- **Tailwind CSS v4** (@theme / @utility 設定)
-- **Three.js**: 3Dキャラクター（SaborouCharacter3D / SaborouScene3D）
-  - Three.js は別チャンク分離（初期バンドル 219KB / Three.js gzip 249KB）
-- **react-three-fiber / @react-three/drei**: Three.js React統合
-- **shadcn/ui**: UIコンポーネント
-- **react-i18next**: 多言語対応（pkgs/frontend/src/i18n.ts）
-- **PWA**: service worker / manifest（public/mockServiceWorker.js）
-- **ErrorBoundary**: コンポーネント実装済み
-- **vitest**: ユニットテスト（126テスト全パス）
-- **@playwright/test**: E2Eテスト（tests/e2e.spec.ts）
-- ネオブルータリズム UI デザイン
+## Chrome extension
+- Manifest V3 / Side Panel / content script / service worker
+- React `19.2.6`, Vite `8.0.12`, TypeScript `6.0.x`, Tailwind `4.1.x`, Vitest `4.1.6`
+- ElevenLabs `@11labs/client` **0.2.0 固定**
+- Chrome Identity API + Cognito Authorization Code PKCE S256
+- Slack DOM MutationObserver、入力欄への execCommand + InputEvent フォールバック
+- build成果物: manifest.json, panel.html, background.js, content.js, icons
 
-### インフラ (pkgs/cdk)
-- **aws-cdk-lib 2.232.1** + **aws-cdk 2.1100.1**
-- **constructs ^10.0.0**
-- **cdk-nag**: セキュリティルール検査（AwsSolutionsChecks）
-- **jest + ts-jest**: CDK テスト（35テスト全パス）
-- 6スタック構成（DataStack / StorageStack / CognitoStack / ApiStack / AgentStack / FrontendStack）
+## CDK / AWS
+- aws-cdk-lib `2.232.1`, aws-cdk CLI `2.1122.0`, constructs `10.x`, cdk-nag `2.35`
+- Jest `29.7`, ts-jest、TypeScript `5.9.x`
+- 主なAWSサービス: DynamoDB, Lambda, API Gateway HTTP API, Cognito, S3, CloudFront, Bedrock, Secrets Manager, EventBridge/Scheduler, CloudWatch, SSM, ACM
+- AgentCore Gateway は安定版 CDK にL2がないため `AWS::BedrockAgentCore::Gateway` / `GatewayTarget` のL1を使用
+- カスタムドメインは任意。CloudFront証明書は us-east-1、API証明書は ap-northeast-1
 
-### モノレポ管理
-- **pnpm ^10.33.0** + **pnpm-workspace.yaml**
-- **@biomejs/biome ^1.9.4**: フォーマット + Lint
-
-### AWS サービス（実装済み・デプロイ対象）
-- **Lambda**: 全バックエンド処理（ARM64 / Amazon Linux 2023）
-  - API Lambda (Hono)
-  - Webhook Lambda (Slack Webhook受信)
-  - Agent Lambda (Bedrock Agent)
-- **API Gateway HTTP API**: REST API
-- **Lambda Function URL**: SSE ストリーミング（Response Streaming）
-- **DynamoDB On-Demand**: 8テーブル（Users / ServiceConnections / TaskCandidates / Tasks / TaskOrganization / Proposals / HonneData / Personas）
-- **S3 + CloudFront**: フロントエンドホスティング（OAC設定）
-- **Cognito**: 認証（ユーザープール + Slack OAuth）
-- **Amazon Bedrock**: claude-3-5-sonnet（TaskExtractor）+ claude-3-haiku（SaboriProposer）
-- **Secrets Manager**: OAuth トークン・APIキー管理
-- **EventBridge**: エージェント間非同期連携
-- **CloudWatch**: モニタリング・アラート
-- **SSM Parameter Store**: OAuth State Secret
-- **リージョン**: ap-northeast-1（東京）
-
-### 外部連携
-- **Slack API**: タスク抽出元（Slack OAuth + Webhook）
-  - HMAC-SHA256 署名検証実装済み
-  - `scripts/register_slack_secret.sh` でシークレット登録
-- ※ Gmail / Google Calendar は v1.1.0 スコープ（予選外）
-
-### MCPサーバー（.vscode/mcp.json）
-- serena, oraios/serena: コードナビゲーション
-- context7: ライブラリドキュメント取得
-- awslabs aws-d: AWSアーキテクチャ図生成
-- chromedevtool: ブラウザ操作
-- deepwiki: Wiki検索
-- pencil: デザインツール（.pen ファイル）
-- sequential-thinking: 思考支援
-- aws-mcp: AWS API 直接操作
+## 外部統合
+- Slack OAuth/Webhook/Web API
+- Google OAuth、Calendar、Gmail
+- ElevenLabs Conversational AI（任意。未設定フォールバックあり）
+- Bedrock AgentCore Gateway MCP（任意。Hono API直接呼び出しフォールバックあり）

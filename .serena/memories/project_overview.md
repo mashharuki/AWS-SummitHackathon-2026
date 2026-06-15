@@ -1,81 +1,43 @@
 # AWS-SummitHackathon-2026 プロジェクト概要
 
-最終更新: 2026-05-23
+最終更新: 2026-06-15
 
-## 目的
-AWS Summit Japan 2026 ハッカソン参加用リポジトリ。
-プロダクト名: **SABOROU（サボロー）**
-「今どうサボれば一番うまく逃げ切れるか」をAIがリアルタイムに提案するサービス。
+## プロダクト
+AWS Summit Japan 2026 ハッカソン向けの **SABOROU（サボロー）**。Slack 等から仕事を検知し、AI が「サボる／今やる」を文脈と心理学的根拠から判定する。現在の v2 は Chrome 拡張の Side Panel から Slack 新着を検知し、返信案を生成し、クリックまたは音声承認で返信する体験を追加している。
 
-- ハッカソン公式URL: https://pages.awscloud.com/summit-japan-2026-hackathon-reg.html
+## 現在の状態
+- AI-DLC v2 スプリントの Inception / Construction は 2026-06-15 に完了。
+- v2 の U-V2-01〜09（8実装Unit + 統合）を実装済み。
+- 約1,528テストが全パス、全パッケージ typecheck 0、CDK synth 成功と記録されている。
+- 残作業は実AWSデプロイ、ElevenLabs Agent ID/API key 登録、AgentCore の実リージョン利用確認、実機デモ。
+- セットアップ手順は `aidlc-docs/construction/v2/v2-setup-and-demo-guide.md`。
+- 決勝は 2026-06-26。
 
-## プロジェクトの状態（2026-05-23 時点）
-- **INCEPTION フェーズ**: 完了（v2.2.0）
-- **CONSTRUCTION フェーズ**: 全Unit完了（U-01〜U-06 + UIリデザイン）
-- **OPERATIONS フェーズ**: 運用ドキュメント作成済み
-- 書類審査 M1（2026-05-10）: **通過済み**
-- MVP デモ M2（2026-05-30）: **次の目標**
-- 決勝 M3（2026-06-26）: 最終目標
+## モノレポ構成
+- `pkgs/shared`: 共有型、Zod schema、repository interface、utility。
+- `pkgs/agent`: Bedrock Converse API ベースの TaskExtractorAgent、SaboriProposerAgent、SaboriProposerAgentV2、SchedulePlannerAgent、Slack client。
+- `pkgs/backend`: Hono API/Lambda。Cognito認証、Slack/Google連携、task/proposal/honne/schedule API。
+- `pkgs/frontend`: React Web UI。Three.js、ガント、ゲーミフィケーション、PWA。
+- `pkgs/extension`: v2 Chrome Manifest V3 拡張。Side Panel、Slack content script、Cognito PKCE、ElevenLabs音声承認。
+- `pkgs/cdk`: AWS CDK。Data/Frontend/Cognito/API/Agent/Webhook/AgentCore/ConfigDeploy と任意のカスタムドメイン証明書スタック。
+- `aidlc-docs`: AI-DLC 文書と監査ログ。アプリコードを置かない。
+- `aidlc-inputs`: 要件、方針、モック、UI入力。
 
-## 最新実装状況（2026-05-23）
-- **Slack 実連携**: 完了（OAuth + Webhook + シークレット登録スクリプト）
-- **PWA 化**: 完了（service worker / manifest、public/mockServiceWorker.js）
-- **多言語対応**: 完了（pkgs/frontend/src/i18n.ts）
-- **レスポンシブデザイン**: 対応完了
-- **UI**: ネオブルータリズム + Three.js 3D/2D 共存設計
-- **Bedrock モデル呼び出し**: 修正済み（claude-3-5-sonnet / Haiku）
-- **ロゴ/バナー**: 追加済み（public/banner.svg, favicon.svg）
-- **モックデータ削除**: 完了（実 API 接続）
-- **Playwright E2E**: エラー修正済み
+## v2 の主要変更
+- Chrome 拡張 `pkgs/extension` を新設。固定 Extension ID は `klnbcafcphlnmbdbjgmpdjfeimenokmj`。
+- Slack DOM 監視、自動入力、Side Panel 通知、Cognito Authorization Code + PKCE S256 を実装。
+- `@11labs/client@0.2.0` による音声対話。未設定時は「いいよ」ボタンで完走可能。
+- `SaboriProposerAgentV2` が `reply_draft` / `decline_draft` を生成。既存 v1 agent は維持。
+- Backend に `POST /api/proposals/judge`、`POST /api/slack/reply`、`POST /api/tasks/:id/report` を追加。
+- AgentCore Gateway は `aws-cdk-lib` の L1 `CfnGateway` / `CfnGatewayTarget` で実装。`-c enableAgentCore=false` で無効化可能。
+- EventBridge の17:00進捗報告Scheduleは安全のため DISABLED。
 
-## リポジトリ構成（モノレポ - pnpm workspaces）
-```
-/
-├── AGENTS.md                   # AIワークフロールール（最優先）
-├── CLAUDE.md                   # Claude向けルール参照
-├── README.md                   # プロジェクト概要
-├── package.json                # ルートパッケージ（Biome + pnpm スクリプト）
-├── pnpm-workspace.yaml         # ワークスペース定義
-├── biome.json                  # Biome（フォーマット/lint設定）
-├── scripts/
-│   └── register_slack_secret.sh  # Secrets Manager へのSlack資格情報登録スクリプト
-├── pkgs/
-│   ├── shared/                 # 共有型・ユーティリティ（ESM/CJS/DTS）
-│   ├── agent/                  # Bedrockエージェント（task-extractor + sabori-proposer）
-│   ├── backend/                # Hono on Lambda（REST API + Slack Webhook）
-│   ├── cdk/                    # AWS CDK 6スタック（TypeScript）
-│   └── frontend/               # React 19 + Vite + Three.js + PWA + i18n
-├── aidlc-docs/                 # AI-DLCドキュメント（コード置かない）
-│   ├── aidlc-state.md          # ワークフロー状態管理（最新: v2.2.0）
-│   ├── audit.md                # 全操作ログ
-│   ├── inception/              # Inceptionフェーズ成果物
-│   ├── construction/           # Constructionフェーズ成果物（U-01〜U-06）
-│   └── operations/             # 運用ガイド（CDK・バックエンド・フロントエンド・Slack設定）
-├── aidlc-inputs/               # ビジネス要件・技術決定のインプット
-├── .aws-aidlc-rule-details/    # AI-DLCワークフロールール詳細
-├── .claude/                    # Claude AI設定（rules/, skills/）
-├── .github/                    # GitHub Actions・スキル群
-└── .vscode/                    # VS Code設定（MCP含む）
-```
+## 設計上の重要事項
+- AWSリージョンは原則 `ap-northeast-1`。CloudFront証明書のみ任意で `us-east-1`。
+- AgentCore/ElevenLabs/MCP は加点機能だが、Hono API直接呼び出しとクリック承認のフォールバックを持つ。
+- `customDomain=true` と `enableAgentCore=false` は CDK context。
+- `aidlc-docs/aidlc-state.md` が工程状態の正本。
+- `AGENTS.md` の AI-DLC ワークフローと監査規則が最優先。
 
-## 設計コンセプト
-- **表の価値**: AIが「今サボれる理由」を科学的根拠付きで提示
-- **裏の価値（人をダメにする）**: AIへの依存で判断力が退化していく二重設計
-- Dual-Agent 協調: TaskExtractorAgent（U-03a）+ SaboriProposerAgent（U-03b）
-- 社会心理学5理論（CEM・Identifiability・Sucker Effect・SDT・Expectancy Theory）を根拠に採用
-
-## CDK スタック構成（6スタック）
-1. DataStack — DynamoDB テーブル群
-2. StorageStack — S3バケット
-3. CognitoStack — Cognito UserPool + Slack OAuth
-4. ApiStack — API Gateway + Lambda (Hono)
-5. AgentStack — Lambda (Bedrock Agent)
-6. FrontendStack — CloudFront + S3
-
-## 重要なルール
-- AGENTS.md が最高優先度のワークフロールール
-- AI-DLCの3フェーズ: INCEPTION → CONSTRUCTION → OPERATIONS
-- アプリケーションコードは pkgs/ 配下に配置（aidlc-docs/ には置かない）
-- ドキュメントは aidlc-docs/ 配下のみ
-- 全出力は日本語（コードコメント・変数名は英語可）
-- AWSリージョン: ap-northeast-1（東京）固定
+## Serena 注意事項
+2026-06-15 時点で Serena はこのプロジェクトの active languages を `python` のみと誤認しており、TypeScript/TSX の symbol overview が失敗する。設定修正までは `search_for_pattern` または `rg` と限定ファイル読み込みを使う。

@@ -2041,3 +2041,11 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 
 ### aidlc-state.md を v4.0.0 に更新。v2 Construction 完了を記録。
 ---
+
+## Serena MCP メモリー更新
+**Timestamp**: 2026-06-15T13:37:53Z
+**User Input**: "Seran MCPのメモリーを最新化してください！ 前回読み込んだ時から大幅にバージョンアップしています！"
+**AI Response**: "Serena MCP の既存メモリー5件（project_overview / tech_stack / code_style_conventions / suggested_commands / task_completion_checklist）を、現在のリポジトリ、v2 AI-DLC 状態、最新コミット、パッケージ定義、主要実装と照合して全面更新し、Serena から再読して保存を確認した。TypeScript プロジェクトを python のみと認識している Serena 設定不整合もメモリーに記録した。"
+**Context**: 継続セッション。v2 Construction 完了後の Serena プロジェクトメモリー再同期。AI-DLC ルール詳細ディレクトリは指定4候補に存在しなかったため、AGENTS.md と既存 aidlc-state.md / audit.md に従って実施。
+
+---
