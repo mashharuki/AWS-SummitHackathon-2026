@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Requirements Analysis 進行中（2026-06-16）。SABOROU APIサーバーMCP化 / ElevenLabs AgentからのSABOROU機能呼び出し追加開発。
-- **ドキュメントバージョン**: v4.2.0-draft（2026-06-16 MCP serverization requirements）
+- **現在のステージ**: v3 Requirements Analysis 見直し完了・承認待ち（2026-06-16）。Serena MCP併用の実コードギャップ分析を反映。
+- **ドキュメントバージョン**: v4.2.1-draft（2026-06-16 MCP serverization gap analysis）
 
 ---
 
@@ -14,11 +14,21 @@
 
 ### INCEPTION フェーズ（v3: SABOROU MCP Serverization）
 - [x] Workspace Detection — 完了（2026-06-16）。Brownfield 判定。既存v2成果物と実装を確認。
-- [ ] Requirements Analysis — 進行中。質問ファイル `aidlc-docs/inception/v3/requirements/requirement-verification-questions.md` 作成済み。ユーザー回答待ち。
+- [x] Requirements Analysis — 見直し完了（2026-06-16）。AgentCore Gateway本命、既存API全体のMCPツール化、`@Claude` タスク実行依頼フロー、実AWS/AgentCore/ElevenLabs検証を定義。Serena MCP併用の実コード照合でGAP-V3-01〜08を追加。SECURITY-02/08はApplication Designで解消必須のBlocking Gap。ユーザー承認待ち。
 - [ ] User Stories — 条件付き。音声Agentからのユーザー操作フローに影響するため、Requirements承認後に実施要否を判断。
 - [ ] Workflow Planning — 未着手。
 - [ ] Application Design — 条件付き。MCPサーバー方式の選択結果に応じて実施。
 - [ ] Units Generation — 条件付き。複数パッケージ変更の場合に実施。
+
+### Extension Configuration（v3）
+| Extension | Enabled | Decided At |
+|---|---|---|
+| Security Baseline | Yes | Requirements Analysis |
+| Property-Based Testing | No | Requirements Analysis |
+
+### v3 成果物ディレクトリ
+- `aidlc-docs/inception/v3/requirements/requirement-verification-questions.md`
+- `aidlc-docs/inception/v3/requirements/requirements.md`
 
 ---
 
