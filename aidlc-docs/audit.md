@@ -2275,3 +2275,19 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: INCEPTION - Application Design revision based on user-provided ElevenLabs Dashboard constraint.
 
 ---
+
+## Units Generation Start and Planning Prompt — SABOROU MCP Serverization
+**Timestamp**: 2026-06-16T14:44:20Z
+**User Input**: "Units Generation に進んでください！"
+**AI Response**: "Treated the request as approval of the revised Application Design and started Units Generation Part 1. Generated `aidlc-docs/inception/v3/plans/unit-of-work-plan.md` with a recommended 5-unit decomposition: MCP transport/auth adapter, MCP tool registry/schema, Slack Claude delegation, ElevenLabs MCP registration/fallback, and real integration verification. The plan includes preselected answers based on approved requirements/design and asks for approval before Part 2 artifact generation."
+**Context**: INCEPTION - Units Generation Part 1 planning and approval gate.
+
+---
+
+## Units Generation Completion Prompt — SABOROU MCP Serverization
+**Timestamp**: 2026-06-16T14:48:33Z
+**User Input**: "承認します！"
+**AI Response**: "User approved the Unit of Work plan. Generated `aidlc-docs/inception/v3/units/unit-of-work.md`, `unit-of-work-dependency.md`, and `unit-of-work-story-map.md`. The final decomposition contains five units: U-V3-01 mcp-transport-auth-adapter, U-V3-02 mcp-tool-registry-schema, U-V3-03 slack-claude-delegation, U-V3-04 elevenlabs-registration-fallback, and U-V3-05 real-integration-verification. Updated `unit-of-work-plan.md` checkboxes, `aidlc-state.md`, and prepared the Units Generation review gate before entering Construction."
+**Context**: INCEPTION - Units Generation Part 2 completion and approval gate.
+
+---
