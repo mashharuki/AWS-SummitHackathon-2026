@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 User Stories 完了・承認待ち（2026-06-16）。MCP音声操作とSlack `@Claude` 委譲のユーザージャーニーを定義。
-- **ドキュメントバージョン**: v4.2.1-draft（2026-06-16 MCP serverization gap analysis）
+- **現在のステージ**: v3 Workflow Planning 完了・承認待ち（2026-06-16）。Application Design / Units Generation / 全Construction設計ステージを実施対象に設定。
+- **ドキュメントバージョン**: v4.2.2-draft（2026-06-16 MCP serverization workflow planning）
 
 ---
 
@@ -16,9 +16,9 @@
 - [x] Workspace Detection — 完了（2026-06-16）。Brownfield 判定。既存v2成果物と実装を確認。
 - [x] Requirements Analysis — 見直し完了（2026-06-16）。AgentCore Gateway本命、既存API全体のMCPツール化、`@Claude` タスク実行依頼フロー、実AWS/AgentCore/ElevenLabs検証を定義。Serena MCP併用の実コード照合でGAP-V3-01〜08を追加。SECURITY-02/08はApplication Designで解消必須のBlocking Gap。ユーザー承認待ち。
 - [x] User Stories — 完了（2026-06-16）。3ペルソナ、9ユーザーストーリー、INVEST確認、要件/ギャップトレーサビリティを作成。ユーザー承認待ち。
-- [ ] Workflow Planning — 未着手。
-- [ ] Application Design — 条件付き。MCPサーバー方式の選択結果に応じて実施。
-- [ ] Units Generation — 条件付き。複数パッケージ変更の場合に実施。
+- [x] Workflow Planning — 完了（2026-06-16）。高リスクの複数パッケージ変更として、Application Design / Units Generation / Functional Design / NFR Requirements / NFR Design / Infrastructure Design / Code Generation / Build and Testを実施対象に設定。ユーザー承認待ち。
+- [ ] Application Design — 実施予定。AgentCore→Hono認証経路、MCP実呼び出し方式、OpenAPI同期方式、`@Claude` 委譲契約を確定する。
+- [ ] Units Generation — 実施予定。CDK/backend/extension/docsにまたがる複数Unitへ分解する。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -31,6 +31,7 @@
 - `aidlc-docs/inception/v3/requirements/requirements.md`
 - `aidlc-docs/inception/v3/plans/user-stories-assessment.md`
 - `aidlc-docs/inception/v3/plans/story-generation-plan.md`
+- `aidlc-docs/inception/v3/plans/execution-plan.md`
 - `aidlc-docs/inception/v3/user-stories/personas.md`
 - `aidlc-docs/inception/v3/user-stories/stories.md`
 
