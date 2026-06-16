@@ -1,0 +1,48 @@
+{
+  "review_target": "aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/McpTransportAuthAdapter.lean",
+  "build_command": "lean aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/McpTransportAuthAdapter.lean",
+  "build_status": "success",
+  "lean_version": "Lean 4.31.0",
+  "sorry_count": 0,
+  "forbidden_constructs": {
+    "sorry": 0,
+    "axiom": 0,
+    "admit": 0,
+    "unsafe": 0
+  },
+  "proved_properties": [
+    "IAM role evidence alone does not resolve to a SABOROU userId",
+    "Invalid auth evidence does not resolve to a userId",
+    "Resolved identity implies Cognito JWT evidence",
+    "MCP precheck rejects IAM-role-only requests as unauthorized",
+    "Requests without identity cannot pass precheck",
+    "Cross-user resource access returns false",
+    "Resource owner access returns true",
+    "Write and external-post tools require approval",
+    "Side-effect tools without approval are rejected",
+    "Read tool with valid Cognito identity passes precheck",
+    "Safe audit event is independent of raw secret and raw args",
+    "IAM-role-only audit event has no user hash"
+  ],
+  "spec_alignment": {
+    "status": "aligned",
+    "source_documents": [
+      "aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/domain-entities.md",
+      "aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/business-rules.md",
+      "aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/business-logic-model.md"
+    ],
+    "notes": "The Lean model formalizes the U-V3-01 security invariants from Functional Design. It does not prove every TypeScript implementation line is bug-free."
+  },
+  "scores": {
+    "readability": 4,
+    "robustness": 4,
+    "completeness": 5,
+    "spec_fidelity": 4,
+    "overall": 4.25
+  },
+  "overall_verdict": "APPROVED",
+  "residual_risk": [
+    "Code Generation must preserve the Lean model when translating to TypeScript/CDK.",
+    "Future U-V3-02 tool registry implementation must add concrete tool allowlist/schema proofs or tests."
+  ]
+}

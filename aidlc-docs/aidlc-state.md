@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Units Generation 完了・承認待ち（2026-06-16）。5 Unit分解、依存関係、ストーリーマップを生成。
-- **ドキュメントバージョン**: v4.2.6-draft（2026-06-16 Units Generation complete）
+- **現在のステージ**: v3 Construction / U-V3-01 Functional Design + Lean形式検証 完了・承認待ち（2026-06-17 JST）。MCP transport/auth adapter の重要不変条件をLeanで証明。
+- **ドキュメントバージョン**: v4.2.8-draft（2026-06-17 U-V3-01 Lean formal verification）
 
 ---
 
@@ -18,7 +18,17 @@
 - [x] User Stories — 完了（2026-06-16）。3ペルソナ、9ユーザーストーリー、INVEST確認、要件/ギャップトレーサビリティを作成。ユーザー承認待ち。
 - [x] Workflow Planning — 完了（2026-06-16）。高リスクの複数パッケージ変更として、Application Design / Units Generation / Functional Design / NFR Requirements / NFR Design / Infrastructure Design / Code Generation / Build and Testを実施対象に設定。ユーザー承認済み。
 - [x] Application Design — 修正完了（2026-06-16）。AgentCore Gateway を入口にしつつ、既存 Hono JWT API を弱めない MCP Tool Adapter / Identity Resolver / allowlist Tool Registry / `@Claude` Slack Delegation を設計。ElevenLabs Dashboard登録制約に合わせ、MCP本線を `streamable_http` 第一候補、`sse` fallbackに修正。SECURITY-02/08 の設計上の解消方針を確定。ユーザー承認済み。
-- [x] Units Generation — 完了（2026-06-16）。U-V3-01〜05の5 Unit、依存関係、実装順序、US/FR/GAP/NFRトレーサビリティを作成。ユーザー承認待ち。
+- [x] Units Generation — 完了（2026-06-16）。U-V3-01〜05の5 Unit、依存関係、実装順序、US/FR/GAP/NFRトレーサビリティを作成。ユーザー承認済み。
+
+### CONSTRUCTION フェーズ（v3）
+
+#### U-V3-01: mcp-transport-auth-adapter
+- [x] Functional Design — 完了（2026-06-16）。MCP invocation / caller identity / tool context / authorization decision / audit event / safe error shape、既存JWTルート維持、IAMのみでuserId認可しないルール、監査ログ非機密化ルールを定義。ユーザー承認待ち。
+- [x] Lean Formal Verification — 完了（2026-06-17 JST）。`McpTransportAuthAdapter.lean` で IAM-only拒否、identity未解決時precheck拒否、cross-user access拒否、side-effect approval必須、audit secret/args非依存を `sorry` なしで証明。`lean` 検証成功。
+- [ ] NFR Requirements — 実施予定。Security Baseline、認証/認可、ログ、デモ可用性、テスト要件をU-V3-01向けに具体化する。
+- [ ] NFR Design — 実施予定。SECURITY-02/08の実装パターンを定義する。
+- [ ] Infrastructure Design — 実施予定。API Gateway / AgentCore Target / IAM / loggingの設計を具体化する。
+- [ ] Code Generation — 実施予定。Backend/CDK実装とテストを生成する。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -44,6 +54,13 @@
 - `aidlc-docs/inception/v3/units/unit-of-work.md`
 - `aidlc-docs/inception/v3/units/unit-of-work-dependency.md`
 - `aidlc-docs/inception/v3/units/unit-of-work-story-map.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/McpTransportAuthAdapter.lean`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/README.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/review.json`
 
 ---
 

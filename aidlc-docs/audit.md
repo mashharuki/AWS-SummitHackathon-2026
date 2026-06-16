@@ -2291,3 +2291,19 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: INCEPTION - Units Generation Part 2 completion and approval gate.
 
 ---
+
+## Construction Start and Functional Design Completion Prompt — U-V3-01
+**Timestamp**: 2026-06-16T14:58:59Z
+**User Input**: "承認します。 CONSTRUCTION PHASEに進んでください"
+**AI Response**: "Treated the request as approval of v3 Units Generation and started Construction Phase with U-V3-01 mcp-transport-auth-adapter. Read the Functional Design rule, implementation guidance, U-V3-01 unit definition, application component methods, existing backend auth middleware, AgentCore stack, and API stack. Generated `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-functional-design-plan.md` plus functional design artifacts: `domain-entities.md`, `business-rules.md`, and `business-logic-model.md`. The design preserves existing Hono JWT routes, requires Cognito-backed user identity for MCP calls, forbids IAM role identity as user authorization, defines safe error handling, and defines non-sensitive tool-call audit logging."
+**Context**: CONSTRUCTION - U-V3-01 Functional Design completion and approval gate.
+
+---
+
+## Lean Formal Verification — U-V3-01
+**Timestamp**: 2026-06-16T15:16:47Z
+**User Input**: "LeanのAgent skillを使ってロジックにバグがないことを数学的に証明して"
+**AI Response**: "Used the Lean formal verification skill plus spec-formalizer, proof-planner, and proof-reviewer guidance. Created `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/McpTransportAuthAdapter.lean`, `README.md`, and `review.json`. The Lean model proves the U-V3-01 security invariants: IAM-role-only evidence never resolves to userId, identity-less requests cannot pass precheck, cross-user resource access is rejected, side-effect tools require approval, and audit events are independent of raw secrets and raw tool arguments. Verified with `lean` on Lean 4.31.0. No `sorry`, `axiom`, `admit`, or `unsafe` constructs were found. Scope limitation: this proves the abstract Functional Design model, not every future TypeScript implementation line."
+**Context**: CONSTRUCTION - U-V3-01 Lean formal verification.
+
+---
