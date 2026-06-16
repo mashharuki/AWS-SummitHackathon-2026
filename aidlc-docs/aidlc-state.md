@@ -5,7 +5,7 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Requirements Analysis 見直し完了・承認待ち（2026-06-16）。Serena MCP併用の実コードギャップ分析を反映。
+- **現在のステージ**: v3 User Stories 完了・承認待ち（2026-06-16）。MCP音声操作とSlack `@Claude` 委譲のユーザージャーニーを定義。
 - **ドキュメントバージョン**: v4.2.1-draft（2026-06-16 MCP serverization gap analysis）
 
 ---
@@ -15,7 +15,7 @@
 ### INCEPTION フェーズ（v3: SABOROU MCP Serverization）
 - [x] Workspace Detection — 完了（2026-06-16）。Brownfield 判定。既存v2成果物と実装を確認。
 - [x] Requirements Analysis — 見直し完了（2026-06-16）。AgentCore Gateway本命、既存API全体のMCPツール化、`@Claude` タスク実行依頼フロー、実AWS/AgentCore/ElevenLabs検証を定義。Serena MCP併用の実コード照合でGAP-V3-01〜08を追加。SECURITY-02/08はApplication Designで解消必須のBlocking Gap。ユーザー承認待ち。
-- [ ] User Stories — 条件付き。音声Agentからのユーザー操作フローに影響するため、Requirements承認後に実施要否を判断。
+- [x] User Stories — 完了（2026-06-16）。3ペルソナ、9ユーザーストーリー、INVEST確認、要件/ギャップトレーサビリティを作成。ユーザー承認待ち。
 - [ ] Workflow Planning — 未着手。
 - [ ] Application Design — 条件付き。MCPサーバー方式の選択結果に応じて実施。
 - [ ] Units Generation — 条件付き。複数パッケージ変更の場合に実施。
@@ -29,6 +29,10 @@
 ### v3 成果物ディレクトリ
 - `aidlc-docs/inception/v3/requirements/requirement-verification-questions.md`
 - `aidlc-docs/inception/v3/requirements/requirements.md`
+- `aidlc-docs/inception/v3/plans/user-stories-assessment.md`
+- `aidlc-docs/inception/v3/plans/story-generation-plan.md`
+- `aidlc-docs/inception/v3/user-stories/personas.md`
+- `aidlc-docs/inception/v3/user-stories/stories.md`
 
 ---
 
