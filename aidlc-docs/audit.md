@@ -2259,3 +2259,19 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: INCEPTION - Workflow Planning completion and approval gate.
 
 ---
+
+## Application Design Completion Prompt — SABOROU MCP Serverization
+**Timestamp**: 2026-06-16T14:33:45Z
+**User Input**: "承認します。 Application Design に進んでください"
+**AI Response**: "Generated v3 Application Design artifacts: `aidlc-docs/inception/v3/plans/application-design-plan.md`, `aidlc-docs/inception/v3/application-design/components.md`, `component-methods.md`, `services.md`, `component-dependency.md`, and `application-design.md`. The design introduces an MCP Tool Adapter boundary, MCP Identity Resolver, allowlist-based Tool Registry, Slack Delegation Service for `@Claude`, Voice Tool Client alignment, and verification harness. It preserves the existing direct Hono JWT API fallback, avoids weakening user authorization for AgentCore calls, and defines design-level resolution for SECURITY-02 and SECURITY-08. Presenting Application Design review gate before Units Generation."
+**Context**: INCEPTION - Application Design completion and approval gate.
+
+---
+
+## Application Design Revision — ElevenLabs MCP Transport
+**Timestamp**: 2026-06-16T14:41:06Z
+**User Input**: "11Elevenlabのダッシュボードから登録できるMCPのタイプは sse か ストリーム可能なHTTPのどちらかです。"
+**AI Response**: "Updated v3 Requirements, Application Design, Services, Components, Component Methods, Component Dependencies, Execution Plan, and AI-DLC state to reflect the ElevenLabs Dashboard MCP registration constraint. The primary MCP path is now `streamable_http`; `sse` is retained as a fallback bridge option if compatibility testing requires it. Browser `clientTools` are no longer treated as the primary MCP path and are limited to fallback/UI support."
+**Context**: INCEPTION - Application Design revision based on user-provided ElevenLabs Dashboard constraint.
+
+---

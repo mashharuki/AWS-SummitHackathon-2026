@@ -136,7 +136,9 @@ ElevenLabs Agentの会話フローからSABOROU MCPツールを呼び出せる�
 - Agentが `saborou_judge_sabori` を呼び、返信ドラフトを提示できる
 - Agentがユーザー承認後に `saborou_send_slack_reply` を呼べる
 - 拡張側の仮想RESTパス `/mcp/tools/...` と、AgentCore Gatewayの実MCP呼び出し方式の差分が解消される
-- ElevenLabs Agentが直接MCPサーバー登録で呼ぶ方式と、拡張の `clientTools` が中継する方式のどちらを採用するかをApplication Designで確定する
+- ElevenLabs Dashboardに登録できるMCP server typeは `sse` または `streamable_http` であるため、SABOROU MCP endpointはこのどちらかで公開される
+- 採用候補は `streamable_http` を第一候補、AgentCore GatewayまたはElevenLabs実接続で互換性問題がある場合のみ `sse` bridgeを代替候補とする
+- 拡張の `clientTools` はMCP本線ではなく、実MCP経路が使えない場合の既存Hono API fallbackまたはUI補助に限定される
 - MCP経路が使えない場合の既存Hono APIフォールバック方針が文書化される
 
 ### FR-V3-04: `@Claude` タスク実行依頼フロー
@@ -251,7 +253,7 @@ AgentCore GatewayがMCP tool callを受けた後、Hono APIへ安全にユーザ
 - AgentCore用OpenAPI schemaの対象operation allowlistテストを追加する
 - AgentCore用OpenAPI schemaとバックエンド実ルートの同期テストを追加する
 - AgentCore Gateway CDK synthテストを維持・拡張する
-- 拡張のclientToolsまたはMCP接続経路のテストを追加する。仮想 `/mcp/tools/...` パスを使う場合は、実Gatewayで成立することを統合テストで確認する
+- ElevenLabs Dashboard登録方式として `streamable_http` の実接続テストを追加する。互換性問題で `sse` bridgeを採用する場合は、同じTool Adapterに到達することを統合テストで確認する
 - 実AWS/AgentCore/ElevenLabs接続の手動検証手順を作成する
 
 ---

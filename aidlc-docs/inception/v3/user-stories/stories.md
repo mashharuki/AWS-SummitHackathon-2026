@@ -109,12 +109,12 @@ P-V3-02 として、MCP公開対象APIがコードとOpenAPIスキーマでズ�
 
 ## US-V3-08: ElevenLabs Agentから実MCP経路で呼び出す
 
-P-V3-02 として、ElevenLabs AgentからAgentCore Gatewayの実MCPツールを呼べることを検証したい。なぜなら、拡張側の仮想 `/mcp/tools/...` 呼び出しだけでは本番デモの動作保証にならないから。
+P-V3-02 として、ElevenLabs AgentからDashboard登録済みのSABOROU MCPサーバーを呼べることを検証したい。なぜなら、拡張側の仮想 `/mcp/tools/...` 呼び出しやブラウザ `clientTools` だけでは本番デモの動作保証にならないから。
 
 **Acceptance Criteria**:
 
-- [ ] Given AgentCore Gateway URLがある, When ElevenLabs Agent設定に登録する, Then `saborou_get_tasks` を実MCP経路で呼べる。
-- [ ] Given 拡張 `clientTools` 中継方式を採用する, When Application Designで方式を決める, Then 実Gatewayで成立するHTTP/MCPプロトコルが明記される。
+- [ ] Given SABOROU MCP endpointがある, When ElevenLabs Dashboardに `streamable_http` として登録する, Then `saborou_get_tasks` を実MCP経路で呼べる。
+- [ ] Given `streamable_http` 互換性が実検証で成立しない, When fallback設計を選ぶ, Then 同じTool Adapterを利用する `sse` bridgeで登録できる。
 - [ ] Given MCP経路が失敗する, When fallbackが発動する, Then Hono API直接呼び出しでデモ継続できる。
 
 **Traceability**: FR-V3-03, GAP-V3-05, GAP-V3-08

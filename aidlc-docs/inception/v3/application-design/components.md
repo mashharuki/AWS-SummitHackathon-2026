@@ -155,17 +155,17 @@
 
 ## C-V3-06: VoiceToolClient
 
-**責務**: Chrome拡張のElevenLabs `clientTools` とSABOROU API/MCP tool contractsを接続し、実MCP経路とHono fallbackを扱う。
+**責務**: Chrome拡張のElevenLabs `clientTools` をMCP本線から外し、UI補助または既存Hono fallbackとして扱う。MCP本線はElevenLabs Dashboardに登録する `streamable_http` または `sse` のリモートMCPサーバーとする。
 
 **入力**:
 
-- Tool call from ElevenLabs SDK
+- Fallback/UI tool call from ElevenLabs SDK or extension UI
 - Cognito JWT from extension auth
 - Current Slack/task context
 
 **出力**:
 
-- Tool result JSON string to ElevenLabs
+- Fallback tool result JSON string to extension UI or ElevenLabs clientTools
 - UI state updates
 
 **依存コンポーネント**:
@@ -176,7 +176,8 @@
 
 **AWSサービスマッピング**:
 
-- AgentCore Gateway endpoint
+- Registered SABOROU MCP endpoint: `streamable_http` primary, `sse` fallback
+- AgentCore Gateway endpoint or SSE bridge endpoint
 - Existing API Gateway endpoint
 
 ---

@@ -206,7 +206,7 @@ Formal unit definitions will be created in Units Generation. Current provisional
 | 1 | U-V3-01 agentcore-auth-path | `pkgs/cdk`, `pkgs/backend` | Resolve Gateway to Hono user identity and authorization |
 | 2 | U-V3-02 mcp-openapi-schema | `pkgs/cdk`, `pkgs/backend` | Expand/sync AgentCore schema and add allowlist tests |
 | 3 | U-V3-03 claude-delegation-api | `pkgs/backend`, `pkgs/agent` | Add Slack `@Claude` delegation endpoint/tool |
-| 4 | U-V3-04 extension-voice-tools | `pkgs/extension` | Align ElevenLabs clientTools/fallback with server contracts |
+| 4 | U-V3-04 elevenlabs-mcp-registration | `pkgs/extension`, `pkgs/cdk`, docs | Register SABOROU MCP as ElevenLabs `streamable_http` primary or `sse` fallback; keep clientTools as fallback/UI support |
 | 5 | U-V3-05 integration-verification | all affected packages + docs | Build/test, deploy verification, real AgentCore/ElevenLabs/Slack guide |
 
 ---
@@ -225,7 +225,7 @@ Formal unit definitions will be created in Units Generation. Current provisional
 - Gateway to Hono API preserves per-user authorization.
 - MCP tool allowlist includes required voice-callable APIs and excludes OAuth/webhook/health/internal routes.
 - `@Claude` delegation posts only after explicit approval.
-- Extension/ElevenLabs flow can call read-only and side-effect tools safely.
+- ElevenLabs Dashboard can register SABOROU MCP as `streamable_http` or `sse`, and the registered flow can call read-only and side-effect tools safely.
 - Existing Hono direct API fallback remains usable.
 - Required package tests, typechecks, builds, CDK tests/synth, and documented real connection verification are complete.
 

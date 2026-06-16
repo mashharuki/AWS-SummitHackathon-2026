@@ -53,3 +53,11 @@ Application Designは実施する。追加質問は作成しない。理由は�
 This plan proceeds from the approved Workflow Planning request.
 
 [Answer]: Approved by user request to proceed to Application Design.
+
+---
+
+## Revision Checklist
+
+- [x] Revision 1: Reflect ElevenLabs Dashboard MCP server type constraint.
+- [x] Revision 1: Constrain remote MCP transport to `streamable_http` or `sse`.
+- [x] Revision 1: Clarify that extension `clientTools` is fallback/UI support, not the primary MCP path.

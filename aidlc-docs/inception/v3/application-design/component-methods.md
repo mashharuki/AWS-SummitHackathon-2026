@@ -125,13 +125,13 @@ interface SlackDelegationService {
 
 ```typescript
 interface VoiceToolClient {
-  callTool(toolName: McpToolName, args: unknown, jwt: string): Promise<unknown>;
-  callGatewayTool(toolName: McpToolName, args: unknown, jwt: string): Promise<unknown>;
+  callFallbackTool(toolName: McpToolName, args: unknown, jwt: string): Promise<unknown>;
   callHonoFallback(toolName: McpToolName, args: unknown, jwt: string): Promise<unknown>;
+  getRegisteredMcpTransport(): "streamable_http" | "sse" | "none";
 }
 ```
 
-**Purpose**: Replace pseudo-MCP assumptions with an explicit true Gateway path plus direct Hono fallback.
+**Purpose**: Keep Chrome extension tooling as fallback/UI support while the primary MCP path is registered in ElevenLabs Dashboard as `streamable_http` or `sse`.
 
 ---
 
@@ -140,6 +140,7 @@ interface VoiceToolClient {
 ```typescript
 interface McpVerificationHarness {
   verifyGatewayTargetActive(gatewayIdentifier: string): Promise<void>;
+  verifyElevenLabsMcpRegistration(transport: "streamable_http" | "sse"): Promise<void>;
   verifyToolCall(toolName: McpToolName, args: unknown): Promise<void>;
   verifyElevenLabsTaskReadout(): Promise<void>;
   verifySlackDelegation(): Promise<void>;

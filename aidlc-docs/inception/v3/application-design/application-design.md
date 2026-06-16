@@ -52,6 +52,14 @@ Read tools can execute after authentication. Side-effect tools require explicit 
 
 **Reason**: Slack posting, Slack sync, Google/Gmail fetch, and `@Claude` delegation can alter external state or expose information.
 
+### DD-V3-06: Expose SABOROU MCP as Streamable HTTP or SSE for ElevenLabs
+
+The ElevenLabs Dashboard can register remote MCP servers only as `sse` or `streamable_http`. SABOROU therefore must not rely on a pseudo `/mcp/tools/...` REST path or browser `clientTools` as the primary MCP integration.
+
+**Decision**: Use `streamable_http` as the first implementation target. If AgentCore Gateway and ElevenLabs Dashboard compatibility cannot be proven in real verification, introduce an `sse` bridge endpoint that fronts the same MCP Tool Adapter and Tool Registry.
+
+**Reason**: This matches the actual ElevenLabs registration surface and keeps the server-side MCP contract independent from the Chrome extension runtime.
+
 ---
 
 ## SECURITY Blocking Gap Resolution

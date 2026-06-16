@@ -94,16 +94,24 @@
 
 ---
 
-## S-V3-05: Voice Agent Tool Service
+## S-V3-05: ElevenLabs Remote MCP Registration Service
 
-**種別**: Chrome extension / ElevenLabs clientTools
+**種別**: ElevenLabs Dashboard remote MCP server registration
 
 **責務**:
 
-- Register read and write tool handlers with ElevenLabs.
-- Attach Cognito JWT only to SABOROU API/MCP calls, never to ElevenLabs WebSocket auth.
-- Prefer real AgentCore path when verified.
-- Keep Hono direct fallback for demo resilience.
+- Register SABOROU MCP server as `streamable_http` or `sse`.
+- Prefer `streamable_http` when AgentCore Gateway and ElevenLabs verification proves compatibility.
+- Use an `sse` bridge only if `streamable_http` compatibility is blocked.
+- Keep browser `clientTools` out of the primary MCP path; reserve them for UI support or Hono fallback.
+- Attach Cognito/JWT context only to SABOROU MCP/API calls, never to ElevenLabs conversation transport auth.
+
+**Transport Decision**:
+
+| Transport | Priority | Use When |
+|-----------|----------|----------|
+| `streamable_http` | Primary | AgentCore Gateway can be registered and invoked directly from ElevenLabs Dashboard. |
+| `sse` | Fallback | Dashboard requires SSE behavior or AgentCore Streamable HTTP compatibility is not proven. |
 
 ---
 
@@ -116,5 +124,7 @@
 - Verify CDK synth and stack outputs.
 - Verify AgentCore Gateway target is active.
 - Verify selected MCP tools with real credentials.
-- Verify ElevenLabs Agent conversation calls SABOROU tools.
+- Verify ElevenLabs Dashboard registration with `streamable_http`.
+- Verify `sse` bridge only if selected by compatibility testing.
+- Verify ElevenLabs Agent conversation calls SABOROU tools through the registered MCP server.
 - Verify Slack reply and `@Claude` delegation in a test channel.
