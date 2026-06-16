@@ -5,8 +5,20 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v2 Construction 追加 Unit「Chrome Notifications」完了（2026-06-15）。拡張168テスト・全体1,559テスト本体通過。
-- **ドキュメントバージョン**: v4.1.0（2026-06-15 Chrome通知機能追加）
+- **現在のステージ**: v3 Requirements Analysis 進行中（2026-06-16）。SABOROU APIサーバーMCP化 / ElevenLabs AgentからのSABOROU機能呼び出し追加開発。
+- **ドキュメントバージョン**: v4.2.0-draft（2026-06-16 MCP serverization requirements）
+
+---
+
+## v3 追加開発状態（2026-06-16〜）
+
+### INCEPTION フェーズ（v3: SABOROU MCP Serverization）
+- [x] Workspace Detection — 完了（2026-06-16）。Brownfield 判定。既存v2成果物と実装を確認。
+- [ ] Requirements Analysis — 進行中。質問ファイル `aidlc-docs/inception/v3/requirements/requirement-verification-questions.md` 作成済み。ユーザー回答待ち。
+- [ ] User Stories — 条件付き。音声Agentからのユーザー操作フローに影響するため、Requirements承認後に実施要否を判断。
+- [ ] Workflow Planning — 未着手。
+- [ ] Application Design — 条件付き。MCPサーバー方式の選択結果に応じて実施。
+- [ ] Units Generation — 条件付き。複数パッケージ変更の場合に実施。
 
 ---
 

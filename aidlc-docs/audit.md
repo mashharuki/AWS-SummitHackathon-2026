@@ -2179,3 +2179,19 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: Chrome Manifest V3のCSPを緩和せず、ElevenLabs音声入出力用AudioWorkletを拡張自身のオリジンからロードする互換対応。
 
 ---
+
+## AI-DLC Workflow Start — SABOROU MCP Serverization
+**Timestamp**: 2026-06-16T13:49:47Z
+**User Input**: "昨日あなたに修正していただいたおかげで11Elevenlab SDKのAgentとの呼び出しを行うことができました。しかし、まだSABOROUのAPIサーバーをMCPサーバー化していないため音声からSABOROUの機能を呼び出す部分が実装できていません。その部分の実装をAI-DLCで進めたいです"
+**AI Response**: "AI-DLC workflow requested. Loaded common process, session continuity, content validation, question format, welcome message, workspace detection, and extension opt-in prompts. Existing AI-DLC project detected; workspace is brownfield with pnpm monorepo packages pkgs/backend, pkgs/extension, pkgs/agent, pkgs/cdk, pkgs/frontend, pkgs/shared. Existing v2 artifacts and state show voice/AgentCore Gateway work completed, but user reports SABOROU API server itself is not yet MCP-serverized; proceeding to Requirements Analysis with focused clarification."
+**Context**: INCEPTION - Workspace Detection and Requirements Analysis start for additional MCP serverization unit.
+
+---
+
+## Requirements Analysis Question Prompt — SABOROU MCP Serverization
+**Timestamp**: 2026-06-16T13:52:52Z
+**User Input**: "昨日あなたに修正していただいたおかげで11Elevenlab SDKのAgentとの呼び出しを行うことができました。しかし、まだSABOROUのAPIサーバーをMCPサーバー化していないため音声からSABOROUの機能を呼び出す部分が実装できていません。その部分の実装をAI-DLCで進めたいです"
+**AI Response**: "Created `aidlc-docs/inception/v3/requirements/requirement-verification-questions.md` with seven focused questions covering MCP implementation approach, MVP tool scope, authentication, demo completion scenario, Security Baseline opt-in, Property-Based Testing opt-in, and verification depth. Updated `aidlc-docs/aidlc-state.md` to mark v3 Workspace Detection complete and v3 Requirements Analysis in progress. Awaiting user answers before generating requirements."
+**Context**: INCEPTION - Requirements Analysis Step 6 question file gate.
+
+---
