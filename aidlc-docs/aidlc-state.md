@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-03 NFR Design 完了・承認待ち（2026-06-17 JST）。Slack `@Claude` delegation のapproval-first guard、schema validation、safe Slack post、error mapper、audit envelope、registry transition patternsを作成。
-- **ドキュメントバージョン**: v4.2.22-draft（2026-06-17 U-V3-03 NFR Design）
+- **現在のステージ**: v3 Construction / U-V3-03 Code Generation Part 1 計画完了・承認待ち（2026-06-17 JST）。Infrastructure Designは新規AWS/IAM/env/secret/persistenceなしのためスキップ判定。SlackDelegationService / route / MCP dispatch / OpenAPI / tests の実装計画を作成。アプリケーションコードは未変更。
+- **ドキュメントバージョン**: v4.2.23-draft（2026-06-17 U-V3-03 Code Generation Planning）
 
 ---
 
@@ -40,9 +40,9 @@
 #### U-V3-03: slack-claude-delegation
 - [x] Functional Design — 完了（2026-06-17 JST）。`saborou_delegate_to_claude` contract、approval gating、task ownership、delegation message、safe Slack error handling、audit boundariesを定義。ユーザー承認済み。
 - [x] NFR Requirements — 完了（2026-06-17 JST）。Slack side effect、secret handling、safe logging、authorization、safe error handling、performance、reliability、testability要件とtech stack decisionsを定義。ユーザー承認済み。
-- [x] NFR Design — 完了・承認待ち（2026-06-17 JST）。Approval-first guard、context-derived identity、schema-first input、deterministic message builder、secret-safe Slack boundary、safe error mapper、safe audit envelope、registry reserved-to-implemented transitionを定義。
-- [ ] Infrastructure Design — 条件付き。IAM/env/Secrets/CDK変更の要否をNFR Design後に判定する。
-- [ ] Code Generation — 実施予定。Backend/agent code and testsを生成する。
+- [x] NFR Design — 完了（2026-06-17 JST）。Approval-first guard、context-derived identity、schema-first input、deterministic message builder、secret-safe Slack boundary、safe error mapper、safe audit envelope、registry reserved-to-implemented transitionを定義。ユーザー承認済み。
+- [x] Infrastructure Design — スキップ（2026-06-17 JST）。新規AWSリソース、IAM、env、Secrets Manager secret、queue/cache/table/API Gateway construct、network componentが不要なため。再オープン条件をdecision artifactに記録。
+- [ ] Code Generation — Part 1 計画完了・承認待ち（2026-06-17 JST）。SlackDelegationService、`POST /api/slack/delegations`、`saborou_delegate_to_claude` schema/registry/dispatch/OpenAPI/tests/code summaryの実装計画を作成。アプリケーションコードは未変更。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -111,6 +111,8 @@
 - `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-nfr-design-plan.md`
 - `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-design/nfr-design-patterns.md`
 - `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-design/logical-components.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/infrastructure-design/infrastructure-design-decision.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-code-generation-plan.md`
 
 ---
 
