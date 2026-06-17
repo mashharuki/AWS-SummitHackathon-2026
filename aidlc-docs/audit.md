@@ -2,6 +2,22 @@
 
 ---
 
+## U-V3-05 NFR Design 完了（承認待ち）
+**Timestamp**: 2026-06-17T15:45:00Z
+**User Input**: "(NFR Design 自動実行中)"
+**AI Response**: "U-V3-05 NFR Design 完了。5 パターン（Verification Evidence Pattern / Env-Safe Script Pattern / Troubleshooting Matrix Pattern / Fallback Runbook Pattern / Demo Reset Script Pattern）と 5 論理コンポーネント（LC-V305-01 Verification Script Suite / LC-V305-02 Evidence Store / LC-V305-03 Troubleshooting Matrix / LC-V305-04 Demo Runbook / LC-V305-05 CI Verification Gate）を定義。Security Baseline: SB-02/05/06/08/09 準拠・ブロッキングファインディングなし。成果物: nfr-design-patterns.md / logical-components.md。"
+**Context**: CONSTRUCTION / U-V3-05 NFR Design / completion and approval gate
+
+---
+
+## U-V3-05 NFR Requirements — ユーザー承認 (B)
+**Timestamp**: 2026-06-17T15:30:00Z
+**User Input**: "B"
+**AI Response**: "U-V3-05 NFR Requirements を B で承認。aidlc-state.md を更新し U-V3-05 NFR Requirements を完了済みにマーク。次に U-V3-05 NFR Design を実行する。NFR Design では Verification Evidence Pattern / Safe Script Pattern / Troubleshooting Matrix Pattern / Fallback Runbook Pattern / Demo Reset Pattern の 5 パターンと論理コンポーネントを定義する。"
+**Context**: CONSTRUCTION / U-V3-05 NFR Requirements / user approval (B) → NFR Design start
+
+---
+
 ## U-V3-05 NFR Requirements 完了（承認待ち）
 **Timestamp**: 2026-06-17T15:15:00Z
 **User Input**: "(NFR Requirements 自動実行中)"

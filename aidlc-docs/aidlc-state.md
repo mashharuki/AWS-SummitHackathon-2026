@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-05 real-integration-verification / NFR Requirements（2026-06-17 JST）。U-V3-04 Code Generation をBで承認。Extension 187テスト全パス・CDK 90テスト全パス。
-- **ドキュメントバージョン**: v4.2.27-draft（2026-06-17 U-V3-04 NFR Design）
+- **現在のステージ**: v3 Construction / U-V3-05 real-integration-verification / NFR Design（2026-06-17 JST）。U-V3-05 NFR Requirements をBで承認。
+- **ドキュメントバージョン**: v4.2.28-draft（2026-06-17 U-V3-05 NFR Design）
 
 ---
 
@@ -53,8 +53,8 @@
 
 #### U-V3-05: real-integration-verification
 - [x] Functional Design — スキップ（新規ドメインロジック追加なし。統合検証Unitのため）
-- [x] NFR Requirements — 完了（2026-06-17 JST）。信頼性（R1〜R4）・観測性（O1〜O3）・手動E2E証拠（E1〜E4）・デモ可用性（A1〜A2）・保守性（M1〜M2）の15要件を定義。Security Baseline適用ルール確認・ブロッキングファインディングなし。ユーザー承認待ち。
-- [ ] NFR Design — 未開始
+- [x] NFR Requirements — 完了（2026-06-17 JST）。信頼性（R1〜R4）・観測性（O1〜O3）・手動E2E証拠（E1〜E4）・デモ可用性（A1〜A2）・保守性（M1〜M2）の15要件を定義。Security Baseline適用ルール確認・ブロッキングファインディングなし。ユーザー承認済み（B）。
+- [x] NFR Design — 完了（2026-06-17 JST）。Verification Evidence Pattern / Safe Script Pattern / Troubleshooting Matrix Pattern / Fallback Runbook Pattern / Demo Reset Script Pattern の5パターンと論理コンポーネント（verification-scripts/evidence-store/demo-reset/troubleshooting-matrix/demo-runbook）を定義。ユーザー承認待ち。
 - [ ] Infrastructure Design — 条件付き（デプロイ/出力変更が必要な場合に実行）
 - [ ] Code Generation — 未開始
 
@@ -145,6 +145,9 @@
 - `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-nfr-requirements-plan.md`
 - `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-requirements/nfr-requirements.md`
 - `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-design/logical-components.md`
 
 ---
 
