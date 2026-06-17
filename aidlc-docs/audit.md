@@ -2451,3 +2451,10 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: CONSTRUCTION / U-V3-03 Code Generation / completion and review handoff
 
 ---
+## U-V3-04 Functional Design
+**Timestamp**: 2026-06-17T13:36:44Z
+**User Input**: "proceed to U-V3-04 / next construction stage"
+**AI Response**: "Recorded U-V3-03 Code Generation approval and proceeded to U-V3-04 Functional Design. Loaded U-V3-04 unit definition, story map, v3 requirements, application design decisions, Functional Design rules, content validation rules, AIDLC workflow guidance, active Security Baseline context, and extension voice integration context. Generated the U-V3-04 Functional Design plan plus domain entities, business rules, business logic model, and frontend component state design. Updated aidlc-state.md to mark U-V3-04 Functional Design complete and awaiting approval."
+**Context**: CONSTRUCTION / transition from U-V3-03 Code Generation to U-V3-04 Functional Design
+
+---

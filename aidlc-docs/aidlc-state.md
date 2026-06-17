@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-03 Code Generation 完了・ユーザーレビュー待ち（2026-06-17 JST）。SlackDelegationService / `POST /api/slack/delegations` / MCP dispatch / OpenAPI / tests を実装。Backend 437 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。
-- **ドキュメントバージョン**: v4.2.24-draft（2026-06-17 U-V3-03 Code Generation Complete）
+- **現在のステージ**: v3 Construction / U-V3-04 Functional Design 完了・承認待ち（2026-06-17 JST）。ElevenLabs Dashboard remote MCP registration、`streamable_http` primary、`sse` conditional fallback、browser `clientTools` fallback、direct Hono fallback、secret-safe setup stateを定義。
+- **ドキュメントバージョン**: v4.2.25-draft（2026-06-17 U-V3-04 Functional Design）
 
 ---
 
@@ -42,7 +42,14 @@
 - [x] NFR Requirements — 完了（2026-06-17 JST）。Slack side effect、secret handling、safe logging、authorization、safe error handling、performance、reliability、testability要件とtech stack decisionsを定義。ユーザー承認済み。
 - [x] NFR Design — 完了（2026-06-17 JST）。Approval-first guard、context-derived identity、schema-first input、deterministic message builder、secret-safe Slack boundary、safe error mapper、safe audit envelope、registry reserved-to-implemented transitionを定義。ユーザー承認済み。
 - [x] Infrastructure Design — スキップ（2026-06-17 JST）。新規AWSリソース、IAM、env、Secrets Manager secret、queue/cache/table/API Gateway construct、network componentが不要なため。再オープン条件をdecision artifactに記録。
-- [x] Code Generation — 完了・ユーザーレビュー待ち（2026-06-17 JST）。SlackDelegationService、`POST /api/slack/delegations`、`saborou_delegate_to_claude` schema/registry/dispatch/OpenAPI/tests/code summaryを生成。Backend 437 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。
+- [x] Code Generation — 完了（2026-06-17 JST）。SlackDelegationService、`POST /api/slack/delegations`、`saborou_delegate_to_claude` schema/registry/dispatch/OpenAPI/tests/code summaryを生成。Backend 437 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。ユーザー承認済み。
+
+#### U-V3-04: elevenlabs-registration-fallback
+- [x] Functional Design — 完了・承認待ち（2026-06-17 JST）。ElevenLabs Dashboard remote MCP registrationをprimary pathとして定義し、`streamable_http` first、`sse` verification-only fallback、browser `clientTools` fallback/UI support、direct Hono fallback、pseudo `/mcp/tools/...` neutralization、secret-safe setup stateを設計。
+- [ ] NFR Requirements — 実施予定。Demo availability、auth-token separation、secret-safe browser config/logging、transport fallback reliabilityを評価する。
+- [ ] NFR Design — 実施予定。Remote MCP primary / fallback decision / safe config / safe diagnosticsの具体パターンを定義する。
+- [ ] Infrastructure Design — 条件付き。`sse` bridge、新規endpoint、CDK output、Gateway registration artifactが必要な場合のみ実行する。
+- [ ] Code Generation — 実施予定。Extension/config/docs/testsを生成し、pseudo AgentCore REST path assumptionを除去または中立化する。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -114,6 +121,11 @@
 - `aidlc-docs/construction/u-v3-03-slack-claude-delegation/infrastructure-design/infrastructure-design-decision.md`
 - `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-code-generation-plan.md`
 - `aidlc-docs/construction/u-v3-03-slack-claude-delegation/code/code-generation-summary.md`
+- `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/frontend-components.md`
 
 ---
 
