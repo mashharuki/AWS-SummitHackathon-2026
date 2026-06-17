@@ -2465,3 +2465,10 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: CONSTRUCTION / U-V3-04 NFR Requirements / completion and review handoff
 
 ---
+## U-V3-04 NFR Design
+**Timestamp**: 2026-06-17T13:43:07Z
+**User Input**: "NFR Designに進んでください"
+**AI Response**: "Recorded U-V3-04 NFR Requirements approval and proceeded to U-V3-04 NFR Design. Loaded NFR Design rules, U-V3-04 NFR Requirements, tech stack decisions, Functional Design context, and active Security Baseline. Generated the NFR Design plan, design patterns, and logical components. The design defines Remote MCP Primary Registration, Conditional SSE Fallback Gate, Explicit Fallback Mode Boundary, Secret-Safe Configuration View, Server-Side Authorization Preservation, Bounded Failure and Retry Policy, Safe Diagnostic Taxonomy, Registry-Backed Setup Artifact, and Verification Handoff Contract. Security Baseline applicable rules have no blocking findings."
+**Context**: CONSTRUCTION / U-V3-04 NFR Design / completion and review handoff
+
+---

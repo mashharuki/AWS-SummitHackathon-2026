@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-04 NFR Requirements 完了・承認待ち（2026-06-17 JST）。Secret-safe browser configuration、primary/fallback boundary integrity、authorization preservation、demo availability、safe observability、maintainability、test coverage、tech stack decisionsを定義。
-- **ドキュメントバージョン**: v4.2.26-draft（2026-06-17 U-V3-04 NFR Requirements）
+- **現在のステージ**: v3 Construction / U-V3-04 NFR Design 完了・承認待ち（2026-06-17 JST）。Remote MCP primary registration、conditional SSE fallback gate、explicit fallback mode boundary、secret-safe config view、server-side authorization preservation、bounded failure policy、safe diagnostics、registry-backed setup artifact、verification handoffを設計。
+- **ドキュメントバージョン**: v4.2.27-draft（2026-06-17 U-V3-04 NFR Design）
 
 ---
 
@@ -46,8 +46,8 @@
 
 #### U-V3-04: elevenlabs-registration-fallback
 - [x] Functional Design — 完了（2026-06-17 JST）。ElevenLabs Dashboard remote MCP registrationをprimary pathとして定義し、`streamable_http` first、`sse` verification-only fallback、browser `clientTools` fallback/UI support、direct Hono fallback、pseudo `/mcp/tools/...` neutralization、secret-safe setup stateを設計。ユーザー承認済み。
-- [x] NFR Requirements — 完了・承認待ち（2026-06-17 JST）。Secret-safe browser configuration、primary/fallback boundary integrity、authorization preservation、demo availability、latency/user feedback、observability/troubleshooting、maintainability、test coverage、tech stack decisionsを定義。Security Baseline applicable rulesはblocking findingsなし。
-- [ ] NFR Design — 実施予定。Remote MCP primary / fallback decision / safe config / safe diagnosticsの具体パターンを定義する。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Secret-safe browser configuration、primary/fallback boundary integrity、authorization preservation、demo availability、latency/user feedback、observability/troubleshooting、maintainability、test coverage、tech stack decisionsを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
+- [x] NFR Design — 完了・承認待ち（2026-06-17 JST）。Remote MCP primary registration、conditional SSE fallback gate、explicit fallback mode boundary、secret-safe config view、server-side authorization preservation、bounded failure and retry policy、safe diagnostic taxonomy、registry-backed setup artifact、verification handoff contractを定義。Security Baseline applicable rulesはblocking findingsなし。
 - [ ] Infrastructure Design — 条件付き。`sse` bridge、新規endpoint、CDK output、Gateway registration artifactが必要な場合のみ実行する。
 - [ ] Code Generation — 実施予定。Extension/config/docs/testsを生成し、pseudo AgentCore REST path assumptionを除去または中立化する。
 
@@ -129,6 +129,9 @@
 - `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-nfr-requirements-plan.md`
 - `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-requirements/nfr-requirements.md`
 - `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-design/logical-components.md`
 
 ---
 
