@@ -130,7 +130,8 @@ export const MCP_TOOL_REGISTRY = [
   {
     name: "saborou_delegate_to_claude",
     effect: "side_effect",
-    description: "Delegate an approved SABOROU task to Slack's Claude participant.",
+    description:
+      "Delegate an approved SABOROU task to Slack's Claude participant.",
     http: { method: "POST", path: "/api/slack/delegations" },
     schema: {
       input: "saborou_delegate_to_claude",

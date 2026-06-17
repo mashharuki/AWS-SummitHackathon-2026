@@ -135,7 +135,10 @@ export class SlackDelegationService {
         status = "forbidden";
       } else if (error instanceof NotFoundError) {
         status = "task_not_found";
-      } else if (error instanceof AppError && error.code === "SLACK_API_ERROR") {
+      } else if (
+        error instanceof AppError &&
+        error.code === "SLACK_API_ERROR"
+      ) {
         status = "slack_api_error";
       }
 

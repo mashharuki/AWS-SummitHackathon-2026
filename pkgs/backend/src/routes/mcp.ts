@@ -90,10 +90,7 @@ export function createMcpRoute(options: CreateMcpRouteOptions = {}) {
       if (error instanceof AppError) {
         const safe = mapAppErrorToMcpError(error);
         status = mapPrecheckCodeToAuditStatus(safe.code);
-        return c.json(
-          toSafeError(safe.code, safe.message),
-          safe.statusCode,
-        );
+        return c.json(toSafeError(safe.code, safe.message), safe.statusCode);
       }
 
       status = "tool_error";

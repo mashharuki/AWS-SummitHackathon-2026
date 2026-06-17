@@ -64,8 +64,18 @@ const SlackReplySchema = z.object({
 });
 
 const SlackClaudeDelegationSchema = z.object({
-  taskId: z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9:_./-]+$/),
-  channelId: z.string().trim().min(1).max(80).regex(/^[A-Z0-9][A-Z0-9_-]*$/),
+  taskId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Za-z0-9:_./-]+$/),
+  channelId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[A-Z0-9][A-Z0-9_-]*$/),
   threadTs: z
     .string()
     .trim()

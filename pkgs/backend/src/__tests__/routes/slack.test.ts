@@ -476,7 +476,9 @@ describe("POST /api/slack/delegations", () => {
       }),
     );
     expect(mockPostMessage.mock.calls[0][0].text).toContain("@Claude");
-    expect(mockPostMessage.mock.calls[0][0].text).toContain("決勝デモの台本作成");
+    expect(mockPostMessage.mock.calls[0][0].text).toContain(
+      "決勝デモの台本作成",
+    );
   });
 
   it("returns 403 and does not touch Slack when approval is missing", async () => {

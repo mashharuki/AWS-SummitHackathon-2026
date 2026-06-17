@@ -25,6 +25,7 @@
       "**/aidlc-docs",
       "**/aidlc-inputs",
       "**/.claude/**",
+      "**/.agents/**",
       "**/.github/**",
       "**/.vscode/**",
       "**/.serena/**",

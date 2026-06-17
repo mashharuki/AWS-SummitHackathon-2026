@@ -150,7 +150,9 @@ describe("SlackDelegationService", () => {
         createSlackClient: () => ({
           postMessage: vi
             .fn()
-            .mockRejectedValue(new SlackApiError("channel_not_found", "chat.postMessage")),
+            .mockRejectedValue(
+              new SlackApiError("channel_not_found", "chat.postMessage"),
+            ),
         }),
       },
     );
