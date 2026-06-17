@@ -2,24 +2,24 @@
  * Global test setup file
  * This runs before each test file
  */
-import { vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import { vi, beforeAll, afterAll, beforeEach } from "vitest";
 
 // ============================================
 // Environment Variables
 // ============================================
 
 // Stub environment variables for tests
-vi.stubEnv('SLACK_BOT_TOKEN', 'xoxb-test-token-12345');
-vi.stubEnv('SLACK_SIGNING_SECRET', 'test-signing-secret-abc123');
-vi.stubEnv('REDIS_URL', 'redis://localhost:6379');
-vi.stubEnv('NODE_ENV', 'test');
+vi.stubEnv("SLACK_BOT_TOKEN", "xoxb-test-token-12345");
+vi.stubEnv("SLACK_SIGNING_SECRET", "test-signing-secret-abc123");
+vi.stubEnv("REDIS_URL", "redis://localhost:6379");
+vi.stubEnv("NODE_ENV", "test");
 
 // ============================================
 // Global Mocks
 // ============================================
 
 // Mock Chat SDK
-vi.mock('chat', () => ({
+vi.mock("chat", () => ({
   Chat: vi.fn().mockImplementation(() => ({
     onNewMention: vi.fn(),
     onSubscribedMessage: vi.fn(),
@@ -42,12 +42,12 @@ vi.mock('chat', () => ({
 }));
 
 // Mock Slack adapter
-vi.mock('@chat-adapter/slack', () => ({
+vi.mock("@chat-adapter/slack", () => ({
   createSlackAdapter: vi.fn().mockReturnValue({}),
 }));
 
 // Mock Redis state adapter
-vi.mock('@chat-adapter/state-redis', () => ({
+vi.mock("@chat-adapter/state-redis", () => ({
   createRedisState: vi.fn().mockReturnValue({}),
 }));
 
@@ -64,7 +64,7 @@ export function createMockThread(overrides = {}) {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue(undefined),
     },
-    channelId: 'C12345678',
+    channelId: "C12345678",
     threadTs: undefined,
     ...overrides,
   };
@@ -72,18 +72,18 @@ export function createMockThread(overrides = {}) {
 
 export function createMockMessage(overrides = {}) {
   return {
-    text: 'test message',
-    userId: 'U12345678',
-    ts: '1234567890.123456',
+    text: "test message",
+    userId: "U12345678",
+    ts: "1234567890.123456",
     ...overrides,
   };
 }
 
 export function createMockSlashCommandEvent(overrides = {}) {
   return {
-    text: '',
-    userId: 'U12345678',
-    channelId: 'C12345678',
+    text: "",
+    userId: "U12345678",
+    channelId: "C12345678",
     thread: createMockThread(),
     openModal: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -92,9 +92,9 @@ export function createMockSlashCommandEvent(overrides = {}) {
 
 export function createMockActionEvent(overrides = {}) {
   return {
-    actionId: '',
-    value: '',
-    userId: 'U12345678',
+    actionId: "",
+    value: "",
+    userId: "U12345678",
     thread: createMockThread(),
     values: {},
     ...overrides,
@@ -103,11 +103,11 @@ export function createMockActionEvent(overrides = {}) {
 
 export function createMockContext(overrides = {}) {
   return {
-    channel_id: 'C12345678',
+    channel_id: "C12345678",
     thread_ts: undefined,
     is_dm: false,
-    team_id: 'T12345678',
-    user_id: 'U12345678',
+    team_id: "T12345678",
+    user_id: "U12345678",
     ...overrides,
   };
 }
@@ -115,10 +115,10 @@ export function createMockContext(overrides = {}) {
 export function createMockEvent(type: string, overrides = {}) {
   const baseEvent = {
     type,
-    user: 'U12345678',
-    channel: 'C12345678',
-    ts: '1234567890.123456',
-    event_ts: '1234567890.123456',
+    user: "U12345678",
+    channel: "C12345678",
+    ts: "1234567890.123456",
+    event_ts: "1234567890.123456",
     ...overrides,
   };
 
@@ -131,12 +131,12 @@ export function createMockEvent(type: string, overrides = {}) {
 
 beforeAll(() => {
   // Global setup before all tests
-  console.log('Starting test suite...');
+  console.log("Starting test suite...");
 });
 
 afterAll(() => {
   // Global cleanup after all tests
-  console.log('Test suite complete.');
+  console.log("Test suite complete.");
 });
 
 beforeEach(() => {

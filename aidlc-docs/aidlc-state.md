@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-01 Functional Design + Lean形式検証 完了・承認待ち（2026-06-17 JST）。MCP transport/auth adapter の重要不変条件をLeanで証明。
-- **ドキュメントバージョン**: v4.2.8-draft（2026-06-17 U-V3-01 Lean formal verification）
+- **現在のステージ**: v3 Construction / U-V3-02 NFR Design 完了・承認待ち（2026-06-17 JST）。MCP registry/schema のNFR実装パターンと論理コンポーネントを定義。
+- **ドキュメントバージョン**: v4.2.16-draft（2026-06-17 U-V3-02 NFR Design）
 
 ---
 
@@ -23,12 +23,19 @@
 ### CONSTRUCTION フェーズ（v3）
 
 #### U-V3-01: mcp-transport-auth-adapter
-- [x] Functional Design — 完了（2026-06-16）。MCP invocation / caller identity / tool context / authorization decision / audit event / safe error shape、既存JWTルート維持、IAMのみでuserId認可しないルール、監査ログ非機密化ルールを定義。ユーザー承認待ち。
+- [x] Functional Design — 完了（2026-06-16）。MCP invocation / caller identity / tool context / authorization decision / audit event / safe error shape、既存JWTルート維持、IAMのみでuserId認可しないルール、監査ログ非機密化ルールを定義。ユーザー承認済み。
 - [x] Lean Formal Verification — 完了（2026-06-17 JST）。`McpTransportAuthAdapter.lean` で IAM-only拒否、identity未解決時precheck拒否、cross-user access拒否、side-effect approval必須、audit secret/args非依存を `sorry` なしで証明。`lean` 検証成功。
-- [ ] NFR Requirements — 実施予定。Security Baseline、認証/認可、ログ、デモ可用性、テスト要件をU-V3-01向けに具体化する。
-- [ ] NFR Design — 実施予定。SECURITY-02/08の実装パターンを定義する。
-- [ ] Infrastructure Design — 実施予定。API Gateway / AgentCore Target / IAM / loggingの設計を具体化する。
-- [ ] Code Generation — 実施予定。Backend/CDK実装とテストを生成する。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Security Baseline全15ルールを評価し、U-V3-01向けに認証/認可、監査ログ、fail-closed、可用性、テスト、Lean証明維持要件を定義。ユーザー承認済み。
+- [x] NFR Design — 完了（2026-06-17 JST）。Verified Identity Gate、Fail-Closed Adapter Pipeline、Safe Audit Event Envelope、Route Preservation Boundary、Schema-First Adapter Input、Least-Privilege Gateway Hop、Safe Error Mapper、Lean Evidence Lock、Adapter Latency Budgetを定義。ユーザー承認済み。
+- [x] Infrastructure Design — 完了（2026-06-17 JST）。既存JWT route preservation、MCP adapter route boundary、application-level Cognito JWT verification、API Gateway access logs、90日ログ保持、CloudWatch metric filters/alarms、AgentCore Gateway role scoping、CDK assertionsを設計。ユーザー承認済み。
+- [x] Code Generation — 完了（2026-06-17 JST）。MCP domain types / Cognito JWT identity resolver / safe audit logger / fail-closed precheck / `/api/mcp/tools/{toolName}` route / CDK access logs・90日保持・MCP alarms・AgentCore IAM scope / tests / code summaryを生成。Backend 412 tests + typecheck、CDK 84 tests + build、Lean検証が通過。ユーザー承認待ち。
+
+#### U-V3-02: mcp-tool-registry-schema
+- [x] Functional Design — 完了（2026-06-17 JST）。MCP tool allowlist、side-effect分類、approval requirements、excluded routes、schema drift report、runtime invocation model、schema publication model、`saborou_judge_sabori`意味整理を定義。ユーザー承認済み。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Allowlist-only publication、schema-first validation、output data minimization、side-effect approval enforcement、schema drift prevention、registry performance、demo availability、test coverage、maintainabilityを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
+- [x] NFR Design — 完了（2026-06-17 JST）。Registry As Policy Boundary、Schema-First Tool Invocation、Approval Metadata Gate、Safe Voice Output Envelope、Drift Detector Build Gate、Static Registry Warm-Path、Explicit Exclusion List、Legacy OperationId Migration、Reserved Tool Contractを定義。ユーザー承認待ち。
+- [ ] Infrastructure Design — 実施予定。AgentCore schema deployment、CDK schema asset、outputs/testsの変更点を具体化する。
+- [ ] Code Generation — 実施予定。Registry/schema/test更新を生成する。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -61,6 +68,27 @@
 - `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/McpTransportAuthAdapter.lean`
 - `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/README.md`
 - `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/review.json`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-design/logical-components.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-infrastructure-design-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/infrastructure-design/infrastructure-design.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/infrastructure-design/deployment-architecture.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-code-generation-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/code/code-generation-summary.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-design/logical-components.md`
 
 ---
 

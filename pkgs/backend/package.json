@@ -33,6 +33,7 @@
     "@saboru/agent": "workspace:*",
     "@saboru/shared": "workspace:*",
     "hono": "^4.12.19",
+    "jose": "^6.2.3",
     "zod": "^3.25.0"
   }
 }

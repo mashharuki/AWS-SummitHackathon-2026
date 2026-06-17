@@ -62,6 +62,7 @@ import { createGoogleAuthRoute } from "./routes/google-auth.js";
 import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
+import { createMcpRoute } from "./routes/mcp.js";
 import { createProposalsRoute } from "./routes/proposals.js";
 import { createScheduleRoute } from "./routes/schedule.js";
 import { createSlackRoute } from "./routes/slack.js";
@@ -215,6 +216,7 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
+  app.route("/api/mcp", createMcpRoute());
   // Google Calendar/Gmail 取り込みルート（U-07b）
   app.route(
     "/api/google",

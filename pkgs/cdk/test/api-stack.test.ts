@@ -58,10 +58,24 @@ describe("SaborouApiStack", () => {
     });
   });
 
-  test("Log group has 14-day retention", () => {
+  test("Lambda and API access log groups have 90-day retention", () => {
     template.hasResourceProperties("AWS::Logs::LogGroup", {
       LogGroupName: Match.stringLikeRegexp("saborou-api"),
-      RetentionInDays: 14,
+      RetentionInDays: 90,
+    });
+    template.hasResourceProperties("AWS::Logs::LogGroup", {
+      LogGroupName: Match.stringLikeRegexp("apigateway/saborou-api"),
+      RetentionInDays: 90,
+    });
+  });
+
+  test("HTTP API default stage has access logging enabled", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
+      StageName: "$default",
+      AccessLogSettings: Match.objectLike({
+        DestinationArn: Match.anyValue(),
+        Format: Match.stringLikeRegexp("requestId"),
+      }),
     });
   });
 
@@ -104,6 +118,37 @@ describe("SaborouApiStack", () => {
       RouteKey: "GET /api/auth/google/callback",
       AuthorizationType: "NONE",
     });
+  });
+
+  test("main proxy route remains protected by JWT authorizer", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: Match.stringLikeRegexp("\\{proxy\\+\\}"),
+      AuthorizationType: "JWT",
+      AuthorizerId: Match.anyValue(),
+    });
+  });
+
+  test("MCP adapter route is explicit and relies on Lambda-side JWT verification", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: "POST /api/mcp/tools/{toolName}",
+      AuthorizationType: "NONE",
+    });
+  });
+
+  test("MCP audit metric filters and alarms are created", () => {
+    template.resourceCountIs("AWS::Logs::MetricFilter", 3);
+    template.hasResourceProperties("AWS::Logs::MetricFilter", {
+      FilterPattern:
+        '{ $.action = "mcp_tool_call" && $.status = "unauthorized" }',
+      MetricTransformations: Match.arrayWith([
+        Match.objectLike({
+          MetricNamespace: "Saborou/Mcp",
+          MetricName: "Unauthorized",
+          MetricValue: "1",
+        }),
+      ]),
+    });
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 3);
   });
 
   test("Lambda function has DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE environment variable (U-07b)", () => {

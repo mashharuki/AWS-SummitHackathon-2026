@@ -88,12 +88,12 @@ export class SaborouAgentCoreStack extends cdk.Stack {
         "AgentCore Gateway execution role; invokes the Hono HTTP API via execute-api and reads the OpenAPI schema from S3",
     });
 
-    // Hono API（HTTP API）のすべてのルート/ステージへの Invoke を許可する。
-    // リソースを当該 API ID に限定することで最小権限を担保する。
+    // MCP adapter route のみ Invoke を許可する。
+    // Gateway role はサービスホップ権限であり、ユーザー認可はLambda側JWT検証で行う。
     const honoApiExecuteArn = cdk.Stack.of(this).formatArn({
       service: "execute-api",
       resource: props.httpApiId,
-      resourceName: "*/*/*",
+      resourceName: "$default/POST/api/mcp/tools/*",
     });
     gatewayRole.addToPolicy(
       new iam.PolicyStatement({
@@ -199,7 +199,7 @@ export class SaborouAgentCoreStack extends cdk.Stack {
       {
         id: "AwsSolutions-IAM5",
         reason:
-          "Gateway role scopes execute-api:Invoke to the specific Hono HTTP API id; the */*/* path wildcard is required to allow all routes/methods/stages of that single API. BucketDeployment also requires S3 wildcards on the schema bucket to operate.",
+          "Gateway role scopes execute-api:Invoke to the specific Hono HTTP API id and POST /api/mcp/tools/* adapter path. BucketDeployment also requires S3 wildcards on the schema bucket to operate.",
       },
       {
         id: "AwsSolutions-L1",

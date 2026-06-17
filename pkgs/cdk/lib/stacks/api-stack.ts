@@ -1,8 +1,10 @@
 import * as cdk from "aws-cdk-lib";
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import type * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -65,9 +67,91 @@ export class SaborouApiStack extends cdk.Stack {
     // --- Lambda: Hono バックエンド ---
     const honoFnLogGroup = new logs.LogGroup(this, "HonoFnLogGroup", {
       logGroupName: `/aws/lambda/saborou-api-${environment}`,
-      retention: logs.RetentionDays.TWO_WEEKS,
+      retention: logs.RetentionDays.THREE_MONTHS,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+
+    const httpApiAccessLogGroup = new logs.LogGroup(
+      this,
+      "HttpApiAccessLogGroup",
+      {
+        logGroupName: `/aws/apigateway/saborou-api-${environment}`,
+        retention: logs.RetentionDays.THREE_MONTHS,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      },
+    );
+
+    const accessLogFormat = apigateway.AccessLogFormat.custom(
+      JSON.stringify({
+        requestId: "$context.requestId",
+        routeKey: "$context.routeKey",
+        status: "$context.status",
+        responseLatency: "$context.responseLatency",
+        integrationStatus: "$context.integrationStatus",
+        sourceIp: "$context.identity.sourceIp",
+        userAgent: "$context.identity.userAgent",
+      }),
+    );
+
+    const mcpUnauthorizedMetric = new logs.MetricFilter(
+      this,
+      "McpUnauthorizedMetricFilter",
+      {
+        logGroup: honoFnLogGroup,
+        metricNamespace: "Saborou/Mcp",
+        metricName: "Unauthorized",
+        filterPattern: logs.FilterPattern.literal(
+          '{ $.action = "mcp_tool_call" && $.status = "unauthorized" }',
+        ),
+        metricValue: "1",
+      },
+    );
+
+    const mcpForbiddenMetric = new logs.MetricFilter(
+      this,
+      "McpForbiddenMetricFilter",
+      {
+        logGroup: honoFnLogGroup,
+        metricNamespace: "Saborou/Mcp",
+        metricName: "Forbidden",
+        filterPattern: logs.FilterPattern.literal(
+          '{ $.action = "mcp_tool_call" && $.status = "forbidden" }',
+        ),
+        metricValue: "1",
+      },
+    );
+
+    const mcpToolErrorMetric = new logs.MetricFilter(
+      this,
+      "McpToolErrorMetricFilter",
+      {
+        logGroup: honoFnLogGroup,
+        metricNamespace: "Saborou/Mcp",
+        metricName: "ToolError",
+        filterPattern: logs.FilterPattern.literal(
+          '{ $.action = "mcp_tool_call" && $.status = "tool_error" }',
+        ),
+        metricValue: "1",
+      },
+    );
+
+    for (const [id, metricFilter, threshold] of [
+      ["McpUnauthorizedAlarm", mcpUnauthorizedMetric, 5],
+      ["McpForbiddenAlarm", mcpForbiddenMetric, 5],
+      ["McpToolErrorAlarm", mcpToolErrorMetric, 3],
+    ] as const) {
+      new cloudwatch.Alarm(this, id, {
+        metric: metricFilter.metric({
+          statistic: "Sum",
+          period: cdk.Duration.minutes(5),
+        }),
+        threshold,
+        evaluationPeriods: 1,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+    }
 
     const honoFn = new lambda.Function(this, "HonoFn", {
       functionName: `saborou-api-${environment}`,
@@ -255,6 +339,7 @@ export class SaborouApiStack extends cdk.Stack {
     // --- HTTP API ---
     const httpApi = new apigatewayv2.HttpApi(this, "HttpApi", {
       apiName: `saborou-api-${environment}`,
+      createDefaultStage: false,
       // CORS preflight は API Gateway が処理する（OPTIONS は JWT Authorizer を通さない）。
       // 注意: API Gateway v2 は chrome-extension:// 形式の個別オリジンを
       // allowOrigins に受け付けない（"Invalid format for origin"）。
@@ -303,6 +388,17 @@ export class SaborouApiStack extends cdk.Stack {
       ),
     });
 
+    // MCP adapter route (API Gateway authorizerなし / Lambda側でCognito JWTを検証)
+    // AgentCore Gateway の GATEWAY_IAM_ROLE はユーザー認可として扱わない。
+    httpApi.addRoutes({
+      path: "/api/mcp/tools/{toolName}",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "McpToolsIntegration",
+        honoFn,
+      ),
+    });
+
     // メインルート (JWT 認証必須)
     // OPTIONS は除外: API Gateway の corsPreflight が preflight を自動処理する。
     // ANY に OPTIONS を含めると JWT Authorizer が preflight に 401 を返し CORS が壊れる。
@@ -321,6 +417,18 @@ export class SaborouApiStack extends cdk.Stack {
         honoFn,
       ),
       authorizer,
+    });
+
+    const defaultStage = new apigatewayv2.HttpStage(this, "DefaultStage", {
+      httpApi,
+      stageName: "$default",
+      autoDeploy: true,
+      accessLogSettings: {
+        destination: new apigatewayv2.LogGroupLogDestination(
+          httpApiAccessLogGroup,
+        ),
+        format: accessLogFormat,
+      },
     });
 
     // --- API Gateway カスタムドメイン（customDomain=true のときのみ） ---
@@ -345,6 +453,7 @@ export class SaborouApiStack extends cdk.Stack {
       new apigatewayv2.ApiMapping(this, "ApiDomainMapping", {
         api: httpApi,
         domainName: apiDomainName,
+        stage: defaultStage,
         // mappingKey を省略することでルートパス（/）にマッピングされる
       });
 
@@ -398,11 +507,6 @@ export class SaborouApiStack extends cdk.Stack {
         id: "AwsSolutions-L1",
         reason:
           "nodejs22.x is the latest stable Node.js runtime; cdk-nag may not have updated its reference list yet",
-      },
-      {
-        id: "AwsSolutions-APIG1",
-        reason:
-          "HTTP API access logging is disabled for hackathon scope to reduce cost; CloudWatch Logs on Lambda covers observability",
       },
       {
         id: "AwsSolutions-APIG4",

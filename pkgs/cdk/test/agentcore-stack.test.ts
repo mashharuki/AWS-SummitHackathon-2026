@@ -121,6 +121,33 @@ describe("SaborouAgentCoreStack", () => {
         ]),
       }),
     });
+
+    const policies = template.findResources("AWS::IAM::Policy");
+    const serializedPolicies = JSON.stringify(policies);
+    expect(serializedPolicies).toContain("abc123httpapi");
+    expect(serializedPolicies).toContain("$default/POST/api/mcp/tools/*");
+  });
+
+  test("Gateway 実行ロールは wildcard action や SABOROU data-plane 権限を持たない", () => {
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const statements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((policy) => policy.Properties.PolicyDocument.Statement ?? []);
+    const allActions = statements.flatMap((stmt) => {
+      const action = (stmt as { Action?: string | string[] }).Action;
+      return Array.isArray(action) ? action : [action];
+    });
+
+    expect(allActions).not.toContain("*");
+    expect(allActions.some((action) => action?.startsWith("dynamodb:"))).toBe(
+      false,
+    );
+    expect(
+      allActions.some((action) => action?.startsWith("secretsmanager:")),
+    ).toBe(false);
   });
 
   test("MCP エンドポイント URL と Gateway ARN が出力される", () => {
