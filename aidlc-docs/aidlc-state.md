@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-02 Code Generation 完了・ユーザーレビュー待ち（2026-06-17 JST）。Registry/schema/precheck/route/OpenAPI drift gate を実装し、backend 425 tests + typecheck、CDK 89 tests + build が通過。
-- **ドキュメントバージョン**: v4.2.19-draft（2026-06-17 U-V3-02 Code Generation Complete）
+- **現在のステージ**: v3 Construction / U-V3-03 NFR Design 完了・承認待ち（2026-06-17 JST）。Slack `@Claude` delegation のapproval-first guard、schema validation、safe Slack post、error mapper、audit envelope、registry transition patternsを作成。
+- **ドキュメントバージョン**: v4.2.22-draft（2026-06-17 U-V3-03 NFR Design）
 
 ---
 
@@ -35,7 +35,14 @@
 - [x] NFR Requirements — 完了（2026-06-17 JST）。Allowlist-only publication、schema-first validation、output data minimization、side-effect approval enforcement、schema drift prevention、registry performance、demo availability、test coverage、maintainabilityを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
 - [x] NFR Design — 完了（2026-06-17 JST）。Registry As Policy Boundary、Schema-First Tool Invocation、Approval Metadata Gate、Safe Voice Output Envelope、Drift Detector Build Gate、Static Registry Warm-Path、Explicit Exclusion List、Legacy OperationId Migration、Reserved Tool Contractを定義。ユーザー承認済み。
 - [x] Infrastructure Design — 完了（2026-06-17 JST）。既存AgentCore Stack constructsを維持し、schema artifact、S3 schema deployment、GatewayTarget、registry/schema tests、drift validation gates、`/api/mcp/tools/{toolName}` publication boundaryを設計。ユーザー承認済み。
-- [x] Code Generation — 完了・ユーザーレビュー待ち（2026-06-17 JST）。Registry/schema/precheck/route/OpenAPI drift gate/code summaryを生成。Backend 425 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。
+- [x] Code Generation — 完了（2026-06-17 JST）。Registry/schema/precheck/route/OpenAPI drift gate/code summaryを生成。Backend 425 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。ユーザー承認済み。
+
+#### U-V3-03: slack-claude-delegation
+- [x] Functional Design — 完了（2026-06-17 JST）。`saborou_delegate_to_claude` contract、approval gating、task ownership、delegation message、safe Slack error handling、audit boundariesを定義。ユーザー承認済み。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Slack side effect、secret handling、safe logging、authorization、safe error handling、performance、reliability、testability要件とtech stack decisionsを定義。ユーザー承認済み。
+- [x] NFR Design — 完了・承認待ち（2026-06-17 JST）。Approval-first guard、context-derived identity、schema-first input、deterministic message builder、secret-safe Slack boundary、safe error mapper、safe audit envelope、registry reserved-to-implemented transitionを定義。
+- [ ] Infrastructure Design — 条件付き。IAM/env/Secrets/CDK変更の要否をNFR Design後に判定する。
+- [ ] Code Generation — 実施予定。Backend/agent code and testsを生成する。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -94,6 +101,16 @@
 - `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/infrastructure-design/deployment-architecture.md`
 - `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-code-generation-plan.md`
 - `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/code/code-generation-summary.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-design/logical-components.md`
 
 ---
 

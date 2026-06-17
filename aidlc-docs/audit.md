@@ -2409,3 +2409,24 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: CONSTRUCTION / U-V3-02 Code Generation / completion and review handoff
 
 ---
+## U-V3-02 Approval and U-V3-03 Functional Design Start
+**Timestamp**: 2026-06-17T12:43:43Z
+**User Input**: "o U-V3-03 / next construction stageに進んでください。"
+**AI Response**: "Recorded U-V3-02 Code Generation approval and proceeded to U-V3-03 Functional Design. Loaded U-V3-03 unit definition, dependency map, story map, v3 requirements, application design, U-V3-02 registry summary, Functional Design rules, content validation rules, and active Security Baseline. Generated U-V3-03 Functional Design plan and artifacts."
+**Context**: CONSTRUCTION / transition from U-V3-02 Code Generation to U-V3-03 Functional Design
+
+---
+## U-V3-03 NFR Requirements
+**Timestamp**: 2026-06-17T12:49:07Z
+**User Input**: "NFR Requirementsに進んでください"
+**AI Response**: "Recorded U-V3-03 Functional Design approval and proceeded to U-V3-03 NFR Requirements. Loaded NFR Requirements rules, Functional Design artifacts, active Security Baseline, existing Slack route/token context, and generated NFR requirements plus tech stack decisions."
+**Context**: CONSTRUCTION / U-V3-03 NFR Requirements / completion and review handoff
+
+---
+## U-V3-03 NFR Design
+**Timestamp**: 2026-06-17T12:51:45Z
+**User Input**: "NFR Designに進んでください"
+**AI Response**: "Recorded U-V3-03 NFR Requirements approval and proceeded to U-V3-03 NFR Design. Loaded NFR Design rules, NFR Requirements artifacts, Tech Stack Decisions, Functional Design context, and active Security Baseline. Generated NFR design patterns and logical components."
+**Context**: CONSTRUCTION / U-V3-03 NFR Design / completion and review handoff
+
+---
