@@ -16,7 +16,7 @@ describe("MCP audit", () => {
   it("builds a safe audit event without forbidden fields", () => {
     const event = buildSafeMcpAuditEvent({
       requestId: "req-1",
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       source: "agentcore",
       userId: "user-123",
       status: "success",
@@ -26,7 +26,7 @@ describe("MCP audit", () => {
     expect(event).toEqual({
       action: "mcp_tool_call",
       requestId: "req-1",
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       source: "agentcore",
       userIdHash: expect.any(String),
       status: "success",
@@ -46,7 +46,7 @@ describe("MCP audit", () => {
 
     auditMcpToolCall({
       requestId: "req-2",
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       source: "agentcore",
       userId: "user-123",
       status: "success",

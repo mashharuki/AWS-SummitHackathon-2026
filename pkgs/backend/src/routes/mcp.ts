@@ -10,13 +10,11 @@ import {
   resolveMcpIdentity,
   type McpIdentityResolverOptions,
 } from "../mcp/identity.js";
-import {
-  DEFAULT_MCP_TOOL_ALLOWLIST,
-  precheckMcpInvocation,
-} from "../mcp/precheck.js";
+import { precheckMcpInvocation } from "../mcp/precheck.js";
 import type {
   McpAuditStatus,
   McpSource,
+  McpToolDefinition,
   McpToolContext,
   SafeMcpErrorCode,
   SafeMcpErrorResponse,
@@ -70,7 +68,7 @@ export function createMcpRoute(options: CreateMcpRouteOptions = {}) {
         ok: true,
         requestId,
         toolName,
-        result: dispatchPlaceholderTool(precheck.tool.name),
+        result: dispatchRegistryTool(precheck.tool, precheck.parsedArgs),
       };
       status = "success";
       return c.json(response);
@@ -115,16 +113,31 @@ async function parseMcpBody(request: Request): Promise<McpRequestBody> {
   return parsed as McpRequestBody;
 }
 
-function dispatchPlaceholderTool(toolName: string): Record<string, unknown> {
-  if (toolName === "saborou_side_effect_probe") {
-    return { status: "approved" };
+function dispatchRegistryTool(
+  tool: McpToolDefinition,
+  parsedArgs: Record<string, unknown>,
+): Record<string, unknown> {
+  if (tool.implementationStatus === "reserved") {
+    return {
+      status: "reserved",
+      message: "Tool contract is reserved for a later implementation unit.",
+      implementationStatus: tool.implementationStatus,
+      requiresApproval: tool.approval.required,
+    };
   }
 
-  const allowedNames = DEFAULT_MCP_TOOL_ALLOWLIST.map((tool) => tool.name);
   return {
-    status: "ok",
-    adapter: "mcp-transport-auth-adapter",
-    allowlist: allowedNames,
+    status: tool.approval.required
+      ? "validated_for_approved_action"
+      : "validated",
+    target: {
+      method: tool.http.method,
+      path: tool.http.path,
+    },
+    outputMode: tool.outputMode,
+    implementationStatus: tool.implementationStatus,
+    requiresApproval: tool.approval.required,
+    validatedArgumentKeys: Object.keys(parsedArgs).sort(),
   };
 }
 

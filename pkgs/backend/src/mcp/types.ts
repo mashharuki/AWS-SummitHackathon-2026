@@ -10,6 +10,27 @@ export type McpAuditStatus =
 
 export type McpToolEffect = "read" | "side_effect";
 
+export type McpToolName =
+  | "saborou_list_tasks"
+  | "saborou_get_task"
+  | "saborou_list_candidates"
+  | "saborou_generate_reply_draft"
+  | "saborou_judge_sabori"
+  | "saborou_fetch_google_calendar"
+  | "saborou_fetch_gmail"
+  | "saborou_send_slack_reply"
+  | "saborou_schedule_report"
+  | "saborou_delegate_to_claude";
+
+export type McpHttpMethod = "GET" | "POST";
+
+export type McpToolImplementationStatus =
+  | "implemented"
+  | "adapter_validated"
+  | "reserved";
+
+export type McpToolOutputMode = "safe_summary" | "safe_action_result";
+
 export type McpIdentity = {
   userId: string;
   issuer: string;
@@ -29,8 +50,24 @@ export type McpToolInvocation = {
 };
 
 export type McpToolDefinition = {
-  name: string;
+  name: McpToolName;
   effect: McpToolEffect;
+  description: string;
+  http: {
+    method: McpHttpMethod;
+    path: string;
+  };
+  schema: {
+    input: string;
+    output: string;
+  };
+  approval: {
+    required: boolean;
+    reason?: string;
+  };
+  outputMode: McpToolOutputMode;
+  implementationStatus: McpToolImplementationStatus;
+  published: boolean;
 };
 
 export type McpPrecheckFailureCode =
@@ -40,7 +77,11 @@ export type McpPrecheckFailureCode =
   | "VALIDATION_ERROR";
 
 export type McpPrecheckResult =
-  | { ok: true; tool: McpToolDefinition }
+  | {
+      ok: true;
+      tool: McpToolDefinition;
+      parsedArgs: Record<string, unknown>;
+    }
   | { ok: false; code: McpPrecheckFailureCode; message: string };
 
 export type SafeMcpAuditEvent = {

@@ -1,19 +1,14 @@
 import type {
   McpPrecheckResult,
   McpToolContext,
-  McpToolDefinition,
   McpToolInvocation,
 } from "./types.js";
-
-export const DEFAULT_MCP_TOOL_ALLOWLIST: ReadonlyArray<McpToolDefinition> = [
-  { name: "saborou_mcp_health", effect: "read" },
-  { name: "saborou_side_effect_probe", effect: "side_effect" },
-];
+import { getMcpToolDefinition } from "./registry.js";
+import { parseMcpToolArgs } from "./schemas.js";
 
 export function precheckMcpInvocation(
   context: McpToolContext | null,
   invocation: McpToolInvocation,
-  allowlist: ReadonlyArray<McpToolDefinition> = DEFAULT_MCP_TOOL_ALLOWLIST,
 ): McpPrecheckResult {
   if (!context?.identity.userId) {
     return {
@@ -23,7 +18,7 @@ export function precheckMcpInvocation(
     };
   }
 
-  const tool = allowlist.find((item) => item.name === invocation.toolName);
+  const tool = getMcpToolDefinition(invocation.toolName);
   if (!tool) {
     return {
       ok: false,
@@ -40,15 +35,24 @@ export function precheckMcpInvocation(
     };
   }
 
-  if (tool.effect === "side_effect" && invocation.approved !== true) {
+  if (tool.approval.required && invocation.approved !== true) {
     return {
       ok: false,
       code: "FORBIDDEN",
-      message: "Side-effect tool requires explicit approval",
+      message: "Tool requires explicit approval",
     };
   }
 
-  return { ok: true, tool };
+  try {
+    const parsedArgs = parseMcpToolArgs(tool.name, invocation.args);
+    return { ok: true, tool, parsedArgs };
+  } catch {
+    return {
+      ok: false,
+      code: "VALIDATION_ERROR",
+      message: "Tool arguments failed schema validation",
+    };
+  }
 }
 
 function isJsonObject(value: unknown): value is Record<string, unknown> {

@@ -1,346 +1,497 @@
 openapi: 3.1.0
 info:
-  title: SABOROU API
-  version: 2.0.0
+  title: SABOROU MCP Tool API
+  version: 3.0.0
   description: >-
-    SABOROU task management and Slack reply API exposed as MCP tools through
-    Amazon Bedrock AgentCore Gateway. Each operation becomes a callable MCP tool
-    for the ElevenLabs voice agent. operationId and description fields are used
-    verbatim as MCP tool names and descriptions, so they are written for an AI
-    consumer.
+    SABOROU MCP tool adapter schema for Amazon Bedrock AgentCore Gateway.
+    Published operations invoke the single backend MCP adapter boundary under
+    /api/mcp/tools/* and never expose auth, webhook, health, docs, or internal
+    routes directly.
 servers:
   - url: https://api.saborou.example.com
-    description: >-
-      Placeholder server URL. The AgentCore Gateway rewrites the request host to
-      the real API Gateway HTTP API endpoint at invocation time using the
-      configured gateway IAM role; this value is only used to satisfy the
-      OpenAPI 3.1 schema requirement and is not contacted directly.
+    description: Placeholder server URL rewritten to the real HTTP API endpoint.
 paths:
-  /api/tasks:
-    get:
-      operationId: listTasks
-      summary: List the current user's tasks
-      description: >-
-        Retrieve the list of the authenticated user's tasks. Use this to gather
-        context about what the user is currently working on before drafting a
-        Slack reply, judging whether a request can be declined, or generating a
-        progress report. Returns tasks with their title, status, due date, and
-        assignee so the agent can reason about workload and priorities.
-      parameters:
-        - name: status
-          in: query
-          required: false
-          description: >-
-            Optional filter to return only tasks in the given status. One of
-            "active", "completed", or "pending". Omit to return all tasks.
-          schema:
-            type: string
-            enum:
-              - active
-              - completed
-              - pending
-      responses:
-        "200":
-          description: A list of the user's tasks.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  tasks:
-                    type: array
-                    description: The user's tasks.
-                    items:
-                      $ref: "#/components/schemas/Task"
-                required:
-                  - tasks
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-  /api/proposals/stream:
+  /api/mcp/tools/saborou_list_tasks:
     post:
-      operationId: streamProposal
-      summary: Judge a sabori request and generate a reply or decline draft
-      description: >-
-        Run the SaboriProposerAgent over an incoming Slack message to judge
-        whether it is a request the user should accept or can politely decline,
-        and to generate a draft reply. Use this when the user receives a Slack
-        message and wants SABOROU to propose how to respond. Returns the
-        judgment, a suggested reply draft, and a short text-to-speech friendly
-        summary the voice agent can read aloud for approval.
+      operationId: saborou_list_tasks
+      x-saborou-mcp-tool: saborou_list_tasks
+      x-saborou-approval-required: false
+      summary: List SABOROU tasks
+      description: List the caller's SABOROU tasks with optional status filter.
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                messageText:
-                  type: string
-                  description: The full text of the incoming Slack message to judge.
-                channelId:
-                  type: string
-                  description: The Slack channel or DM id the message was received in.
-                mode:
-                  type: string
-                  description: >-
-                    The generation mode. "sabori_judgment" judges and proposes,
-                    "reply_draft" only drafts a reply, "decline_draft" drafts a
-                    polite decline.
-                  enum:
-                    - sabori_judgment
-                    - reply_draft
-                    - decline_draft
-              required:
-                - messageText
+        $ref: "#/components/requestBodies/McpListTasksRequest"
       responses:
         "200":
-          description: The judgment and generated draft.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Proposal"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-  /api/proposals/judge:
-    post:
-      operationId: judgeSabori
-      summary: Judge a Slack message and draft a reply
-      description: >-
-        Given the raw text of an incoming Slack message, draft a polite business
-        Japanese reply, score how much the user can sabori (slack off), and
-        produce a short text-to-speech friendly summary the voice agent can read
-        aloud for approval. Use this when the user receives a Slack message and
-        wants SABOROU to immediately propose a reply draft without selecting a
-        specific task first.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  description: The full text of the incoming Slack message to judge.
-                senderName:
-                  type: string
-                  description: >-
-                    Optional name of the message sender, used as additional
-                    context when drafting the reply.
-              required:
-                - message
-      responses:
-        "200":
-          description: The reply draft, sabori score, and TTS summary.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  replyDraft:
-                    type: string
-                    description: The drafted reply text to send to Slack.
-                  saboriScore:
-                    type: number
-                    description: >-
-                      How much the user can sabori (slack off), from 0.0 to 1.0.
-                  ttsSummary:
-                    type: string
-                    description: >-
-                      A short text-to-speech friendly summary of the reply draft.
-                required:
-                  - replyDraft
-                  - saboriScore
-                  - ttsSummary
+          $ref: "#/components/responses/McpToolSuccess"
         "400":
-          description: The request body failed validation.
+          $ref: "#/components/responses/McpToolError"
         "401":
-          $ref: "#/components/responses/Unauthorized"
-        "503":
-          description: The sabori judge agent is not configured.
-  /api/slack/reply:
-    post:
-      operationId: sendSlackReply
-      summary: Send an approved reply to Slack
-      description: >-
-        Post a reply message to Slack on the user's behalf after the user has
-        explicitly approved the draft. Only call this once the user has confirmed
-        the reply text, because it sends the message immediately and irreversibly.
-        Returns the Slack message timestamp on success.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                taskId:
-                  type: string
-                  description: The id of the task this reply is associated with.
-                replyText:
-                  type: string
-                  description: The exact, user-approved reply text to post to Slack.
-                channelId:
-                  type: string
-                  description: The Slack channel or DM id to post the reply to.
-                threadTs:
-                  type: string
-                  description: >-
-                    Optional parent message timestamp to post the reply into a
-                    thread.
-              required:
-                - replyText
-                - channelId
-      responses:
-        "200":
-          description: The reply was posted to Slack.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    description: Whether the message was posted successfully.
-                  ts:
-                    type: string
-                    description: The Slack message timestamp of the posted reply.
-                  taskId:
-                    type: string
-                    description: The associated task id, echoed back if provided.
-                required:
-                  - ok
-        "400":
-          description: The request body failed validation.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "502":
-          description: The Slack API rejected the message (e.g. channel_not_found).
-  /api/tasks/{id}/report:
-    post:
-      operationId: scheduleProgressReport
-      summary: Generate a progress report draft for a task
-      description: >-
-        Generate a polite Japanese progress report draft for the given task,
-        summarizing that the work is currently being checked and coordinated.
-        The draft is returned for the user to review and approve (by voice or
-        button) before it is sent to Slack via sendSlackReply. A recurring daily
-        17:00 JST schedule also exists (defined but disabled by default) to
-        trigger this generation automatically. Use this when the user asks
-        SABOROU to keep a stakeholder updated on a task's progress.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: The id of the task to generate a progress report for.
-          schema:
-            type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: {}
-      responses:
-        "200":
-          description: The progress report draft was generated.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  taskId:
-                    type: string
-                    description: The id of the task the report was generated for.
-                  reportText:
-                    type: string
-                    description: The generated progress report draft (Japanese).
-                  tone:
-                    type: string
-                    description: The tone of the report (formal, polite, or casual).
-                    enum:
-                      - formal
-                      - polite
-                      - casual
-                  reasoning:
-                    type: array
-                    description: The rationale behind the generated report.
-                    items:
-                      type: string
-                required:
-                  - taskId
-                  - reportText
-                  - reasoning
-        "401":
-          $ref: "#/components/responses/Unauthorized"
+          $ref: "#/components/responses/McpToolError"
         "404":
-          description: The task was not found or is not owned by the caller.
-        "503":
-          description: Progress report generation is unavailable or failed.
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_get_task:
+    post:
+      operationId: saborou_get_task
+      x-saborou-mcp-tool: saborou_get_task
+      x-saborou-approval-required: false
+      summary: Get one SABOROU task
+      description: Get one caller-owned SABOROU task by task id.
+      requestBody:
+        $ref: "#/components/requestBodies/McpGetTaskRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_list_candidates:
+    post:
+      operationId: saborou_list_candidates
+      x-saborou-mcp-tool: saborou_list_candidates
+      x-saborou-approval-required: false
+      summary: List task candidates
+      description: List pending Slack-derived task candidates for the caller.
+      requestBody:
+        $ref: "#/components/requestBodies/McpEmptyArgsRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_generate_reply_draft:
+    post:
+      operationId: saborou_generate_reply_draft
+      x-saborou-mcp-tool: saborou_generate_reply_draft
+      x-saborou-approval-required: false
+      summary: Generate a reply draft
+      description: Generate a safe Slack reply draft for a caller-owned task.
+      requestBody:
+        $ref: "#/components/requestBodies/McpGenerateReplyDraftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_judge_sabori:
+    post:
+      operationId: saborou_judge_sabori
+      x-saborou-mcp-tool: saborou_judge_sabori
+      x-saborou-approval-required: false
+      summary: Judge an incoming Slack message
+      description: Judge an incoming Slack message and generate a reply draft.
+      requestBody:
+        $ref: "#/components/requestBodies/McpJudgeSaboriRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_fetch_google_calendar:
+    post:
+      operationId: saborou_fetch_google_calendar
+      x-saborou-mcp-tool: saborou_fetch_google_calendar
+      x-saborou-approval-required: true
+      summary: Import Google Calendar context
+      description: >-
+        Import Google Calendar workload context into SABOROU. Requires explicit
+        user approval because it imports external account data.
+      requestBody:
+        $ref: "#/components/requestBodies/McpApprovedEmptyArgsRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_fetch_gmail:
+    post:
+      operationId: saborou_fetch_gmail
+      x-saborou-mcp-tool: saborou_fetch_gmail
+      x-saborou-approval-required: true
+      summary: Import Gmail task candidates
+      description: >-
+        Import Gmail-derived task candidates into SABOROU. Requires explicit user
+        approval because it imports external account data.
+      requestBody:
+        $ref: "#/components/requestBodies/McpFetchGmailRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_send_slack_reply:
+    post:
+      operationId: saborou_send_slack_reply
+      x-saborou-mcp-tool: saborou_send_slack_reply
+      x-saborou-approval-required: true
+      summary: Send an approved Slack reply
+      description: >-
+        Send an explicitly approved Slack reply on the caller's behalf. Requires
+        explicit approval because it posts externally and cannot be silently
+        undone.
+      requestBody:
+        $ref: "#/components/requestBodies/McpSendSlackReplyRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_schedule_report:
+    post:
+      operationId: saborou_schedule_report
+      x-saborou-mcp-tool: saborou_schedule_report
+      x-saborou-approval-required: true
+      summary: Generate or schedule a progress report
+      description: >-
+        Generate or schedule a progress report draft for a caller-owned task.
+        Requires explicit approval because it creates a task reporting action.
+      requestBody:
+        $ref: "#/components/requestBodies/McpScheduleReportRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_delegate_to_claude:
+    post:
+      operationId: saborou_delegate_to_claude
+      x-saborou-mcp-tool: saborou_delegate_to_claude
+      x-saborou-approval-required: true
+      x-saborou-implementation-status: reserved
+      summary: Reserved Claude delegation contract
+      description: >-
+        Reserved contract for U-V3-03 Claude delegation. Requires explicit
+        approval and returns a reserved response until U-V3-03 implements it.
+      requestBody:
+        $ref: "#/components/requestBodies/McpDelegateToClaudeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
 components:
-  responses:
-    Unauthorized:
-      description: The request lacked a valid Cognito JWT.
+  requestBodies:
+    McpEmptyArgsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpEmptyArgsBody"
+    McpApprovedEmptyArgsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/McpEmptyArgsBody"
+              - type: object
+                required:
+                  - approved
+    McpListTasksRequest:
+      required: true
       content:
         application/json:
           schema:
             type: object
+            additionalProperties: false
             properties:
-              message:
-                type: string
-                description: The error message.
+              args:
+                type: object
+                additionalProperties: false
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - active
+                      - completed
+                      - pending
+              approved:
+                type: boolean
+    McpGetTaskRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpTaskIdBody"
+    McpGenerateReplyDraftRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
             required:
-              - message
+              - args
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - taskId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  mode:
+                    type: string
+                    enum:
+                      - sabori_judgment
+                      - reply_draft
+                      - decline_draft
+              approved:
+                type: boolean
+    McpJudgeSaboriRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+                    minLength: 1
+                    maxLength: 4000
+                  senderName:
+                    type: string
+                    maxLength: 120
+              approved:
+                type: boolean
+    McpFetchGmailRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                properties:
+                  maxResults:
+                    type: integer
+                    minimum: 1
+                    maximum: 20
+              approved:
+                type: boolean
+                const: true
+    McpSendSlackReplyRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - replyText
+                  - channelId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  replyText:
+                    type: string
+                    minLength: 1
+                    maxLength: 2000
+                  channelId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  threadTs:
+                    type: string
+                    minLength: 1
+                    maxLength: 32
+              approved:
+                type: boolean
+                const: true
+    McpScheduleReportRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - taskId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  tone:
+                    type: string
+                    enum:
+                      - formal
+                      - polite
+                      - casual
+              approved:
+                type: boolean
+                const: true
+    McpDelegateToClaudeRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - taskId
+                  - instruction
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  instruction:
+                    type: string
+                    minLength: 1
+                    maxLength: 2000
+              approved:
+                type: boolean
+                const: true
+  responses:
+    McpToolSuccess:
+      description: Safe MCP adapter success envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpToolSuccess"
+    McpToolError:
+      description: Safe MCP adapter error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpToolError"
   schemas:
-    Task:
+    SafeId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: "^[A-Za-z0-9:_./-]+$"
+    McpEmptyArgsBody:
       type: object
-      description: A SABOROU task.
+      additionalProperties: false
       properties:
-        id:
-          type: string
-          description: The unique task id.
-        title:
-          type: string
-          description: The task title.
-        status:
-          type: string
-          description: The task status.
-          enum:
-            - active
-            - completed
-            - pending
-        dueDate:
-          type: string
-          description: The task due date in ISO 8601 format, if set.
-        assignee:
-          type: string
-          description: The display name of the task assignee, if set.
-      required:
-        - id
-        - title
-        - status
-    Proposal:
+        args:
+          type: object
+          additionalProperties: false
+        approved:
+          type: boolean
+    McpTaskIdBody:
       type: object
-      description: The result of a sabori judgment and draft generation.
-      properties:
-        judgment:
-          type: string
-          description: >-
-            The judgment of the request. One of "accept", "decline", or
-            "needs_review".
-          enum:
-            - accept
-            - decline
-            - needs_review
-        replyDraft:
-          type: string
-          description: The generated draft reply text.
-        ttsSummary:
-          type: string
-          description: >-
-            A short (<= 100 character) text-to-speech friendly summary the voice
-            agent reads aloud to ask the user for approval.
+      additionalProperties: false
       required:
-        - judgment
-        - replyDraft
+        - args
+      properties:
+        args:
+          type: object
+          additionalProperties: false
+          required:
+            - taskId
+          properties:
+            taskId:
+              $ref: "#/components/schemas/SafeId"
+        approved:
+          type: boolean
+    McpToolSuccess:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+        - requestId
+        - toolName
+        - result
+      properties:
+        ok:
+          type: boolean
+          const: true
+        requestId:
+          type: string
+        toolName:
+          type: string
+        result:
+          type: object
+    McpToolError:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - TOOL_NOT_ALLOWED
+                - VALIDATION_ERROR
+                - TOOL_ERROR
+            message:
+              type: string

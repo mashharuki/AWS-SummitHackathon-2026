@@ -2379,3 +2379,33 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: CONSTRUCTION - U-V3-02 NFR Design completion and approval gate.
 
 ---
+
+## Infrastructure Design Completion Prompt — U-V3-02
+**Timestamp**: 2026-06-17T03:42:02Z
+**User Input**: "to Infrastructure Designに進んでください！！"
+**AI Response**: "Treated the request as approval of U-V3-02 NFR Design and proceeded to Infrastructure Design using the AWS CDK skill. Generated `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-infrastructure-design-plan.md`, `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/infrastructure-design/infrastructure-design.md`, and `deployment-architecture.md`. The design preserves existing AgentCore stack constructs and schema deployment resources, maps registry/schema logical components to existing CDK resources, defines OpenAPI artifact strategy through `/api/mcp/tools/{toolName}`, specifies drift validation gates, avoids new runtime AWS resources, and documents Security Baseline compliance with no blocking findings."
+**Context**: CONSTRUCTION - U-V3-02 Infrastructure Design completion and approval gate.
+
+---
+
+## Code Generation Planning Prompt — U-V3-02
+**Timestamp**: 2026-06-17T03:48:52Z
+**User Input**: "Code Generationに進んでください！"
+**AI Response**: "Treated the request as approval of U-V3-02 Infrastructure Design and proceeded to Code Generation Part 1 Planning. Generated `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-code-generation-plan.md`. The plan defines backend registry/schema/precheck/MCP route targets, backend tests, AgentCore OpenAPI artifact updates, CDK schema drift tests, possible direct YAML parser dependency for CDK tests, verification commands, risk controls, and code generation summary output. No application code was changed yet; awaiting explicit approval before Code Generation Part 2."
+**Context**: CONSTRUCTION - U-V3-02 Code Generation Part 1 planning and approval gate.
+
+---
+## User Approval - U-V3-02 Code Generation Part 2
+**Timestamp**: 2026-06-17T12:31:31Z
+**User Input**: "作成してくれた計画で実装を開始してください！"
+**AI Response**: "Treating this as explicit approval to start U-V3-02 Code Generation Part 2. Loading AIDLC rules, active Security Baseline, current plan, existing MCP adapter code, tests, and AgentCore OpenAPI schema before implementation."
+**Context**: CONSTRUCTION / U-V3-02 Code Generation / Part 2 approval and implementation start
+
+---
+## U-V3-02 Code Generation Completion
+**Timestamp**: 2026-06-17T12:39:44Z
+**User Input**: "作成してくれた計画で実装を開始してください！"
+**AI Response**: "Completed U-V3-02 Code Generation Part 2. Implemented backend MCP registry, schema catalog, registry-backed precheck, registry-aware MCP route behavior, backend tests, AgentCore OpenAPI artifact, CDK schema drift test, and code generation summary. Verification passed: backend test 425 tests, backend typecheck, CDK test 89 tests, CDK build, and targeted security checks."
+**Context**: CONSTRUCTION / U-V3-02 Code Generation / completion and review handoff
+
+---

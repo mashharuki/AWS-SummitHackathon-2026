@@ -34,7 +34,7 @@ describe("POST /api/mcp/tools/:toolName", () => {
     const events: SafeMcpAuditEvent[] = [];
     const app = createTestApp({ events });
 
-    const res = await app.request("/api/mcp/tools/saborou_mcp_health", {
+    const res = await app.request("/api/mcp/tools/saborou_list_tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ args: {} }),
@@ -46,7 +46,7 @@ describe("POST /api/mcp/tools/:toolName", () => {
     });
     expect(events[0]).toMatchObject({
       action: "mcp_tool_call",
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       userIdHash: "anonymous",
       status: "unauthorized",
     });
@@ -79,45 +79,53 @@ describe("POST /api/mcp/tools/:toolName", () => {
   it("requires explicit approval for side-effect tool calls", async () => {
     const app = createTestApp({ verifier: validVerifier, events: [] });
 
-    const res = await app.request("/api/mcp/tools/saborou_side_effect_probe", {
+    const res = await app.request("/api/mcp/tools/saborou_send_slack_reply", {
       method: "POST",
       headers: {
         Authorization: "Bearer valid-token",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ args: {}, approved: false }),
+      body: JSON.stringify({
+        args: { replyText: "了解しました", channelId: "C12345" },
+        approved: false,
+      }),
     });
 
     expect(res.status).toBe(403);
     expect(await res.json()).toEqual({
       error: {
         code: "FORBIDDEN",
-        message: "Side-effect tool requires explicit approval",
+        message: "Tool requires explicit approval",
       },
     });
   });
 
-  it("returns a safe success response for the adapter health tool", async () => {
+  it("returns a safe success response for a registry read tool", async () => {
     const events: SafeMcpAuditEvent[] = [];
     const app = createTestApp({ verifier: validVerifier, events });
 
-    const res = await app.request("/api/mcp/tools/saborou_mcp_health", {
+    const res = await app.request("/api/mcp/tools/saborou_list_tasks", {
       method: "POST",
       headers: {
         Authorization: "Bearer valid-token",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ args: {} }),
+      body: JSON.stringify({ args: { status: "active" } }),
     });
 
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({
       ok: true,
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       result: {
-        status: "ok",
-        adapter: "mcp-transport-auth-adapter",
+        status: "validated",
+        target: {
+          method: "GET",
+          path: "/api/tasks",
+        },
+        requiresApproval: false,
+        validatedArgumentKeys: ["status"],
       },
     });
     expect(JSON.stringify(body)).not.toContain("valid-token");
@@ -132,7 +140,7 @@ describe("POST /api/mcp/tools/:toolName", () => {
       events: [],
     });
 
-    const res = await app.request("/api/mcp/tools/saborou_mcp_health", {
+    const res = await app.request("/api/mcp/tools/saborou_list_tasks", {
       method: "POST",
       headers: {
         Authorization: "Bearer invalid-token",
@@ -144,6 +152,54 @@ describe("POST /api/mcp/tools/:toolName", () => {
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({
       error: { code: "UNAUTHORIZED", message: "Invalid token audience" },
+    });
+  });
+
+  it("rejects schema-invalid registry args", async () => {
+    const app = createTestApp({ verifier: validVerifier, events: [] });
+
+    const res = await app.request("/api/mcp/tools/saborou_get_task", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer valid-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ args: { taskId: "<script>" } }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Tool arguments failed schema validation",
+      },
+    });
+  });
+
+  it("returns reserved status only for the U-V3-03 delegation contract", async () => {
+    const app = createTestApp({ verifier: validVerifier, events: [] });
+
+    const res = await app.request("/api/mcp/tools/saborou_delegate_to_claude", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer valid-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        args: { taskId: "task-1", instruction: "調整してください" },
+        approved: true,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      toolName: "saborou_delegate_to_claude",
+      result: {
+        status: "reserved",
+        implementationStatus: "reserved",
+        requiresApproval: true,
+      },
     });
   });
 });

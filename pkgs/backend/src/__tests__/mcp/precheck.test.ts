@@ -15,7 +15,7 @@ const context: McpToolContext = {
 describe("precheckMcpInvocation", () => {
   it("rejects missing verified identity", () => {
     const result = precheckMcpInvocation(null, {
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       args: {},
     });
 
@@ -37,8 +37,17 @@ describe("precheckMcpInvocation", () => {
 
   it("rejects non-object args", () => {
     const result = precheckMcpInvocation(context, {
-      toolName: "saborou_mcp_health",
+      toolName: "saborou_list_tasks",
       args: "raw-string",
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "VALIDATION_ERROR" });
+  });
+
+  it("rejects schema-invalid object args", () => {
+    const result = precheckMcpInvocation(context, {
+      toolName: "saborou_get_task",
+      args: { taskId: "<script>" },
     });
 
     expect(result).toMatchObject({ ok: false, code: "VALIDATION_ERROR" });
@@ -46,8 +55,8 @@ describe("precheckMcpInvocation", () => {
 
   it("rejects side-effect tools without explicit approval", () => {
     const result = precheckMcpInvocation(context, {
-      toolName: "saborou_side_effect_probe",
-      args: {},
+      toolName: "saborou_send_slack_reply",
+      args: { replyText: "了解しました", channelId: "C12345" },
       approved: false,
     });
 
@@ -56,14 +65,15 @@ describe("precheckMcpInvocation", () => {
 
   it("allows approved side-effect tools", () => {
     const result = precheckMcpInvocation(context, {
-      toolName: "saborou_side_effect_probe",
-      args: {},
+      toolName: "saborou_send_slack_reply",
+      args: { replyText: "了解しました", channelId: "C12345" },
       approved: true,
     });
 
     expect(result).toMatchObject({
       ok: true,
-      tool: { name: "saborou_side_effect_probe", effect: "side_effect" },
+      tool: { name: "saborou_send_slack_reply", effect: "side_effect" },
+      parsedArgs: { replyText: "了解しました", channelId: "C12345" },
     });
   });
 });
