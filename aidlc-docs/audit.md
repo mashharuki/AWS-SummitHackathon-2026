@@ -2458,3 +2458,10 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: CONSTRUCTION / transition from U-V3-03 Code Generation to U-V3-04 Functional Design
 
 ---
+## U-V3-04 NFR Requirements
+**Timestamp**: 2026-06-17T13:39:46Z
+**User Input**: "承認して NFR Requirementsに進んでください！"
+**AI Response**: "Recorded U-V3-04 Functional Design approval and proceeded to U-V3-04 NFR Requirements. Loaded NFR Requirements rules, active Security Baseline, Functional Design artifacts, v3 requirements, and application design context. Generated the U-V3-04 NFR Requirements plan, NFR requirements, and tech stack decisions. The assessment defines secret-safe browser configuration, primary/fallback boundary integrity, authorization preservation, demo availability, latency/user feedback, observability/troubleshooting, maintainability, test coverage, and tech stack decisions. Security Baseline applicable rules have no blocking findings."
+**Context**: CONSTRUCTION / U-V3-04 NFR Requirements / completion and review handoff
+
+---
