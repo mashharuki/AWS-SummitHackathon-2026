@@ -2,6 +2,22 @@
 
 ---
 
+## U-V3-05 NFR Requirements 完了（承認待ち）
+**Timestamp**: 2026-06-17T15:15:00Z
+**User Input**: "(NFR Requirements 自動実行中)"
+**AI Response**: "U-V3-05 NFR Requirements 完了。15要件（NFR-V305-R1〜R4 信頼性 / O1〜O3 観測性 / E1〜E4 手動E2E証拠 / A1〜A2 デモ可用性 / M1〜M2 保守性）を定義。Security Baseline 適用評価でブロッキングファインディングなし。NFR-V305-E4（未認証拒否）・NFR-V305-O2（エラーログのトークン非漏洩）・NFR-V305-M2（スクリプトのシークレット安全性）を Critical として設定。成果物: nfr-requirements.md / tech-stack-decisions.md。"
+**Context**: CONSTRUCTION / U-V3-05 NFR Requirements / completion and approval gate
+
+---
+
+## U-V3-04 Code Generation — ユーザー承認 (B)
+**Timestamp**: 2026-06-17T15:00:00Z
+**User Input**: "B"
+**AI Response**: "U-V3-04 Code Generation を B で承認。aidlc-state.md を更新し U-V3-04 Code Generation を完了済みにマーク。次のUnit U-V3-05: real-integration-verification へ進む。U-V3-05 は Functional Design スキップ → NFR Requirements → NFR Design → Infrastructure Design（条件付き）→ Code Generation の順で実行する。"
+**Context**: CONSTRUCTION / U-V3-04 Code Generation / user approval (B) → U-V3-05 start
+
+---
+
 ## U-V3-04 Code Generation Part 1 — Plan Complete (承認待ち)
 **Timestamp**: 2026-06-17T14:45:00Z
 **User Input**: "(Code Generation Part 1 plan created; awaiting user approval)"

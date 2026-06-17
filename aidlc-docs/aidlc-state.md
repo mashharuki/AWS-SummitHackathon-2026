@@ -5,7 +5,7 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-04 Code Generation 完了・承認待ち（2026-06-17 JST）。Extension 187テスト全パス・CDK 90テスト全パス。aidlc-state.md更新済み。
+- **現在のステージ**: v3 Construction / U-V3-05 real-integration-verification / NFR Requirements（2026-06-17 JST）。U-V3-04 Code Generation をBで承認。Extension 187テスト全パス・CDK 90テスト全パス。
 - **ドキュメントバージョン**: v4.2.27-draft（2026-06-17 U-V3-04 NFR Design）
 
 ---
@@ -49,7 +49,14 @@
 - [x] NFR Requirements — 完了（2026-06-17 JST）。Secret-safe browser configuration、primary/fallback boundary integrity、authorization preservation、demo availability、latency/user feedback、observability/troubleshooting、maintainability、test coverage、tech stack decisionsを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
 - [x] NFR Design — 完了・承認待ち（2026-06-17 JST）。Remote MCP primary registration、conditional SSE fallback gate、explicit fallback mode boundary、secret-safe config view、server-side authorization preservation、bounded failure and retry policy、safe diagnostic taxonomy、registry-backed setup artifact、verification handoff contractを定義。Security Baseline applicable rulesはblocking findingsなし。
 - [x] Infrastructure Design — 完了・承認済み（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加、SSEブリッジ延期決定、ElevenLabs Dashboard streamable_http登録設定、フォールバックアーキテクチャ設計を実施。新規AWSリソース・IAM・ネットワーク変更なし。ユーザーBで承認済み。
-- [x] Code Generation — 完了（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加（api-stack.ts）、CDKテスト追加（+1）、mcpFallback.ts新規作成（FallbackMode5値/SafeDiagnosticCode6コード/SafeConfigView/getMcpFallbackMode/getSafeConfigView）、agentClient.ts疑似AgentCoreパス除去・Hono API常時呼び出し統一・mcpFallback再エクスポート、agentClient.test.ts更新（+6テスト）、mcpFallback.test.ts新規作成（+15テスト）、ELEVENLABS_MCP_SETUP.md新規作成（シークレット非記載）。Extension 187テスト全パス（旧168）、CDK 90テスト全パス（旧79）。ユーザー承認待ち。
+- [x] Code Generation — 完了・承認済み（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加（api-stack.ts）、CDKテスト追加（+1）、mcpFallback.ts新規作成（FallbackMode5値/SafeDiagnosticCode6コード/SafeConfigView/getMcpFallbackMode/getSafeConfigView）、agentClient.ts疑似AgentCoreパス除去・Hono API常時呼び出し統一・mcpFallback再エクスポート、agentClient.test.ts更新（+6テスト）、mcpFallback.test.ts新規作成（+15テスト）、ELEVENLABS_MCP_SETUP.md新規作成（シークレット非記載）。Extension 187テスト全パス（旧168）、CDK 90テスト全パス（旧79）。ユーザーBで承認済み。
+
+#### U-V3-05: real-integration-verification
+- [x] Functional Design — スキップ（新規ドメインロジック追加なし。統合検証Unitのため）
+- [x] NFR Requirements — 完了（2026-06-17 JST）。信頼性（R1〜R4）・観測性（O1〜O3）・手動E2E証拠（E1〜E4）・デモ可用性（A1〜A2）・保守性（M1〜M2）の15要件を定義。Security Baseline適用ルール確認・ブロッキングファインディングなし。ユーザー承認待ち。
+- [ ] NFR Design — 未開始
+- [ ] Infrastructure Design — 条件付き（デプロイ/出力変更が必要な場合に実行）
+- [ ] Code Generation — 未開始
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -135,6 +142,9 @@
 - `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-infrastructure-design-plan.md`
 - `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/infrastructure-design/infrastructure-design.md`
 - `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/infrastructure-design/deployment-architecture.md`
+- `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-requirements/tech-stack-decisions.md`
 
 ---
 
