@@ -27,6 +27,7 @@ import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
 import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import { SlackDelegationService } from "../services/SlackDelegationService.js";
 import type { AppEnv } from "../types.js";
 
 const SyncMessagesSchema = z.object({
@@ -60,6 +61,20 @@ const SlackReplySchema = z.object({
   channelId: z.string().min(1),
   /** スレッド返信にする場合の親メッセージ ts */
   threadTs: z.string().optional(),
+});
+
+const SlackClaudeDelegationSchema = z.object({
+  taskId: z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9:_./-]+$/),
+  channelId: z.string().trim().min(1).max(80).regex(/^[A-Z0-9][A-Z0-9_-]*$/),
+  threadTs: z
+    .string()
+    .trim()
+    .min(1)
+    .max(32)
+    .regex(/^[0-9]{10,}\.[0-9]{1,}$/)
+    .optional(),
+  instruction: z.string().trim().min(1).max(2000).optional(),
+  approved: z.boolean().optional().default(false),
 });
 
 /** verdict をサボロー口調の一言メッセージにする */
@@ -205,6 +220,42 @@ export function createSlackRoute(
       });
 
       return c.json({ posted: true, ts: result.ts, verdict });
+    },
+  );
+
+  /** POST /api/slack/delegations — 承認済みタスクを Slack 上の @Claude に委譲する */
+  slack.post(
+    "/delegations",
+    zValidator("json", SlackClaudeDelegationSchema, (result, c) => {
+      if (!result.success) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid request body",
+              details: result.error.flatten(),
+            },
+          },
+          400,
+        );
+      }
+    }),
+    async (c) => {
+      const userId = c.get("userId");
+      const body = c.req.valid("json");
+      const service = new SlackDelegationService(taskRepository);
+
+      const result = await service.delegateToClaude({
+        userId,
+        taskId: body.taskId,
+        channelId: body.channelId,
+        ...(body.threadTs ? { threadTs: body.threadTs } : {}),
+        ...(body.instruction ? { instruction: body.instruction } : {}),
+        approved: body.approved,
+        requestId: c.req.header("x-request-id") ?? crypto.randomUUID(),
+      });
+
+      return c.json(result);
     },
   );
 

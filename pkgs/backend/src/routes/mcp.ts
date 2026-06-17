@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { UnauthorizedError } from "../errors.js";
+import { AppError, UnauthorizedError } from "../errors.js";
 import {
   auditMcpToolCall,
   buildSafeMcpAuditEvent,
@@ -20,9 +20,11 @@ import type {
   SafeMcpErrorResponse,
   SafeMcpSuccessResponse,
 } from "../mcp/types.js";
+import type { SlackDelegationService } from "../services/SlackDelegationService.js";
 
 type CreateMcpRouteOptions = McpIdentityResolverOptions & {
   auditWriter?: WriteAuditEvent;
+  delegationService?: Pick<SlackDelegationService, "delegateToClaude">;
 };
 
 type McpRequestBody = {
@@ -68,7 +70,14 @@ export function createMcpRoute(options: CreateMcpRouteOptions = {}) {
         ok: true,
         requestId,
         toolName,
-        result: dispatchRegistryTool(precheck.tool, precheck.parsedArgs),
+        result: await dispatchRegistryTool({
+          toolName: precheck.tool.name,
+          tool: precheck.tool,
+          parsedArgs: precheck.parsedArgs,
+          context,
+          approved: body.approved === true,
+          options,
+        }),
       };
       status = "success";
       return c.json(response);
@@ -76,6 +85,15 @@ export function createMcpRoute(options: CreateMcpRouteOptions = {}) {
       if (error instanceof UnauthorizedError) {
         status = "unauthorized";
         return c.json(toSafeError("UNAUTHORIZED", error.message), 401);
+      }
+
+      if (error instanceof AppError) {
+        const safe = mapAppErrorToMcpError(error);
+        status = mapPrecheckCodeToAuditStatus(safe.code);
+        return c.json(
+          toSafeError(safe.code, safe.message),
+          safe.statusCode,
+        );
       }
 
       status = "tool_error";
@@ -113,31 +131,58 @@ async function parseMcpBody(request: Request): Promise<McpRequestBody> {
   return parsed as McpRequestBody;
 }
 
-function dispatchRegistryTool(
-  tool: McpToolDefinition,
-  parsedArgs: Record<string, unknown>,
-): Record<string, unknown> {
-  if (tool.implementationStatus === "reserved") {
+async function dispatchRegistryTool(input: {
+  toolName: string;
+  tool: McpToolDefinition;
+  parsedArgs: Record<string, unknown>;
+  context: McpToolContext;
+  approved: boolean;
+  options: CreateMcpRouteOptions;
+}): Promise<Record<string, unknown>> {
+  if (input.toolName === "saborou_delegate_to_claude") {
+    if (!input.options.delegationService) {
+      throw new AppError(
+        500,
+        "TOOL_ERROR",
+        "Claude delegation is not configured",
+      );
+    }
+
+    const result = await input.options.delegationService.delegateToClaude({
+      userId: input.context.identity.userId,
+      taskId: String(input.parsedArgs.taskId),
+      channelId: String(input.parsedArgs.channelId),
+      ...(typeof input.parsedArgs.threadTs === "string"
+        ? { threadTs: input.parsedArgs.threadTs }
+        : {}),
+      ...(typeof input.parsedArgs.instruction === "string"
+        ? { instruction: input.parsedArgs.instruction }
+        : {}),
+      approved: input.approved,
+      requestId: input.context.requestId,
+    });
+
     return {
-      status: "reserved",
-      message: "Tool contract is reserved for a later implementation unit.",
-      implementationStatus: tool.implementationStatus,
-      requiresApproval: tool.approval.required,
+      status: "delegated",
+      taskId: result.taskId,
+      channelId: result.channelId,
+      ts: result.ts,
+      delegatedTextPreview: result.delegatedTextPreview,
     };
   }
 
   return {
-    status: tool.approval.required
+    status: input.tool.approval.required
       ? "validated_for_approved_action"
       : "validated",
     target: {
-      method: tool.http.method,
-      path: tool.http.path,
+      method: input.tool.http.method,
+      path: input.tool.http.path,
     },
-    outputMode: tool.outputMode,
-    implementationStatus: tool.implementationStatus,
-    requiresApproval: tool.approval.required,
-    validatedArgumentKeys: Object.keys(parsedArgs).sort(),
+    outputMode: input.tool.outputMode,
+    implementationStatus: input.tool.implementationStatus,
+    requiresApproval: input.tool.approval.required,
+    validatedArgumentKeys: Object.keys(input.parsedArgs).sort(),
   };
 }
 
@@ -176,4 +221,30 @@ function mapErrorCodeToStatus(code: SafeMcpErrorCode): ContentfulStatusCode {
     case "TOOL_ERROR":
       return 500;
   }
+}
+
+function mapAppErrorToMcpError(error: AppError): {
+  code: SafeMcpErrorCode;
+  message: string;
+  statusCode: ContentfulStatusCode;
+} {
+  if (error.statusCode === 403) {
+    return { code: "FORBIDDEN", message: error.message, statusCode: 403 };
+  }
+
+  if (error.statusCode === 400) {
+    return {
+      code: "VALIDATION_ERROR",
+      message: error.message,
+      statusCode: 400,
+    };
+  }
+
+  return {
+    code: "TOOL_ERROR",
+    message: "Tool execution failed",
+    statusCode: (error.statusCode >= 400 && error.statusCode <= 599
+      ? error.statusCode
+      : 500) as ContentfulStatusCode,
+  };
 }

@@ -69,6 +69,7 @@ import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
 import { createUsersRoute } from "./routes/users.js";
 import { GoogleTokenService } from "./services/GoogleTokenService.js";
+import { SlackDelegationService } from "./services/SlackDelegationService.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
@@ -105,6 +106,7 @@ const googleCalendarCacheRepository = new DynamoGoogleCalendarCacheRepository(
   dynamoClient,
   env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE,
 );
+const slackDelegationService = new SlackDelegationService(taskRepository);
 
 // Initialize SaboriProposerAgent (U-03b dependency)
 const bedrockClient = new BedrockClientAdapter();
@@ -216,7 +218,10 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
-  app.route("/api/mcp", createMcpRoute());
+  app.route(
+    "/api/mcp",
+    createMcpRoute({ delegationService: slackDelegationService }),
+  );
   // Google Calendar/Gmail 取り込みルート（U-07b）
   app.route(
     "/api/google",

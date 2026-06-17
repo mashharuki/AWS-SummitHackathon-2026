@@ -49,9 +49,9 @@ describe("MCP_TOOL_REGISTRY", () => {
     );
   });
 
-  it("keeps the Claude delegation tool reserved for U-V3-03", () => {
+  it("marks the Claude delegation tool implemented after U-V3-03", () => {
     expect(getMcpToolDefinition("saborou_delegate_to_claude")).toMatchObject({
-      implementationStatus: "reserved",
+      implementationStatus: "implemented",
       approval: { required: true },
       published: true,
     });

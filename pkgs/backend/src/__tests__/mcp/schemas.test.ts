@@ -40,4 +40,28 @@ describe("MCP tool schemas", () => {
       parseMcpToolArgs("saborou_fetch_gmail", { maxResults: 1000 }),
     ).toThrow();
   });
+
+  it("accepts Claude delegation args with an explicit channel", () => {
+    expect(
+      parseMcpToolArgs("saborou_delegate_to_claude", {
+        taskId: "task-1",
+        channelId: "C12345678",
+        threadTs: "1718600000.123456",
+        instruction: "初稿をお願いします",
+      }),
+    ).toMatchObject({
+      taskId: "task-1",
+      channelId: "C12345678",
+      instruction: "初稿をお願いします",
+    });
+  });
+
+  it("rejects Claude delegation args without a channel", () => {
+    expect(() =>
+      parseMcpToolArgs("saborou_delegate_to_claude", {
+        taskId: "task-1",
+        instruction: "初稿をお願いします",
+      }),
+    ).toThrow();
+  });
 });

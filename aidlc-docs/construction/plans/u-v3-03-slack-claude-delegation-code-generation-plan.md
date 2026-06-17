@@ -127,27 +127,27 @@ pnpm --filter cdk build
 - [x] Define exact backend, MCP, OpenAPI, test, and documentation targets.
 - [x] Create this Code Generation plan.
 - [x] Update `aidlc-docs/audit.md` and `aidlc-docs/aidlc-state.md`.
-- [ ] Receive explicit user approval to start Part 2.
+- [x] Receive explicit user approval to start Part 2.
 
 ## Part 2 - Generation Checklist
-- [ ] Create `SlackDelegationService` with approval guard, message builder, task lookup, Slack post, and safe result/error behavior.
-- [ ] Add direct `POST /api/slack/delegations` route and request schema.
-- [ ] Update MCP `saborou_delegate_to_claude` schema to include `channelId` and optional `threadTs`.
-- [ ] Update registry implementation status and metadata for `saborou_delegate_to_claude`.
-- [ ] Update MCP route dispatch so `saborou_delegate_to_claude` executes the delegation service instead of returning reserved status.
-- [ ] Update AgentCore OpenAPI schema for delegation args and implemented status.
-- [ ] Add service-level delegation tests.
-- [ ] Add Slack route delegation tests.
-- [ ] Update MCP schema, registry, and route tests.
-- [ ] Update/verify CDK schema drift tests.
-- [ ] Run backend verification: `pnpm --filter backend test`.
-- [ ] Run backend type verification: `pnpm --filter backend typecheck`.
-- [ ] Run CDK verification: `pnpm --filter cdk test`.
-- [ ] Run CDK build: `pnpm --filter cdk build`.
-- [ ] Run targeted security checks for no token/full-message leakage, approval-first behavior, no duplicate tool name, and no new infrastructure markers.
-- [ ] Generate U-V3-03 code generation summary.
-- [ ] Update this plan's checkboxes immediately as each step completes.
-- [ ] Update `aidlc-docs/aidlc-state.md` and `aidlc-docs/audit.md`.
+- [x] Create `SlackDelegationService` with approval guard, message builder, task lookup, Slack post, and safe result/error behavior.
+- [x] Add direct `POST /api/slack/delegations` route and request schema.
+- [x] Update MCP `saborou_delegate_to_claude` schema to include `channelId` and optional `threadTs`.
+- [x] Update registry implementation status and metadata for `saborou_delegate_to_claude`.
+- [x] Update MCP route dispatch so `saborou_delegate_to_claude` executes the delegation service instead of returning reserved status.
+- [x] Update AgentCore OpenAPI schema for delegation args and implemented status.
+- [x] Add service-level delegation tests.
+- [x] Add Slack route delegation tests.
+- [x] Update MCP schema, registry, and route tests.
+- [x] Update/verify CDK schema drift tests.
+- [x] Run backend verification: `pnpm --filter backend test`.
+- [x] Run backend type verification: `pnpm --filter backend typecheck`.
+- [x] Run CDK verification: `pnpm --filter cdk test`.
+- [x] Run CDK build: `pnpm --filter cdk build`.
+- [x] Run targeted security checks for no token/full-message leakage, approval-first behavior, no duplicate tool name, and no new infrastructure markers.
+- [x] Generate U-V3-03 code generation summary.
+- [x] Update this plan's checkboxes immediately as each step completes.
+- [x] Update `aidlc-docs/aidlc-state.md` and `aidlc-docs/audit.md`.
 
 ## Risk Controls
 - Approval-first guard prevents Slack token lookup and posting without explicit approval.

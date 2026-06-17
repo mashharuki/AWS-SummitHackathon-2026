@@ -187,11 +187,11 @@ paths:
       operationId: saborou_delegate_to_claude
       x-saborou-mcp-tool: saborou_delegate_to_claude
       x-saborou-approval-required: true
-      x-saborou-implementation-status: reserved
-      summary: Reserved Claude delegation contract
+      x-saborou-implementation-status: implemented
+      summary: Delegate a task to Claude in Slack
       description: >-
-        Reserved contract for U-V3-03 Claude delegation. Requires explicit
-        approval and returns a reserved response until U-V3-03 implements it.
+        Delegate an approved SABOROU task to Slack's Claude participant.
+        Requires explicit approval because it posts externally into Slack.
       requestBody:
         $ref: "#/components/requestBodies/McpDelegateToClaudeRequest"
       responses:
@@ -399,10 +399,18 @@ components:
                 additionalProperties: false
                 required:
                   - taskId
-                  - instruction
+                  - channelId
                 properties:
                   taskId:
                     $ref: "#/components/schemas/SafeId"
+                  channelId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  threadTs:
+                    type: string
+                    minLength: 1
+                    maxLength: 32
                   instruction:
                     type: string
                     minLength: 1

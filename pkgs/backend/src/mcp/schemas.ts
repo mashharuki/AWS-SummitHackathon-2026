@@ -74,6 +74,8 @@ export const mcpToolInputSchemas = {
   saborou_delegate_to_claude: z
     .object({
       taskId: idSchema,
+      channelId: slackChannelSchema,
+      threadTs: slackThreadTsSchema,
       instruction: safeTextSchema.max(2000),
     })
     .strict(),

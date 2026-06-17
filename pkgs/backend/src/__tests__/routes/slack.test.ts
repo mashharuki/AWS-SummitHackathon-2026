@@ -420,3 +420,136 @@ describe("POST /api/slack/reply", () => {
     expect(body.error.code).toBe("SLACK_API_ERROR");
   });
 });
+
+describe("POST /api/slack/delegations", () => {
+  const task = {
+    PK: `USER#${MOCK_USER_ID}`,
+    SK: "TASK#t1",
+    taskId: "t1",
+    userId: MOCK_USER_ID,
+    status: "approved",
+    title: "決勝デモの台本作成",
+    deadline: "2026-06-26T09:00:00+09:00",
+    requester: "PM",
+    description: "AWS Summit Japan 2026 決勝デモ用の説明台本を準備する",
+    sourceType: "slack",
+    approvedAt: "2026-05-23T00:00:00.000Z",
+    updatedAt: "2026-05-23T00:00:00.000Z",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetSlackToken.mockResolvedValue("xoxb-test");
+    mockPostMessage.mockResolvedValue({ ts: "22.22" });
+  });
+
+  it("posts an approved Claude delegation message", async () => {
+    const taskFindById = vi.fn().mockResolvedValue(task);
+    const app = await buildApp(vi.fn(), { taskFindById });
+
+    const res = await app.request("/api/slack/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: "t1",
+        channelId: "C12345",
+        threadTs: "1718600000.123456",
+        instruction: "短い初稿をお願いします",
+        approved: true,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      ok: true,
+      taskId: "t1",
+      channelId: "C12345",
+      ts: "22.22",
+    });
+    expect(taskFindById).toHaveBeenCalledWith(MOCK_USER_ID, "t1");
+    expect(mockGetSlackToken).toHaveBeenCalledWith(MOCK_USER_ID);
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "C12345",
+        thread_ts: "1718600000.123456",
+      }),
+    );
+    expect(mockPostMessage.mock.calls[0][0].text).toContain("@Claude");
+    expect(mockPostMessage.mock.calls[0][0].text).toContain("決勝デモの台本作成");
+  });
+
+  it("returns 403 and does not touch Slack when approval is missing", async () => {
+    const taskFindById = vi.fn().mockResolvedValue(task);
+    const app = await buildApp(vi.fn(), { taskFindById });
+
+    const res = await app.request("/api/slack/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: "t1", channelId: "C12345" }),
+    });
+
+    expect(res.status).toBe(403);
+    expect(taskFindById).not.toHaveBeenCalled();
+    expect(mockGetSlackToken).not.toHaveBeenCalled();
+    expect(mockPostMessage).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for missing or wrong-owner tasks without posting", async () => {
+    const taskFindById = vi.fn().mockResolvedValue(null);
+    const app = await buildApp(vi.fn(), { taskFindById });
+
+    const res = await app.request("/api/slack/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: "missing",
+        channelId: "C12345",
+        approved: true,
+      }),
+    });
+
+    expect(res.status).toBe(404);
+    expect(mockPostMessage).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for invalid delegation input", async () => {
+    const app = await buildApp(vi.fn());
+
+    const res = await app.request("/api/slack/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: "<script>",
+        channelId: "C12345",
+        approved: true,
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(mockPostMessage).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe 502 when Slack API fails", async () => {
+    mockPostMessage.mockRejectedValueOnce(
+      new MockSlackApiError("channel_not_found", "chat.postMessage"),
+    );
+    const taskFindById = vi.fn().mockResolvedValue(task);
+    const app = await buildApp(vi.fn(), { taskFindById });
+
+    const res = await app.request("/api/slack/delegations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId: "t1",
+        channelId: "C12345",
+        approved: true,
+      }),
+    });
+
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.error.code).toBe("SLACK_API_ERROR");
+    expect(JSON.stringify(body)).not.toContain("xoxb-test");
+  });
+});

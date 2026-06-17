@@ -11,6 +11,15 @@ function createTestApp(options: {
     aud: string;
   }>;
   events?: SafeMcpAuditEvent[];
+  delegationService?: {
+    delegateToClaude: (input: unknown) => Promise<{
+      ok: true;
+      taskId: string;
+      channelId: string;
+      ts: string;
+      delegatedTextPreview: string;
+    }>;
+  };
 }) {
   const app = new Hono();
   app.route(
@@ -18,6 +27,7 @@ function createTestApp(options: {
     createMcpRoute({
       verifier: options.verifier,
       auditWriter: (event) => options.events?.push(event),
+      delegationService: options.delegationService,
     }),
   );
   return app;
@@ -176,8 +186,19 @@ describe("POST /api/mcp/tools/:toolName", () => {
     });
   });
 
-  it("returns reserved status only for the U-V3-03 delegation contract", async () => {
-    const app = createTestApp({ verifier: validVerifier, events: [] });
+  it("executes the implemented Claude delegation tool", async () => {
+    const delegateToClaude = async () => ({
+      ok: true as const,
+      taskId: "task-1",
+      channelId: "C12345",
+      ts: "1718600000.123456",
+      delegatedTextPreview: "@Claude Please help with task-1",
+    });
+    const app = createTestApp({
+      verifier: validVerifier,
+      events: [],
+      delegationService: { delegateToClaude },
+    });
 
     const res = await app.request("/api/mcp/tools/saborou_delegate_to_claude", {
       method: "POST",
@@ -186,7 +207,11 @@ describe("POST /api/mcp/tools/:toolName", () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        args: { taskId: "task-1", instruction: "調整してください" },
+        args: {
+          taskId: "task-1",
+          channelId: "C12345",
+          instruction: "調整してください",
+        },
         approved: true,
       }),
     });
@@ -196,9 +221,10 @@ describe("POST /api/mcp/tools/:toolName", () => {
       ok: true,
       toolName: "saborou_delegate_to_claude",
       result: {
-        status: "reserved",
-        implementationStatus: "reserved",
-        requiresApproval: true,
+        status: "delegated",
+        taskId: "task-1",
+        channelId: "C12345",
+        ts: "1718600000.123456",
       },
     });
   });
