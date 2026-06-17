@@ -13,7 +13,10 @@
     "frontend": "pnpm --filter frontend",
     "backend": "pnpm --filter backend",
     "register:secret": "./scripts/register_slack_secret.sh",
-    "deploy:all": "./scripts/deploy_all.sh"
+    "deploy:all": "./scripts/deploy_all.sh",
+    "verify": "pnpm run verify:secrets && pnpm run verify:build",
+    "verify:secrets": "./scripts/verify-secret-scan.sh",
+    "verify:build": "./scripts/verify-build-test.sh"
   },
   "keywords": [],
   "author": "",

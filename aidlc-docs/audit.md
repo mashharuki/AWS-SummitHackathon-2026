@@ -2,6 +2,62 @@
 
 ---
 
+## v3 Build and Test — 完了
+**Timestamp**: 2026-06-18T00:30:00Z
+**User Input**: "B"
+**AI Response**: "v3 Build and Test 全成果物を作成。対象 Unit: U-V3-01〜05。build-instructions.md（v3 ビルド手順追記: MCP アダプタ / CDK v3 construct / extension mcpFallback / 検証スクリプト権限確認）/ unit-test-instructions.md（v3 テスト手順追記: backend 437 tests / CDK 90 tests / extension 187 tests / セキュリティテスト）/ integration-test-instructions.md（v3 統合テスト追記: MCP アダプタ↔レジストリ / Slack 委譲 / ElevenLabs フォールバック / AgentCore 手動テスト / CloudWatch 確認）/ performance-test-instructions.md（v3 パフォーマンス NFR 追記: NFR-V301-P1/P2 / デモウォームアップ）/ build-and-test-summary.md（v3 サマリー追記: 全 Unit 完了状況 / 1,577+ tests / デモ当日チェックリスト）。aidlc-state.md 更新: v3 Build and Test 完了マーク済み。"
+**Context**: CONSTRUCTION / v3 Build and Test / all artifacts created / aidlc-state.md updated
+
+---
+
+## v3 Build and Test — ユーザー承認 (B)
+**Timestamp**: 2026-06-18T00:00:00Z
+**User Input**: "B"
+**AI Response**: "U-V3-05 Code Generation を B で承認。Build and Test フェーズを開始する。対象 Unit: U-V3-01〜U-V3-05。成果物: build-instructions.md / unit-test-instructions.md / integration-test-instructions.md / performance-test-instructions.md / build-and-test-summary.md を aidlc-docs/construction/build-and-test/ に作成（v3版として追記）。"
+**Context**: CONSTRUCTION / v3 Build and Test / user approval (B) → Build and Test phase start
+
+---
+
+## U-V3-05 Code Generation Part 2 — 完了
+**Timestamp**: 2026-06-17T16:45:00Z
+**User Input**: "(自動実行)"
+**AI Response**: "U-V3-05 Code Generation Part 2 全 13 ステップ完了。生成物: scripts/verify-build-test.sh / scripts/verify-cdk-synth.sh / scripts/verify-agentcore.sh / scripts/verify-mcp-auth.sh / scripts/verify-cloudwatch.sh / scripts/verify-secret-scan.sh / scripts/demo-reset.sh（全て chmod +x 済み）/ evidence/README.md + 13 .gitkeep / TROUBLESHOOTING.md（6サービス×18+シナリオ）/ DEMO_RUNBOOK.md（15分構成+3段フォールバック+Q&A4名）/ .gitignore 画像除外追記 / package.json verify スクリプト追加 / code-generation-summary.md 生成。計画書チェックボックス全更新 / aidlc-state.md 更新完了。"
+**Context**: CONSTRUCTION / U-V3-05 Code Generation Part 2 / all 13 steps complete
+
+---
+
+## U-V3-05 Code Generation Part 2 — ユーザー承認 (B) 実行開始
+**Timestamp**: 2026-06-17T16:10:00Z
+**User Input**: "B"
+**AI Response**: "U-V3-05 Code Generation Part 2 を開始。13 ステップを順番に実行する。Step 1〜7: verify-*.sh / demo-reset.sh スクリプト作成（scripts/ に配置）。Step 8: evidence/ ディレクトリ + README.md 作成（プロジェクトルート）。Step 9: TROUBLESHOOTING.md 作成（プロジェクトルート）。Step 10: DEMO_RUNBOOK.md 作成（プロジェクトルート）。Step 11: .gitignore 更新。Step 12: package.json verify スクリプト追加。Step 13: code-generation-summary.md 作成。全スクリプトにシークレットハードコード禁止・環境変数チェック付き。"
+**Context**: CONSTRUCTION / U-V3-05 Code Generation Part 2 / user approval (B) → execution start
+
+---
+
+## U-V3-05 NFR Design — ユーザー承認 (B)
+**Timestamp**: 2026-06-17T16:00:00Z
+**User Input**: "B"
+**AI Response**: "U-V3-05 NFR Design を B で承認。aidlc-state.md を更新し U-V3-05 NFR Design を完了済みにマーク。Infrastructure Design は新規 AWS リソース・IAM・ネットワーク変更なしのためスキップ判定。次に Code Generation Part 1（計画作成）を実行する。"
+**Context**: CONSTRUCTION / U-V3-05 NFR Design / user approval (B) → Infrastructure Design skip判定 → Code Generation Part 1 開始
+
+---
+
+## U-V3-05 Infrastructure Design — スキップ判定
+**Timestamp**: 2026-06-17T16:02:00Z
+**User Input**: "(システム自動判定)"
+**AI Response**: "U-V3-05 は検証スクリプト・ドキュメント群のみで新規 AWS リソース・IAM・CDK変更・ネットワーク変更なし。Infrastructure Design をスキップし Code Generation へ進む。判断根拠を infrastructure-design-decision.md に記録。"
+**Context**: CONSTRUCTION / U-V3-05 Infrastructure Design / skip decision
+
+---
+
+## U-V3-05 Code Generation Part 1 — 計画承認プロンプト
+**Timestamp**: 2026-06-17T16:05:00Z
+**User Input**: "(承認待ち)"
+**AI Response**: "U-V3-05 Code Generation Part 1 計画を作成。13 ステップ（verify-build-test.sh / verify-cdk-synth.sh / verify-agentcore.sh / verify-mcp-auth.sh / verify-cloudwatch.sh / verify-secret-scan.sh / demo-reset.sh / Evidence Store / TROUBLESHOOTING.md / DEMO_RUNBOOK.md / .gitignore / package.json verify / code-generation-summary）を定義。計画書: aidlc-docs/construction/plans/u-v3-05-real-integration-verification-code-generation-plan.md。ユーザーの承認を待つ。"
+**Context**: CONSTRUCTION / U-V3-05 Code Generation Part 1 / plan created and awaiting approval
+
+---
+
 ## U-V3-05 NFR Design 完了（承認待ち）
 **Timestamp**: 2026-06-17T15:45:00Z
 **User Input**: "(NFR Design 自動実行中)"

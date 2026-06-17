@@ -9,3 +9,11 @@ dist/
 !.env.example
 *.local
 .learnings
+
+# evidence/ — スクリーンショット画像は除外（テキストログはコミット対象）
+evidence/**/*.png
+evidence/**/*.jpg
+evidence/**/*.jpeg
+evidence/**/*.webp
+evidence/**/*.gif
+evidence/**/*.mp4

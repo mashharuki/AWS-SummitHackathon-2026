@@ -5,8 +5,8 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-05 real-integration-verification / NFR Design（2026-06-17 JST）。U-V3-05 NFR Requirements をBで承認。
-- **ドキュメントバージョン**: v4.2.28-draft（2026-06-17 U-V3-05 NFR Design）
+- **現在のステージ**: v3 Build and Test 完了（2026-06-18 JST）。全 5 Unit（U-V3-01〜05）のビルド・テスト・統合検証手順書を作成完了。backend 437 tests / CDK 90 tests / extension 187 tests 全パス確認。実環境手動テスト手順を DEMO_RUNBOOK.md に集約。次: Operations フェーズ（デプロイ検証）またはデモ準備へ。
+- **ドキュメントバージョン**: v4.2.31（2026-06-18 v3 Build and Test 完了）
 
 ---
 
@@ -54,9 +54,12 @@
 #### U-V3-05: real-integration-verification
 - [x] Functional Design — スキップ（新規ドメインロジック追加なし。統合検証Unitのため）
 - [x] NFR Requirements — 完了（2026-06-17 JST）。信頼性（R1〜R4）・観測性（O1〜O3）・手動E2E証拠（E1〜E4）・デモ可用性（A1〜A2）・保守性（M1〜M2）の15要件を定義。Security Baseline適用ルール確認・ブロッキングファインディングなし。ユーザー承認済み（B）。
-- [x] NFR Design — 完了（2026-06-17 JST）。Verification Evidence Pattern / Safe Script Pattern / Troubleshooting Matrix Pattern / Fallback Runbook Pattern / Demo Reset Script Pattern の5パターンと論理コンポーネント（verification-scripts/evidence-store/demo-reset/troubleshooting-matrix/demo-runbook）を定義。ユーザー承認待ち。
-- [ ] Infrastructure Design — 条件付き（デプロイ/出力変更が必要な場合に実行）
-- [ ] Code Generation — 未開始
+- [x] NFR Design — 完了・承認済み（2026-06-17 JST）。Verification Evidence Pattern / Safe Script Pattern / Troubleshooting Matrix Pattern / Fallback Runbook Pattern / Demo Reset Script Pattern の5パターンと論理コンポーネント（verification-scripts/evidence-store/demo-reset/troubleshooting-matrix/demo-runbook）を定義。ユーザーBで承認済み。
+- [x] Infrastructure Design — スキップ（2026-06-17 JST）。U-V3-05 は検証スクリプト・ドキュメント群のみで新規 AWS リソース・IAM・CDK変更・ネットワーク変更なし。decision artifact を作成。
+- [x] Code Generation — 完了・承認済み（2026-06-17 JST）。13 ステップ全生成完了。verify-build-test.sh / verify-cdk-synth.sh / verify-agentcore.sh / verify-mcp-auth.sh / verify-cloudwatch.sh / verify-secret-scan.sh / demo-reset.sh（scripts/）/ evidence/README.md + 13サブディレクトリ / TROUBLESHOOTING.md（6サービス×3+シナリオ）/ DEMO_RUNBOOK.md（15分デモ手順書 + 3段フォールバック + Q&A）/ .gitignore 更新 / package.json verify スクリプト追加 / code-generation-summary.md 生成。全スクリプト chmod +x 済み。ユーザーBで承認済み。
+
+#### v3 Build and Test（全 Unit 完了後）
+- [x] Build and Test — 完了（2026-06-18 JST）。v3 全 5 Unit（U-V3-01〜05）対象。成果物: build-instructions.md（v3 セクション追記）/ unit-test-instructions.md（v3 セクション追記）/ integration-test-instructions.md（v3 セクション追記）/ performance-test-instructions.md（v3 セクション追記）/ build-and-test-summary.md（v3 セクション追記）。ユーザー承認済み（B）。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |
@@ -148,6 +151,19 @@
 - `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-nfr-design-plan.md`
 - `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-design/nfr-design-patterns.md`
 - `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-design/logical-components.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/infrastructure-design/infrastructure-design-decision.md`
+- `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-code-generation-plan.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/code/code-generation-summary.md`
+- `scripts/verify-build-test.sh`（NFR-V305-R1 Critical）
+- `scripts/verify-cdk-synth.sh`（NFR-V305-R2 Critical）
+- `scripts/verify-agentcore.sh`（NFR-V305-R3 High）
+- `scripts/verify-mcp-auth.sh`（NFR-V305-E4 Critical）
+- `scripts/verify-cloudwatch.sh`（NFR-V305-O1/O2 High/Critical）
+- `scripts/verify-secret-scan.sh`（NFR-V305-M2 Critical）
+- `scripts/demo-reset.sh`（NFR-V305-A2 High）
+- `evidence/README.md` + 13 サブディレクトリ（証拠ストア）
+- `TROUBLESHOOTING.md`（6サービス×3+シナリオ NFR-V305-M1）
+- `DEMO_RUNBOOK.md`（15分デモ手順書 + 3段フォールバック NFR-V305-R4/A2）
 
 ---
 
