@@ -31,11 +31,11 @@ function mockErrorResponse(status = 500, statusText = "Internal Server Error") {
 }
 
 // ---------------------------------------------------------------------------
-// isMcpAvailable — unit test using the live module
+// isMcpAvailable — VITE_MCP_TOOLS_BASE_URL ベースの判定テスト
 // ---------------------------------------------------------------------------
 
 describe("isMcpAvailable", () => {
-  it("returns false when VITE_AGENTCORE_GATEWAY_URL is not set in test env", async () => {
+  it("returns false when VITE_MCP_TOOLS_BASE_URL is not set in test env", async () => {
     const { isMcpAvailable } = await import("./agentClient");
     // In vitest env the var is not defined, so should be false
     expect(typeof isMcpAvailable()).toBe("boolean");
@@ -51,17 +51,16 @@ vi.mock("./agentClient", async (importOriginal) => {
   return original;
 });
 
+// ---------------------------------------------------------------------------
+// judgeTask — 常に Hono API を呼び出すことを確認
+// ---------------------------------------------------------------------------
+
 describe("judgeTask (direct fetch assertions)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("calls the backend API with correct body and Authorization header", async () => {
-    // Spy: force MCP unavailable and hit Hono path
-    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
-      false,
-    );
-
     mockOkResponse({
       replyDraft: "了解しました",
       saboriScore: 0.9,
@@ -89,15 +88,39 @@ describe("judgeTask (direct fetch assertions)", () => {
   });
 
   it("throws on non-ok response", async () => {
-    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
-      false,
-    );
     mockErrorResponse(500, "Server Error");
 
     const { judgeTask } = await import("./agentClient");
     await expect(judgeTask({ message: "test" }, "jwt")).rejects.toThrow("500");
   });
+
+  // U-V3-04: judgeTask が常に Hono API (/api/proposals/judge) を呼び出すことを確認
+  it("always calls Hono API /api/proposals/judge regardless of MCP configuration", async () => {
+    // isMcpAvailable が true になるよう設定してもHono APIを呼ぶことを確認
+    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
+      true,
+    );
+    mockOkResponse({
+      replyDraft: "了解しました",
+      saboriScore: 0.8,
+      ttsSummary: "ok",
+    });
+
+    const { judgeTask } = await import("./agentClient");
+    const result = await judgeTask({ message: "test" }, "jwt");
+
+    expect(mockFetch).toHaveBeenCalledOnce();
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    // MCP が設定済みでも /mcp/tools/ パスは呼ばれない
+    expect(url).toContain("/api/proposals/judge");
+    expect(url).not.toContain("/mcp/tools/");
+    expect(result.replyDraft).toBe("了解しました");
+  });
 });
+
+// ---------------------------------------------------------------------------
+// sendSlackReply — 常に Hono API を呼び出すことを確認
+// ---------------------------------------------------------------------------
 
 describe("sendSlackReply (direct fetch assertions)", () => {
   beforeEach(() => {
@@ -105,9 +128,6 @@ describe("sendSlackReply (direct fetch assertions)", () => {
   });
 
   it("calls POST /api/slack/reply", async () => {
-    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
-      false,
-    );
     mockOkResponse({ ok: true });
 
     const { sendSlackReply } = await import("./agentClient");
@@ -120,7 +140,26 @@ describe("sendSlackReply (direct fetch assertions)", () => {
     expect(url).toContain("/api/slack/reply");
     expect(result.ok).toBe(true);
   });
+
+  // U-V3-04: sendSlackReply が常に Hono API (/api/slack/reply) を呼び出すことを確認
+  it("always calls Hono API /api/slack/reply regardless of MCP configuration", async () => {
+    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
+      true,
+    );
+    mockOkResponse({ ok: true });
+
+    const { sendSlackReply } = await import("./agentClient");
+    await sendSlackReply({ channelId: "C456", replyText: "ok" }, "jwt");
+
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/slack/reply");
+    expect(url).not.toContain("/mcp/tools/");
+  });
 });
+
+// ---------------------------------------------------------------------------
+// getTasks — 常に Hono API を呼び出すことを確認
+// ---------------------------------------------------------------------------
 
 describe("getTasks (direct fetch assertions)", () => {
   beforeEach(() => {
@@ -128,9 +167,6 @@ describe("getTasks (direct fetch assertions)", () => {
   });
 
   it("returns tasks array from response", async () => {
-    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
-      false,
-    );
     mockOkResponse({ tasks: [{ id: "1", title: "レポート", status: "open" }] });
 
     const { getTasks } = await import("./agentClient");
@@ -139,53 +175,44 @@ describe("getTasks (direct fetch assertions)", () => {
     expect(tasks).toHaveLength(1);
     expect(tasks[0].title).toBe("レポート");
   });
+
+  // U-V3-04: getTasks が常に Hono API (/api/tasks) を呼び出すことを確認
+  it("always calls Hono API /api/tasks regardless of MCP configuration", async () => {
+    vi.spyOn(await import("./agentClient"), "isMcpAvailable").mockReturnValue(
+      true,
+    );
+    mockOkResponse({ tasks: [] });
+
+    const { getTasks } = await import("./agentClient");
+    await getTasks("jwt");
+
+    const [url] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/api/tasks");
+    expect(url).not.toContain("/mcp/tools/");
+  });
 });
 
-describe("judgeTask (MCP path with fallback)", () => {
+// ---------------------------------------------------------------------------
+// 後方互換: 旧テストケース（MCP path fallback テスト相当）
+// ---------------------------------------------------------------------------
+
+describe("judgeTask (backward compat — single fetch call)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("falls back to Hono API when MCP path is unavailable (direct fetch mock)", async () => {
-    // Simulate: MCP path throws (network-level), Hono path succeeds
-    // We mock fetch: first call throws, second call succeeds
-    mockFetch
-      .mockRejectedValueOnce(new Error("MCP endpoint not reachable"))
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () =>
-          Promise.resolve({
-            replyDraft: "fallback response",
-            saboriScore: 0.5,
-            ttsSummary: "ok",
-          }),
-        text: () => Promise.resolve(""),
-      });
-
-    // Force the MCP check to return true by setting a non-null AgentCore URL
-    // via the module's internal path — instead, test the warn+fallback path
-    // directly by verifying the Hono result when the first fetch fails.
-    // Since isMcpAvailable() reads from import.meta.env which returns undefined
-    // in tests, this test verifies the fallback works at the fetch level.
-    const { judgeTask } = await import("./agentClient");
-    // Both calls fail so it throws — this test actually just verifies
-    // the second fetch is tried in the warn path.
-    // The real fallback test is integration-level, so we verify the behavior
-    // when MCP url is not configured: direct Hono API call succeeds.
-    vi.spyOn(
-      await import("./agentClient"),
-      "isMcpAvailable",
-    ).mockReturnValueOnce(false);
-    mockFetch.mockReset();
+  it("succeeds with a single Hono API call (no MCP retry logic)", async () => {
     mockOkResponse({
       replyDraft: "direct api response",
       saboriScore: 0.8,
       ttsSummary: "ok",
     });
 
+    const { judgeTask } = await import("./agentClient");
     const result = await judgeTask({ message: "test" }, "jwt");
-    expect(result.replyDraft).toBe("direct api response");
+
+    // U-V3-04: 常に1回のみ Hono API を呼ぶ（MCP への二重呼び出しなし）
     expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result.replyDraft).toBe("direct api response");
   });
 });

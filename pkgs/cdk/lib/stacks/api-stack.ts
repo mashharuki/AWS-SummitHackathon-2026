@@ -486,6 +486,15 @@ export class SaborouApiStack extends cdk.Stack {
       exportName: `SaborouHttpApiUrl-${environment}`,
     });
 
+    // U-V3-04: ElevenLabs Dashboard で SABOROU をリモート MCP サーバーとして登録するための
+    // streamable_http エンドポイントベース URL。カスタムドメイン有効時はカスタム URL を使用。
+    new cdk.CfnOutput(this, "McpToolsBaseUrl", {
+      value: `${apiUrl}/api/mcp/tools`,
+      description:
+        "SABOROU MCP tools base URL — ElevenLabs Dashboard streamable_http 登録先",
+      exportName: `SaborouMcpToolsBaseUrl-${environment}`,
+    });
+
     new cdk.CfnOutput(this, "HonoFnArn", {
       value: honoFn.functionArn,
       description: "Hono Lambda function ARN",

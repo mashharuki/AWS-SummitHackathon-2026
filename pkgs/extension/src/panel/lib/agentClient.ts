@@ -1,29 +1,33 @@
 /**
  * Agent client: abstraction layer for calling the backend API.
  *
- * Primary path: AgentCore Gateway MCP endpoint (VITE_AGENTCORE_GATEWAY_URL)
- * Fallback path: Hono API direct call (VITE_API_URL)
+ * Primary path: ElevenLabs Dashboard remote MCP registration (external;
+ *   see ELEVENLABS_MCP_SETUP.md). The extension does not proxy MCP calls —
+ *   ElevenLabs calls the SABOROU backend via streamable_http directly.
+ *
+ * Fallback path: Hono API direct call (VITE_API_URL).
+ *   This module implements the "client_tools_fallback" / "hono_direct_fallback"
+ *   paths used when the extension registers tool callbacks as ElevenLabs
+ *   clientTools. All functions in this module always call Hono API directly.
  *
  * API keys are never held in the extension. All requests carry the
  * Cognito JWT from getValidToken() in the Authorization header.
- *
- * MCP over HTTP is not yet stable in @11labs/client 0.2.0 — the
- * clientTools config accepts plain function callbacks, not an MCP URL.
- * This module therefore implements direct fetch calls and exposes a
- * isMcpAvailable() helper so useConversationalAgent can register the
- * same operations as ElevenLabs clientTools.
  */
+
+// ---------------------------------------------------------------------------
+// Re-exports from mcpFallback for backward compatibility
+// ---------------------------------------------------------------------------
+
+export {
+  getMcpFallbackMode,
+  getSafeConfigView,
+  getMcpToolsBaseUrl,
+  type FallbackMode,
+} from "./mcpFallback";
 
 // ---------------------------------------------------------------------------
 // Config helpers
 // ---------------------------------------------------------------------------
-
-function getAgentCoreUrl(): string | null {
-  const v = import.meta.env.VITE_AGENTCORE_GATEWAY_URL;
-  // Only return a value when it is a non-empty, non-placeholder string
-  if (!v || v === "undefined" || v === "null") return null;
-  return v;
-}
 
 function getApiUrl(): string {
   const v = import.meta.env.VITE_API_URL;
@@ -34,15 +38,21 @@ function getApiUrl(): string {
 }
 
 /**
- * Returns true when AgentCore Gateway URL is configured.
- * clientTools in the ElevenLabs SDK will prefer AgentCore when available.
+ * Returns true when the MCP tools base URL (VITE_MCP_TOOLS_BASE_URL) is
+ * configured, indicating that the ElevenLabs Dashboard remote MCP
+ * registration URL is available.
+ *
+ * Note: This does NOT mean the extension sends requests to an MCP endpoint.
+ * The extension always uses Hono API (client_tools_fallback). This flag
+ * signals that the external ElevenLabs → SABOROU backend MCP path is set up.
  */
 export function isMcpAvailable(): boolean {
-  return Boolean(getAgentCoreUrl());
+  const v = import.meta.env.VITE_MCP_TOOLS_BASE_URL;
+  return Boolean(v && v !== "undefined" && v !== "null");
 }
 
 // ---------------------------------------------------------------------------
-// Shared fetch helper
+// Shared fetch helper (always uses Hono API — client_tools_fallback path)
 // ---------------------------------------------------------------------------
 
 async function apiFetch<T>(
@@ -50,7 +60,9 @@ async function apiFetch<T>(
   jwt: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const baseUrl = getAgentCoreUrl() ?? getApiUrl();
+  // Extension always calls Hono API directly (ElevenLabs clientTools fallback).
+  // Remote MCP primary path is handled externally by ElevenLabs Dashboard.
+  const baseUrl = getApiUrl();
   const url = `${baseUrl}${path}`;
 
   const res = await fetch(url, {
@@ -72,6 +84,7 @@ async function apiFetch<T>(
 
 // ---------------------------------------------------------------------------
 // Tool: judgeTask (saborou_judge_sabori)
+// ElevenLabs clientTools fallback implementation — always calls Hono API.
 // ---------------------------------------------------------------------------
 
 export interface JudgeTaskParams {
@@ -90,26 +103,15 @@ export interface JudgeTaskResult {
   ttsSummary: string;
 }
 
+/**
+ * ElevenLabs clientTools フォールバック実装: saborou_judge_sabori
+ * 常に Hono API (/api/proposals/judge) を呼び出す。
+ * ElevenLabs Dashboard 経由のリモート MCP 呼び出しとは独立して動作する。
+ */
 export async function judgeTask(
   params: JudgeTaskParams,
   jwt: string,
 ): Promise<JudgeTaskResult> {
-  // Try AgentCore (MCP path) first, fall back to Hono direct
-  try {
-    if (isMcpAvailable()) {
-      return await apiFetch<JudgeTaskResult>(
-        "/mcp/tools/saborou_judge_sabori",
-        jwt,
-        { method: "POST", body: JSON.stringify(params) },
-      );
-    }
-  } catch (err) {
-    console.warn(
-      "[agentClient] AgentCore unavailable, falling back to API",
-      err,
-    );
-  }
-
   return apiFetch<JudgeTaskResult>("/api/proposals/judge", jwt, {
     method: "POST",
     body: JSON.stringify(params),
@@ -118,6 +120,7 @@ export async function judgeTask(
 
 // ---------------------------------------------------------------------------
 // Tool: sendSlackReply (saborou_send_slack_reply)
+// ElevenLabs clientTools fallback implementation — always calls Hono API.
 // ---------------------------------------------------------------------------
 
 export interface SendSlackReplyParams {
@@ -129,25 +132,14 @@ export interface SendSlackReplyParams {
   replyText: string;
 }
 
+/**
+ * ElevenLabs clientTools フォールバック実装: saborou_send_slack_reply
+ * 常に Hono API (/api/slack/reply) を呼び出す。
+ */
 export async function sendSlackReply(
   params: SendSlackReplyParams,
   jwt: string,
 ): Promise<{ ok: boolean }> {
-  try {
-    if (isMcpAvailable()) {
-      return await apiFetch<{ ok: boolean }>(
-        "/mcp/tools/saborou_send_slack_reply",
-        jwt,
-        { method: "POST", body: JSON.stringify(params) },
-      );
-    }
-  } catch (err) {
-    console.warn(
-      "[agentClient] AgentCore unavailable, falling back to API",
-      err,
-    );
-  }
-
   return apiFetch<{ ok: boolean }>("/api/slack/reply", jwt, {
     method: "POST",
     body: JSON.stringify(params),
@@ -156,6 +148,7 @@ export async function sendSlackReply(
 
 // ---------------------------------------------------------------------------
 // Tool: getTasks (saborou_get_tasks)
+// ElevenLabs clientTools fallback implementation — always calls Hono API.
 // ---------------------------------------------------------------------------
 
 export interface Task {
@@ -165,23 +158,11 @@ export interface Task {
   dueAt?: string;
 }
 
+/**
+ * ElevenLabs clientTools フォールバック実装: saborou_get_tasks
+ * 常に Hono API (/api/tasks) を呼び出す。
+ */
 export async function getTasks(jwt: string): Promise<Task[]> {
-  try {
-    if (isMcpAvailable()) {
-      const res = await apiFetch<{ tasks: Task[] }>(
-        "/mcp/tools/saborou_get_tasks",
-        jwt,
-        { method: "POST", body: JSON.stringify({}) },
-      );
-      return res.tasks;
-    }
-  } catch (err) {
-    console.warn(
-      "[agentClient] AgentCore unavailable, falling back to API",
-      err,
-    );
-  }
-
   const res = await apiFetch<{ tasks: Task[] }>("/api/tasks", jwt, {
     method: "GET",
   });

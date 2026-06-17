@@ -160,4 +160,15 @@ describe("SaborouApiStack", () => {
       },
     });
   });
+
+  test("McpToolsBaseUrl CfnOutput is present and contains /api/mcp/tools (U-V3-04)", () => {
+    // U-V3-04: ElevenLabs Dashboard の streamable_http 登録先 URL が CloudFormation Outputs に存在することを確認
+    const outputs = template.findOutputs("McpToolsBaseUrl");
+    expect(Object.keys(outputs)).toHaveLength(1);
+    const output = outputs["McpToolsBaseUrl"];
+    // value は {"Fn::Join": ["", [apiEndpoint, "/api/mcp/tools"]]} の形式になる
+    const valueStr = JSON.stringify(output.Value);
+    expect(valueStr).toContain("/api/mcp/tools");
+    expect(output.Export?.Name).toContain("SaborouMcpToolsBaseUrl");
+  });
 });

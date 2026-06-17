@@ -5,7 +5,7 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Construction / U-V3-04 Infrastructure Design 完了・承認待ち（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加（`{HttpApiUrl}/api/mcp/tools`）、ElevenLabs Dashboard streamable_http登録設定、SSEブリッジ延期判断（U-V3-05証拠待ち）、フォールバックアーキテクチャ（remote_mcp_primary / remote_mcp_unverified / client_tools_fallback / hono_direct_fallback / unconfigured）を設計。
+- **現在のステージ**: v3 Construction / U-V3-04 Code Generation 完了・承認待ち（2026-06-17 JST）。Extension 187テスト全パス・CDK 90テスト全パス。aidlc-state.md更新済み。
 - **ドキュメントバージョン**: v4.2.27-draft（2026-06-17 U-V3-04 NFR Design）
 
 ---
@@ -48,8 +48,8 @@
 - [x] Functional Design — 完了（2026-06-17 JST）。ElevenLabs Dashboard remote MCP registrationをprimary pathとして定義し、`streamable_http` first、`sse` verification-only fallback、browser `clientTools` fallback/UI support、direct Hono fallback、pseudo `/mcp/tools/...` neutralization、secret-safe setup stateを設計。ユーザー承認済み。
 - [x] NFR Requirements — 完了（2026-06-17 JST）。Secret-safe browser configuration、primary/fallback boundary integrity、authorization preservation、demo availability、latency/user feedback、observability/troubleshooting、maintainability、test coverage、tech stack decisionsを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
 - [x] NFR Design — 完了・承認待ち（2026-06-17 JST）。Remote MCP primary registration、conditional SSE fallback gate、explicit fallback mode boundary、secret-safe config view、server-side authorization preservation、bounded failure and retry policy、safe diagnostic taxonomy、registry-backed setup artifact、verification handoff contractを定義。Security Baseline applicable rulesはblocking findingsなし。
-- [x] Infrastructure Design — 完了（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加、SSEブリッジ延期決定、ElevenLabs Dashboard streamable_http登録設定、フォールバックアーキテクチャ設計を実施。新規AWSリソース・IAM・ネットワーク変更なし。ユーザー承認待ち。
-- [ ] Code Generation — 実施予定。Extension/config/docs/testsを生成し、pseudo AgentCore REST path assumptionを除去または中立化する。
+- [x] Infrastructure Design — 完了・承認済み（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加、SSEブリッジ延期決定、ElevenLabs Dashboard streamable_http登録設定、フォールバックアーキテクチャ設計を実施。新規AWSリソース・IAM・ネットワーク変更なし。ユーザーBで承認済み。
+- [x] Code Generation — 完了（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加（api-stack.ts）、CDKテスト追加（+1）、mcpFallback.ts新規作成（FallbackMode5値/SafeDiagnosticCode6コード/SafeConfigView/getMcpFallbackMode/getSafeConfigView）、agentClient.ts疑似AgentCoreパス除去・Hono API常時呼び出し統一・mcpFallback再エクスポート、agentClient.test.ts更新（+6テスト）、mcpFallback.test.ts新規作成（+15テスト）、ELEVENLABS_MCP_SETUP.md新規作成（シークレット非記載）。Extension 187テスト全パス（旧168）、CDK 90テスト全パス（旧79）。ユーザー承認待ち。
 
 ### Extension Configuration（v3）
 | Extension | Enabled | Decided At |

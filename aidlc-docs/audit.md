@@ -2,6 +2,22 @@
 
 ---
 
+## U-V3-04 Code Generation Part 1 — Plan Complete (承認待ち)
+**Timestamp**: 2026-06-17T14:45:00Z
+**User Input**: "(Code Generation Part 1 plan created; awaiting user approval)"
+**AI Response**: "Code Generation 計画書を作成。8ステップ: Step 1 CDK McpToolsBaseUrl CfnOutput、Step 2 CDK テスト、Step 3 mcpFallback.ts新規作成、Step 4 agentClient.tsリファクタリング（疑似AgentCoreパス除去）、Step 5 agentClientテスト更新、Step 6 mcpFallbackテスト新規、Step 7 ElevenLabs Dashboardセットアップガイド、Step 8 Code Generationサマリー。Security Baseline全15ルール準拠。ブロッキングファインディングなし。"
+**Context**: CONSTRUCTION / U-V3-04 Code Generation Part 1 / plan complete; approval gate
+
+---
+
+## U-V3-04 Infrastructure Design Approval + Code Generation Start
+**Timestamp**: 2026-06-17T14:30:00Z
+**User Input**: "B"
+**AI Response**: "U-V3-04 Infrastructure Design をBで承認。aidlc-state.mdを更新してInfrastructure Designを完了済みにし、Code Generation Part 1（計画作成）を開始する。CDK McpToolsBaseUrl CfnOutput追加、Extension agentClient.ts疑似AgentCoreパス除去・FallbackMode型定義追加、ElevenLabs Dashboard セットアップガイド生成、テスト追加を含む計画を作成する。"
+**Context**: CONSTRUCTION / U-V3-04 Infrastructure Design / user approval (B) → Code Generation Part 1 start
+
+---
+
 ## U-V3-04 Infrastructure Design Start
 **Timestamp**: 2026-06-17T14:00:00Z
 **User Input**: "v3-04のInfrastructure Designから進めてください"
@@ -2486,5 +2502,21 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **User Input**: "NFR Designに進んでください"
 **AI Response**: "Recorded U-V3-04 NFR Requirements approval and proceeded to U-V3-04 NFR Design. Loaded NFR Design rules, U-V3-04 NFR Requirements, tech stack decisions, Functional Design context, and active Security Baseline. Generated the NFR Design plan, design patterns, and logical components. The design defines Remote MCP Primary Registration, Conditional SSE Fallback Gate, Explicit Fallback Mode Boundary, Secret-Safe Configuration View, Server-Side Authorization Preservation, Bounded Failure and Retry Policy, Safe Diagnostic Taxonomy, Registry-Backed Setup Artifact, and Verification Handoff Contract. Security Baseline applicable rules have no blocking findings."
 **Context**: CONSTRUCTION / U-V3-04 NFR Design / completion and review handoff
+
+---
+
+## U-V3-04 Code Generation Part 2 — Execution Start (ユーザー承認 B)
+**Timestamp**: 2026-06-17T15:00:00Z
+**User Input**: "B"
+**AI Response**: "Code Generation Part 1 計画（8ステップ）をBで承認。Part 2 コード生成を開始する。Step 1: CDK McpToolsBaseUrl CfnOutput追加、Step 2: CDKテスト追加、Step 3: mcpFallback.ts新規作成、Step 4: agentClient.tsリファクタリング（疑似AgentCoreパス除去）、Step 5: agentClient.test.ts更新、Step 6: mcpFallback.test.ts新規作成、Step 7: ELEVENLABS_MCP_SETUP.md新規作成、Step 8: code-generation-summary.md新規作成。"
+**Context**: CONSTRUCTION / U-V3-04 Code Generation Part 2 / execution start after user approval
+
+---
+
+## U-V3-04 Code Generation Part 2 — Complete
+**Timestamp**: 2026-06-17T15:30:00Z
+**User Input**: "(Code Generation Part 2 execution completed)"
+**AI Response**: "U-V3-04 Code Generation Part 2 全8ステップを完了。変更ファイル: api-stack.ts（McpToolsBaseUrl CfnOutput追加）、api-stack.test.ts（+1テスト）、agentClient.ts（疑似AgentCoreパス除去・mcpFallback再エクスポート・Hono API常時呼び出し統一）、agentClient.test.ts（+6テスト、Hono API常時呼び出し確認）。新規ファイル: mcpFallback.ts（FallbackMode5値・SafeDiagnosticCode6コード・SafeConfigView・getMcpFallbackMode・getMcpToolsBaseUrl・getSafeConfigView）、mcpFallback.test.ts（+15テスト）、ELEVENLABS_MCP_SETUP.md（シークレット非記載）、code-generation-summary.md。テスト結果: Extension 187テスト全パス（旧168）、CDK 90テスト全パス（旧79）。Security Baseline準拠確認済み。疑似AgentCore /mcp/tools/saborou_*パス完全除去確認済み。"
+**Context**: CONSTRUCTION / U-V3-04 Code Generation Part 2 / completion; awaiting user approval
 
 ---
