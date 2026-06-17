@@ -2,6 +2,22 @@
 
 ---
 
+## U-V3-04 Infrastructure Design Start
+**Timestamp**: 2026-06-17T14:00:00Z
+**User Input**: "v3-04のInfrastructure Designから進めてください"
+**AI Response**: "U-V3-04 NFR Design承認を記録し、Infrastructure Designを開始する。aidlc-state.md、unit-of-work.md、NFR Design成果物、既存U-V3-01/02インフラ設計、CDK出力を確認。実行判断: EXECUTE（RemoteMcpSetupDescriptorがCDK/API出力としてMCPエンドポイントURLを必要とするため）。新規AWSリソース・IAM・ネットワーク・SSEブリッジは不要。既存HttpApiUrl出力を基にMcpToolsBaseUrl CfnOutputを追加する設計を実施。"
+**Context**: CONSTRUCTION / U-V3-04 Infrastructure Design / start
+
+---
+
+## U-V3-04 Infrastructure Design Completion
+**Timestamp**: 2026-06-17T14:15:00Z
+**User Input**: "v3-04のInfrastructure Designから進めてください"
+**AI Response**: "U-V3-04 Infrastructure Design完了。生成成果物: infrastructure-design-plan.md（実行判断・論理コンポーネントマッピング・CDK変更セット・リスク管理）、infrastructure-design.md（AWSリソースマッピング・MCPエンドポイント設計・SSEブリッジ延期判断・SecurityBaseline準拠・CodeGeneration制約）、deployment-architecture.md（デプロイメント概要・ElevenLabs Dashboard登録フロー・フォールバックアーキテクチャ・デプロイ手順・Well-Architectedチェック）。CDK変更はMcpToolsBaseUrl CfnOutput追加のみ。新規AWSリソース・IAM変更なし。SSEブリッジはU-V3-05証拠後に再オープン。Security Baseline全15ルール準拠、ブロッキングファインディングなし。"
+**Context**: CONSTRUCTION / U-V3-04 Infrastructure Design / completion and approval gate
+
+---
+
 ## Chrome Notifications Code Generation Complete
 **Timestamp**: 2026-06-15T14:58:27Z
 **User Input**: "(No additional user input; continued execution of the approved Chrome notifications plan.)"
