@@ -126,7 +126,7 @@ export class SlackDelegationService {
         return {
           ok: true,
           taskId: input.taskId,
-          channelId: input.channelId,
+          channelId: resolvedChannelId,
           ts: result.ts ?? "",
           delegatedTextPreview: message.preview,
         };
