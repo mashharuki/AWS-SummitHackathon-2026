@@ -62,6 +62,7 @@ import { createGoogleAuthRoute } from "./routes/google-auth.js";
 import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
+import { createMcpJsonRpcRoute } from "./routes/mcp-jsonrpc.js";
 import { createMcpRoute } from "./routes/mcp.js";
 import { createProposalsRoute } from "./routes/proposals.js";
 import { createScheduleRoute } from "./routes/schedule.js";
@@ -218,9 +219,25 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
+  // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
   app.route(
     "/api/mcp",
     createMcpRoute({ delegationService: slackDelegationService }),
+  );
+
+  // MCP JSON-RPC 2.0 (streamable_http): POST /api/mcp  (ElevenLabs 向け)
+  // internalCaller は app を遅延参照するクロージャ — app 初期化後に呼ばれるため安全
+  const internalCaller = async (
+    path: string,
+    init: RequestInit,
+  ): Promise<Response> =>
+    app.fetch(new Request(`http://internal${path}`, init));
+  app.route(
+    "/api/mcp",
+    createMcpJsonRpcRoute({
+      caller: internalCaller,
+      delegationService: slackDelegationService,
+    }),
   );
   // Google Calendar/Gmail 取り込みルート（U-07b）
   app.route(

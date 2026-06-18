@@ -2,6 +2,14 @@
 
 ---
 
+## O-03: ElevenLabs MCP 登録完了
+**Timestamp**: 2026-06-18T22:35:00Z
+**User Input**: "やったー！！繋げられました！！"
+**AI Response**: "ElevenLabs → MCP JSON-RPC 接続確認。実装内容: (1) pkgs/backend/src/routes/mcp-jsonrpc.ts 新規作成 — MCP JSON-RPC 2.0 ハンドラー (initialize/tools/list/tools/call)。(2) api-stack.ts に POST /api/mcp ルート追加（認証なし、Lambda で JWT検証）。(3) authMiddleware に x-internal-sub ヘッダーフォールバック追加（内部Lambda-to-Lambda呼び出し対応）。(4) 全スタックデプロイ完了。確認済み: initialize=200/tools/list(auth)=10ツール/tools/call saborou_list_tasks=PASS/tools/call saborou_judge_sabori={replyDraft,saboriScore,ttsSummary}=PASS。ElevenLabs Dashboard URL: https://71m86enw87.execute-api.ap-northeast-1.amazonaws.com/api/mcp (streamable_http, Bearer Cognito JWT)"
+**Context**: OPERATIONS / O-03 ElevenLabs MCP 登録 / 接続確認完了
+
+---
+
 ## O-02: フロントエンド SSL 修復完了
 **Timestamp**: 2026-06-18T16:30:00Z
 **User Input**: "(コンテキスト引き継ぎ)"

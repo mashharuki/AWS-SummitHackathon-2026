@@ -125,6 +125,17 @@ MCP_BASE_URL=$(aws cloudformation describe-stacks \
 ./scripts/verify-secret-scan.sh
 ```
 
+Cognitoでアクセストークンが必要な場合
+
+```bash
+aws cognito-idp initiate-auth \
+  --auth-flow USER_PASSWORD_AUTH \
+  --client-id 5mthfmer1a05dhocs6r5mu49lq \
+  --auth-parameters USERNAME=<メールアドレス>,PASSWORD=<パスワード> \
+  --query 'AuthenticationResult.AccessToken' \
+  --output text
+```
+
 ### 期待結果
 
 各スクリプトで `[RESULT] PASS` が出力されること。

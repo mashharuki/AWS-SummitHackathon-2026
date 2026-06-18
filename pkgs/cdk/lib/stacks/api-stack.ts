@@ -388,13 +388,24 @@ export class SaborouApiStack extends cdk.Stack {
       ),
     });
 
-    // MCP adapter route (API Gateway authorizerなし / Lambda側でCognito JWTを検証)
-    // AgentCore Gateway の GATEWAY_IAM_ROLE はユーザー認可として扱わない。
+    // MCP adapter route (REST): POST /api/mcp/tools/{toolName}
+    // API Gateway authorizerなし / Lambda側でCognito JWTを検証
     httpApi.addRoutes({
       path: "/api/mcp/tools/{toolName}",
       methods: [apigatewayv2.HttpMethod.POST],
       integration: new apigatewayv2Integrations.HttpLambdaIntegration(
         "McpToolsIntegration",
+        honoFn,
+      ),
+    });
+
+    // MCP JSON-RPC 2.0 route: POST /api/mcp  (ElevenLabs streamable_http 向け)
+    // API Gateway authorizerなし / Lambda内で initialize は認証不要、tools/call は Cognito JWT検証
+    httpApi.addRoutes({
+      path: "/api/mcp",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "McpJsonRpcIntegration",
         honoFn,
       ),
     });
@@ -498,8 +509,16 @@ export class SaborouApiStack extends cdk.Stack {
     new cdk.CfnOutput(this, "McpToolsBaseUrl", {
       value: `${apiUrl}/api/mcp/tools`,
       description:
-        "SABOROU MCP tools base URL — ElevenLabs Dashboard streamable_http 登録先",
+        "SABOROU MCP REST adapter base URL (Chrome 拡張・AgentCore 向け)",
       exportName: `SaborouMcpToolsBaseUrl-${environment}`,
+    });
+
+    // MCP JSON-RPC 2.0 endpoint (ElevenLabs streamable_http 向け)
+    new cdk.CfnOutput(this, "McpJsonRpcUrl", {
+      value: `${apiUrl}/api/mcp`,
+      description:
+        "SABOROU MCP JSON-RPC 2.0 endpoint — ElevenLabs Dashboard streamable_http 登録先",
+      exportName: `SaborouMcpJsonRpcUrl-${environment}`,
     });
 
     new cdk.CfnOutput(this, "HonoFnArn", {

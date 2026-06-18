@@ -160,7 +160,9 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
       title: candidate.title,
       deadline: candidate.deadline,
       requester: candidate.requester,
-      ...(candidate.assignee ? { assignee: candidate.assignee } : /* c8 ignore next */ {}),
+      ...(candidate.assignee
+        ? { assignee: candidate.assignee }
+        : /* c8 ignore next */ {}),
       description: candidate.description,
       sourceType: candidate.sourceType,
       approvedAt: toIsoString(now),
@@ -195,7 +197,9 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
                   title: { S: task.title },
                   ...(task.deadline ? { deadline: { S: task.deadline } } : {}),
                   requester: { S: task.requester },
-                  ...(task.assignee ? { assignee: { S: task.assignee } } : /* c8 ignore next */ {}),
+                  ...(task.assignee
+                    ? { assignee: { S: task.assignee } }
+                    : /* c8 ignore next */ {}),
                   description: { S: task.description },
                   sourceType: { S: task.sourceType },
                   approvedAt: { S: task.approvedAt },

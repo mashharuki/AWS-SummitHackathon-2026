@@ -75,9 +75,7 @@ export class SaborouAgentCoreStack extends cdk.Stack {
       this,
       "DeploySchema",
       {
-        sources: [
-          s3deploy.Source.asset(path.join(__dirname, "../../schemas")),
-        ],
+        sources: [s3deploy.Source.asset(path.join(__dirname, "../../schemas"))],
         destinationBucket: schemaBucket,
         prune: true,
         memoryLimit: 256,
