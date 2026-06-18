@@ -56,6 +56,8 @@ export interface GenericExtractInput {
    * 未注入時は解決せず、抽出値（ID 等）をそのまま保存する。
    */
   resolveSlackName?: SlackNameResolver;
+  /** Slack チャンネル ID（Slack ソースのみ）。委譲ツールで使用する。 */
+  channelId?: string;
 }
 
 /** Slack メンション記法 <@U12345678> から user ID を取り出す（先頭1件）。 */
@@ -117,6 +119,7 @@ export class TaskExtractorAgent {
       sourceRef,
       requesterHint = "",
       senderSlackUserId,
+      channelId,
       resolveSlackName,
     } = input;
 
@@ -264,6 +267,7 @@ export class TaskExtractorAgent {
         description: extracted.description,
         sourceType,
         sourceRef, // only reference ID, not message body (DP-04)
+        ...(channelId ? { slackChannelId: channelId } : {}),
         status: TASK_CANDIDATE_STATUS.PENDING,
         createdAt: toIsoString(now),
         ttl: Math.floor(now.getTime() / 1000) + TASK_CANDIDATE_TTL_DAYS * 86400,
@@ -339,6 +343,7 @@ export class TaskExtractorAgent {
       requesterHint: slackUserId,
       senderSlackUserId: slackUserId,
       resolveSlackName,
+      channelId: event.message.channelId,
     });
   }
 

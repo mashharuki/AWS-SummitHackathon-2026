@@ -81,7 +81,7 @@ export function createMcpJsonRpcRoute(options: McpJsonRpcRouteOptions) {
           );
         }
 
-        let identity;
+        let identity: Awaited<ReturnType<typeof resolveMcpIdentity>>;
         try {
           identity = await resolveMcpIdentity(authHeader, options);
         } catch {
@@ -95,7 +95,7 @@ export function createMcpJsonRpcRoute(options: McpJsonRpcRouteOptions) {
           const result = await invokeTool(
             params.name,
             params.arguments ?? {},
-            authHeader!,
+            authHeader ?? "",
             identity,
             options,
           );
@@ -218,11 +218,15 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
         type: "object",
         properties: {
           taskId: { type: "string" },
-          channelId: { type: "string" },
+          channelId: {
+            type: "string",
+            description:
+              "Slack channel ID (e.g. C01234567). Optional if the task was created from Slack.",
+          },
           threadTs: { type: "string" },
           instruction: { type: "string", minLength: 1, maxLength: 2000 },
         },
-        required: ["taskId", "channelId", "instruction"],
+        required: ["taskId", "instruction"],
       };
     default:
       return { type: "object" };
@@ -248,7 +252,9 @@ async function invokeTool(
     return options.delegationService.delegateToClaude({
       userId: identity.userId,
       taskId: String(args.taskId),
-      channelId: String(args.channelId),
+      ...(typeof args.channelId === "string" && args.channelId
+        ? { channelId: args.channelId }
+        : {}),
       ...(typeof args.threadTs === "string" ? { threadTs: args.threadTs } : {}),
       ...(typeof args.instruction === "string"
         ? { instruction: args.instruction }

@@ -26,7 +26,8 @@ export type SlackDelegationAuditEvent = {
 export type SlackDelegationInput = {
   userId: string;
   taskId: string;
-  channelId: string;
+  /** Slack channel ID. Falls back to task.slackChannelId when omitted. */
+  channelId?: string;
   threadTs?: string;
   instruction?: string;
   approved: boolean;
@@ -100,13 +101,23 @@ export class SlackDelegationService {
         throw new NotFoundError("Task not found");
       }
 
+      const resolvedChannelId =
+        input.channelId ?? (task as { slackChannelId?: string }).slackChannelId;
+      if (!resolvedChannelId) {
+        throw new AppError(
+          400,
+          "MISSING_CHANNEL",
+          "Slack channelId is required but was not provided and is not stored on the task",
+        );
+      }
+
       const message = buildClaudeDelegationMessage(task, input.instruction);
       const token = await this.getToken(input.userId);
       const client = this.createSlackClient(token);
 
       try {
         const result = await client.postMessage({
-          channel: input.channelId,
+          channel: resolvedChannelId,
           text: message.text,
           ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
         });
