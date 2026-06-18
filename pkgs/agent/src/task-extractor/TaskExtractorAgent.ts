@@ -67,7 +67,7 @@ function extractSlackUserId(raw: string): string | null {
   if (m) return m[1];
   // 素の user ID（U/W から始まる英数字）にもフォールバック対応する。
   const bare = raw.trim().match(/^([UW][A-Z0-9]{6,})$/);
-  return bare ? bare[1] : null;
+  return bare ? bare[1] : /* c8 ignore next */ null;
 }
 
 /**

@@ -23,6 +23,7 @@ echo "" | tee -a "${SCAN_FILE}"
 SCAN_TARGETS=()
 for d in \
   "${ROOT_DIR}/scripts" \
+  "${ROOT_DIR}/pkgs" \
   "${ROOT_DIR}/packages" \
   "${ROOT_DIR}/apps" \
   "${ROOT_DIR}/cdk" \
@@ -40,24 +41,35 @@ done
 echo "" | tee -a "${SCAN_FILE}"
 
 # =====================
-# シークレットパターン定義
-# パターン名 → 正規表現
+# シークレットパターン定義（bash 3.2 互換: 配列で名前と正規表現を並列管理）
 # =====================
-declare -A PATTERNS
-PATTERNS["ElevenLabs_API_KEY"]="sk-[a-zA-Z0-9]{32,}"
-PATTERNS["Slack_Token_Bot"]="xox[bp]-[0-9]+-[a-zA-Z0-9-]+"
-PATTERNS["AWS_Access_Key_ID"]="AKIA[A-Z0-9]{16}"
-PATTERNS["Hardcoded_SecretARN"]="arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9/+=.@_-]+"
-PATTERNS["GitHub_PAT"]="ghp_[a-zA-Z0-9]{36,}"
-PATTERNS["Generic_API_Key"]="api[_-]?key['\"]?\s*[:=]\s*['\"][a-zA-Z0-9_-]{20,}['\"]"
+PATTERN_NAMES=(
+  "ElevenLabs_API_KEY"
+  "Slack_Token_Bot"
+  "AWS_Access_Key_ID"
+  "Hardcoded_SecretARN"
+  "GitHub_PAT"
+  "Generic_API_Key"
+)
+PATTERN_REGEXPS=(
+  "sk-[a-zA-Z0-9]{32,}"
+  "xox[bp]-[0-9]+-[a-zA-Z0-9-]+"
+  "AKIA[A-Z0-9]{16}"
+  "arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[a-zA-Z0-9/+=.@_-]+"
+  "ghp_[a-zA-Z0-9]{36,}"
+  "api[_-]?key['\"]?[[:space:]]*[:=][[:space:]]*['\"][a-zA-Z0-9_-]{20,}['\"]"
+)
 
 TOTAL_ISSUES=0
 
 for dir in "${SCAN_TARGETS[@]}"; do
   echo "--- スキャン: ${dir} ---" | tee -a "${SCAN_FILE}"
 
-  for pattern_name in "${!PATTERNS[@]}"; do
-    pattern="${PATTERNS[$pattern_name]}"
+  idx=0
+  while [ "${idx}" -lt "${#PATTERN_NAMES[@]}" ]; do
+    pattern_name="${PATTERN_NAMES[$idx]}"
+    pattern="${PATTERN_REGEXPS[$idx]}"
+    idx=$((idx + 1))
 
     MATCHES=$(grep -rEn \
       --include="*.sh" \
@@ -70,11 +82,13 @@ for dir in "${SCAN_TARGETS[@]}"; do
       --include="*.yml" \
       "${pattern}" "${dir}" 2>/dev/null \
       | grep -v "node_modules" \
+      | grep -v "cdk\.out" \
       | grep -v ".env.example" \
       | grep -v "\.d\.ts:" \
       | grep -v "# example:" \
       | grep -v "# 取得方法:" \
       | grep -v "# 実行方法:" \
+      | grep -v "secretsmanager.*secret:.*[/*]" \
       || true)
 
     if [ -n "${MATCHES}" ]; then

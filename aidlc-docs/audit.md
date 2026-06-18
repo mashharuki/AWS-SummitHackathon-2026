@@ -2,6 +2,38 @@
 
 ---
 
+## O-01: CDK デプロイ — 全スタック完了
+**Timestamp**: 2026-06-18T06:30:00Z
+**User Input**: "しました！"
+**AI Response**: "SaborouWebhook-dev / SaborouConfigDeploy-dev のデプロイ完了を確認。全 8 スタック（SaborouData-dev / SaborouFrontend-dev / SaborouCognito-dev / SaborouApi-dev / SaborouAgent-dev / SaborouWebhook-dev / SaborouAgentCore-dev / SaborouConfigDeploy-dev）が本番 AWS 環境に反映。O-01 完了。次: O-02 verify スクリプト全実行。"
+**Context**: OPERATIONS / O-01 CDK デプロイ / 全スタック完了
+
+---
+
+## O-01: CDK デプロイ — SaborouAgentCore-dev デプロイ成功
+**Timestamp**: 2026-06-18T06:21:00Z
+**User Input**: "デプロイ成功しました！！"
+**AI Response**: "SaborouAgentCore-dev デプロイ完了。GatewayUrl: https://saborou-mcp-gateway-dev-dcmjxh8d4z.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com/mcp。修正内容: (1) IamCredentialProvider.Service='execute-api' を addPropertyOverride で注入（CDK L1 型未収録のため）。(2) schemaDeployment への明示的 addDependency 追加（BucketDeployment 完了前に GatewayTarget が S3 参照する競合を解消）。"
+**Context**: OPERATIONS / O-01 CDK デプロイ / SaborouAgentCore-dev CREATE_COMPLETE
+
+---
+
+## O-01: CDK デプロイ — SaborouApi-dev デプロイ成功
+**Timestamp**: 2026-06-18T05:50:00Z
+**User Input**: "デプロイできました！！"
+**AI Response**: "SaborouApi-dev デプロイ完了。McpToolsBaseUrl: https://71m86enw87.execute-api.ap-northeast-1.amazonaws.com/api/mcp/tools。`overrideLogicalId('HttpApiDefaultStage3EEB07D6')` で CF の HttpApiDefaultStage3EEB07D6 を UPDATE 扱いにすることで解決。API Gateway `$default` ステージへのアクセスログ設定（90日保持）が適用された。"
+**Context**: OPERATIONS / O-01 CDK デプロイ / SaborouApi-dev UPDATE_COMPLETE
+
+---
+
+## Operations フェーズ — v3-operations-deploy-demo.md 作成
+**Timestamp**: 2026-06-18T02:00:00Z
+**User Input**: "このオペレーションの内容をマークダウンファイルに書き出してください"
+**AI Response**: "aidlc-docs/operations/v3-operations-deploy-demo.md を新規作成。内容: 前提確認チェックリスト / O-01〜O-06 タスク詳細（CDK デプロイ / verify スクリプト全実行 / ElevenLabs MCP 登録 / E2E 動作確認 / 証拠収集 / DEMO_RUNBOOK.md 最終調整）/ 決勝当日直前チェックリスト / 関連ドキュメント一覧。"
+**Context**: OPERATIONS / v3-operations-deploy-demo.md 作成完了
+
+---
+
 ## v3 Build and Test — 完了
 **Timestamp**: 2026-06-18T00:30:00Z
 **User Input**: "B"

@@ -71,12 +71,18 @@ export class SaborouAgentCoreStack extends cdk.Stack {
     });
 
     // schemas/ 配下の OpenAPI YAML を S3 にデプロイする。
-    new s3deploy.BucketDeployment(this, "DeploySchema", {
-      sources: [s3deploy.Source.asset(path.join(__dirname, "../../schemas"))],
-      destinationBucket: schemaBucket,
-      prune: true,
-      memoryLimit: 256,
-    });
+    const schemaDeployment = new s3deploy.BucketDeployment(
+      this,
+      "DeploySchema",
+      {
+        sources: [
+          s3deploy.Source.asset(path.join(__dirname, "../../schemas")),
+        ],
+        destinationBucket: schemaBucket,
+        prune: true,
+        memoryLimit: 256,
+      },
+    );
 
     // --- 2. Gateway 実行 IAM ロール ---
     // AgentCore Gateway サービスが assume し、Hono API の特定 ARN のみを
@@ -162,7 +168,17 @@ export class SaborouAgentCoreStack extends cdk.Stack {
         },
       ],
     });
+    // aws-cdk-lib 2.232.1 の L1 型に IamCredentialProvider が未収録のため
+    // addPropertyOverride で直接注入する。openApiSchema ターゲットに必須。
+    // Service は SigV4 署名のサービス名（API Gateway = "execute-api"）。
+    target.addPropertyOverride(
+      "CredentialProviderConfigurations.0.CredentialProvider.IamCredentialProvider.Service",
+      "execute-api",
+    );
+    // GatewayTarget は Schema が S3 に存在してから CREATE する必要がある。
+    // BucketDeployment の完了を明示的に待つ。
     target.node.addDependency(gateway);
+    target.node.addDependency(schemaDeployment);
 
     this.gatewayUrl = gateway.attrGatewayUrl;
     this.gatewayArn = gateway.attrGatewayArn;

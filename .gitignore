@@ -10,7 +10,9 @@ dist/
 *.local
 .learnings
 
-# evidence/ — スクリーンショット画像は除外（テキストログはコミット対象）
+# evidence/
+evidence/**/*.log
+evidence/**/*.txt
 evidence/**/*.png
 evidence/**/*.jpg
 evidence/**/*.jpeg

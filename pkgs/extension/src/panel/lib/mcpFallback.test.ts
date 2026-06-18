@@ -209,8 +209,9 @@ describe("FallbackMode boundary tests", () => {
       "https://abc123.execute-api.ap-northeast-1.amazonaws.com/api/mcp/tools",
     );
 
-    const { getMcpFallbackMode, getSafeConfigView } =
-      await import("./mcpFallback");
+    const { getMcpFallbackMode, getSafeConfigView } = await import(
+      "./mcpFallback"
+    );
 
     const mode = getMcpFallbackMode();
     const view = getSafeConfigView();
@@ -277,7 +278,9 @@ describe("SafeDiagnosticCode taxonomy", () => {
     // URL 未設定時は登録なし診断コード
     // client_tools_fallback モードでは null（unconfigured ではないため）
     // Note: client_tools_fallback は設定なしではなく代替手段として有効
-    expect(view.diagnosticCode === null || view.diagnosticCode !== undefined).toBe(true);
+    expect(
+      view.diagnosticCode === null || view.diagnosticCode !== undefined,
+    ).toBe(true);
     vi.unstubAllEnvs();
   });
 

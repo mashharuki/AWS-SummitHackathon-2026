@@ -430,6 +430,13 @@ export class SaborouApiStack extends cdk.Stack {
         format: accessLogFormat,
       },
     });
+    // Match the logical ID that was recorded by the previous deployment.
+    // The stage was originally created implicitly (createDefaultStage: true) under
+    // HttpApiDefaultStage3EEB07D6. Overriding here turns CREATE into UPDATE so
+    // CloudFormation applies the access-log settings to the existing physical resource.
+    (defaultStage.node.defaultChild as cdk.CfnResource).overrideLogicalId(
+      "HttpApiDefaultStage3EEB07D6",
+    );
 
     // --- API Gateway カスタムドメイン（customDomain=true のときのみ） ---
     // ap-northeast-1 の証明書と DomainName L2 コンストラクトを使用する。

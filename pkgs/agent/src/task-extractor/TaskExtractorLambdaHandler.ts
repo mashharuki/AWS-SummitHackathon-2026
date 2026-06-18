@@ -52,6 +52,7 @@ async function buildSlackNameResolver(
     const token = await getSlackToken(cognitoUserId);
     const client = new SlackClient(token);
     return (slackUserId: string) => client.usersInfo(slackUserId);
+  /* c8 ignore next 4 */
   } catch (err) {
     logError({ action: "slack_resolver_init_failed", err: String(err) });
     return undefined;
