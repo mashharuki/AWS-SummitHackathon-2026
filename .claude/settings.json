@@ -9,7 +9,15 @@
       "Bash(npm run lint)",
       "Bash(npm run build)",
       "Bash(npm run test:*)",
-      "Read(~/.zshrc)"
+      "Read(~/.zshrc)",
+      "mcp__codegraph__codegraph_search",
+      "mcp__codegraph__codegraph_explore",
+      "mcp__codegraph__codegraph_callers",
+      "mcp__codegraph__codegraph_callees",
+      "mcp__codegraph__codegraph_impact",
+      "mcp__codegraph__codegraph_node",
+      "mcp__codegraph__codegraph_status",
+      "mcp__codegraph__codegraph_files"
     ],
     "deny": [
       "Bash(curl:*)",

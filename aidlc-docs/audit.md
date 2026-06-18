@@ -2,6 +2,14 @@
 
 ---
 
+## O-02: フロントエンド SSL 修復完了
+**Timestamp**: 2026-06-18T16:30:00Z
+**User Input**: "(コンテキスト引き継ぎ)"
+**AI Response**: "CDK customDomain=true デプロイが $default ステージ競合・chrome-extension CORS エラーで失敗していたため、AWS CLI で直接修正する方針に変更。手順: (1) aws cloudfront update-distribution で E3TM47PD6J9JXT に alias=saborou.agentic-jp.com + ACM cert arn:aws:acm:us-east-1:055259484931:certificate/c128631a-43c7-4a9b-ad30-70a4676f02be を設定 → Status: Deployed。(2) env-config.json の VITE_OAUTH_REDIRECT_URI を https://saborou.agentic-jp.com/auth/callback に更新して S3 アップロード。(3) CloudFront キャッシュインバリデーション実行。確認: Python urllib で https://saborou.agentic-jp.com/env-config.json → HTTP 200 / SSL 正常。Cognito callback URL も既に saborou.agentic-jp.com を含んでいることを確認済み。"
+**Context**: OPERATIONS / O-02 フロントエンド SSL 修復 / CloudFront alias + ACM 直接更新
+
+---
+
 ## O-01: CDK デプロイ — 全スタック完了
 **Timestamp**: 2026-06-18T06:30:00Z
 **User Input**: "しました！"
@@ -2638,5 +2646,13 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **User Input**: "(Code Generation Part 2 execution completed)"
 **AI Response**: "U-V3-04 Code Generation Part 2 全8ステップを完了。変更ファイル: api-stack.ts（McpToolsBaseUrl CfnOutput追加）、api-stack.test.ts（+1テスト）、agentClient.ts（疑似AgentCoreパス除去・mcpFallback再エクスポート・Hono API常時呼び出し統一）、agentClient.test.ts（+6テスト、Hono API常時呼び出し確認）。新規ファイル: mcpFallback.ts（FallbackMode5値・SafeDiagnosticCode6コード・SafeConfigView・getMcpFallbackMode・getMcpToolsBaseUrl・getSafeConfigView）、mcpFallback.test.ts（+15テスト）、ELEVENLABS_MCP_SETUP.md（シークレット非記載）、code-generation-summary.md。テスト結果: Extension 187テスト全パス（旧168）、CDK 90テスト全パス（旧79）。Security Baseline準拠確認済み。疑似AgentCore /mcp/tools/saborou_*パス完全除去確認済み。"
 **Context**: CONSTRUCTION / U-V3-04 Code Generation Part 2 / completion; awaiting user approval
+
+---
+
+## Operations O-02: verify スクリプト全件 PASS
+**Timestamp**: 2026-06-18T11:35:44Z
+**User Input**: "(verify-cloudwatch.sh 実行完了)"
+**AI Response**: "O-02 全 verify スクリプト PASS 確認。verify-build-test.sh PASS=10 / verify-agentcore.sh PASS=3（HTTP 401 到達確認・CFスタック CREATE_COMPLETE）/ verify-secret-scan.sh PASS（シークレット漏洩なし）/ verify-mcp-auth.sh PASS=3（NFR-V305-E4 クリア: 認証なし→401・無効トークン→401・認証あり→エンドポイント到達）/ verify-cloudwatch.sh PASS（O1: saborou_list_tasks 3件監査ログ確認・O2: エラーログシークレット漏洩なし）。証拠ログ一式 evidence/ ディレクトリに保存済み。"
+**Context**: OPERATIONS / O-02 verify scripts / all pass confirmed
 
 ---
