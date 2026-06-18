@@ -1,7 +1,16 @@
+import {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} from "@aws-sdk/client-secrets-manager";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { env } from "../config/env.js";
 import { UnauthorizedError } from "../errors.js";
 import type { McpIdentity } from "./types.js";
+
+const secretsClient = new SecretsManagerClient({
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
+});
+const MCP_API_KEY_SECRET = "saborou/mcp-api-key";
 
 export type VerifiedJwtClaims = {
   sub: string;
@@ -33,12 +42,45 @@ export async function resolveMcpIdentity(
   options: McpIdentityResolverOptions = {},
 ): Promise<McpIdentity> {
   const token = extractBearerToken(authorization);
-  const claims = await (options.verifier ?? verifyCognitoJwt)(token);
+
+  // テスト等でカスタム verifier が注入された場合は常にそちらを使う
+  if (options.verifier) {
+    const claims = await options.verifier(token);
+    return { userId: claims.sub, issuer: claims.iss, audience: claims.aud };
+  }
+
+  // JWT は "." を2つ以上含む → Cognito JWT として検証
+  if (token.split(".").length >= 3) {
+    const claims = await verifyCognitoJwt(token);
+    return { userId: claims.sub, issuer: claims.iss, audience: claims.aud };
+  }
+
+  // それ以外 → 静的 API キーとして検証
+  return verifyMcpApiKey(token);
+}
+
+async function verifyMcpApiKey(token: string): Promise<McpIdentity> {
+  let secret: { apiKey: string; userId: string };
+  try {
+    const res = await secretsClient.send(
+      new GetSecretValueCommand({ SecretId: MCP_API_KEY_SECRET }),
+    );
+    secret = JSON.parse(res.SecretString ?? "{}") as {
+      apiKey: string;
+      userId: string;
+    };
+  } catch {
+    throw new UnauthorizedError("API key verification unavailable");
+  }
+
+  if (token !== secret.apiKey) {
+    throw new UnauthorizedError("Invalid API key");
+  }
 
   return {
-    userId: claims.sub,
-    issuer: claims.iss,
-    audience: claims.aud,
+    userId: secret.userId,
+    issuer: "saborou/mcp-api-key",
+    audience: "mcp",
   };
 }
 

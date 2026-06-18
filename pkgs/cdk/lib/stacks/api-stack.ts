@@ -314,6 +314,17 @@ export class SaborouApiStack extends cdk.Stack {
       }),
     );
 
+    // --- MCP API キー読み取り権限（ElevenLabs 長期認証用） ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/mcp-api-key*`,
+        ],
+      }),
+    );
+
     // --- EventBridge PutEvents 権限（遡及取得 API が SlackBackfill を publish） ---
     honoFn.addToRolePolicy(
       new iam.PolicyStatement({
