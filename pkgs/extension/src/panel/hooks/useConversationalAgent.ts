@@ -103,6 +103,35 @@ function isAgentConfigured(): boolean {
   return Boolean(getAgentId() || getSignedUrl());
 }
 
+/**
+ * Client-side overrides (Japanese language / system prompt / first message)
+ * are OPT-IN. ElevenLabs rejects the connection if an override is sent but not
+ * enabled in the dashboard (Security → Overrides), which shows up as an
+ * immediate connect→disconnect loop. Enable this only AFTER the dashboard
+ * overrides are turned on, by setting VITE_ELEVENLABS_ENABLE_OVERRIDES=true.
+ */
+function areOverridesEnabled(): boolean {
+  return import.meta.env.VITE_ELEVENLABS_ENABLE_OVERRIDES === "true";
+}
+
+/**
+ * System prompt sent as an override so the agent always behaves as SABOROU in
+ * Japanese, regardless of the dashboard default. Requires the matching
+ * override (prompt / language / first message) to be enabled in the ElevenLabs
+ * dashboard, otherwise it is silently ignored.
+ */
+const AGENT_SYSTEM_PROMPT =
+  "あなたは「SABOROU（サボロー）」というサボり支援アシスタントです。" +
+  "必ず日本語で、短く親しみやすく話してください。" +
+  "ユーザーにSlackの新着メッセージが届くと、画面に返信案が表示されます。" +
+  "ユーザーが「送って」「いいよ」「OK」など承認の意思を示したら、" +
+  "saborou_send_slack_reply ツールを引数なしで呼び出してください" +
+  "（channelId・返信文は画面の返信案が自動的に使われます）。" +
+  "返信内容を聞き返す必要はありません。承認されたら即座に送信してください。";
+
+const AGENT_FIRST_MESSAGE =
+  "こんにちは、SABOROU です。Slackに自分宛てのメッセージが届いたら、返信案を出しますね。";
+
 const MICROPHONE_PERMISSION_ERROR =
   "マイク許可用のタブを開きました。そのタブで「マイクを許可」を押し、許可後にSABOROUへ戻ってもう一度音声接続してください。";
 
@@ -374,6 +403,19 @@ export function useConversationalAgent(
         sessionConfig.signedUrl = signedUrl;
       } else if (agentId) {
         sessionConfig.agentId = agentId;
+      }
+
+      // Overrides are opt-in: sending them when the dashboard hasn't enabled
+      // the matching override causes ElevenLabs to reject the connection
+      // (immediate connect→disconnect). Only attach once explicitly enabled.
+      if (areOverridesEnabled()) {
+        sessionConfig.overrides = {
+          agent: {
+            language: "ja",
+            firstMessage: AGENT_FIRST_MESSAGE,
+            prompt: { prompt: AGENT_SYSTEM_PROMPT },
+          },
+        };
       }
 
       const conv = await Conversation.startSession(
