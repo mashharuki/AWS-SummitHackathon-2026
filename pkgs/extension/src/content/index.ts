@@ -93,21 +93,62 @@ function scanForNewMessages(): void {
 }
 
 /**
+ * 拡張機能のリロード後、このページに残った古い content script は孤児になる。
+ * その状態で chrome.* を呼ぶと "Extension context invalidated" が出続けるため、
+ * 検知したら監視を停止してエラーの洪水を止める（ページ再読込で新版が注入される）。
+ */
+function isExtensionContextInvalidated(err: unknown): boolean {
+  return (
+    (err instanceof Error &&
+      err.message.includes("Extension context invalidated")) ||
+    !chrome.runtime?.id
+  );
+}
+
+function teardownOrphanedContentScript(): void {
+  try {
+    observer.disconnect();
+  } catch {
+    // already disconnected
+  }
+  console.info(
+    "[SABOROU] Extension context invalidated — content script stopped. Reload this tab to re-enable.",
+  );
+}
+
+/**
  * chrome.runtime.sendMessage のラッパー（エラーを握り潰す）
  * Side Panel が開いていない場合にエラーが発生するため
  */
 function sendMessageToSidePanel(message: NewSlackMessage): void {
-  chrome.runtime.sendMessage(message).catch((err: unknown) => {
-    // Side Panel が開いていない場合: Could not establish connection.
-    // この場合は無視する（次回の監視で再試行される）
-    if (
-      err instanceof Error &&
-      err.message.includes("Could not establish connection")
-    ) {
+  // 孤児化していたら呼び出し自体を避ける（同期 throw も防ぐ）
+  if (isExtensionContextInvalidated(undefined)) {
+    teardownOrphanedContentScript();
+    return;
+  }
+  try {
+    chrome.runtime.sendMessage(message).catch((err: unknown) => {
+      // Side Panel が開いていない場合: Could not establish connection.
+      // この場合は無視する（次回の監視で再試行される）
+      if (
+        err instanceof Error &&
+        err.message.includes("Could not establish connection")
+      ) {
+        return;
+      }
+      if (isExtensionContextInvalidated(err)) {
+        teardownOrphanedContentScript();
+        return;
+      }
+      console.warn("[SABOROU] sendMessage error:", err);
+    });
+  } catch (err) {
+    if (isExtensionContextInvalidated(err)) {
+      teardownOrphanedContentScript();
       return;
     }
-    console.warn("[SABOROU] sendMessage error:", err);
-  });
+    console.warn("[SABOROU] sendMessage threw:", err);
+  }
 }
 
 // ---------------------------------------------------------------------------
