@@ -34,6 +34,7 @@ vi.mock("@/panel/lib/agentClient", () => ({
 }));
 
 import { Conversation } from "@11labs/client";
+import { sendSlackReply } from "@/panel/lib/agentClient";
 import {
   requestMicrophoneAccess,
   useConversationalAgent,
@@ -316,6 +317,96 @@ describe("useConversationalAgent", () => {
     expect(result.current.lastAgentMessage).toBe(
       "了解しました、後ほど対応します",
     );
+
+    // @ts-expect-error restore
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;
+  });
+
+  it("saborou_send_slack_reply falls back to activeReply when args are omitted", async () => {
+    // @ts-expect-error mutating readonly env for test
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = "test-agent-id";
+
+    let clientTools: Record<
+      string,
+      (params: Record<string, unknown>) => Promise<string>
+    > = {};
+    vi.mocked(Conversation.startSession).mockImplementationOnce(
+      async (opts) => {
+        const options = opts as Record<string, unknown>;
+        clientTools = options.clientTools as typeof clientTools;
+        return mockConversation as unknown as InstanceType<typeof Conversation>;
+      },
+    );
+
+    const onReplySent = vi.fn();
+    const { result } = renderHook(() =>
+      useConversationalAgent({
+        sessionJwt: "valid-jwt",
+        activeReply: {
+          channelId: "C123",
+          threadTs: "1700000000.000100",
+          replyText: "了解しました、対応します",
+        },
+        onReplySent,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    // Agent calls the tool with NO arguments — should use activeReply.
+    let raw = "";
+    await act(async () => {
+      raw = await clientTools.saborou_send_slack_reply({});
+    });
+
+    expect(sendSlackReply).toHaveBeenCalledWith(
+      {
+        channelId: "C123",
+        threadTs: "1700000000.000100",
+        replyText: "了解しました、対応します",
+      },
+      "valid-jwt",
+    );
+    expect(JSON.parse(raw)).toEqual({ ok: true });
+    expect(onReplySent).toHaveBeenCalledTimes(1);
+
+    // @ts-expect-error restore
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;
+  });
+
+  it("saborou_send_slack_reply returns no_active_reply when nothing is on screen", async () => {
+    // @ts-expect-error mutating readonly env for test
+    import.meta.env.VITE_ELEVENLABS_AGENT_ID = "test-agent-id";
+
+    let clientTools: Record<
+      string,
+      (params: Record<string, unknown>) => Promise<string>
+    > = {};
+    vi.mocked(Conversation.startSession).mockImplementationOnce(
+      async (opts) => {
+        const options = opts as Record<string, unknown>;
+        clientTools = options.clientTools as typeof clientTools;
+        return mockConversation as unknown as InstanceType<typeof Conversation>;
+      },
+    );
+
+    const { result } = renderHook(() =>
+      useConversationalAgent({ sessionJwt: "valid-jwt", activeReply: null }),
+    );
+
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    let raw = "";
+    await act(async () => {
+      raw = await clientTools.saborou_send_slack_reply({});
+    });
+
+    expect(sendSlackReply).not.toHaveBeenCalled();
+    expect(JSON.parse(raw).error).toBe("no_active_reply");
 
     // @ts-expect-error restore
     import.meta.env.VITE_ELEVENLABS_AGENT_ID = undefined;

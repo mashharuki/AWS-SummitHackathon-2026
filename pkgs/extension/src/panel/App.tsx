@@ -14,7 +14,12 @@ import type {
 import { SIDE_PANEL_PORT_NAME } from "@/messages";
 import { NotificationSettingsMenu } from "@/panel/NotificationSettingsMenu";
 import { useConversationalAgent } from "@/panel/hooks/useConversationalAgent";
-import { useVoiceApproval } from "@/panel/hooks/useVoiceApproval";
+import {
+  isApprovalPhrase,
+  isCancellationPhrase,
+  normalizeTranscript,
+  useVoiceApproval,
+} from "@/panel/hooks/useVoiceApproval";
 import { judgeTask, sendSlackReply } from "@/panel/lib/agentClient";
 import {
   CheckCircle,
@@ -83,8 +88,18 @@ export function App() {
     sessionJwtRef.current = sessionJwt;
   }, [sessionJwt]);
 
+  // 送信状態を ref でも保持（二重送信ガードを最新値で判定するため）
+  const sendStatusRef = useRef<SendStatus>("idle");
+  useEffect(() => {
+    sendStatusRef.current = sendStatus;
+  }, [sendStatus]);
+
   // voiceApproval.startListening を ref で保持し useEffect の依存配列問題を回避する
   const startListeningRef = useRef<() => void>(() => {});
+  // 送信処理を ref で保持（音声 onApproved から最新版を呼ぶため）
+  const sendCurrentReplyRef = useRef<() => Promise<boolean>>(async () => false);
+  // 返信案を ref で保持（トランスクリプト判定から最新値を参照するため）
+  const replyDraftRef = useRef<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // Voice approval hook
@@ -93,7 +108,10 @@ export function App() {
   const voiceApproval = useVoiceApproval({
     timeoutMs: 3000,
     onApproved: () => {
-      console.info("[SABOROU] Voice approval: approved");
+      console.info("[SABOROU] Voice approval: approved → sending");
+      // 音声フレーズ判定（「いいよ」等）で承認されたら実際に送信する。
+      // ElevenLabs Agent がツールを呼ばなくても、この経路で確実に送れる。
+      void sendCurrentReplyRef.current();
     },
     onRejected: (reason) => {
       console.info("[SABOROU] Voice approval rejected:", reason);
@@ -109,19 +127,65 @@ export function App() {
   // Conversational agent hook
   // ---------------------------------------------------------------------------
 
+  // replyDraft の最新値を ref に同期
+  useEffect(() => {
+    replyDraftRef.current = replyDraft;
+  }, [replyDraft]);
+
   const handleUserTranscript = useCallback(
     (transcript: string) => {
-      // Only forward to approval if we are awaiting
-      if (voiceApproval.state === "awaiting_approval") {
-        voiceApproval.processTranscript(transcript);
+      // 返信案が画面にある間は、3秒の承認待ちに縛られず常に「いいよ」を拾う。
+      // ElevenLabs Agent がツールを呼ばなくても、この経路で確実に送信できる。
+      const hasDraft = Boolean(replyDraftRef.current);
+      const canSend =
+        sendStatusRef.current === "idle" || sendStatusRef.current === "error";
+
+      if (hasDraft && canSend) {
+        const normalized = normalizeTranscript(transcript);
+        if (isApprovalPhrase(normalized)) {
+          console.info(
+            "[SABOROU] Approval phrase detected in transcript → sending",
+          );
+          void sendCurrentReplyRef.current();
+          return;
+        }
+        if (isCancellationPhrase(normalized)) {
+          console.info("[SABOROU] Cancellation phrase detected");
+          voiceApproval.cancel();
+          return;
+        }
       }
+
+      // 承認待ち状態のときは従来のフレーズ判定にも回す（ボタン併用フロー）
+      voiceApproval.processTranscript(transcript);
     },
     [voiceApproval],
   );
 
+  // The reply currently on screen — handed to the agent so "送って" can send it
+  // without the agent having to recover the channelId from the transcript.
+  const activeReply =
+    latestSlackMessage && replyDraft
+      ? {
+          channelId: latestSlackMessage.channelId,
+          threadTs: latestSlackMessage.threadTs || undefined,
+          replyText: replyDraft,
+        }
+      : null;
+
   const agent = useConversationalAgent({
     sessionJwt,
     onUserTranscript: handleUserTranscript,
+    activeReply,
+    onReplySent: () => {
+      setSendStatus("sent");
+      voiceApproval.approve();
+      chrome.runtime
+        .sendMessage({ type: "TASK_REPLY_COMPLETED" })
+        .catch((err: unknown) => {
+          console.warn("[SABOROU] Completion notification failed:", err);
+        });
+    },
   });
 
   // ---------------------------------------------------------------------------
@@ -148,6 +212,11 @@ export function App() {
         .then((result) => {
           setReplyDraft(result.replyDraft);
           setJudgeStatus("ready");
+          // Tell the agent a reply is ready so "送って" sends it via clientTools.
+          agent.pushContext(
+            `返信案ができました。${payload.sender} さんへの返信文は「${result.replyDraft}」です。` +
+              "ユーザーが「送って」「いいよ」などと言ったら、saborou_send_slack_reply ツールを呼んでこの返信を送信してください。引数は省略してかまいません（画面の返信案が使われます）。",
+          );
           startListeningRef.current();
         })
         .catch((err: unknown) => {
@@ -289,33 +358,21 @@ export function App() {
   };
 
   // ---------------------------------------------------------------------------
-  // Approval + Slack 送信（非音声フロー）
+  // Approval + Slack 送信
   // ---------------------------------------------------------------------------
 
-  const handleApprovalButtonClick = useCallback(async () => {
-    if (!userInfo) return;
-
-    // 送信完了/エラー後にもう一度押したらリセット（次のメッセージ用）
-    if (sendStatus === "sent" || sendStatus === "error") {
-      voiceApproval.reset();
-      setSendStatus("idle");
-      setSendError(null);
-      return;
-    }
-
-    // 送信中は二重送信を防ぐ
-    if (sendStatus === "sending") return;
-
+  /**
+   * 画面に出ている返信案を実際に送信する共通処理。
+   * ボタン・音声フレーズ判定・ElevenLabs ツールの全経路から呼ばれる。
+   * 二重送信は sendStatusRef で防ぐ。
+   */
+  const sendCurrentReply = useCallback(async (): Promise<boolean> => {
     const jwt = sessionJwtRef.current;
-    // 返信案が無い／JWT無し／メッセージ無しなら承認待ち開始のみ
-    if (!jwt || !latestSlackMessage || !replyDraft) {
-      if (voiceApproval.state === "idle") voiceApproval.startListening();
-      return;
-    }
+    if (!jwt || !latestSlackMessage || !replyDraft) return false;
+    // 二重送信防止（ボタンと音声が同時に発火しても1回だけ送る）
+    if (sendStatusRef.current === "sending" || sendStatusRef.current === "sent")
+      return false;
 
-    // 返信案がある場合: ボタン1クリックで即承認・送信する。
-    // （音声の承認待ちタイムアウト状態に関わらず、ボタンは確実に送信する）
-    voiceApproval.approve();
     setSendStatus("sending");
     setSendError(null);
 
@@ -343,13 +400,53 @@ export function App() {
           // content script が応答しなくても API 送信は成功しているので無視
           console.warn("[SABOROU] DOM reply fallback failed:", err);
         });
+      return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Slack 送信エラー";
       console.error("[SABOROU] sendSlackReply failed:", msg);
       setSendError(msg);
       setSendStatus("error");
+      return false;
     }
-  }, [userInfo, voiceApproval, latestSlackMessage, replyDraft, sendStatus]);
+  }, [latestSlackMessage, replyDraft]);
+
+  // 音声フレーズ判定で「いいよ」を拾ったときの送信を ref 経由で行う
+  // （useVoiceApproval の onApproved から最新の sendCurrentReply を呼ぶため）
+  useEffect(() => {
+    sendCurrentReplyRef.current = sendCurrentReply;
+  });
+
+  const handleApprovalButtonClick = useCallback(async () => {
+    if (!userInfo) return;
+
+    // 送信完了/エラー後にもう一度押したらリセット（次のメッセージ用）
+    if (sendStatus === "sent" || sendStatus === "error") {
+      voiceApproval.reset();
+      setSendStatus("idle");
+      setSendError(null);
+      return;
+    }
+
+    // 送信中は二重送信を防ぐ
+    if (sendStatus === "sending") return;
+
+    // 返信案が無い場合は承認待ち開始のみ
+    if (!sessionJwtRef.current || !latestSlackMessage || !replyDraft) {
+      if (voiceApproval.state === "idle") voiceApproval.startListening();
+      return;
+    }
+
+    // 返信案がある場合: ボタン1クリックで即承認・送信する。
+    voiceApproval.approve();
+    await sendCurrentReply();
+  }, [
+    userInfo,
+    voiceApproval,
+    latestSlackMessage,
+    replyDraft,
+    sendStatus,
+    sendCurrentReply,
+  ]);
 
   return (
     <div className="flex flex-col h-screen bg-[#fffaf5]" data-testid="app-root">

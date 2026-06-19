@@ -44,6 +44,17 @@ export interface ConversationalAgentState {
   lastUserTranscript: string | null;
 }
 
+/**
+ * The Slack reply the agent can send when the user says "送って".
+ * App keeps this in sync with whatever draft is currently on screen so the
+ * agent never has to recover the long channelId from the transcript.
+ */
+export interface ActiveSlackReply {
+  channelId: string;
+  threadTs?: string;
+  replyText: string;
+}
+
 export interface UseConversationalAgentOptions {
   /**
    * Valid Cognito JWT. Pass null/undefined to keep the session disconnected.
@@ -52,6 +63,14 @@ export interface UseConversationalAgentOptions {
   sessionJwt: string | null | undefined;
   /** Called when the agent emits a user transcript (for voice approval) */
   onUserTranscript?: (transcript: string) => void;
+  /**
+   * The reply currently displayed on screen. When the agent calls
+   * saborou_send_slack_reply without explicit args, these values are used so
+   * "送って" works without the agent having to repeat the channelId/draft.
+   */
+  activeReply?: ActiveSlackReply | null;
+  /** Called after the agent successfully sends a Slack reply via clientTools */
+  onReplySent?: () => void;
 }
 
 export interface UseConversationalAgentReturn extends ConversationalAgentState {
@@ -159,7 +178,7 @@ const INITIAL_STATE: ConversationalAgentState = {
 export function useConversationalAgent(
   options: UseConversationalAgentOptions,
 ): UseConversationalAgentReturn {
-  const { sessionJwt, onUserTranscript } = options;
+  const { sessionJwt, onUserTranscript, activeReply, onReplySent } = options;
 
   const [state, setState] = useState<ConversationalAgentState>(() => ({
     ...INITIAL_STATE,
@@ -170,10 +189,17 @@ export function useConversationalAgent(
   const onUserTranscriptRef = useRef(onUserTranscript);
   // Keep latest JWT ref so clientTools closures pick up refreshed tokens
   const jwtRef = useRef(sessionJwt);
+  // Keep latest active reply + callback so clientTools closures stay current
+  const activeReplyRef = useRef(activeReply);
+  const onReplySentRef = useRef(onReplySent);
 
   useEffect(() => {
     onUserTranscriptRef.current = onUserTranscript;
+    onReplySentRef.current = onReplySent;
   });
+  useEffect(() => {
+    activeReplyRef.current = activeReply;
+  }, [activeReply]);
   useEffect(() => {
     jwtRef.current = sessionJwt;
   }, [sessionJwt]);
@@ -187,6 +213,7 @@ export function useConversationalAgent(
   const buildClientTools = useCallback(() => {
     return {
       saborou_get_tasks: async (_params: Record<string, unknown>) => {
+        console.info("[SABOROU] clientTool called: saborou_get_tasks");
         const jwt = jwtRef.current;
         if (!jwt) return JSON.stringify({ error: "not authenticated" });
         try {
@@ -198,6 +225,7 @@ export function useConversationalAgent(
       },
 
       saborou_judge_sabori: async (params: Record<string, unknown>) => {
+        console.info("[SABOROU] clientTool called: saborou_judge_sabori");
         const jwt = jwtRef.current;
         if (!jwt) return JSON.stringify({ error: "not authenticated" });
         try {
@@ -217,17 +245,40 @@ export function useConversationalAgent(
       },
 
       saborou_send_slack_reply: async (params: Record<string, unknown>) => {
+        console.info(
+          "[SABOROU] clientTool called: saborou_send_slack_reply",
+          params,
+        );
         const jwt = jwtRef.current;
         if (!jwt) return JSON.stringify({ error: "not authenticated" });
+
+        // Fall back to the reply currently displayed on screen so the user can
+        // just say "送って" without the agent reconstructing channelId/draft.
+        const active = activeReplyRef.current;
+        const channelId = params.channelId
+          ? String(params.channelId)
+          : (active?.channelId ?? "");
+        const threadTs = params.threadTs
+          ? String(params.threadTs)
+          : active?.threadTs;
+        const replyText = params.replyText
+          ? String(params.replyText)
+          : (active?.replyText ?? "");
+
+        if (!channelId || !replyText) {
+          return JSON.stringify({
+            error: "no_active_reply",
+            message:
+              "送信できる返信案がありません。先にSlackメッセージを受け取ってください。",
+          });
+        }
+
         try {
           const result = await sendSlackReply(
-            {
-              channelId: String(params.channelId ?? ""),
-              threadTs: params.threadTs ? String(params.threadTs) : undefined,
-              replyText: String(params.replyText ?? ""),
-            },
+            { channelId, threadTs, replyText },
             jwt,
           );
+          onReplySentRef.current?.();
           return JSON.stringify(result);
         } catch (err) {
           return JSON.stringify({ error: String(err) });
@@ -282,8 +333,9 @@ export function useConversationalAgent(
           console.info("[SABOROU] ElevenLabs connected:", conversationId);
           setState((prev) => ({ ...prev, status: "connected", error: null }));
         },
-        onDisconnect: () => {
-          console.info("[SABOROU] ElevenLabs disconnected");
+        onDisconnect: (details?: unknown) => {
+          // details carries the close reason (e.g. rejected overrides).
+          console.info("[SABOROU] ElevenLabs disconnected", details ?? "");
           conversationRef.current = null;
           setState((prev) => ({ ...prev, status: "disconnected", mode: null }));
         },
