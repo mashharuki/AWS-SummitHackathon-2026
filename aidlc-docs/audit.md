@@ -2671,3 +2671,155 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **Context**: OPERATIONS / O-02 verify scripts / all pass confirmed
 
 ---
+## Implementation Resume
+**Timestamp**: 2026-06-20T09:41:20Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# Travelpayouts旅行プラン代行機能 実装計画
+
+## Summary
+
+SABOROUの既存Hono API/MCP基盤に、旅行プラン立案を代行する統合ツール `saborou_plan_trip` を追加する。ElevenLabs remote MCPとチャットクライアントの両方から同じHono APIを呼べる構成にし、デモではTravelpayouts実APIを優先しつつ、認証未設定・空結果・API失敗時は安全なfixtureへ自動フォールバックする。
+
+v1ではAviasales Search APIは使わない。規約・アクセス・デモ安定性の都合で、フライトはAviasales Data API/GraphQL相当のキャッシュ系データ、ホテルとアクティビティはAI選定 + Travelpayouts Partner Links APIによる予約導線生成で実装する。
+
+## Key Changes
+
+- Backendに `POST /api/travel/plan` を追加し、認証済みユーザーの旅行条件から統合プランを返す。
+- MCP registry/schema/OpenAPIに `saborou_plan_trip` を追加し、ElevenLabs Dashboardのstreamable HTTP MCPから呼べるようにする。
+- `TravelPlanningService` を新設し、以下を一括実行する。
+  - 不足条件がある場合は `needs_clarification` と音声向け質問を返す。
+  - Travelpayouts/Aviasalesからフライト候補を取得、失敗時はfixture候補へフォールバック。
+  - ホテル候補は目的地・予算・嗜好からAIで3件選定し、Partner Links APIが使える場合のみ予約URLを変換。
+  - アクティビティ候補は目的地・興味・日数から日別に選定し、Viator/Tiqets/WeGoTrip/Airalo等の導線はPartner Links APIまたはfixture URLで表現。
+  - 最終結果を日本語の短い音声要約と構造化JSONで返す。
+- CDK/DataStackにTravelpayouts用Secrets Manager secretを追加する。
+  - secret name: `/saborou/travelpayouts/credentials-${environment}`
+  - JSON fields: `apiToken`, `marker`, `trs`
+  - API Lambdaへ `TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN` を注入し、read権限を付与する。
+- Chat/UIの新規画面は今回含めない。既存/外部チャットはHono APIまたはMCPを呼ぶ前提にする。
+
+## Public Interfaces
+
+`POST /api/travel/plan`
+
+Request body:
+
+```json
+{
+  \"origin\": \"Tokyo\",
+  \"destination\": \"Paris\",
+  \"departureDate\": \"2026-07-10\",
+  \"returnDate\": \"2026-07-15\",
+  \"travelers\": 1,
+  \"currency\": \"JPY\",
+  \"budgetPerPerson\": 250000,
+  \"interests\": [\"food\", \"art\", \"history\"],
+  \"flightPreference\": \"balanced\",
+  \"hotelPreference\": \"standard\",
+  \"language\": \"ja\"
+}
+```
+
+Defaults:
+
+- `origin`: `\"Tokyo\"`
+- `travelers`: `1`
+- `currency`: `\"JPY\"`
+- `interests`: `[\"sightseeing\", \"food\", \"culture\"]`
+- `flightPreference`: `\"balanced\"`
+- `hotelPreference`: `\"standard\"`
+- `language`: `\"ja\"`
+
+Required for full planning:
+
+- `destination`
+- `departureDate`
+- `returnDate`
+
+Response body:
+
+```json
+{
+  \"status\": \"planned\",
+  \"message\": \"音声で読み上げやすい短い要約\",
+  \"missingFields\": [],
+  \"sourceMode\": \"live|fixture|mixed\",
+  \"plan\": {
+    \"summary\": \"...\",
+    \"assumptions\": [\"...\"],
+    \"flights\": [{ \"rank\": 1, \"title\": \"...\", \"price\": { \"amount\": 120000, \"currency\": \"JPY\" }, \"reason\": \"...\", \"bookingUrl\": null }],
+    \"hotels\": [{ \"rank\": 1, \"name\": \"...\", \"area\": \"...\", \"reason\": \"...\", \"bookingUrl\": \"...\" }],
+    \"activitiesByDay\": [{ \"day\": 1, \"date\": \"2026-07-10\", \"items\": [{ \"title\": \"...\", \"timeOfDay\": \"afternoon\", \"reason\": \"...\", \"bookingUrl\": \"...\" }] }],
+    \"nextQuestion\": null
+  }
+}
+```
+
+MCP tool:
+
+- name: `saborou_plan_trip`
+- effect: `read`
+- approval required: `false`
+- implementation status: `implemented`
+- input schema mirrors `/api/travel/plan`
+- output mode: `safe_summary`
+
+## Implementation Details
+
+- Add backend schemas with Zod: `TravelPlanRequestSchema`, `TravelPlanResponseSchema`, strict validation, max text lengths, date format `YYYY-MM-DD`.
+- Add `TravelpayoutsClient` with methods:
+  - `getFlightPricesForDates`
+  - `createPartnerLinks`
+  - `getAutocompletePlaces` only if needed for IATA normalization
+- Add fixture provider for demo stability:
+  - deterministic Paris/Tokyo sample flights, hotels, and activities
+  - generic fallback for unknown destination
+  - response always marks `sourceMode`
+- Add Bedrock-backed planner prompt in backend service using existing `BedrockClientAdapter`.
+  - Temperature `0`
+  - Output validated by Zod
+  - Prompt must not expose API tokens or raw secret values
+- Wire the service into `createApp()` and mount `app.route(\"/api/travel\", createTravelRoute(...))`.
+- Update MCP dispatch so `saborou_plan_trip` calls `/api/travel/plan` internally through the existing JSON-RPC caller path.
+- Update `pkgs/cdk/schemas/saborou-openapi.yaml` so AgentCore schema drift tests pass.
+- Do not persist travel plans in DynamoDB for v1. The feature is ephemeral and demo-oriented.
+
+## Test Plan
+
+- Backend unit tests:
+  - missing destination/date returns `needs_clarification`
+  - valid request returns `planned`
+  - no Travelpayouts credentials returns fixture result, not 500
+  - Travelpayouts 401/429/5xx falls back to fixture and marks `sourceMode: mixed` or `fixture`
+  - Partner Links partial failure preserves unlinked hotel/activity options
+  - response never includes API token, marker, trs, or raw Authorization header
+- MCP tests:
+  - `saborou_plan_trip` appears in registry and published tool list
+  - schema accepts valid voice-friendly partial input
+  - unknown fields are rejected
+  - JSON-RPC `tools/list` includes the tool
+  - JSON-RPC `tools/call` invokes the internal API and returns safe text content
+- CDK tests:
+  - Travelpayouts secret exists
+  - API Lambda receives `TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN`
+  - Lambda has read access to only the Travelpayouts secret
+  - AgentCore OpenAPI drift gate passes
+- Verification commands:
+  - `pnpm --filter backend test`
+  - `pnpm --filter backend typecheck`
+  - `pnpm --filter cdk test`
+  - `pnpm --filter cdk build`
+  - existing MCP auth verification script after deploy
+
+## Assumptions
+
+- Product/API name is Travelpayouts; user textの「travelpayments」は同社APIの意図として扱う。
+- ハッカソンデモ優先のため、実API + fixture fallbackのハイブリッド方式を採用する。
+- ホテルはTravelpayouts Partner Links APIによる予約導線生成をv1の実装範囲にし、専用ホテル検索APIの追加調査は後続に回す。
+- 音声デモはElevenLabs remote MCPを主経路にし、Chrome拡張clientTools fallbackへの旅行ツール追加は必須にしない。
+- Aviasales Search APIはv1で使わないため、Bookクリック時のみリンク生成などのSearch API固有規約対応は今回の実装対象外にする。"
+**AI Response**: "Started implementation from the provided Travelpayouts travel planning plan. Resolved project as brownfield/resumed AI-DLC workflow; expected rule-detail directory was not present, so AGENTS.md embedded rules are being followed. Loaded Travelpayouts skill and began backend/MCP/CDK inspection."
+**Context**: Implementation resume, workspace detection, audit trail.
+
+---
