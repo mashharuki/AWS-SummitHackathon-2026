@@ -466,8 +466,7 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
             type: "string",
             minLength: 1,
             maxLength: 80,
-            description:
-              "投稿先のSlackチャンネルID（必須）。例: C01234567。",
+            description: "投稿先のSlackチャンネルID（必須）。例: C01234567。",
           },
           threadTs: {
             type: "string",

@@ -77,15 +77,17 @@ function formatActivities(
   if (days.length === 0) return "";
 
   const daySections = days.map((day) => {
-    const items = day.items.slice(0, 3).map((item) =>
-      [
-        `• ${escapeSlackText(item.timeOfDay)}: ${escapeSlackText(item.title)}`,
-        `  ${escapeSlackText(item.reason)}`,
-        formatBookingLink(item.bookingUrl),
-      ]
-        .filter(Boolean)
-        .join("\n"),
-    );
+    const items = day.items
+      .slice(0, 3)
+      .map((item) =>
+        [
+          `• ${escapeSlackText(item.timeOfDay)}: ${escapeSlackText(item.title)}`,
+          `  ${escapeSlackText(item.reason)}`,
+          formatBookingLink(item.bookingUrl),
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
     return `_${day.day}日目 ${escapeSlackText(day.date)}_\n${items.join("\n")}`;
   });
 

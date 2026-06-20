@@ -184,7 +184,8 @@ const clarificationResponse: TravelPlanResponse = {
     flights: [],
     hotels: [],
     activitiesByDay: [],
-    nextQuestion: "旅行プランを作るために、行き先、出発日、帰国日を教えてください。",
+    nextQuestion:
+      "旅行プランを作るために、行き先、出発日、帰国日を教えてください。",
   },
 };
 

@@ -1,4 +1,8 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Marp } from "@marp-team/marp-core";
 import type { IBedrockClient } from "@saboru/agent";
@@ -101,7 +105,11 @@ export class MarpSlideService {
           | undefined;
         marpMarkdown =
           input?.marpMarkdown ??
-          buildFixtureMarpMarkdown(request.topic, request.slideCount, request.language);
+          buildFixtureMarpMarkdown(
+            request.topic,
+            request.slideCount,
+            request.language,
+          );
         slideCount = input?.slideCount ?? request.slideCount;
       } catch {
         marpMarkdown = buildFixtureMarpMarkdown(
@@ -160,7 +168,11 @@ export class MarpSlideService {
   }
 }
 
-function buildFullHtmlDocument(html: string, css: string, title: string): string {
+function buildFullHtmlDocument(
+  html: string,
+  css: string,
+  title: string,
+): string {
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>

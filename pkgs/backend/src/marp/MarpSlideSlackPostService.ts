@@ -72,7 +72,9 @@ export class MarpSlideSlackPostService {
       const result = await client.postMessage({
         channel: input.request.channelId,
         text,
-        ...(input.request.threadTs ? { thread_ts: input.request.threadTs } : {}),
+        ...(input.request.threadTs
+          ? { thread_ts: input.request.threadTs }
+          : {}),
       });
 
       return MarpCreateSlidesAndPostToSlackResponseSchema.parse({
@@ -85,7 +87,9 @@ export class MarpSlideSlackPostService {
           posted: true,
           channelId: input.request.channelId,
           ...(result.ts ? { ts: result.ts } : {}),
-          ...(input.request.threadTs ? { threadTs: input.request.threadTs } : {}),
+          ...(input.request.threadTs
+            ? { threadTs: input.request.threadTs }
+            : {}),
           textPreview: text.slice(0, 100),
         },
       });

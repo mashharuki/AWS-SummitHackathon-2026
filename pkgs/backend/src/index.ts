@@ -270,7 +270,8 @@ export function createApp() {
   const internalCaller = async (
     path: string,
     init: RequestInit,
-  ): Promise<Response> => app.fetch(new Request(`http://internal${path}`, init));
+  ): Promise<Response> =>
+    app.fetch(new Request(`http://internal${path}`, init));
   // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
   app.route(
     "/api/mcp",
