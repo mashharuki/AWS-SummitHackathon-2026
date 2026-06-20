@@ -33,8 +33,8 @@ vi.mock("@/panel/lib/agentClient", () => ({
   sendSlackReply: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
-import { Conversation } from "@11labs/client";
 import { sendSlackReply } from "@/panel/lib/agentClient";
+import { Conversation } from "@11labs/client";
 import {
   requestMicrophoneAccess,
   useConversationalAgent,

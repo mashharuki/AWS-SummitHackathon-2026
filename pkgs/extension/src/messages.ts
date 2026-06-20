@@ -22,6 +22,10 @@ export interface GetPendingTask {
 export interface SendSlackReplyMessage {
   type: "SEND_SLACK_REPLY";
   text: string;
+  /** 返信先チャンネル ID（任意。現在開いているスレッドに送る場合は省略） */
+  channelId?: string;
+  /** 返信先スレッド ts（任意） */
+  threadTs?: string;
 }
 
 export type ExtensionRuntimeMessage =

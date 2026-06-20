@@ -25,11 +25,21 @@ export {
   type FallbackMode,
 } from "./mcpFallback";
 
+import type {
+  CalendarStatus,
+  ProgressReport,
+  Proposal,
+  SaboriSchedule,
+  ScheduleStep,
+  TaskCandidate,
+  TaskSummary,
+} from "./types";
+
 // ---------------------------------------------------------------------------
 // Config helpers
 // ---------------------------------------------------------------------------
 
-function getApiUrl(): string {
+export function getApiUrl(): string {
   const v = import.meta.env.VITE_API_URL;
   if (!v || v === "undefined" || v === "null") {
     return "https://api.saborou.example.com";
@@ -167,4 +177,159 @@ export async function getTasks(jwt: string): Promise<Task[]> {
     method: "GET",
   });
   return res.tasks;
+}
+
+// ---------------------------------------------------------------------------
+// 4タブ UI 向け拡充 API（U-V4-01）
+//
+// すべて Hono API を直接呼ぶ（既存の apiFetch を再利用）。
+// shared への依存を避けるため types.ts のローカル型を返す。
+// ---------------------------------------------------------------------------
+
+/** GET /api/tasks/candidates — Slack/Gmail 抽出済みのタスク候補一覧 */
+export async function getCandidates(jwt: string): Promise<TaskCandidate[]> {
+  const res = await apiFetch<{ candidates: TaskCandidate[] }>(
+    "/api/tasks/candidates",
+    jwt,
+    { method: "GET" },
+  );
+  return res.candidates;
+}
+
+/** GET /api/tasks — 承認済みタスク一覧（4タブ用の詳細型） */
+export async function getTaskSummaries(jwt: string): Promise<TaskSummary[]> {
+  const res = await apiFetch<{ tasks: TaskSummary[] }>("/api/tasks", jwt, {
+    method: "GET",
+  });
+  return res.tasks;
+}
+
+/** GET /api/tasks/:id — 単一タスク */
+export async function getTask(
+  taskId: string,
+  jwt: string,
+): Promise<TaskSummary> {
+  return apiFetch<TaskSummary>(
+    `/api/tasks/${encodeURIComponent(taskId)}`,
+    jwt,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * POST /api/tasks/candidates/:id/plan-steps
+ * 承認モーダルを開いた時に作業ステップ草案を生成する。
+ * 失敗(503)時は空配列を返し、UI 側は手動入力にフォールバックする。
+ */
+export async function fetchPlanSteps(
+  candidateId: string,
+  jwt: string,
+): Promise<ScheduleStep[]> {
+  try {
+    const res = await apiFetch<{ steps: ScheduleStep[] }>(
+      `/api/tasks/candidates/${encodeURIComponent(candidateId)}/plan-steps`,
+      jwt,
+      { method: "POST", body: JSON.stringify({}) },
+    );
+    return res.steps ?? [];
+  } catch (err) {
+    console.warn("[agentClient] fetchPlanSteps failed:", err);
+    return [];
+  }
+}
+
+/** POST /api/tasks/candidates/:id/approve — 候補を承認しタスク化する */
+export async function approveCandidate(
+  candidateId: string,
+  jwt: string,
+  overrides?: Record<string, unknown>,
+): Promise<TaskSummary> {
+  return apiFetch<TaskSummary>(
+    `/api/tasks/candidates/${encodeURIComponent(candidateId)}/approve`,
+    jwt,
+    {
+      method: "POST",
+      body: JSON.stringify(overrides ? { overrides } : {}),
+    },
+  );
+}
+
+/** DELETE /api/tasks/candidates/:id — 候補を却下する */
+export async function rejectCandidate(
+  candidateId: string,
+  jwt: string,
+): Promise<void> {
+  const baseUrl = getApiUrl();
+  const res = await fetch(
+    `${baseUrl}/api/tasks/candidates/${encodeURIComponent(candidateId)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${jwt}` },
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`[agentClient] ${res.status} ${res.statusText}: ${text}`);
+  }
+}
+
+/** GET /api/google/calendar/status — カレンダーキャッシュ状態（busyScore 等） */
+export async function getCalendarStatus(jwt: string): Promise<CalendarStatus> {
+  try {
+    return await apiFetch<CalendarStatus>("/api/google/calendar/status", jwt, {
+      method: "GET",
+    });
+  } catch (err) {
+    console.warn("[agentClient] getCalendarStatus failed:", err);
+    return { cached: false };
+  }
+}
+
+/** GET /api/tasks/:id/proposal — サボり提案（reasoning/verdict を含む） */
+export async function getProposal(
+  taskId: string,
+  jwt: string,
+): Promise<Proposal | null> {
+  try {
+    return await apiFetch<Proposal>(
+      `/api/tasks/${encodeURIComponent(taskId)}/proposal`,
+      jwt,
+      { method: "GET" },
+    );
+  } catch (err) {
+    console.warn("[agentClient] getProposal failed:", err);
+    return null;
+  }
+}
+
+/** GET /api/tasks/:id/schedule — 3バンドガント */
+export async function getSchedule(
+  taskId: string,
+  jwt: string,
+): Promise<SaboriSchedule | null> {
+  try {
+    const res = await apiFetch<{ schedule: SaboriSchedule }>(
+      `/api/tasks/${encodeURIComponent(taskId)}/schedule`,
+      jwt,
+      { method: "GET" },
+    );
+    return res.schedule;
+  } catch (err) {
+    console.warn("[agentClient] getSchedule failed:", err);
+    return null;
+  }
+}
+
+/** POST /api/tasks/:id/report — 進捗報告文（動いてるフリ）を生成する */
+export async function getProgressReport(
+  taskId: string,
+  jwt: string,
+): Promise<ProgressReport> {
+  return apiFetch<ProgressReport>(
+    `/api/tasks/${encodeURIComponent(taskId)}/report`,
+    jwt,
+    { method: "POST", body: JSON.stringify({}) },
+  );
 }
