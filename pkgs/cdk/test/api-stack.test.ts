@@ -194,14 +194,23 @@ describe("SaborouApiStack", () => {
     });
   });
 
-  test("McpToolsBaseUrl CfnOutput is present and contains /api/mcp/tools (U-V3-04)", () => {
-    // U-V3-04: ElevenLabs Dashboard の streamable_http 登録先 URL が CloudFormation Outputs に存在することを確認
+  test("MCP CfnOutputs distinguish JSON-RPC endpoint from REST tool boundary", () => {
+    const jsonRpcOutputs = template.findOutputs("McpJsonRpcUrl");
+    expect(Object.keys(jsonRpcOutputs)).toHaveLength(1);
+    const jsonRpcOutput = jsonRpcOutputs["McpJsonRpcUrl"];
+    const jsonRpcValueStr = JSON.stringify(jsonRpcOutput.Value);
+    expect(jsonRpcValueStr).toContain("/api/mcp");
+    expect(jsonRpcValueStr).not.toContain("/api/mcp/tools");
+    expect(jsonRpcOutput.Export?.Name).toContain("SaborouMcpJsonRpcUrl");
+
+    // REST adapter base for AgentCore OpenAPI target. This is not the direct
+    // Streamable HTTP JSON-RPC registration URL.
     const outputs = template.findOutputs("McpToolsBaseUrl");
     expect(Object.keys(outputs)).toHaveLength(1);
     const output = outputs["McpToolsBaseUrl"];
-    // value は {"Fn::Join": ["", [apiEndpoint, "/api/mcp/tools"]]} の形式になる
     const valueStr = JSON.stringify(output.Value);
     expect(valueStr).toContain("/api/mcp/tools");
+    expect(valueStr).not.toEqual(jsonRpcValueStr);
     expect(output.Export?.Name).toContain("SaborouMcpToolsBaseUrl");
   });
 });

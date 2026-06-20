@@ -5,7 +5,7 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: 旅行プランMarkdown整形＋Slack投稿機能 実装・検証完了（2026-06-20 JST）。`POST /api/travel/plan-and-post-to-slack`、MCP tool `saborou_plan_trip_and_post_to_slack`、Slack mrkdwn formatter、AgentCore OpenAPI schema更新を実装。backend 464 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス確認。次: 実環境でSlack User Token優先投稿とAgentCore tool invocationをE2E確認。
+- **現在のステージ**: `mcp-agentcore-connection-fix` Code Generation Part 2 実装・ローカル検証完了（2026-06-21 JST）。Endpoint documentation、CDK output semantics test、AgentCore/direct MCP verification scripts、backend JSON-RPC tests、operations docs、code summaryを更新。backend 466 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス。残: 実Cognito token付きAgentCore Gateway live verification。
 - **ドキュメントバージョン**: v4.4.0（2026-06-20 旅行プランSlack投稿機能 実装完了）
 
 ---

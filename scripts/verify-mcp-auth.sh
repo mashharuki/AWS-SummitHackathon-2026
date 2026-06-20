@@ -48,10 +48,70 @@ fi
 
 # MCP は REST形式: POST /api/mcp/tools/:toolName
 MCP_TOOL_ENDPOINT="${API_ENDPOINT}/api/mcp/tools/saborou_list_tasks"
+MCP_JSONRPC_ENDPOINT="${API_ENDPOINT}/api/mcp"
 PASS=0
 FAIL=0
 
 echo "API Endpoint: ${MCP_TOOL_ENDPOINT}" | tee -a "${LOG_FILE}"
+echo "MCP JSON-RPC Endpoint: ${MCP_JSONRPC_ENDPOINT}" | tee -a "${LOG_FILE}"
+echo "" | tee -a "${LOG_FILE}"
+
+# =====================
+# テスト 0-A: Streamable HTTP initialize → 200 期待
+# =====================
+echo "--- [TEST 0-A] Streamable HTTP initialize (期待: 200) ---" | tee -a "${LOG_FILE}"
+INIT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "${MCP_JSONRPC_ENDPOINT}" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"verify-mcp-auth","version":"1.0.0"}}}')
+
+echo "レスポンスコード: ${INIT_STATUS}" | tee -a "${LOG_FILE}"
+if [ "${INIT_STATUS}" = "200" ]; then
+  echo "[PASS] Streamable HTTP initialize → 200" | tee -a "${LOG_FILE}"
+  PASS=$((PASS + 1))
+else
+  echo "[FAIL] Streamable HTTP initialize → 期待: 200, 実際: ${INIT_STATUS}" | tee -a "${LOG_FILE}"
+  FAIL=$((FAIL + 1))
+fi
+echo "" | tee -a "${LOG_FILE}"
+
+# =====================
+# テスト 0-B: Streamable HTTP tools/list 認証付き → 200 期待
+# =====================
+echo "--- [TEST 0-B] Streamable HTTP tools/list 認証付き (期待: 200) ---" | tee -a "${LOG_FILE}"
+TOOLS_LIST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X POST "${MCP_JSONRPC_ENDPOINT}" \
+  -H "Authorization: Bearer ${COGNITO_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
+
+echo "レスポンスコード: ${TOOLS_LIST_STATUS}" | tee -a "${LOG_FILE}"
+if [ "${TOOLS_LIST_STATUS}" = "200" ]; then
+  echo "[PASS] Streamable HTTP tools/list → 200" | tee -a "${LOG_FILE}"
+  PASS=$((PASS + 1))
+else
+  echo "[FAIL] Streamable HTTP tools/list → 期待: 200, 実際: ${TOOLS_LIST_STATUS}" | tee -a "${LOG_FILE}"
+  FAIL=$((FAIL + 1))
+fi
+echo "" | tee -a "${LOG_FILE}"
+
+# =====================
+# テスト 0-C: SSE GET は未実装として扱う
+# =====================
+echo "--- [TEST 0-C] SSE GET unsupported 確認 (期待: 401/404/405) ---" | tee -a "${LOG_FILE}"
+SSE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X GET "${MCP_JSONRPC_ENDPOINT}" \
+  -H "Accept: text/event-stream")
+
+echo "レスポンスコード: ${SSE_STATUS}" | tee -a "${LOG_FILE}"
+if [[ "${SSE_STATUS}" =~ ^(401|404|405)$ ]]; then
+  echo "[PASS] SSE endpoint は未実装として扱われます (${SSE_STATUS})" | tee -a "${LOG_FILE}"
+  PASS=$((PASS + 1))
+else
+  echo "[FAIL] SSE GET → 期待: 401/404/405, 実際: ${SSE_STATUS}" | tee -a "${LOG_FILE}"
+  echo "       SSE をサポートする場合は別途設計・テストが必要です" | tee -a "${LOG_FILE}"
+  FAIL=$((FAIL + 1))
+fi
 echo "" | tee -a "${LOG_FILE}"
 
 # =====================

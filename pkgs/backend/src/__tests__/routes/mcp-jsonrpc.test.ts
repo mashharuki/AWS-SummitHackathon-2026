@@ -9,6 +9,61 @@ const verifier = async () => ({
 });
 
 describe("POST /api/mcp JSON-RPC", () => {
+  it("responds to initialize without requiring authentication", async () => {
+    const app = new Hono();
+    app.route(
+      "/api/mcp",
+      createMcpJsonRpcRoute({
+        verifier,
+        caller: async () => new Response("{}", { status: 200 }),
+      }),
+    );
+
+    const res = await app.request("/api/mcp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 0,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities: {},
+          clientInfo: { name: "test-client", version: "1.0.0" },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      jsonrpc: "2.0",
+      id: 0,
+      result: {
+        protocolVersion: "2025-03-26",
+        serverInfo: { name: "SABOROU", version: "3.0.0" },
+      },
+    });
+  });
+
+  it("does not expose an SSE GET endpoint", async () => {
+    const app = new Hono();
+    app.route(
+      "/api/mcp",
+      createMcpJsonRpcRoute({
+        verifier,
+        caller: async () => new Response("{}", { status: 200 }),
+      }),
+    );
+
+    const res = await app.request("/api/mcp", {
+      method: "GET",
+      headers: { Accept: "text/event-stream" },
+    });
+
+    expect(res.status).toBe(404);
+  });
+
   it("includes saborou_plan_trip in tools/list", async () => {
     const app = new Hono();
     app.route(

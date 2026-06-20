@@ -10,6 +10,9 @@ set -euo pipefail
 #                            --stack-name SaborouAgentCore-dev \
 #                            --query 'Stacks[0].Outputs[?OutputKey==`GatewayIdentifier`].OutputValue' \
 #                            --output text
+# 任意環境変数:
+#   COGNITO_TOKEN        : Gateway 認証付き JSON-RPC 検証に使う Cognito JWT。
+#                          値はログに出力しない。
 # 実行方法: AWS_REGION=ap-northeast-1 AGENTCORE_GATEWAY_ID=saborou-mcp-gateway-dev-xxxxx \
 #           ./scripts/verify-agentcore.sh
 
@@ -38,6 +41,11 @@ fi
 
 echo "AWS_REGION:           ${AWS_REGION}" | tee -a "${STATUS_FILE}"
 echo "AGENTCORE_GATEWAY_ID: ${AGENTCORE_GATEWAY_ID}" | tee -a "${STATUS_FILE}"
+if [ -n "${COGNITO_TOKEN:-}" ]; then
+  echo "COGNITO_TOKEN:        [set, redacted]" | tee -a "${STATUS_FILE}"
+else
+  echo "COGNITO_TOKEN:        [not set]" | tee -a "${STATUS_FILE}"
+fi
 echo "" | tee -a "${STATUS_FILE}"
 
 PASS_COUNT=0
@@ -109,6 +117,54 @@ if [[ "${HTTP_STATUS}" =~ ^(200|401|403|405)$ ]]; then
 else
   echo "[FAIL] Gateway URL に到達できません (HTTP ${HTTP_STATUS})" | tee -a "${STATUS_FILE}"
   FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+echo "" | tee -a "${STATUS_FILE}"
+
+# --- Check 4: 認証付き MCP JSON-RPC initialize / tools/list ---
+echo "--- [Check 4] Gateway MCP JSON-RPC 認証付き検証 ---" | tee -a "${STATUS_FILE}"
+if [ -z "${COGNITO_TOKEN:-}" ]; then
+  echo "[WARN] COGNITO_TOKEN 未設定のため、認証付き initialize/tools/list 検証をスキップします" | tee -a "${STATUS_FILE}"
+  echo "       到達性は Check 3 の 401/403 で確認済みです" | tee -a "${STATUS_FILE}"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  INIT_BODY='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"saborou-verify-agentcore","version":"1.0.0"}}}'
+  INIT_RESPONSE_FILE="${EVIDENCE_DIR}/agentcore-initialize-$(date +%Y%m%dT%H%M%S).json"
+  INIT_STATUS=$(curl -sS -o "${INIT_RESPONSE_FILE}" -w "%{http_code}" \
+    --max-time 15 \
+    -X POST "${GATEWAY_URL}" \
+    -H "Authorization: Bearer ${COGNITO_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "${INIT_BODY}" 2>/dev/null) || INIT_STATUS="000"
+
+  echo "initialize HTTP Status: ${INIT_STATUS}" | tee -a "${STATUS_FILE}"
+  if [ "${INIT_STATUS}" = "200" ] && python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert d.get('jsonrpc') == '2.0'; assert 'result' in d" "${INIT_RESPONSE_FILE}" 2>/dev/null; then
+    echo "[PASS] Gateway MCP initialize が認証付きで成功しました" | tee -a "${STATUS_FILE}"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  else
+    echo "[FAIL] Gateway MCP initialize が失敗しました (HTTP ${INIT_STATUS})" | tee -a "${STATUS_FILE}"
+    echo "       レスポンス本文は ${INIT_RESPONSE_FILE} に保存済み（トークンは保存していません）" | tee -a "${STATUS_FILE}"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
+
+  LIST_BODY='{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+  LIST_RESPONSE_FILE="${EVIDENCE_DIR}/agentcore-tools-list-$(date +%Y%m%dT%H%M%S).json"
+  LIST_STATUS=$(curl -sS -o "${LIST_RESPONSE_FILE}" -w "%{http_code}" \
+    --max-time 20 \
+    -X POST "${GATEWAY_URL}" \
+    -H "Authorization: Bearer ${COGNITO_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "${LIST_BODY}" 2>/dev/null) || LIST_STATUS="000"
+
+  echo "tools/list HTTP Status: ${LIST_STATUS}" | tee -a "${STATUS_FILE}"
+  if [ "${LIST_STATUS}" = "200" ] && python3 -c "import json,sys; d=json.load(open(sys.argv[1])); tools=d.get('result',{}).get('tools',[]); assert isinstance(tools, list); assert len(tools) > 0" "${LIST_RESPONSE_FILE}" 2>/dev/null; then
+    TOOL_COUNT=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('result',{}).get('tools',[])))" "${LIST_RESPONSE_FILE}" 2>/dev/null || echo "unknown")
+    echo "[PASS] Gateway MCP tools/list が成功しました (tools=${TOOL_COUNT})" | tee -a "${STATUS_FILE}"
+    PASS_COUNT=$((PASS_COUNT + 1))
+  else
+    echo "[FAIL] Gateway MCP tools/list が失敗しました (HTTP ${LIST_STATUS})" | tee -a "${STATUS_FILE}"
+    echo "       レスポンス本文は ${LIST_RESPONSE_FILE} に保存済み（トークンは保存していません）" | tee -a "${STATUS_FILE}"
+    FAIL_COUNT=$((FAIL_COUNT + 1))
+  fi
 fi
 echo "" | tee -a "${STATUS_FILE}"
 

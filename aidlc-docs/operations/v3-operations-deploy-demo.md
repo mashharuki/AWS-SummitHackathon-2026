@@ -6,6 +6,8 @@
 **残り日数**: 8 日  
 **前提フェーズ**: v3 Build and Test 完了（backend 437 tests / CDK 90 tests / extension 187 tests 全パス）
 
+> **MCP endpoint note**: direct MCP Streamable HTTP は `McpJsonRpcUrl` (`/api/mcp`) を使う。Bedrock AgentCore Gateway 経由は `GatewayUrl` (`...gateway.../mcp`) を使う。`McpToolsBaseUrl` (`/api/mcp/tools`) は AgentCore OpenAPI target / REST adapter boundary であり、direct MCP server URL ではない。SSE transport は現時点では未実装。
+
 ---
 
 ## 目的
@@ -54,7 +56,7 @@
 ### 目的
 
 v3 で追加・変更された CDK リソースを本番環境へ反映する。主な変更点:
-- `McpToolsBaseUrl` CfnOutput 追加（U-V3-04）
+- `McpJsonRpcUrl` / `McpToolsBaseUrl` CfnOutput 確認（U-V3-04）
 - API Gateway アクセスログ・90 日保持（U-V3-01）
 - MCP アラーム・AgentCore IAM スコープ（U-V3-01）
 
@@ -80,7 +82,8 @@ pnpm --filter @saboru/cdk run deploy
 
 ### 期待結果
 - CloudFormation スタックが `UPDATE_COMPLETE` になる
-- `McpToolsBaseUrl` output が表示される（例: `https://xxxx.execute-api.ap-northeast-1.amazonaws.com/prod/api/mcp/tools`）
+- `McpJsonRpcUrl` output が表示される（例: `https://xxxx.execute-api.ap-northeast-1.amazonaws.com/api/mcp`）
+- `McpToolsBaseUrl` output が表示される（例: `https://xxxx.execute-api.ap-northeast-1.amazonaws.com/api/mcp/tools`）
 
 ### トラブルシュート
 - デプロイ失敗時は `TROUBLESHOOTING.md` の「CDK / CloudFormation」セクションを参照
@@ -106,16 +109,26 @@ pnpm --filter @saboru/cdk run deploy
 # AgentCore Gateway 状態確認（デプロイ後）
 AWS_REGION=ap-northeast-1 \
 AGENTCORE_GATEWAY_ID=$(aws cloudformation describe-stacks \
-  --stack-name SaborouStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`AgentCoreGatewayId`].OutputValue' \
+  --stack-name SaborouAgentCore-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`GatewayIdentifier`].OutputValue' \
   --output text) \
 ./scripts/verify-agentcore.sh
 
-# MCP Auth エンドポイント検証
-MCP_BASE_URL=$(aws cloudformation describe-stacks \
-  --stack-name SaborouStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`McpToolsBaseUrl`].OutputValue' \
+# Cognito token がある場合は AgentCore Gateway の認証付き JSON-RPC も検証
+AWS_REGION=ap-northeast-1 \
+AGENTCORE_GATEWAY_ID=$(aws cloudformation describe-stacks \
+  --stack-name SaborouAgentCore-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`GatewayIdentifier`].OutputValue' \
   --output text) \
+COGNITO_TOKEN=<cognito-access-token> \
+./scripts/verify-agentcore.sh
+
+# MCP Auth エンドポイント検証（API_ENDPOINT は API の origin。/api/mcp はスクリプト側で付与）
+API_ENDPOINT=$(aws cloudformation describe-stacks \
+  --stack-name SaborouApi-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`HttpApiUrl`].OutputValue' \
+  --output text) \
+COGNITO_TOKEN=<cognito-access-token> \
 ./scripts/verify-mcp-auth.sh
 
 # CloudWatch アラーム・メトリクス確認
@@ -144,8 +157,8 @@ aws cognito-idp initiate-auth \
 |-----------|---------|---------|
 | verify-build-test.sh | NFR-V305-R1 | 全テスト PASS |
 | verify-cdk-synth.sh | NFR-V305-R2 | synth エラーゼロ |
-| verify-agentcore.sh | NFR-V305-R3 | AVAILABLE 状態 |
-| verify-mcp-auth.sh | NFR-V305-E4 | 認証・認可動作確認 |
+| verify-agentcore.sh | NFR-V305-R3 | Gateway 到達性 / 認証付き JSON-RPC tools/list |
+| verify-mcp-auth.sh | NFR-V305-E4 | direct Streamable HTTP / SSE unsupported / REST adapter 認証・認可 |
 | verify-cloudwatch.sh | NFR-V305-O1/O2 | アラーム INSUFFICIENT_DATA or OK |
 | verify-secret-scan.sh | NFR-V305-M2 | ハードコードシークレットゼロ |
 
@@ -164,12 +177,19 @@ ElevenLabs Conversational AI の Dashboard で SABOROU の MCP エンドポイ�
 ### 必要な情報
 
 ```bash
-# McpToolsBaseUrl を取得
-MCP_BASE_URL=$(aws cloudformation describe-stacks \
-  --stack-name SaborouStack \
-  --query 'Stacks[0].Outputs[?OutputKey==`McpToolsBaseUrl`].OutputValue' \
+# direct MCP Streamable HTTP URL を取得
+MCP_JSONRPC_URL=$(aws cloudformation describe-stacks \
+  --stack-name SaborouApi-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`McpJsonRpcUrl`].OutputValue' \
   --output text)
-echo "MCP Base URL: $MCP_BASE_URL"
+echo "MCP JSON-RPC URL: $MCP_JSONRPC_URL"
+
+# Bedrock AgentCore Gateway URL を取得
+AGENTCORE_GATEWAY_URL=$(aws cloudformation describe-stacks \
+  --stack-name SaborouAgentCore-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`GatewayUrl`].OutputValue' \
+  --output text)
+echo "AgentCore Gateway URL: $AGENTCORE_GATEWAY_URL"
 ```
 
 ### 登録手順
@@ -178,10 +198,12 @@ echo "MCP Base URL: $MCP_BASE_URL"
 
 1. ElevenLabs Dashboard → Conversational AI → 対象 Agent を選択
 2. **Tools** タブ → **Add Tool** → **MCP (Remote)**
-3. **URL** に `${MCP_BASE_URL}` を入力
-4. **Transport Type**: `streamable_http`（第一選択）
+3. direct MCP の場合は **URL** に `${MCP_JSONRPC_URL}` を入力。AgentCore Gateway 経由の場合は `${AGENTCORE_GATEWAY_URL}` を入力
+4. **Transport Type**: `streamable_http`
 5. **Authentication**: Bearer Token（Cognito アクセストークン）
 6. Save して Tool 一覧に `saborou_judge_sabori` / `saborou_get_tasks` / `saborou_delegate_to_claude` が表示されることを確認
+
+`sse` は未実装のため登録しない。`McpToolsBaseUrl` は direct MCP 登録に使わない。
 
 ### 動作確認
 
@@ -192,8 +214,9 @@ echo "MCP Base URL: $MCP_BASE_URL"
 ### フォールバック
 
 streamable_http が失敗する場合:
-1. Transport Type を `sse` に変更して再試行
-2. それも失敗する場合は `mcpFallback.ts` の `FallbackMode` に従い `DIRECT_HONO` フォールバックへ切り替え
+1. URL が `McpJsonRpcUrl` または `GatewayUrl` になっていることを確認する
+2. Cognito Bearer Token の期限・issuer・audience を確認する
+3. `mcpFallback.ts` の `FallbackMode` に従い `DIRECT_HONO` フォールバックへ切り替え
    - Chrome 拡張の `agentClient.ts` が自動的に Hono API を直接呼び出す設定になっている
 
 ---
@@ -237,8 +260,8 @@ PROPOSALS_TABLE=$(aws cloudformation describe-stacks \
 ### Step 3: フォールバック確認
 
 意図的に Primary パスを壊してフォールバックが動くことを確認:
-- streamable_http → sse への自動切り替えを確認（`mcpFallback.ts` の `getMcpFallbackMode`）
-- sse 失敗時に `DIRECT_HONO` フォールバックが有効になることを確認
+- streamable_http が使えない場合に `DIRECT_HONO` フォールバックが有効になることを確認
+- SSE は未実装のためフォールバック先にしない
 
 ---
 
@@ -278,7 +301,8 @@ PROPOSALS_TABLE=$(aws cloudformation describe-stacks \
 
 ### 確認・更新ポイント
 
-- [ ] 実際の `McpToolsBaseUrl` を記載
+- [ ] 実際の `McpJsonRpcUrl` と `GatewayUrl` を記載
+- [ ] `McpToolsBaseUrl` は AgentCore OpenAPI target / REST adapter boundary としてのみ記載
 - [ ] ElevenLabs Agent ID・Widget URL を記載（シークレット値は記載しない）
 - [ ] CloudFormation スタック名・Output キーが正確か確認
 - [ ] フォールバック手順が実環境で動作することを確認し、手順を更新
