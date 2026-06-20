@@ -6,6 +6,7 @@ import {
 } from "../mcp/identity.js";
 import type { McpToolDefinition } from "../mcp/types.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
+import { normalizeForTts } from "../utils/ttsNormalizer.js";
 
 const PROTOCOL_VERSION = "2024-11-05";
 
@@ -102,7 +103,7 @@ export function createMcpJsonRpcRoute(options: McpJsonRpcRouteOptions) {
           return c.json(
             rpcResult(id, {
               content: [
-                { type: "text", text: JSON.stringify(result, null, 2) },
+                { type: "text", text: normalizeForTts(JSON.stringify(result, null, 2)) },
               ],
             }),
           );
