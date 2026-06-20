@@ -1,0 +1,4 @@
+interface:
+  display_name: "Travelpayouts Travel Product"
+  short_description: "Travelpayouts API travel product builder"
+  default_prompt: "Use $travelpayouts-travel-product to design, implement, and test a travel planning product with Travelpayouts APIs."
