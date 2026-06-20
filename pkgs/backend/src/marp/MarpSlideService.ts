@@ -4,7 +4,6 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Marp } from "@marp-team/marp-core";
 import type { IBedrockClient } from "@saboru/agent";
 import {
   MarpCreateSlidesRequestSchema,
@@ -126,6 +125,7 @@ export class MarpSlideService {
       );
     }
 
+    const { Marp } = await import("@marp-team/marp-core");
     const marp = new Marp({ html: true });
     const { html, css } = marp.render(marpMarkdown);
     const fullHtml = buildFullHtmlDocument(html, css, request.topic);
