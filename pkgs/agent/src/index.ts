@@ -83,6 +83,8 @@ export type {
 export {
   ContextCollector,
   getSlackToken,
+  getSlackUserToken,
+  resetSlackTokenCache,
 } from "./context-collector/ContextCollector.js";
 
 // Slack Web API クライアント

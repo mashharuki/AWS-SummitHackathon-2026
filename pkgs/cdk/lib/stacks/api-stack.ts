@@ -198,6 +198,9 @@ export class SaborouApiStack extends cdk.Stack {
         // per-user の Slack Bot Token シークレット名プレフィックス
         // （遡及取得 API が認証ユーザーの Bot Token を取得するため）
         SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
+        // per-user の Slack User Token シークレット名プレフィックス
+        // （ユーザー自身のアカウントから返信するために使用）
+        SLACK_USER_TOKEN_SECRET_PREFIX: "saborou/slack-user-token/",
         // Slack OAuth コールバック成功後のフロント（CloudFront）リダイレクト先。
         // 未設定だと localhost:5173 にフォールバックしてしまう。
         ...(props.frontendDomainName
@@ -287,7 +290,22 @@ export class SaborouApiStack extends cdk.Stack {
         ],
       }),
     );
-    // CreateSecret はリソース未作成のため * 指定（OAuth 初回連携で Bot Token を新規作成）
+    // --- per-user Slack User Token の読み書き権限 ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DescribeSecret",
+        ],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-user-token/*`,
+        ],
+      }),
+    );
+    // CreateSecret はリソース未作成のため * 指定（OAuth 初回連携で Bot/User Token を新規作成）
     honoFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,

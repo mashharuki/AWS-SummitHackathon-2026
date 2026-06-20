@@ -77,6 +77,7 @@ export function createAuthRoute(
     const params = new URLSearchParams({
       client_id: slackClientId,
       scope: SLACK_OAUTH_SCOPES,
+      user_scope: "chat:write",
       redirect_uri: redirectUri,
       state,
     });
@@ -161,7 +162,7 @@ export function createAuthRoute(
       ok: boolean;
       access_token?: string;
       team?: { id: string; name: string };
-      authed_user?: { id: string };
+      authed_user?: { id: string; access_token?: string };
       error?: string;
     };
 
@@ -202,6 +203,31 @@ export function createAuthRoute(
         secretArn = updateResult.ARN ?? secretName;
       } else {
         throw err;
+      }
+    }
+
+    // Store user token in Secrets Manager (xoxp- token for posting as the user)
+    if (tokenData.authed_user?.access_token) {
+      const userSecretName = `saborou/slack-user-token/${userId}`;
+      try {
+        await smClient.send(
+          new CreateSecretCommand({
+            Name: userSecretName,
+            SecretString: tokenData.authed_user.access_token,
+            Description: `Slack user token for Saborou user ${userId}`,
+          }),
+        );
+      } catch (err) {
+        if ((err as { name?: string }).name === "ResourceExistsException") {
+          await smClient.send(
+            new UpdateSecretCommand({
+              SecretId: userSecretName,
+              SecretString: tokenData.authed_user.access_token,
+            }),
+          );
+        } else {
+          throw err;
+        }
       }
     }
 

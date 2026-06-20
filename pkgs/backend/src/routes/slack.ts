@@ -19,7 +19,12 @@ import {
   PutEventsCommand,
 } from "@aws-sdk/client-eventbridge";
 import { zValidator } from "@hono/zod-validator";
-import { SlackApiError, SlackClient, getSlackToken } from "@saboru/agent";
+import {
+  SlackApiError,
+  SlackClient,
+  getSlackToken,
+  getSlackUserToken,
+} from "@saboru/agent";
 import { Hono } from "hono";
 import { z } from "zod";
 import { env } from "../config/env.js";
@@ -300,8 +305,10 @@ export function createSlackRoute(
       const userId = c.get("userId");
       const { taskId, replyText, channelId, threadTs } = c.req.valid("json");
 
-      const botToken = await getSlackToken(userId);
-      const client = new SlackClient(botToken);
+      // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
+      const userToken = await getSlackUserToken(userId);
+      const token = userToken ?? (await getSlackToken(userId));
+      const client = new SlackClient(token);
 
       try {
         const result = await client.postMessage({

@@ -110,6 +110,7 @@ export class SaborouAgentStack extends cdk.Stack {
         // per-user の Slack Bot Token シークレット名プレフィックス。
         // ContextCollector が `${prefix}${cognitoSub}` で個別トークンを取得する。
         SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
+        SLACK_USER_TOKEN_SECRET_PREFIX: "saborou/slack-user-token/",
         PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
     });
@@ -120,6 +121,15 @@ export class SaborouAgentStack extends cdk.Stack {
       actions: ["secretsmanager:GetSecretValue"],
       resources: [
         `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-bot-token/*`,
+      ],
+    });
+
+    // --- per-user Slack User Token への読み取り権限 ---
+    const slackUserTokenReadPolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ["secretsmanager:GetSecretValue"],
+      resources: [
+        `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-user-token/*`,
       ],
     });
 
@@ -137,6 +147,7 @@ export class SaborouAgentStack extends cdk.Stack {
     taskExtractorFn.addToRolePolicy(bedrockPolicy);
     taskExtractorFn.addToRolePolicy(marketplacePolicy);
     taskExtractorFn.addToRolePolicy(slackBotTokenReadPolicy);
+    taskExtractorFn.addToRolePolicy(slackUserTokenReadPolicy);
     props.data.tables.taskCandidates.grantReadWriteData(taskExtractorFn);
     props.data.tables.tasks.grantReadData(taskExtractorFn);
     // 接続テーブル読み取り権限（Slack user ID → cognitoSub マッピング解決用）
@@ -180,6 +191,7 @@ export class SaborouAgentStack extends cdk.Stack {
         BEDROCK_REGION: "ap-northeast-1",
         // per-user の Slack Bot Token シークレット名プレフィックス（ContextCollector が参照）
         SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
+        SLACK_USER_TOKEN_SECRET_PREFIX: "saborou/slack-user-token/",
         // DYNAMODB_TABLE_PERSONAS: 削除 (MVP スコープ — U-03b では未使用)
         PSEUDONYMIZE_SALT: pseudonymizeSalt,
       },
@@ -188,6 +200,7 @@ export class SaborouAgentStack extends cdk.Stack {
     saboriProposerFn.addToRolePolicy(bedrockPolicy);
     saboriProposerFn.addToRolePolicy(marketplacePolicy);
     saboriProposerFn.addToRolePolicy(slackBotTokenReadPolicy);
+    saboriProposerFn.addToRolePolicy(slackUserTokenReadPolicy);
     props.data.tables.proposals.grantReadWriteData(saboriProposerFn);
     props.data.tables.tasks.grantReadData(saboriProposerFn);
     // personas テーブルの権限付与を削除 (MVP スコープ)

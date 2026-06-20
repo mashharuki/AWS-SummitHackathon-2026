@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import { SlackApiError, SlackClient, getSlackToken } from "@saboru/agent";
+import {
+  SlackApiError,
+  SlackClient,
+  getSlackToken,
+  getSlackUserToken,
+} from "@saboru/agent";
 import type { Task } from "@saboru/shared";
 import { AppError, ForbiddenError, NotFoundError } from "../errors.js";
 import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
@@ -57,6 +62,7 @@ type SlackPostClient = {
 
 export type SlackDelegationServiceOptions = {
   getToken?: (userId: string) => Promise<string>;
+  getUserToken?: (userId: string) => Promise<string | null>;
   createSlackClient?: (token: string) => SlackPostClient;
   auditWriter?: (event: SlackDelegationAuditEvent) => void;
   now?: () => number;
@@ -68,6 +74,7 @@ const MAX_PREVIEW_LENGTH = 180;
 
 export class SlackDelegationService {
   private readonly getToken: (userId: string) => Promise<string>;
+  private readonly getUserToken: (userId: string) => Promise<string | null>;
   private readonly createSlackClient: (token: string) => SlackPostClient;
   private readonly auditWriter?: (event: SlackDelegationAuditEvent) => void;
   private readonly now: () => number;
@@ -77,6 +84,7 @@ export class SlackDelegationService {
     options: SlackDelegationServiceOptions = {},
   ) {
     this.getToken = options.getToken ?? getSlackToken;
+    this.getUserToken = options.getUserToken ?? getSlackUserToken;
     this.createSlackClient =
       options.createSlackClient ?? ((token) => new SlackClient(token));
     this.auditWriter = options.auditWriter;
@@ -112,7 +120,9 @@ export class SlackDelegationService {
       }
 
       const message = buildClaudeDelegationMessage(task, input.instruction);
-      const token = await this.getToken(input.userId);
+      // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
+      const userToken = await this.getUserToken(input.userId);
+      const token = userToken ?? (await this.getToken(input.userId));
       const client = this.createSlackClient(token);
 
       try {
