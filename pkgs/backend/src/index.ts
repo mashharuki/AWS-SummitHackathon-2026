@@ -62,6 +62,7 @@ import { createGoogleAuthRoute } from "./routes/google-auth.js";
 import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
+import { createMarpRoute } from "./routes/marp.js";
 import { createMcpJsonRpcRoute } from "./routes/mcp-jsonrpc.js";
 import { createMcpRoute } from "./routes/mcp.js";
 import { createProposalsRoute } from "./routes/proposals.js";
@@ -72,6 +73,9 @@ import { createTravelRoute } from "./routes/travel.js";
 import { createUsersRoute } from "./routes/users.js";
 import { GoogleTokenService } from "./services/GoogleTokenService.js";
 import { SlackDelegationService } from "./services/SlackDelegationService.js";
+import { S3Client } from "@aws-sdk/client-s3";
+import { MarpSlideService } from "./marp/MarpSlideService.js";
+import { MarpSlideSlackPostService } from "./marp/MarpSlideSlackPostService.js";
 import { TravelPlanSlackPostService } from "./travel/TravelPlanSlackPostService.js";
 import { TravelPlanningService } from "./travel/TravelPlanningService.js";
 import { TravelpayoutsClient } from "./travel/TravelpayoutsClient.js";
@@ -144,6 +148,18 @@ const travelPlanningService = new TravelPlanningService({
 });
 const travelPlanSlackPostService = new TravelPlanSlackPostService(
   travelPlanningService,
+);
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
+});
+const marpSlideService = new MarpSlideService({
+  bedrockClient,
+  s3BucketName: env.MARP_SLIDES_BUCKET_NAME,
+  s3Client,
+});
+const marpSlideSlackPostService = new MarpSlideSlackPostService(
+  marpSlideService,
 );
 
 /**
@@ -243,6 +259,14 @@ export function createApp() {
         travelPlanSlackPostService.planAndPostToSlack(input),
     }),
   );
+  app.route(
+    "/api/marp",
+    createMarpRoute({
+      createSlides: (input) => marpSlideService.createSlides(input),
+      createSlidesAndPostToSlack: (input) =>
+        marpSlideSlackPostService.createSlidesAndPostToSlack(input),
+    }),
+  );
   const internalCaller = async (
     path: string,
     init: RequestInit,
@@ -253,6 +277,7 @@ export function createApp() {
     createMcpRoute({
       delegationService: slackDelegationService,
       travelPlanningService,
+      marpSlideService,
       caller: internalCaller,
     }),
   );

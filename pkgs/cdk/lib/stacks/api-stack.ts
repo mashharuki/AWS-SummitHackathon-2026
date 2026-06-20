@@ -221,6 +221,8 @@ export class SaborouApiStack extends cdk.Stack {
         // --- Travelpayouts credentials for travel plan MCP/API ---
         TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN:
           props.data.secrets.travelpayoutsCredentialsSecret.secretArn,
+        // --- Marp Slides S3 bucket ---
+        MARP_SLIDES_BUCKET_NAME: props.data.buckets.marpSlides.bucketName,
       },
     });
 
@@ -279,6 +281,15 @@ export class SaborouApiStack extends cdk.Stack {
 
     // --- Travelpayouts credentials secret: read-only, single secret scope ---
     props.data.secrets.travelpayoutsCredentialsSecret.grantRead(honoFn);
+
+    // --- Marp Slides S3: PutObject (upload) + GetObject (pre-signed URL) ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:PutObject", "s3:GetObject"],
+        resources: [`${props.data.buckets.marpSlides.bucketArn}/*`],
+      }),
+    );
 
     // --- per-user Slack Bot Token の読み書き権限 ---
     // 読み取り（遡及取得 API）と書き込み（OAuth コールバックでの保存）の両方が必要。

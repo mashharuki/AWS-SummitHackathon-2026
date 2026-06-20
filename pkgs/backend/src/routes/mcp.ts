@@ -20,6 +20,7 @@ import type {
   SafeMcpErrorResponse,
   SafeMcpSuccessResponse,
 } from "../mcp/types.js";
+import type { MarpSlideService } from "../marp/MarpSlideService.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
 import type { TravelPlanningService } from "../travel/TravelPlanningService.js";
 
@@ -27,6 +28,7 @@ type CreateMcpRouteOptions = McpIdentityResolverOptions & {
   auditWriter?: WriteAuditEvent;
   delegationService?: Pick<SlackDelegationService, "delegateToClaude">;
   travelPlanningService?: Pick<TravelPlanningService, "plan">;
+  marpSlideService?: Pick<MarpSlideService, "createSlides">;
   caller?: (path: string, init: RequestInit) => Promise<Response>;
 };
 
@@ -191,6 +193,37 @@ async function dispatchRegistryTool(input: {
         500,
         "TOOL_ERROR",
         "Travel plan Slack posting is not configured",
+      );
+    }
+
+    return callInternalApi(input.options.caller, {
+      tool: input.tool,
+      parsedArgs: { ...input.parsedArgs, approved: input.approved },
+      authorization: "",
+      userId: input.context.identity.userId,
+    });
+  }
+
+  if (input.toolName === "saborou_create_marp_slides") {
+    if (!input.options.marpSlideService) {
+      throw new AppError(
+        500,
+        "TOOL_ERROR",
+        "Marp slide service is not configured",
+      );
+    }
+
+    return input.options.marpSlideService.createSlides(
+      input.parsedArgs,
+    ) as Promise<Record<string, unknown>>;
+  }
+
+  if (input.toolName === "saborou_create_marp_slides_and_post_to_slack") {
+    if (!input.options.caller) {
+      throw new AppError(
+        500,
+        "TOOL_ERROR",
+        "Marp slide Slack posting is not configured",
       );
     }
 

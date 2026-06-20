@@ -194,6 +194,39 @@ export const MCP_TOOL_REGISTRY = [
     implementationStatus: "implemented",
     published: true,
   },
+  {
+    name: "saborou_create_marp_slides",
+    effect: "read",
+    description:
+      "Marpスライドを自動生成してS3へアップロードし、プレビュー用URLを返します。「スライドを作って」「プレゼン資料を生成して」「Marpスライドを作成して」などと言われたときに使用してください。topicは必須です。languageでja/enを選択できます（デフォルトja）。slideCountで枚数を指定できます（8〜20枚、デフォルト12枚）。生成後にURLをSlackへ投稿する場合は saborou_create_marp_slides_and_post_to_slack を使用してください。",
+    http: { method: "POST", path: "/api/marp/create-slides" },
+    schema: { input: "saborou_create_marp_slides", output: "safe_summary" },
+    approval: { required: false },
+    outputMode: "safe_summary",
+    implementationStatus: "implemented",
+    published: true,
+  },
+  {
+    name: "saborou_create_marp_slides_and_post_to_slack",
+    effect: "side_effect",
+    description:
+      "Marpスライドを自動生成してS3にアップロードし、プレビューURLを指定Slackチャンネルへ投稿します。「スライドを作ってSlackに送って」「プレゼン資料をチャンネルに投稿して」などと言われたときにのみ使用してください。topicとchannelIdが必須です。投稿は取り消し不可のため、必ずトピックと投稿先をユーザーに確認し、approved=trueで呼び出してください。",
+    http: {
+      method: "POST",
+      path: "/api/marp/create-slides-and-post-to-slack",
+    },
+    schema: {
+      input: "saborou_create_marp_slides_and_post_to_slack",
+      output: "safe_action_result",
+    },
+    approval: {
+      required: true,
+      reason: "Uploads slides to S3 and posts a URL externally to Slack.",
+    },
+    outputMode: "safe_action_result",
+    implementationStatus: "implemented",
+    published: true,
+  },
 ] as const satisfies ReadonlyArray<McpToolDefinition>;
 
 export const MCP_TOOL_NAMES = MCP_TOOL_REGISTRY.map((tool) => tool.name);

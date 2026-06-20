@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as cr from "aws-cdk-lib/custom-resources";
 import { NagSuppressions } from "cdk-nag";
@@ -23,6 +24,9 @@ export interface DataStackExports {
     readonly slackSigningSecret: secretsmanager.Secret;
     readonly googleClientSecret: secretsmanager.Secret;
     readonly travelpayoutsCredentialsSecret: secretsmanager.Secret;
+  };
+  readonly buckets: {
+    readonly marpSlides: s3.Bucket;
   };
 }
 
@@ -143,6 +147,19 @@ export class SaborouDataStack extends cdk.Stack {
       partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "createdAt", type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
+    });
+
+    // --- S3: Marp Slides ---
+    const marpSlidesBucket = new s3.Bucket(this, "MarpSlidesBucket", {
+      bucketName: `saborou-marp-slides-${this.account}-${environment}`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      versioned: false,
+      removalPolicy: isProd
+        ? cdk.RemovalPolicy.RETAIN
+        : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: !isProd,
     });
 
     // --- Secrets Manager ---
@@ -308,6 +325,14 @@ export class SaborouDataStack extends cdk.Stack {
     });
 
     // --- cdk-nag 抑制 ---
+    NagSuppressions.addResourceSuppressions(marpSlidesBucket, [
+      {
+        id: "AwsSolutions-S1",
+        reason:
+          "Server access logs disabled for hackathon cost scope; slides bucket is internal only",
+      },
+    ]);
+
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-DDB3",
@@ -356,6 +381,9 @@ export class SaborouDataStack extends cdk.Stack {
         slackSigningSecret,
         googleClientSecret,
         travelpayoutsCredentialsSecret,
+      },
+      buckets: {
+        marpSlides: marpSlidesBucket,
       },
     };
   }

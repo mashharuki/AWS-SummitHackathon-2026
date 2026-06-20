@@ -78,4 +78,8 @@ export const env = {
   get TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN(): string | undefined {
     return optionalEnv("TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN");
   },
+  // --- Marp Slides S3 bucket ---
+  get MARP_SLIDES_BUCKET_NAME(): string | undefined {
+    return optionalEnv("MARP_SLIDES_BUCKET_NAME");
+  },
 } as const;
