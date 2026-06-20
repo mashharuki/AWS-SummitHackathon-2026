@@ -5,8 +5,34 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: Travelpayouts旅行プラン代行機能 実装・検証完了（2026-06-20 JST）。`POST /api/travel/plan`、MCP tool `saborou_plan_trip`、Travelpayouts Secrets Manager secret、AgentCore OpenAPI schema更新を実装。backend 451 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス確認。次: 実環境へTravelpayouts secret値を投入し、デプロイ後MCP auth verification scriptを実行。
-- **ドキュメントバージョン**: v4.3.0（2026-06-20 Travelpayouts旅行プラン代行機能 実装完了）
+- **現在のステージ**: 旅行プランMarkdown整形＋Slack投稿機能 実装・検証完了（2026-06-20 JST）。`POST /api/travel/plan-and-post-to-slack`、MCP tool `saborou_plan_trip_and_post_to_slack`、Slack mrkdwn formatter、AgentCore OpenAPI schema更新を実装。backend 464 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス確認。次: 実環境でSlack User Token優先投稿とAgentCore tool invocationをE2E確認。
+- **ドキュメントバージョン**: v4.4.0（2026-06-20 旅行プランSlack投稿機能 実装完了）
+
+---
+
+## 旅行プランMarkdown整形＋Slack投稿機能（2026-06-20）
+
+### 実装状態
+- [x] Backend route — `POST /api/travel/plan-and-post-to-slack` を追加。`approved !== true` は403で拒否し、clarification時はSlack投稿しない。
+- [x] Slack mrkdwn formatter — タイトル、概要、フライト、ホテル、日別アクティビティ、前提/注意点を整形。Slack特殊文字をエスケープし、credential-like markerをredactし、4000文字に制限。
+- [x] Slack posting service — Slack User Token優先、Bot Token fallback、`threadTs`対応、Slack API失敗時は安全な `502 SLACK_API_ERROR`。
+- [x] MCP exposure — `saborou_plan_trip_and_post_to_slack` を side-effect / approval required / implemented として registry、schema、REST adapter、JSON-RPC、OpenAPI に追加。
+- [x] Tests — backend 464 tests、CDK 93 tests、backend typecheck、backend build、CDK build 全パス。
+
+### 成果物
+- `pkgs/backend/src/travel/TravelPlanSlackPostService.ts`
+- `pkgs/backend/src/travel/slackMarkdown.ts`
+- `pkgs/backend/src/routes/travel.ts`
+- `pkgs/backend/src/mcp/registry.ts`
+- `pkgs/backend/src/mcp/schemas.ts`
+- `pkgs/backend/src/routes/mcp.ts`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/construction/travel-plan-slack-post/code/code-generation-summary.md`
+
+### 残作業
+- [ ] デプロイ環境でSlack User Token優先投稿をE2E確認
+- [ ] AgentCore Gateway経由で `saborou_plan_trip_and_post_to_slack` のapproval付き実行を確認
 
 ---
 
