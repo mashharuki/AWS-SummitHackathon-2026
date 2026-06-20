@@ -22,7 +22,8 @@ export type McpToolName =
   | "saborou_schedule_report"
   | "saborou_find_task"
   | "saborou_delegate_to_claude"
-  | "saborou_plan_trip";
+  | "saborou_plan_trip"
+  | "saborou_plan_trip_and_post_to_slack";
 
 export type McpHttpMethod = "GET" | "POST";
 

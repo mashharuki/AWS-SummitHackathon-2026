@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { TravelPlanRequestSchema } from "../travel/schemas.js";
+import {
+  TravelPlanAndPostToSlackRequestSchema,
+  TravelPlanRequestSchema,
+} from "../travel/schemas.js";
 import type { McpToolName } from "./types.js";
 
 const idSchema = z
@@ -86,6 +89,7 @@ export const mcpToolInputSchemas = {
     })
     .strict(),
   saborou_plan_trip: TravelPlanRequestSchema,
+  saborou_plan_trip_and_post_to_slack: TravelPlanAndPostToSlackRequestSchema,
 } satisfies Record<McpToolName, z.ZodTypeAny>;
 
 export const mcpToolOutputSchemas = {

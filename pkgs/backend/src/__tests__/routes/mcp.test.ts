@@ -24,6 +24,7 @@ function createTestApp(options: {
   travelPlanningService?: {
     plan: (input: unknown) => Promise<TravelPlanResponse>;
   };
+  caller?: (path: string, init: RequestInit) => Promise<Response>;
 }) {
   const app = new Hono();
   app.route(
@@ -33,6 +34,7 @@ function createTestApp(options: {
       auditWriter: (event) => options.events?.push(event),
       delegationService: options.delegationService,
       travelPlanningService: options.travelPlanningService,
+      caller: options.caller,
     }),
   );
   return app;
@@ -278,6 +280,154 @@ describe("POST /api/mcp/tools/:toolName", () => {
       result: {
         status: "planned",
         message: "planned Paris",
+      },
+    });
+  });
+
+  it("requires explicit approval for the trip planner Slack post tool", async () => {
+    const app = createTestApp({ verifier: validVerifier, events: [] });
+
+    const res = await app.request(
+      "/api/mcp/tools/saborou_plan_trip_and_post_to_slack",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer valid-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          args: {
+            destination: "Paris",
+            departureDate: "2026-07-10",
+            returnDate: "2026-07-15",
+            channelId: "C12345",
+          },
+        }),
+      },
+    );
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "FORBIDDEN",
+        message: "Tool requires explicit approval",
+      },
+    });
+  });
+
+  it("rejects unknown fields for the trip planner Slack post tool", async () => {
+    const app = createTestApp({ verifier: validVerifier, events: [] });
+
+    const res = await app.request(
+      "/api/mcp/tools/saborou_plan_trip_and_post_to_slack",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer valid-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          args: {
+            destination: "Paris",
+            departureDate: "2026-07-10",
+            returnDate: "2026-07-15",
+            channelId: "C12345",
+            approved: true,
+            apiToken: "secret",
+          },
+          approved: true,
+        }),
+      },
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Tool arguments failed schema validation",
+      },
+    });
+  });
+
+  it("dispatches the trip planner Slack post tool through the internal API caller", async () => {
+    let captured: { path: string; init: RequestInit } | undefined;
+    const app = createTestApp({
+      verifier: validVerifier,
+      events: [],
+      caller: async (path, init) => {
+        captured = { path, init };
+        return Response.json({
+          status: "posted",
+          message: "旅行プランをSlackに投稿しました。",
+          missingFields: [],
+          sourceMode: "fixture",
+          plan: {
+            summary: "summary",
+            assumptions: [],
+            flights: [],
+            hotels: [],
+            activitiesByDay: [],
+            nextQuestion: null,
+          },
+          slack: {
+            posted: true,
+            channelId: "C12345",
+            ts: "1718600000.123456",
+          },
+        });
+      },
+    });
+
+    const res = await app.request(
+      "/api/mcp/tools/saborou_plan_trip_and_post_to_slack",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer valid-token",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          args: {
+            destination: "Paris",
+            departureDate: "2026-07-10",
+            returnDate: "2026-07-15",
+            channelId: "C12345",
+            approved: true,
+          },
+          approved: true,
+        }),
+      },
+    );
+
+    expect(res.status).toBe(200);
+    expect(captured?.path).toBe("/api/travel/plan-and-post-to-slack");
+    expect(captured?.init.method).toBe("POST");
+    expect(captured?.init.headers).toMatchObject({
+      "Content-Type": "application/json",
+      "x-internal-sub": "user-123",
+    });
+    expect(captured?.init.body).toBe(
+      JSON.stringify({
+        origin: "Tokyo",
+        destination: "Paris",
+        departureDate: "2026-07-10",
+        returnDate: "2026-07-15",
+        travelers: 1,
+        currency: "JPY",
+        interests: ["sightseeing", "food", "culture"],
+        flightPreference: "balanced",
+        hotelPreference: "standard",
+        language: "ja",
+        channelId: "C12345",
+        approved: true,
+      }),
+    );
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      toolName: "saborou_plan_trip_and_post_to_slack",
+      result: {
+        status: "posted",
+        slack: { channelId: "C12345" },
       },
     });
   });

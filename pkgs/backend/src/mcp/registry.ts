@@ -176,6 +176,24 @@ export const MCP_TOOL_REGISTRY = [
     implementationStatus: "implemented",
     published: true,
   },
+  {
+    name: "saborou_plan_trip_and_post_to_slack",
+    effect: "side_effect",
+    description:
+      "旅行条件から旅行プランを作成し、Slack向けMarkdownに整形して指定チャンネルへ投稿します。「旅行プランを作ってSlackに投稿して」「この旅程をチャンネルに送って」など、投稿まで明示されたときにのみ使用してください。destination、departureDate、returnDate、channelIdが必要です。投稿は取り消し不可のため、必ず内容と投稿先をユーザーに確認し、approved=trueで呼び出してください。",
+    http: { method: "POST", path: "/api/travel/plan-and-post-to-slack" },
+    schema: {
+      input: "saborou_plan_trip_and_post_to_slack",
+      output: "safe_action_result",
+    },
+    approval: {
+      required: true,
+      reason: "Posts a generated travel plan to Slack externally.",
+    },
+    outputMode: "safe_action_result",
+    implementationStatus: "implemented",
+    published: true,
+  },
 ] as const satisfies ReadonlyArray<McpToolDefinition>;
 
 export const MCP_TOOL_NAMES = MCP_TOOL_REGISTRY.map((tool) => tool.name);

@@ -2831,3 +2831,79 @@ MCP tool:
 **Context**: Implementation resume, workspace detection, audit trail.
 
 ---
+## Code Generation Request
+**Timestamp**: 2026-06-20T12:55:17Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# 旅行プランMarkdown整形＋Slack投稿機能 実装計画
+
+## Summary
+
+既存の旅行プラン生成機能に、Slack投稿まで行う一体型ツールを追加する。新MCP/APIは旅行条件からプランを生成し、Slack向けMarkdown形式に整形し、指定された `channelId` へユーザー自身のSlack User Token優先で投稿する。MCP経由では副作用ツールとして `approved=true` を必須にする。
+
+## Key Changes
+
+- Backendに `POST /api/travel/plan-and-post-to-slack` を追加する。
+  - 入力は既存旅行プラン条件に加えて `channelId` 必須、`threadTs` 任意、`approved` 必須。
+  - `approved !== true` の場合は `403` を返し、Slack投稿しない。
+  - 内部で既存 `TravelPlanningService.plan()` を呼び、`needs_clarification` の場合は投稿せず確認質問を返す。
+  - `planned` の場合だけSlack向けMarkdownを生成し、既存Slack投稿ロジックと同じく `getSlackUserToken(userId)` 優先、なければBot Token fallbackで `chat.postMessage` する。
+
+- Slack Markdown formatterを追加する。
+  - 出力はSlack `mrkdwn` 前提のプレーンテキスト。
+  - 構成は、タイトル、短い概要、フライト候補、ホテル候補、日別アクティビティ、前提/注意点。
+  - Slack特殊文字 `&`, `<`, `>` はエスケープする。
+  - booking URLがある場合は `<url|予約リンク>` 形式にする。
+  - 長すぎる投稿を避けるため最大4000文字程度に収め、必要なら候補数を上位中心に丸める。
+
+- MCP tool `saborou_plan_trip_and_post_to_slack` を追加する。
+  - `effect: "side_effect"`
+  - `approval.required: true`
+  - `implementationStatus: "implemented"`
+  - input schemaは旅行プラン条件 + `channelId` + `threadTs` + `approved`
+  - REST MCP adapterとJSON-RPC internal callerの両方で既存のHono API経由に統一する。
+  - OpenAPI schemaにも `/api/mcp/tools/saborou_plan_trip_and_post_to_slack` を追加し、AgentCore drift testを通す。
+
+## Test Plan
+
+- Backend route/service tests:
+  - `approved=false` または未指定ではSlack投稿せず `403`
+  - `destination/departureDate/returnDate` 不足時はSlack投稿せず `needs_clarification`
+  - 正常入力では旅行プラン生成、Markdown整形、Slack投稿まで成功
+  - `threadTs` 指定時はスレッド返信になる
+  - User TokenがあればUser Token、なければBot Tokenで投稿する
+  - Slack API失敗時は安全な `502 SLACK_API_ERROR`
+  - MarkdownにAPI token、marker、trs、Authorizationが含まれない
+
+- MCP tests:
+  - 新ツールがregistry/published tools/list/OpenAPIに出る
+  - `approved=true` 必須
+  - unknown fieldsをreject
+  - JSON-RPC `tools/call` が内部APIへ `channelId` と旅行条件を渡す
+  - REST MCP adapter経由でも実投稿ルートに到達する
+
+- Verification:
+  - `pnpm --filter backend test`
+  - `pnpm --filter backend typecheck`
+  - `pnpm --filter backend build`
+  - `pnpm --filter cdk test`
+  - `pnpm --filter cdk build`
+
+## Assumptions
+
+- 投稿先は `channelId` 必須にする。
+- MCP投稿は必ず `approved=true` を要求する。
+- 既存 `/api/slack/reply` と同じ思想で、Slack投稿はUser Token優先、Bot Token fallbackにする。
+- 新機能は旅行プランの保存を行わず、生成結果をその場でSlack投稿するだけにする。
+- Slack投稿本文は1メッセージに収め、ファイルアップロードやBlock Kitはv1範囲外にする。"
+**AI Response**: "Loaded AI-DLC common rules, displayed the welcome message, and started focused code generation for the approved travel plan Slack posting unit."
+**Context**: Construction Code Generation, follow-on brownfield unit
+
+---
+## Code Generation Completion
+**Timestamp**: 2026-06-20T13:07:02Z
+**User Input**: "N/A - implementation completion update"
+**AI Response**: "Implemented travel plan Slack posting route, Slack mrkdwn formatter, approval-gated posting service, MCP registry/schema/REST/JSON-RPC wiring, AgentCore OpenAPI schema update, route/service/MCP tests, code-generation summary, and AI-DLC state update. Verified backend tests, backend typecheck, backend build, CDK tests, and CDK build."
+**Context**: Construction Code Generation, travel-plan-slack-post unit completion
+
+---

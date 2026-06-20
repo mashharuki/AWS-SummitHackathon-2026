@@ -72,6 +72,7 @@ import { createTravelRoute } from "./routes/travel.js";
 import { createUsersRoute } from "./routes/users.js";
 import { GoogleTokenService } from "./services/GoogleTokenService.js";
 import { SlackDelegationService } from "./services/SlackDelegationService.js";
+import { TravelPlanSlackPostService } from "./travel/TravelPlanSlackPostService.js";
 import { TravelPlanningService } from "./travel/TravelPlanningService.js";
 import { TravelpayoutsClient } from "./travel/TravelpayoutsClient.js";
 
@@ -141,6 +142,9 @@ const travelPlanningService = new TravelPlanningService({
   travelpayoutsClient,
   bedrockClient,
 });
+const travelPlanSlackPostService = new TravelPlanSlackPostService(
+  travelPlanningService,
+);
 
 /**
  * Google アクセストークン取得のデフォルト実装（U-G04 schedule ルート用）。
@@ -231,23 +235,30 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
-  app.route("/api/travel", createTravelRoute(travelPlanningService));
+  app.route(
+    "/api/travel",
+    createTravelRoute({
+      plan: (input) => travelPlanningService.plan(input),
+      planAndPostToSlack: (input) =>
+        travelPlanSlackPostService.planAndPostToSlack(input),
+    }),
+  );
+  const internalCaller = async (
+    path: string,
+    init: RequestInit,
+  ): Promise<Response> => app.fetch(new Request(`http://internal${path}`, init));
   // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
   app.route(
     "/api/mcp",
     createMcpRoute({
       delegationService: slackDelegationService,
       travelPlanningService,
+      caller: internalCaller,
     }),
   );
 
   // MCP JSON-RPC 2.0 (streamable_http): POST /api/mcp  (ElevenLabs 向け)
   // internalCaller は app を遅延参照するクロージャ — app 初期化後に呼ばれるため安全
-  const internalCaller = async (
-    path: string,
-    init: RequestInit,
-  ): Promise<Response> =>
-    app.fetch(new Request(`http://internal${path}`, init));
   app.route(
     "/api/mcp",
     createMcpJsonRpcRoute({

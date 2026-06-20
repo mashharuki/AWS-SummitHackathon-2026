@@ -89,4 +89,35 @@ describe("MCP tool schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("accepts approved trip planning Slack post input", () => {
+    expect(
+      parseMcpToolArgs("saborou_plan_trip_and_post_to_slack", {
+        destination: "Paris",
+        departureDate: "2026-07-10",
+        returnDate: "2026-07-15",
+        channelId: "C12345678",
+        threadTs: "1718600000.123456",
+        approved: true,
+      }),
+    ).toMatchObject({
+      origin: "Tokyo",
+      destination: "Paris",
+      channelId: "C12345678",
+      approved: true,
+    });
+  });
+
+  it("rejects unknown trip planning Slack post fields", () => {
+    expect(() =>
+      parseMcpToolArgs("saborou_plan_trip_and_post_to_slack", {
+        destination: "Paris",
+        departureDate: "2026-07-10",
+        returnDate: "2026-07-15",
+        channelId: "C12345678",
+        approved: true,
+        admin: true,
+      }),
+    ).toThrow();
+  });
 });

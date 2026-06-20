@@ -7,7 +7,7 @@ const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
 const safeText = z.string().trim().min(1).max(120);
 const safeUrl = z.string().url().max(1000).nullable();
 
-export const TravelPlanRequestSchema = z
+const TravelPlanRequestBaseSchema = z
   .object({
     origin: safeText.default("Tokyo"),
     destination: safeText.optional(),
@@ -33,20 +33,45 @@ export const TravelPlanRequestSchema = z
       .default("standard"),
     language: z.enum(["ja", "en"]).default("ja"),
   })
-  .strict()
-  .superRefine((value, ctx) => {
-    if (
-      value.departureDate &&
-      value.returnDate &&
-      value.departureDate > value.returnDate
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["returnDate"],
-        message: "returnDate must be on or after departureDate",
-      });
-    }
-  });
+  .strict();
+
+function validateDateOrder(
+  value: { departureDate?: string; returnDate?: string },
+  ctx: z.RefinementCtx,
+) {
+  if (
+    value.departureDate &&
+    value.returnDate &&
+    value.departureDate > value.returnDate
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["returnDate"],
+      message: "returnDate must be on or after departureDate",
+    });
+  }
+}
+
+export const TravelPlanRequestSchema =
+  TravelPlanRequestBaseSchema.superRefine(validateDateOrder);
+
+export const TravelPlanAndPostToSlackRequestSchema =
+  TravelPlanRequestBaseSchema.extend({
+    channelId: z
+      .string()
+      .trim()
+      .min(1)
+      .max(80)
+      .regex(/^[A-Z0-9][A-Z0-9_-]*$/),
+    threadTs: z
+      .string()
+      .trim()
+      .min(1)
+      .max(32)
+      .regex(/^[0-9]{10,}\.[0-9]{1,}$/)
+      .optional(),
+    approved: z.boolean().optional().default(false),
+  }).superRefine(validateDateOrder);
 
 export const TravelPriceSchema = z
   .object({
@@ -115,8 +140,36 @@ export const TravelPlanResponseSchema = z
   })
   .strict();
 
+export const TravelPlanAndPostToSlackResponseSchema = z
+  .object({
+    status: z.enum(["posted", "needs_clarification"]),
+    message: z.string().min(1).max(1000),
+    missingFields: z.array(
+      z.enum(["destination", "departureDate", "returnDate"]),
+    ),
+    sourceMode: z.enum(["live", "fixture", "mixed"]),
+    plan: TravelPlanSchema,
+    slack: z
+      .object({
+        posted: z.boolean(),
+        channelId: z.string().min(1).max(80),
+        ts: z.string().max(64).optional(),
+        threadTs: z.string().max(32).optional(),
+        textPreview: z.string().max(240).optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 export type TravelPlanRequest = z.infer<typeof TravelPlanRequestSchema>;
 export type TravelPlanResponse = z.infer<typeof TravelPlanResponseSchema>;
+export type TravelPlanAndPostToSlackRequest = z.infer<
+  typeof TravelPlanAndPostToSlackRequestSchema
+>;
+export type TravelPlanAndPostToSlackResponse = z.infer<
+  typeof TravelPlanAndPostToSlackResponseSchema
+>;
 export type TravelFlightOption = z.infer<typeof TravelFlightOptionSchema>;
 export type TravelHotelOption = z.infer<typeof TravelHotelOptionSchema>;
 export type TravelActivitiesByDay = z.infer<typeof TravelActivitiesByDaySchema>;

@@ -27,6 +27,7 @@ type CreateMcpRouteOptions = McpIdentityResolverOptions & {
   auditWriter?: WriteAuditEvent;
   delegationService?: Pick<SlackDelegationService, "delegateToClaude">;
   travelPlanningService?: Pick<TravelPlanningService, "plan">;
+  caller?: (path: string, init: RequestInit) => Promise<Response>;
 };
 
 type McpRequestBody = {
@@ -184,6 +185,23 @@ async function dispatchRegistryTool(input: {
     ) as Promise<Record<string, unknown>>;
   }
 
+  if (input.toolName === "saborou_plan_trip_and_post_to_slack") {
+    if (!input.options.caller) {
+      throw new AppError(
+        500,
+        "TOOL_ERROR",
+        "Travel plan Slack posting is not configured",
+      );
+    }
+
+    return callInternalApi(input.options.caller, {
+      tool: input.tool,
+      parsedArgs: { ...input.parsedArgs, approved: input.approved },
+      authorization: "",
+      userId: input.context.identity.userId,
+    });
+  }
+
   return {
     status: input.tool.approval.required
       ? "validated_for_approved_action"
@@ -197,6 +215,36 @@ async function dispatchRegistryTool(input: {
     requiresApproval: input.tool.approval.required,
     validatedArgumentKeys: Object.keys(input.parsedArgs).sort(),
   };
+}
+
+async function callInternalApi(
+  caller: NonNullable<CreateMcpRouteOptions["caller"]>,
+  input: {
+    tool: McpToolDefinition;
+    parsedArgs: Record<string, unknown>;
+    authorization: string;
+    userId: string;
+  },
+): Promise<Record<string, unknown>> {
+  const response = await caller(input.tool.http.path, {
+    method: input.tool.http.method,
+    headers: {
+      Authorization: input.authorization,
+      "Content-Type": "application/json",
+      "x-internal-sub": input.userId,
+    },
+    body: JSON.stringify(input.parsedArgs),
+  });
+
+  if (!response.ok) {
+    throw new AppError(
+      response.status as ContentfulStatusCode,
+      "TOOL_ERROR",
+      "Tool execution failed",
+    );
+  }
+
+  return response.json() as Promise<Record<string, unknown>>;
 }
 
 function toSafeError(

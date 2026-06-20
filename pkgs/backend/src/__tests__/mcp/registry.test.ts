@@ -14,6 +14,7 @@ describe("MCP_TOOL_REGISTRY", () => {
     expect(MCP_TOOL_NAMES).toContain("saborou_list_tasks");
     expect(MCP_TOOL_NAMES).toContain("saborou_send_slack_reply");
     expect(MCP_TOOL_NAMES).toContain("saborou_plan_trip");
+    expect(MCP_TOOL_NAMES).toContain("saborou_plan_trip_and_post_to_slack");
   });
 
   it("resolves only registry tool names", () => {
@@ -65,6 +66,19 @@ describe("MCP_TOOL_REGISTRY", () => {
       implementationStatus: "implemented",
       approval: { required: false },
       outputMode: "safe_summary",
+      published: true,
+    });
+  });
+
+  it("publishes the trip planner Slack post tool as an approved side-effect tool", () => {
+    expect(
+      getMcpToolDefinition("saborou_plan_trip_and_post_to_slack"),
+    ).toMatchObject({
+      effect: "side_effect",
+      http: { method: "POST", path: "/api/travel/plan-and-post-to-slack" },
+      implementationStatus: "implemented",
+      approval: { required: true },
+      outputMode: "safe_action_result",
       published: true,
     });
   });
