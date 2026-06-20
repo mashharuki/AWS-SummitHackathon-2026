@@ -68,9 +68,12 @@ import { createProposalsRoute } from "./routes/proposals.js";
 import { createScheduleRoute } from "./routes/schedule.js";
 import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
+import { createTravelRoute } from "./routes/travel.js";
 import { createUsersRoute } from "./routes/users.js";
 import { GoogleTokenService } from "./services/GoogleTokenService.js";
 import { SlackDelegationService } from "./services/SlackDelegationService.js";
+import { TravelPlanningService } from "./travel/TravelPlanningService.js";
+import { TravelpayoutsClient } from "./travel/TravelpayoutsClient.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
@@ -129,6 +132,15 @@ const schedulePlannerAgent = new SchedulePlannerAgent(bedrockClient);
 
 // Initialize SaboriProposerAgentV2 (進捗報告文生成で使用 / U-V2-07)
 const saboriProposerAgentV2 = new SaboriProposerAgentV2(bedrockClient);
+const travelpayoutsClient = env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN
+  ? new TravelpayoutsClient({
+      credentialsSecretArn: env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN,
+    })
+  : undefined;
+const travelPlanningService = new TravelPlanningService({
+  travelpayoutsClient,
+  bedrockClient,
+});
 
 /**
  * Google アクセストークン取得のデフォルト実装（U-G04 schedule ルート用）。
@@ -219,10 +231,14 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
+  app.route("/api/travel", createTravelRoute(travelPlanningService));
   // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
   app.route(
     "/api/mcp",
-    createMcpRoute({ delegationService: slackDelegationService }),
+    createMcpRoute({
+      delegationService: slackDelegationService,
+      travelPlanningService,
+    }),
   );
 
   // MCP JSON-RPC 2.0 (streamable_http): POST /api/mcp  (ElevenLabs 向け)

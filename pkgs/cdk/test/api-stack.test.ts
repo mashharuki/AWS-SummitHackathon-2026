@@ -89,6 +89,39 @@ describe("SaborouApiStack", () => {
     });
   });
 
+  test("Lambda function has TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN environment variable", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
+  test("HonoFn can read only the Travelpayouts credentials secret resource", () => {
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const allStatements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((p) => p.Properties.PolicyDocument.Statement ?? []);
+    const travelpayoutsStatements = allStatements.filter((stmt) => {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const resourceStr = JSON.stringify(s.Resource);
+      return resourceStr.includes("TravelpayoutsCredentialsSecret");
+    });
+
+    expect(travelpayoutsStatements.length).toBeGreaterThan(0);
+    for (const stmt of travelpayoutsStatements) {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const actions = Array.isArray(s.Action) ? s.Action : [s.Action];
+      expect(actions).toContain("secretsmanager:GetSecretValue");
+      expect(JSON.stringify(s.Resource)).not.toContain("*");
+    }
+  });
+
   test("HonoFn has IAM policy for saborou/google-token/* (secretsmanager:GetSecretValue)", () => {
     // Google token IAM ポリシーが存在することを Statement の Action から確認する
     const policies = template.findResources("AWS::IAM::Policy");

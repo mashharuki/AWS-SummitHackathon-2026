@@ -22,6 +22,7 @@ export interface DataStackExports {
     readonly slackClientSecret: secretsmanager.Secret;
     readonly slackSigningSecret: secretsmanager.Secret;
     readonly googleClientSecret: secretsmanager.Secret;
+    readonly travelpayoutsCredentialsSecret: secretsmanager.Secret;
   };
 }
 
@@ -178,6 +179,16 @@ export class SaborouDataStack extends cdk.Stack {
       },
     );
 
+    const travelpayoutsCredentialsSecret = new secretsmanager.Secret(
+      this,
+      "TravelpayoutsCredentialsSecret",
+      {
+        secretName: `/saborou/travelpayouts/credentials-${environment}`,
+        description: "Travelpayouts credentials JSON: apiToken, marker, trs",
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+      },
+    );
+
     // dev: cdk destroy 時に ForceDeleteWithoutRecovery で即時削除するカスタムリソース
     // RETAIN のシークレットは CF が削除しないため、このカスタムリソースが唯一の削除手段
     if (!isProd) {
@@ -253,6 +264,30 @@ export class SaborouDataStack extends cdk.Stack {
           ]),
         },
       );
+
+      const forceDeleteTravelpayouts = new cr.AwsCustomResource(
+        this,
+        "ForceDeleteTravelpayoutsCredentialsSecret",
+        {
+          onDelete: {
+            service: "SecretsManager",
+            action: "deleteSecret",
+            parameters: {
+              SecretId: travelpayoutsCredentialsSecret.secretArn,
+              ForceDeleteWithoutRecovery: true,
+            },
+            physicalResourceId: cr.PhysicalResourceId.of(
+              travelpayoutsCredentialsSecret.secretArn,
+            ),
+          },
+          policy: cr.AwsCustomResourcePolicy.fromStatements([
+            new iam.PolicyStatement({
+              actions: ["secretsmanager:DeleteSecret"],
+              resources: [travelpayoutsCredentialsSecret.secretArn],
+            }),
+          ]),
+        },
+      );
     }
 
     // --- CfnOutputs ---
@@ -316,7 +351,12 @@ export class SaborouDataStack extends cdk.Stack {
         personas,
         googleCalendarCache,
       },
-      secrets: { slackClientSecret, slackSigningSecret, googleClientSecret },
+      secrets: {
+        slackClientSecret,
+        slackSigningSecret,
+        googleClientSecret,
+        travelpayoutsCredentialsSecret,
+      },
     };
   }
 }

@@ -164,6 +164,18 @@ export const MCP_TOOL_REGISTRY = [
     implementationStatus: "implemented",
     published: true,
   },
+  {
+    name: "saborou_plan_trip",
+    effect: "read",
+    description:
+      "旅行条件から航空券・ホテル・アクティビティをまとめた旅行プランを作成します。「旅行プランを立てて」「パリ旅行を組んで」「航空券とホテルと観光をまとめて」などと言われたときに使用してください。destination、departureDate、returnDateが不足している場合は確認質問を返します。Travelpayouts実APIが使えない場合もデモ用候補へ安全にフォールバックします。",
+    http: { method: "POST", path: "/api/travel/plan" },
+    schema: { input: "saborou_plan_trip", output: "safe_summary" },
+    approval: { required: false },
+    outputMode: "safe_summary",
+    implementationStatus: "implemented",
+    published: true,
+  },
 ] as const satisfies ReadonlyArray<McpToolDefinition>;
 
 export const MCP_TOOL_NAMES = MCP_TOOL_REGISTRY.map((tool) => tool.name);

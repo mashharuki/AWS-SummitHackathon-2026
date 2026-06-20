@@ -56,11 +56,36 @@ describe("MCP tool schemas", () => {
     });
   });
 
-  it("rejects Claude delegation args without a channel", () => {
-    expect(() =>
+  it("accepts Claude delegation args without a channel", () => {
+    expect(
       parseMcpToolArgs("saborou_delegate_to_claude", {
         taskId: "task-1",
         instruction: "初稿をお願いします",
+      }),
+    ).toMatchObject({
+      taskId: "task-1",
+      instruction: "初稿をお願いします",
+    });
+  });
+
+  it("accepts voice-friendly partial trip planning input", () => {
+    expect(
+      parseMcpToolArgs("saborou_plan_trip", { destination: "Paris" }),
+    ).toMatchObject({
+      origin: "Tokyo",
+      destination: "Paris",
+      travelers: 1,
+      currency: "JPY",
+    });
+  });
+
+  it("rejects unknown trip planning fields", () => {
+    expect(() =>
+      parseMcpToolArgs("saborou_plan_trip", {
+        destination: "Paris",
+        departureDate: "2026-07-10",
+        returnDate: "2026-07-15",
+        apiToken: "secret",
       }),
     ).toThrow();
   });

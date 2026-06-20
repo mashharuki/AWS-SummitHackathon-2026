@@ -16,11 +16,13 @@ import type { AppEnv } from "../../types.js";
 
 const {
   mockGetSlackToken,
+  mockGetSlackUserToken,
   mockConversationsHistory,
   mockPostMessage,
   mockConversationsList,
 } = vi.hoisted(() => ({
   mockGetSlackToken: vi.fn(),
+  mockGetSlackUserToken: vi.fn(),
   mockConversationsHistory: vi.fn(),
   mockPostMessage: vi.fn(),
   mockConversationsList: vi.fn(),
@@ -38,6 +40,7 @@ class MockSlackApiError extends Error {
 
 vi.mock("@saboru/agent", () => ({
   getSlackToken: mockGetSlackToken,
+  getSlackUserToken: mockGetSlackUserToken,
   SlackApiError: MockSlackApiError,
   SlackClient: class {
     conversationsHistory = mockConversationsHistory;
@@ -328,6 +331,7 @@ describe("POST /api/slack/reply", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetSlackToken.mockResolvedValue("xoxb-test");
+    mockGetSlackUserToken.mockResolvedValue(null);
     mockPostMessage.mockResolvedValue({ ts: "12.34" });
   });
 
@@ -440,6 +444,7 @@ describe("POST /api/slack/delegations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetSlackToken.mockResolvedValue("xoxb-test");
+    mockGetSlackUserToken.mockResolvedValue(null);
     mockPostMessage.mockResolvedValue({ ts: "22.22" });
   });
 

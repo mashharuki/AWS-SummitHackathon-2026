@@ -74,4 +74,8 @@ export const env = {
   get DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE(): string {
     return requireEnv("DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE");
   },
+  // --- Travelpayouts / Aviasales ---
+  get TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN(): string | undefined {
+    return optionalEnv("TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN");
+  },
 } as const;

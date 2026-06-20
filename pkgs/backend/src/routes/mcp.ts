@@ -21,10 +21,12 @@ import type {
   SafeMcpSuccessResponse,
 } from "../mcp/types.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
+import type { TravelPlanningService } from "../travel/TravelPlanningService.js";
 
 type CreateMcpRouteOptions = McpIdentityResolverOptions & {
   auditWriter?: WriteAuditEvent;
   delegationService?: Pick<SlackDelegationService, "delegateToClaude">;
+  travelPlanningService?: Pick<TravelPlanningService, "plan">;
 };
 
 type McpRequestBody = {
@@ -166,6 +168,20 @@ async function dispatchRegistryTool(input: {
       ts: result.ts,
       delegatedTextPreview: result.delegatedTextPreview,
     };
+  }
+
+  if (input.toolName === "saborou_plan_trip") {
+    if (!input.options.travelPlanningService) {
+      throw new AppError(
+        500,
+        "TOOL_ERROR",
+        "Travel planning is not configured",
+      );
+    }
+
+    return input.options.travelPlanningService.plan(
+      input.parsedArgs,
+    ) as Promise<Record<string, unknown>>;
   }
 
   return {

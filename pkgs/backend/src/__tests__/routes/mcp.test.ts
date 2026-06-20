@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { UnauthorizedError } from "../../errors.js";
 import type { SafeMcpAuditEvent } from "../../mcp/types.js";
 import { createMcpRoute } from "../../routes/mcp.js";
+import type { TravelPlanResponse } from "../../travel/schemas.js";
 
 function createTestApp(options: {
   verifier?: (token: string) => Promise<{
@@ -20,6 +21,9 @@ function createTestApp(options: {
       delegatedTextPreview: string;
     }>;
   };
+  travelPlanningService?: {
+    plan: (input: unknown) => Promise<TravelPlanResponse>;
+  };
 }) {
   const app = new Hono();
   app.route(
@@ -28,6 +32,7 @@ function createTestApp(options: {
       verifier: options.verifier,
       auditWriter: (event) => options.events?.push(event),
       delegationService: options.delegationService,
+      travelPlanningService: options.travelPlanningService,
     }),
   );
   return app;
@@ -225,6 +230,54 @@ describe("POST /api/mcp/tools/:toolName", () => {
         taskId: "task-1",
         channelId: "C12345",
         ts: "1718600000.123456",
+      },
+    });
+  });
+
+  it("executes the implemented trip planner tool", async () => {
+    const app = createTestApp({
+      verifier: validVerifier,
+      events: [],
+      travelPlanningService: {
+        plan: async (input) => ({
+          status: "planned",
+          message: `planned ${(input as { destination?: string }).destination}`,
+          missingFields: [],
+          sourceMode: "fixture",
+          plan: {
+            summary: "summary",
+            assumptions: [],
+            flights: [],
+            hotels: [],
+            activitiesByDay: [],
+            nextQuestion: null,
+          },
+        }),
+      },
+    });
+
+    const res = await app.request("/api/mcp/tools/saborou_plan_trip", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer valid-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        args: {
+          destination: "Paris",
+          departureDate: "2026-07-10",
+          returnDate: "2026-07-15",
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      toolName: "saborou_plan_trip",
+      result: {
+        status: "planned",
+        message: "planned Paris",
       },
     });
   });

@@ -5,8 +5,33 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Build and Test 完了（2026-06-18 JST）。全 5 Unit（U-V3-01〜05）のビルド・テスト・統合検証手順書を作成完了。backend 437 tests / CDK 90 tests / extension 187 tests 全パス確認。実環境手動テスト手順を DEMO_RUNBOOK.md に集約。次: Operations フェーズ（デプロイ検証）またはデモ準備へ。
-- **ドキュメントバージョン**: v4.2.31（2026-06-18 v3 Build and Test 完了）
+- **現在のステージ**: Travelpayouts旅行プラン代行機能 実装・検証完了（2026-06-20 JST）。`POST /api/travel/plan`、MCP tool `saborou_plan_trip`、Travelpayouts Secrets Manager secret、AgentCore OpenAPI schema更新を実装。backend 451 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス確認。次: 実環境へTravelpayouts secret値を投入し、デプロイ後MCP auth verification scriptを実行。
+- **ドキュメントバージョン**: v4.3.0（2026-06-20 Travelpayouts旅行プラン代行機能 実装完了）
+
+---
+
+## Travelpayouts旅行プラン代行機能（2026-06-20）
+
+### 実装状態
+- [x] Backend route — `POST /api/travel/plan` を追加。認証済みユーザー向けに旅行条件からプランを返す。
+- [x] Travel planning domain — `TravelPlanningService` / `TravelpayoutsClient` / fixture provider / strict Zod schemas を追加。
+- [x] MCP exposure — `saborou_plan_trip` を registry / schema / JSON-RPC tools/list / REST MCP adapter / AgentCore OpenAPI schema に追加。
+- [x] CDK secret wiring — `/saborou/travelpayouts/credentials-${environment}` secret、API Lambda env、read権限を追加。
+- [x] Schema drift fix — 既存 published tool `saborou_find_task` の OpenAPI operation を追加。
+- [x] Tests — backend 451 tests、CDK 93 tests、typecheck/build 全パス。
+
+### 成果物
+- `pkgs/backend/src/routes/travel.ts`
+- `pkgs/backend/src/travel/`
+- `pkgs/backend/src/__tests__/travel/TravelPlanningService.test.ts`
+- `pkgs/backend/src/__tests__/routes/travel.test.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/construction/travelpayouts-trip-planner/code/code-generation-summary.md`
+
+### 残作業
+- [ ] 実AWS環境でTravelpayouts secret JSONを設定: `apiToken`, `marker`, `trs`
+- [ ] デプロイ後に既存MCP auth verification scriptを実行
 
 ---
 

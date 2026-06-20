@@ -13,6 +13,7 @@ describe("MCP_TOOL_REGISTRY", () => {
     expect(new Set(MCP_TOOL_NAMES).size).toBe(MCP_TOOL_NAMES.length);
     expect(MCP_TOOL_NAMES).toContain("saborou_list_tasks");
     expect(MCP_TOOL_NAMES).toContain("saborou_send_slack_reply");
+    expect(MCP_TOOL_NAMES).toContain("saborou_plan_trip");
   });
 
   it("resolves only registry tool names", () => {
@@ -53,6 +54,17 @@ describe("MCP_TOOL_REGISTRY", () => {
     expect(getMcpToolDefinition("saborou_delegate_to_claude")).toMatchObject({
       implementationStatus: "implemented",
       approval: { required: true },
+      published: true,
+    });
+  });
+
+  it("publishes the Travelpayouts trip planner as a read-only implemented tool", () => {
+    expect(getMcpToolDefinition("saborou_plan_trip")).toMatchObject({
+      effect: "read",
+      http: { method: "POST", path: "/api/travel/plan" },
+      implementationStatus: "implemented",
+      approval: { required: false },
+      outputMode: "safe_summary",
       published: true,
     });
   });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TravelPlanRequestSchema } from "../travel/schemas.js";
 import type { McpToolName } from "./types.js";
 
 const idSchema = z
@@ -84,6 +85,7 @@ export const mcpToolInputSchemas = {
       instruction: safeTextSchema.max(2000),
     })
     .strict(),
+  saborou_plan_trip: TravelPlanRequestSchema,
 } satisfies Record<McpToolName, z.ZodTypeAny>;
 
 export const mcpToolOutputSchemas = {
