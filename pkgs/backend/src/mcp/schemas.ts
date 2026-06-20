@@ -71,10 +71,15 @@ export const mcpToolInputSchemas = {
       tone: z.enum(["formal", "polite", "casual"]).optional(),
     })
     .strict(),
+  saborou_find_task: z
+    .object({
+      keyword: z.string().trim().min(1).max(200),
+    })
+    .strict(),
   saborou_delegate_to_claude: z
     .object({
       taskId: idSchema,
-      channelId: slackChannelSchema,
+      channelId: slackChannelSchema.optional(),
       threadTs: slackThreadTsSchema,
       instruction: safeTextSchema.max(2000),
     })

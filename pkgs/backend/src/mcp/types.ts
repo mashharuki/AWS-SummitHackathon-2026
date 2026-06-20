@@ -20,6 +20,7 @@ export type McpToolName =
   | "saborou_fetch_gmail"
   | "saborou_send_slack_reply"
   | "saborou_schedule_report"
+  | "saborou_find_task"
   | "saborou_delegate_to_claude";
 
 export type McpHttpMethod = "GET" | "POST";

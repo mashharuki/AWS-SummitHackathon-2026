@@ -135,6 +135,18 @@ export const MCP_TOOL_REGISTRY = [
     published: true,
   },
   {
+    name: "saborou_find_task",
+    effect: "read",
+    description:
+      "キーワードでタスクを検索してタスクIDを特定します。「資料作成のタスク」「田中さんから来たタスク」「先週のやつ」など、ユーザーがタスク名・内容・依頼者名の一部を言ったときに使用してください。返答の message フィールドを読み上げて、ユーザーにどのタスクか確認してください。タスクIDが不明なまま他のツールを呼び出す前に必ずこのツールで特定してください。",
+    http: { method: "GET", path: "/api/tasks/search" },
+    schema: { input: "saborou_find_task", output: "safe_summary" },
+    approval: { required: false },
+    outputMode: "safe_summary",
+    implementationStatus: "adapter_validated",
+    published: true,
+  },
+  {
     name: "saborou_delegate_to_claude",
     effect: "side_effect",
     description:

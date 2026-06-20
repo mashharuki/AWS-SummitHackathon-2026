@@ -196,6 +196,56 @@ export function createTasksRoute(
     return c.body(null, 204);
   });
 
+  /**
+   * GET /tasks/search?keyword=xxx — キーワードでタスクを検索する (MCP: saborou_find_task)
+   *
+   * タイトル・説明文・依頼者名を対象に部分一致検索する。
+   * レスポンスの message フィールドは音声で読み上げられることを想定した日本語文章。
+   */
+  tasks.get("/search", async (c) => {
+    const userId = c.get("userId");
+    const keyword = (c.req.query("keyword") ?? "").trim();
+
+    if (!keyword) {
+      return c.json(
+        { error: { code: "VALIDATION_ERROR", message: "keyword is required" } },
+        400,
+      );
+    }
+
+    const all = await taskRepository.findApprovedByUserId(userId);
+    const lower = keyword.toLowerCase();
+    const matched = all.filter((t) => {
+      const haystack = [t.title, t.description ?? "", t.requester ?? ""]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(lower);
+    });
+
+    const matches = matched.map((t, i) => ({
+      index: i + 1,
+      taskId: t.taskId,
+      title: t.title,
+      deadline: t.deadline ?? null,
+      requester: t.requester ?? "",
+    }));
+
+    let message: string;
+    if (matches.length === 0) {
+      message = `「${keyword}」に一致するタスクが見つかりませんでした。別のキーワードで検索するか、タスク一覧を確認してください。`;
+    } else if (matches.length === 1) {
+      const t = matches[0];
+      message = `「${t.title}」が見つかりました。このタスクでよろしいですか？`;
+    } else {
+      const items = matches
+        .map((t) => `${t.index}番目は「${t.title}」`)
+        .join("、");
+      message = `${matches.length}件見つかりました。${items}。どのタスクですか？`;
+    }
+
+    return c.json({ count: matches.length, matches, message });
+  });
+
   /** GET /tasks/:id — Single task */
   tasks.get("/:id", async (c) => {
     const userId = c.get("userId");

@@ -274,6 +274,20 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
         },
         required: ["taskId"],
       };
+    case "saborou_find_task":
+      return {
+        type: "object",
+        properties: {
+          keyword: {
+            type: "string",
+            minLength: 1,
+            maxLength: 200,
+            description:
+              "検索キーワード（必須）。タスクのタイトル・説明文・依頼者名のいずれかに含まれる文字列。例:「資料作成」「田中さん」「プレゼン」「来週の」。部分一致で検索されるため短いキーワードでOK。",
+          },
+        },
+        required: ["keyword"],
+      };
     case "saborou_delegate_to_claude":
       return {
         type: "object",
