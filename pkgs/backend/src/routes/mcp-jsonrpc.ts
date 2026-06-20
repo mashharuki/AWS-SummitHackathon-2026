@@ -152,13 +152,24 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
       return {
         type: "object",
         properties: {
-          status: { type: "string", enum: ["active", "completed", "pending"] },
+          status: {
+            type: "string",
+            enum: ["active", "completed", "pending"],
+            description:
+              "絞り込むタスクのステータス。active=進行中のタスクのみ、completed=完了済みのタスクのみ、pending=保留中のタスクのみ。省略すると全ステータスのタスクを返す。",
+          },
         },
       };
     case "saborou_get_task":
       return {
         type: "object",
-        properties: { taskId: { type: "string" } },
+        properties: {
+          taskId: {
+            type: "string",
+            description:
+              "取得するタスクのID（ULIDまたは英数字の文字列）。saborou_list_tasks で取得したタスクのIDを使用する。",
+          },
+        },
         required: ["taskId"],
       };
     case "saborou_list_candidates":
@@ -167,10 +178,16 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
       return {
         type: "object",
         properties: {
-          taskId: { type: "string" },
+          taskId: {
+            type: "string",
+            description:
+              "返信案を生成するタスクのID。saborou_list_tasks で取得したIDを使用する。",
+          },
           mode: {
             type: "string",
             enum: ["sabori_judgment", "reply_draft", "decline_draft"],
+            description:
+              "生成する返信案のタイプ。sabori_judgment=サボれるか判定して最適な返信案を選ぶ（デフォルト推奨）、reply_draft=引き受ける前提の承諾返信案、decline_draft=丁寧にお断りする返信案。省略すると sabori_judgment が使われる。",
           },
         },
         required: ["taskId"],
@@ -179,8 +196,19 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
       return {
         type: "object",
         properties: {
-          message: { type: "string", minLength: 1, maxLength: 4000 },
-          senderName: { type: "string", maxLength: 120 },
+          message: {
+            type: "string",
+            minLength: 1,
+            maxLength: 4000,
+            description:
+              "判定対象のSlackメッセージ本文。ユーザーが読み上げた内容または入力したテキストをそのまま渡す。",
+          },
+          senderName: {
+            type: "string",
+            maxLength: 120,
+            description:
+              "メッセージ送信者の名前（省略可）。あると返信文の宛名に使われ、より自然な文章になる。例:「田中さん」「部長」。",
+          },
         },
         required: ["message"],
       };
@@ -190,17 +218,41 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
       return {
         type: "object",
         properties: {
-          maxResults: { type: "integer", minimum: 1, maximum: 20 },
+          maxResults: {
+            type: "integer",
+            minimum: 1,
+            maximum: 20,
+            description:
+              "取得するメールの最大件数（1〜20件）。省略すると10件。多いほど処理時間がかかる。",
+          },
         },
       };
     case "saborou_send_slack_reply":
       return {
         type: "object",
         properties: {
-          taskId: { type: "string" },
-          replyText: { type: "string", minLength: 1, maxLength: 2000 },
-          channelId: { type: "string" },
-          threadTs: { type: "string" },
+          taskId: {
+            type: "string",
+            description:
+              "この返信に関連するSABOROUタスクのID（省略可）。ログ追跡のために設定を推奨。",
+          },
+          replyText: {
+            type: "string",
+            minLength: 1,
+            maxLength: 2000,
+            description:
+              "実際にSlackに投稿するメッセージ本文（必須）。送信前にユーザーへ内容を読み上げて確認を取ること。",
+          },
+          channelId: {
+            type: "string",
+            description:
+              "投稿先のSlackチャンネルID（必須）。「C」で始まる英数字の文字列（例: C01234567）。DM（ダイレクトメッセージ）には使用不可。",
+          },
+          threadTs: {
+            type: "string",
+            description:
+              "スレッドに返信する場合の親メッセージのタイムスタンプ（省略可）。「1234567890.123456」形式。省略するとチャンネルへの新規投稿になる。",
+          },
         },
         required: ["replyText", "channelId"],
       };
@@ -208,8 +260,17 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
       return {
         type: "object",
         properties: {
-          taskId: { type: "string" },
-          tone: { type: "string", enum: ["formal", "polite", "casual"] },
+          taskId: {
+            type: "string",
+            description:
+              "進捗報告を作成するタスクのID（必須）。saborou_list_tasks で取得したIDを使用する。",
+          },
+          tone: {
+            type: "string",
+            enum: ["formal", "polite", "casual"],
+            description:
+              "報告文の文体（省略可）。formal=硬いビジネス文体（役員・外部向け）、polite=丁寧語のデフォルト（上司向け、省略時はこれ）、casual=カジュアル（同僚・チーム内向け）。",
+          },
         },
         required: ["taskId"],
       };
@@ -217,14 +278,28 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
       return {
         type: "object",
         properties: {
-          taskId: { type: "string" },
+          taskId: {
+            type: "string",
+            description:
+              "Claudeに委譲するタスクのID（必須）。saborou_list_tasks で取得したIDを使用する。",
+          },
           channelId: {
             type: "string",
             description:
-              "Slack channel ID (e.g. C01234567). Optional if the task was created from Slack.",
+              "Claudeの返信を投稿するSlackチャンネルID（省略可）。Slackから作成されたタスクは自動設定されるため通常は省略してよい。手動で指定する場合は「C」で始まる英数字の文字列（例: C01234567）。",
           },
-          threadTs: { type: "string" },
-          instruction: { type: "string", minLength: 1, maxLength: 2000 },
+          threadTs: {
+            type: "string",
+            description:
+              "Claudeが返信するスレッドの親メッセージのタイムスタンプ（省略可）。「1234567890.123456」形式。省略するとチャンネルへの新規投稿になる。",
+          },
+          instruction: {
+            type: "string",
+            minLength: 1,
+            maxLength: 2000,
+            description:
+              "Claudeへの具体的な指示・依頼内容（必須）。日本語で記述する。例:「このタスクへの返信案を丁寧語で作成してください」「締め切りを確認して対応案を出してください」。",
+          },
         },
         required: ["taskId", "instruction"],
       };
