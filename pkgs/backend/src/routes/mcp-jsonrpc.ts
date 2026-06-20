@@ -8,7 +8,7 @@ import type { McpToolDefinition } from "../mcp/types.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
 import { normalizeForTts } from "../utils/ttsNormalizer.js";
 
-const PROTOCOL_VERSION = "2024-11-05";
+const PROTOCOL_VERSION = "2025-03-26";
 
 type JsonRpcId = number | string | null;
 interface JsonRpcRequest {
