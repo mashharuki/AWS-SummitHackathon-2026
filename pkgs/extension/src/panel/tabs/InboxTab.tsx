@@ -22,7 +22,11 @@ type ModalState =
   | { kind: "approve"; candidate: TaskCandidate }
   | { kind: "decline"; candidate: TaskCandidate };
 
-export function InboxTab() {
+export function InboxTab({
+  onDelegationStart,
+}: {
+  onDelegationStart?: () => void;
+}) {
   const {
     candidates,
     candidatesLoading,
@@ -85,6 +89,7 @@ export function InboxTab() {
             removeCandidate(modal.candidate.candidateId);
             void refreshTasks();
           }}
+          onDelegationStart={onDelegationStart}
         />
       )}
       {modal.kind === "decline" && (

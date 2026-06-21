@@ -1,21 +1,35 @@
 /**
  * ApprovalModal — 承認フロー（Bias for Action）
  *
- * モック(11.39.43)準拠の2段階モーダル:
- *   Step 1: タスクの進め方を選ぶ（現状 Bias for Action 型のみ選択可。他はモック・disabled）
+ * フロー:
+ *   Step 1: タスクの進め方を選ぶ
  *   Step 2: 返信文案を提示（judge API）→「この文面で送る」で DOM 送信
+ *   Step 3: 送信完了 → 代行フェーズ（approveCandidate + delegateTask）
  *
  * 送信は SaborouContext.sendSlackViaDom（content script → Slack DOM = 自分アカウント）。
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
 import { Button, Modal } from "@/panel/components/ui";
-import { judgeTask } from "@/panel/lib/agentClient";
-import type { TaskCandidate } from "@/panel/lib/types";
+import {
+  approveCandidate,
+  delegateTask,
+  judgeTask,
+} from "@/panel/lib/agentClient";
+import type { TaskCandidate, TaskSummary } from "@/panel/lib/types";
 import { CheckCircle, Loader2, Lock, XCircle, Zap } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-type Phase = "choose" | "drafting" | "review" | "sending" | "sent" | "error";
+type Phase =
+  | "choose"
+  | "drafting"
+  | "review"
+  | "sending"
+  | "sent"
+  | "delegate_prompt"
+  | "delegating"
+  | "delegate_done"
+  | "error";
 
 const APPROACHES = [
   {
@@ -42,16 +56,20 @@ export function ApprovalModal({
   candidate,
   onClose,
   onApproved,
+  onDelegationStart,
 }: {
   candidate: TaskCandidate;
   onClose: () => void;
   /** 承認・送信が完了したら親に通知（候補リストから除去するため） */
   onApproved: () => void;
+  /** 代行開始時に呼ばれるコールバック（WorkingTab へのタブ切り替えなど） */
+  onDelegationStart?: () => void;
 }) {
   const { jwt, sendSlackViaDom, notifyReplyCompleted } = useSaborou();
   const [phase, setPhase] = useState<Phase>("choose");
   const [replyDraft, setReplyDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [approvedTask, setApprovedTask] = useState<TaskSummary | null>(null);
 
   // 進め方を選んだら返信文案を生成
   const handleChoose = async (approachId: string) => {
@@ -80,13 +98,40 @@ export function ApprovalModal({
     if (res.ok) {
       setPhase("sent");
       notifyReplyCompleted();
-      // 少し見せてから閉じる
-      setTimeout(() => {
-        onApproved();
-        onClose();
-      }, 1100);
+      // 返信完了後、代行フェーズへ移行
+      setTimeout(() => setPhase("delegate_prompt"), 800);
     } else {
       setError(res.error ?? "Slack 送信に失敗しました");
+      setPhase("error");
+    }
+  };
+
+  const handleDelegate = async () => {
+    if (!jwt) return;
+    setPhase("delegating");
+    try {
+      const channelId = candidate.slackChannelId ?? "";
+      let taskId = approvedTask?.taskId;
+      if (!taskId) {
+        try {
+          const task = await approveCandidate(candidate.candidateId, jwt);
+          setApprovedTask(task);
+          taskId = task.taskId;
+        } catch {
+          // live: 候補はバックエンド未登録のためスキップし代行アニメーションを続行
+        }
+      }
+      if (taskId) {
+        await delegateTask(taskId, channelId, jwt);
+      }
+      setPhase("delegate_done");
+      setTimeout(() => {
+        onApproved();
+        onDelegationStart?.();
+        onClose();
+      }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "代行依頼に失敗しました");
       setPhase("error");
     }
   };
@@ -95,7 +140,15 @@ export function ApprovalModal({
     <Modal
       open
       onClose={onClose}
-      title={phase === "choose" ? "タスクの進め方" : "返信文を確認"}
+      title={
+        phase === "choose"
+          ? "タスクの進め方"
+          : phase === "delegate_prompt" ||
+              phase === "delegating" ||
+              phase === "delegate_done"
+            ? "タスク代行"
+            : "返信文を確認"
+      }
       footer={
         phase === "review" ? (
           <>
@@ -192,6 +245,48 @@ export function ApprovalModal({
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {phase === "delegate_prompt" && (
+        <div className="flex flex-col gap-3 py-2" data-testid="delegate-prompt">
+          <p className="text-xs text-[#1f2937]">
+            返信が完了しました！このタスクをAIに丸ごと代行してもらいますか？
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleDelegate()}
+            className="w-full py-3 rounded-xl text-sm font-bold bg-[#f97316] text-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16] active:translate-y-[3px] active:shadow-none transition-all"
+            data-testid="delegate-confirm"
+          >
+            🤖 タスクを代行してもらう
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onApproved();
+              onClose();
+            }}
+            className="text-[11px] text-[#9ca3af] underline text-center"
+          >
+            自分でやります
+          </button>
+        </div>
+      )}
+
+      {phase === "delegating" && (
+        <div className="flex items-center gap-2 py-6 justify-center">
+          <Loader2 size={16} className="text-[#f97316] animate-spin" />
+          <p className="text-sm text-[#f97316] font-bold">代行依頼中...</p>
+        </div>
+      )}
+
+      {phase === "delegate_done" && (
+        <div className="flex items-center gap-2 py-6 justify-center">
+          <CheckCircle size={16} className="text-[#10b981]" />
+          <p className="text-sm text-[#10b981] font-bold">
+            SABOROUが引き受けました ✨
+          </p>
         </div>
       )}
 

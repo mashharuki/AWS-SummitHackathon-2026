@@ -3,10 +3,7 @@
  *
  * 上部: MiniGantt（進行中タスクのスケジュール。8-17時/昼休み固定）
  * 下部: 「SABOROUがタスク実行中（LIVE）」ブラウザ操作プレビュー（スクレイピング演出）
- *       + ステップ進捗（文脈解析 → Webスクレイピング → MCPで成果物作成）
- *
- * 1タスクずつ順次進行。合間に別タスクは挟まない（設計判断 §3-4）。
- * モック(11.33.45)準拠。実行演出は擬似（実際の代行実行は将来機能）。
+ *       + ステップ進捗（タスク代行開始後にアニメーションで進行）
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
@@ -17,30 +14,31 @@ import type { SaboriSchedule } from "@/panel/lib/types";
 import { CheckCircle2, Globe, Loader2, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const EXEC_STEPS = [
+type StepState = "done" | "active" | "pending";
+
+const STEP_DEFS = [
   {
-    icon: CheckCircle2,
-    title: "文脈を解析",
-    sub: "Slack の依頼 + 締切 + Docs から条件を読み込み",
-    state: "done" as const,
+    title: "旅程の情報を収集",
+    sub: "Slack の依頼 + 期日 + 参加者情報を読み込み",
   },
   {
-    icon: Loader2,
-    title: "Web スクレイピング",
-    sub: "必要な情報を収集中",
-    state: "active" as const,
+    title: "新幹線・ホテルの空き確認",
+    sub: "JR・宿泊施設の空き状況を収集中",
   },
   {
-    icon: Sparkles,
-    title: "MCP で成果物作成",
-    sub: "スライド / フォームを生成",
-    state: "pending" as const,
+    title: "社内共有スライドを生成",
+    sub: "MCP で成果物を作成",
   },
-];
+] as const;
 
 export function WorkingTab() {
   const { jwt, tasks } = useSaborou();
   const [schedule, setSchedule] = useState<SaboriSchedule | null>(null);
+  const [stepStates, setStepStates] = useState<StepState[]>([
+    "active",
+    "pending",
+    "pending",
+  ]);
 
   // 進行中（先頭の承認済みタスク）のスケジュールを取得。1タスクずつ。
   const activeTask = tasks[0] ?? null;
@@ -55,6 +53,29 @@ export function WorkingTab() {
       cancelled = true;
     };
   }, [jwt, activeTask]);
+
+  // タスク代行開始時にステップアニメーションを再生
+  useEffect(() => {
+    if (!activeTask) return;
+    setStepStates(["active", "pending", "pending"]);
+    const t1 = setTimeout(
+      () => setStepStates(["done", "active", "pending"]),
+      2000,
+    );
+    const t2 = setTimeout(
+      () => setStepStates(["done", "done", "active"]),
+      5000,
+    );
+    const t3 = setTimeout(
+      () => setStepStates(["done", "done", "done"]),
+      9000,
+    );
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [activeTask?.taskId]);
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3" data-testid="working-tab">
@@ -107,18 +128,24 @@ export function WorkingTab() {
             </div>
           </div>
 
-          {/* 実行ステップ */}
+          {/* 実行ステップ（動的アニメーション） */}
           <div className="flex flex-col gap-2">
-            {EXEC_STEPS.map((step) => {
-              const Icon = step.icon;
+            {STEP_DEFS.map((def, idx) => {
+              const state = stepStates[idx] ?? "pending";
+              const IconEl =
+                state === "done"
+                  ? CheckCircle2
+                  : state === "active"
+                    ? Loader2
+                    : Sparkles;
               return (
-                <div key={step.title} className="flex items-start gap-2">
-                  <Icon
+                <div key={def.title} className="flex items-start gap-2">
+                  <IconEl
                     size={14}
                     className={
-                      step.state === "done"
+                      state === "done"
                         ? "text-[#10b981] mt-0.5"
-                        : step.state === "active"
+                        : state === "active"
                           ? "text-[#3b82f6] mt-0.5 animate-spin"
                           : "text-white/30 mt-0.5"
                     }
@@ -126,14 +153,14 @@ export function WorkingTab() {
                   <div>
                     <p
                       className={
-                        step.state === "pending"
+                        state === "pending"
                           ? "text-[11px] font-bold text-white/40"
                           : "text-[11px] font-bold text-white"
                       }
                     >
-                      {step.title}
+                      {def.title}
                     </p>
-                    <p className="text-[9px] text-white/50">{step.sub}</p>
+                    <p className="text-[9px] text-white/50">{def.sub}</p>
                   </div>
                 </div>
               );

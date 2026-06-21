@@ -314,7 +314,11 @@ function TabContent({
 
       <div className="flex-1 overflow-y-auto min-h-0">
         {activeTab === "home" && <HomeTab />}
-        {activeTab === "inbox" && <InboxTab />}
+        {activeTab === "inbox" && (
+          <InboxTab
+            onDelegationStart={() => onTabChange("working")}
+          />
+        )}
         {activeTab === "working" && <WorkingTab />}
         {activeTab === "slack" && <SlackTab />}
       </div>
