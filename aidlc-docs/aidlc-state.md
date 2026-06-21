@@ -5,8 +5,34 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: `tts-normalizer-enhancement` Code Generation / Build and Test 完了（2026-06-21 JST）。ElevenLabs向け発話テキスト正規化を略語変換から、JSONキー保護・技術用語・日付時刻・助数詞・URL/ID/Slack timestamp簡略化・proposal ttsSummary正規化へ拡張。backend 480 tests / backend typecheck / backend build 全パス。
-- **ドキュメントバージョン**: v4.6.0（2026-06-21 ttsNormalizer発話正規化強化 実装完了）
+- **現在のステージ**: `marp-slide-stylesheet-enhancement` Code Generation / Build and Test 完了（2026-06-21 JST）。Marp生成スライドに `saborou-premium` 埋め込みテーマ、リッチなfixture deck、プレミアムHTMLプレビューシェル、サービス単体テストを追加。backend 483 tests / backend typecheck / backend build 全パス。
+- **ドキュメントバージョン**: v4.8.0（2026-06-21 Marpスライドスタイル改善 実装完了）
+
+---
+
+## Marpスライドスタイル改善（2026-06-21）
+
+### 計画状態
+- [x] Workspace Detection — Brownfield TypeScript monorepo、既存AI-DLC状態あり。
+- [x] Requirements Analysis — 最小深度で実施。API契約・S3公開・Slack投稿・認証境界を変更しない視覚改善として整理。
+- [x] Workflow Planning — 単一コンポーネント変更として、Application Design / Units Generation / Functional Design / NFR / Infrastructure Design をスキップし、Code Generation / Build and Test を実行対象に設定。
+- [x] Code Generation — `MarpSlideService` の生成プロンプト、埋め込みCSS、fixture deck、HTML preview wrapper、テストを更新。
+- [x] Build and Test — backend 483 tests、backend typecheck、backend build 全パス。
+
+### 成果物
+- `aidlc-docs/inception/requirements/marp-slide-stylesheet-enhancement-requirements.md`
+- `aidlc-docs/inception/plans/marp-slide-stylesheet-enhancement-execution-plan.md`
+- `aidlc-docs/construction/plans/marp-slide-stylesheet-enhancement-code-generation-plan.md`
+- `aidlc-docs/construction/marp-slide-stylesheet-enhancement/code/code-generation-summary.md`
+- `aidlc-docs/construction/build-and-test/build-and-test-summary.md`
+- `pkgs/backend/src/marp/MarpSlideService.ts`
+- `pkgs/backend/src/__tests__/marp/MarpSlideService.test.ts`
+- `pkgs/backend/src/__tests__/routes/slack.test.ts`
+
+### Security Baseline
+- [x] 新規ストレージ、ネットワーク公開面、IAM権限、secret handlingなし。
+- [x] 既存API認証・認可・Slack投稿approval境界を維持する計画。
+- [x] 新規依存関係なし。
 
 ---
 

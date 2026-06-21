@@ -59,6 +59,7 @@ const MOCK_USER_ID = "cognito-slack-test";
 
 interface RepoOverrides {
   taskFindById?: ReturnType<typeof vi.fn>;
+  taskFindApprovedByUserId?: ReturnType<typeof vi.fn>;
   proposalFindLatest?: ReturnType<typeof vi.fn>;
 }
 
@@ -66,6 +67,8 @@ function buildApp(ebSend: ReturnType<typeof vi.fn>, repos: RepoOverrides = {}) {
   const ebClient = { send: ebSend } as unknown as EventBridgeClient;
   const taskRepo = {
     findById: repos.taskFindById ?? vi.fn(),
+    findApprovedByUserId:
+      repos.taskFindApprovedByUserId ?? vi.fn().mockResolvedValue([]),
   } as unknown as DynamoTaskRepository;
   const proposalRepo = {
     findLatestByTaskId: repos.proposalFindLatest ?? vi.fn(),
