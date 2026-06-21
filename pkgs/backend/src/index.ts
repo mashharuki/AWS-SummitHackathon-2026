@@ -169,6 +169,7 @@ const marpSlideService = new MarpSlideService({
 });
 const marpSlideSlackPostService = new MarpSlideSlackPostService(
   marpSlideService,
+  { taskRepository },
 );
 
 /**

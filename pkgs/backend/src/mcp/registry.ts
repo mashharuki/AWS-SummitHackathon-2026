@@ -211,7 +211,7 @@ export const MCP_TOOL_REGISTRY = [
     name: "saborou_create_marp_slides_and_post_to_slack",
     effect: "side_effect",
     description:
-      "Marpスライドを自動生成してS3にアップロードし、プレビューURLを指定Slackチャンネルへ投稿します。「スライドを作ってSlackに送って」「プレゼン資料をチャンネルに投稿して」などと言われたときにのみ使用してください。topicとchannelIdが必須です。投稿は取り消し不可のため、必ずトピックと投稿先をユーザーに確認し、approved=trueで呼び出してください。",
+      "Marpスライドを自動生成してS3にアップロードし、プレビューURLを指定Slackチャンネルへ投稿します。「スライドを作ってSlackに送って」「プレゼン資料をチャンネルに投稿して」などと言われたときにのみ使用してください。topicは必須です。channelIdは省略可能で、省略した場合はタスク履歴から自動的に取得します（タスクが存在する場合）。投稿は取り消し不可のため、必ずトピックと投稿先をユーザーに確認し、approved=trueで呼び出してください。",
     http: {
       method: "POST",
       path: "/api/marp/create-slides-and-post-to-slack",
