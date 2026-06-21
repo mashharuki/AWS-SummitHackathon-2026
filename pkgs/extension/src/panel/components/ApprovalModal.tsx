@@ -4,7 +4,7 @@
  * フロー:
  *   Step 1: タスクの進め方を選ぶ
  *   Step 2: 返信文案を提示（judge API）→「この文面で送る」で DOM 送信
- *   Step 3: 送信完了 → 代行フェーズ（approveCandidate + delegateTask）
+ *   Step 3: 送信完了 → タスク種別を判定して適切な代行ボタンを表示
  *
  * 送信は SaborouContext.sendSlackViaDom（content script → Slack DOM = 自分アカウント）。
  */
@@ -19,6 +19,47 @@ import {
 import type { TaskCandidate, TaskSummary } from "@/panel/lib/types";
 import { CheckCircle, Loader2, Lock, XCircle, Zap } from "lucide-react";
 import { useState } from "react";
+
+// ---------------------------------------------------------------------------
+// タスク種別判定
+// ---------------------------------------------------------------------------
+
+type TaskType = "travel" | "slides" | "general";
+
+function detectTaskTypes(candidate: TaskCandidate): TaskType[] {
+  const text = `${candidate.title} ${candidate.description}`.toLowerCase();
+  const types: TaskType[] = [];
+  if (/旅程|出張|旅行|新幹線|ホテル|宿泊|交通|航空/.test(text)) types.push("travel");
+  if (/スライド|資料|プレゼン|presentation|slide|docs/.test(text))
+    types.push("slides");
+  if (types.length === 0) types.push("general");
+  return types;
+}
+
+const TASK_ACTION_CONFIG: Record<
+  TaskType,
+  { emoji: string; label: string; instruction: string }
+> = {
+  travel: {
+    emoji: "✈️",
+    label: "旅行プランを作成",
+    instruction: "旅程計画・新幹線・ホテルの手配を行う",
+  },
+  slides: {
+    emoji: "📊",
+    label: "スライドを作成",
+    instruction: "社内共有スライドを作成する",
+  },
+  general: {
+    emoji: "🤖",
+    label: "Claudeに委譲",
+    instruction: "タスクをAIが代行する",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Phase / Approaches
+// ---------------------------------------------------------------------------
 
 type Phase =
   | "choose"
@@ -52,6 +93,10 @@ const APPROACHES = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function ApprovalModal({
   candidate,
   onClose,
@@ -60,9 +105,7 @@ export function ApprovalModal({
 }: {
   candidate: TaskCandidate;
   onClose: () => void;
-  /** 承認・送信が完了したら親に通知（候補リストから除去するため） */
   onApproved: () => void;
-  /** 代行開始時に呼ばれるコールバック（WorkingTab へのタブ切り替えなど） */
   onDelegationStart?: () => void;
 }) {
   const { jwt, sendSlackViaDom, notifyReplyCompleted } = useSaborou();
@@ -70,6 +113,8 @@ export function ApprovalModal({
   const [replyDraft, setReplyDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [approvedTask, setApprovedTask] = useState<TaskSummary | null>(null);
+
+  const taskTypes = detectTaskTypes(candidate);
 
   // 進め方を選んだら返信文案を生成
   const handleChoose = async (approachId: string) => {
@@ -98,7 +143,6 @@ export function ApprovalModal({
     if (res.ok) {
       setPhase("sent");
       notifyReplyCompleted();
-      // 返信完了後、代行フェーズへ移行
       setTimeout(() => setPhase("delegate_prompt"), 800);
     } else {
       setError(res.error ?? "Slack 送信に失敗しました");
@@ -106,7 +150,7 @@ export function ApprovalModal({
     }
   };
 
-  const handleDelegate = async () => {
+  const handleDelegate = async (instruction: string) => {
     if (!jwt) return;
     setPhase("delegating");
     try {
@@ -114,15 +158,16 @@ export function ApprovalModal({
       let taskId = approvedTask?.taskId;
       if (!taskId) {
         try {
+          // live: 候補はバックエンド未登録のため失敗することがあるが無視して続行
           const task = await approveCandidate(candidate.candidateId, jwt);
           setApprovedTask(task);
           taskId = task.taskId;
         } catch {
-          // live: 候補はバックエンド未登録のためスキップし代行アニメーションを続行
+          // noop — アニメーションは続行する
         }
       }
       if (taskId) {
-        await delegateTask(taskId, channelId, jwt);
+        await delegateTask(taskId, channelId, jwt, { instruction });
       }
       setPhase("delegate_done");
       setTimeout(() => {
@@ -249,25 +294,54 @@ export function ApprovalModal({
       )}
 
       {phase === "delegate_prompt" && (
-        <div className="flex flex-col gap-3 py-2" data-testid="delegate-prompt">
-          <p className="text-xs text-[#1f2937]">
-            返信が完了しました！このタスクをAIに丸ごと代行してもらいますか？
+        <div className="flex flex-col gap-2" data-testid="delegate-prompt">
+          <p className="text-[10px] font-bold text-[#9ca3af] mb-1">
+            AIに代行してもらう作業を選んでください
           </p>
-          <button
-            type="button"
-            onClick={() => void handleDelegate()}
-            className="w-full py-3 rounded-xl text-sm font-bold bg-[#f97316] text-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16] active:translate-y-[3px] active:shadow-none transition-all"
-            data-testid="delegate-confirm"
-          >
-            🤖 タスクを代行してもらう
-          </button>
+          {taskTypes.map((type) => {
+            const cfg = TASK_ACTION_CONFIG[type];
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => void handleDelegate(cfg.instruction)}
+                className="w-full py-2.5 px-3 rounded-xl text-sm font-bold bg-[#f97316] text-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16] active:translate-y-[3px] active:shadow-none transition-all text-left flex items-center gap-2"
+                data-testid={`delegate-${type}`}
+              >
+                <span className="text-base">{cfg.emoji}</span>
+                <div>
+                  <p className="text-sm font-bold">{cfg.label}</p>
+                  <p className="text-[10px] text-white/80">{cfg.instruction}</p>
+                </div>
+              </button>
+            );
+          })}
+          {/* 「general」が taskTypes に含まれていない場合も Claude 委譲を常時表示 */}
+          {!taskTypes.includes("general") && (
+            <button
+              type="button"
+              onClick={() =>
+                void handleDelegate(TASK_ACTION_CONFIG.general.instruction)
+              }
+              className="w-full py-2.5 px-3 rounded-xl text-sm font-bold bg-white text-[#1f2937] border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16] active:translate-y-[3px] active:shadow-none transition-all text-left flex items-center gap-2"
+              data-testid="delegate-general"
+            >
+              <span className="text-base">🤖</span>
+              <div>
+                <p className="text-sm font-bold">Claudeに委譲</p>
+                <p className="text-[10px] text-[#9ca3af]">
+                  {TASK_ACTION_CONFIG.general.instruction}
+                </p>
+              </div>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
               onApproved();
               onClose();
             }}
-            className="text-[11px] text-[#9ca3af] underline text-center"
+            className="text-[11px] text-[#9ca3af] underline text-center mt-1"
           >
             自分でやります
           </button>

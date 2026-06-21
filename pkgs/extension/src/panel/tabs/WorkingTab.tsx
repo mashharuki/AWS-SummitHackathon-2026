@@ -1,9 +1,9 @@
 /**
  * WorkingTab — ③タスク代行（作業中）
  *
- * 上部: MiniGantt（進行中タスクのスケジュール。8-17時/昼休み固定）
- * 下部: 「SABOROUがタスク実行中（LIVE）」ブラウザ操作プレビュー（スクレイピング演出）
- *       + ステップ進捗（タスク代行開始後にアニメーションで進行）
+ * 上部: MiniGantt（進行中タスクのスケジュール）
+ * 下部: SABOROUがタスク実行中（LIVE）プレビュー
+ *       + ステップ進捗（タスク種別に応じて動的に切り替え）
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
@@ -16,20 +16,57 @@ import { useEffect, useState } from "react";
 
 type StepState = "done" | "active" | "pending";
 
-const STEP_DEFS = [
-  {
-    title: "旅程の情報を収集",
-    sub: "Slack の依頼 + 期日 + 参加者情報を読み込み",
-  },
-  {
-    title: "新幹線・ホテルの空き確認",
-    sub: "JR・宿泊施設の空き状況を収集中",
-  },
-  {
-    title: "社内共有スライドを生成",
-    sub: "MCP で成果物を作成",
-  },
-] as const;
+// ---------------------------------------------------------------------------
+// タスク種別からステップ定義を生成
+// ---------------------------------------------------------------------------
+
+function getStepDefs(
+  taskTitle: string,
+): readonly { title: string; sub: string }[] {
+  const text = taskTitle.toLowerCase();
+  const isTravel = /旅程|出張|旅行|新幹線|ホテル|宿泊|交通|航空/.test(text);
+  const isSlides = /スライド|資料|プレゼン|presentation|slide|docs/.test(text);
+
+  if (isTravel && isSlides) {
+    return [
+      { title: "旅程の情報を収集", sub: "期日・参加者・経路を読み込み" },
+      {
+        title: "新幹線・ホテルの空き確認",
+        sub: "JR・宿泊施設の空き状況を収集中",
+      },
+      { title: "社内共有スライドを生成", sub: "MCP で成果物を作成" },
+    ];
+  }
+  if (isTravel) {
+    return [
+      { title: "旅程の情報を収集", sub: "期日・参加者・経路を読み込み" },
+      {
+        title: "新幹線・ホテルの空き確認",
+        sub: "JR・宿泊施設の空き状況を収集中",
+      },
+      { title: "旅程表を作成", sub: "MCP でドキュメントを生成" },
+    ];
+  }
+  if (isSlides) {
+    return [
+      { title: "タスク情報を収集", sub: "Slack の依頼内容から要件を抽出" },
+      { title: "コンテンツを生成", sub: "Claude が構成・本文を作成中" },
+      { title: "スライドを作成", sub: "MCP で Docs に書き出し" },
+    ];
+  }
+  return [
+    {
+      title: "タスクを分析",
+      sub: "Slack の依頼 + 期日から条件を読み込み",
+    },
+    { title: "必要な情報を収集", sub: "Web スクレイピングで情報収集中" },
+    { title: "成果物を作成", sub: "MCP でファイルを生成" },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function WorkingTab() {
   const { jwt, tasks } = useSaborou();
@@ -40,8 +77,8 @@ export function WorkingTab() {
     "pending",
   ]);
 
-  // 進行中（先頭の承認済みタスク）のスケジュールを取得。1タスクずつ。
   const activeTask = tasks[0] ?? null;
+  const stepDefs = activeTask ? getStepDefs(activeTask.title) : [];
 
   useEffect(() => {
     if (!jwt || !activeTask) return;
@@ -113,7 +150,6 @@ export function WorkingTab() {
                 scraping
               </Badge>
             </div>
-            {/* スキャンライン演出 */}
             <div className="relative h-2 rounded bg-white/10 overflow-hidden mb-1">
               <div
                 className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-[#10b981] to-transparent"
@@ -128,9 +164,9 @@ export function WorkingTab() {
             </div>
           </div>
 
-          {/* 実行ステップ（動的アニメーション） */}
+          {/* 実行ステップ（タスク種別に応じた動的ステップ） */}
           <div className="flex flex-col gap-2">
-            {STEP_DEFS.map((def, idx) => {
+            {stepDefs.map((def, idx) => {
               const state = stepStates[idx] ?? "pending";
               const IconEl =
                 state === "done"
