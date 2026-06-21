@@ -66,6 +66,8 @@ export type SlackDelegationServiceOptions = {
   createSlackClient?: (token: string) => SlackPostClient;
   auditWriter?: (event: SlackDelegationAuditEvent) => void;
   now?: () => number;
+  /** Claude の Slack メンバー ID（例: U08XXXXXXXXX）。未設定時は @Claude プレーンテキスト */
+  claudeUserId?: string;
 };
 
 const MAX_SECTION_LENGTH = 500;
@@ -78,6 +80,7 @@ export class SlackDelegationService {
   private readonly createSlackClient: (token: string) => SlackPostClient;
   private readonly auditWriter?: (event: SlackDelegationAuditEvent) => void;
   private readonly now: () => number;
+  private readonly claudeUserId: string | undefined;
 
   constructor(
     private readonly taskRepository: Pick<DynamoTaskRepository, "findById">,
@@ -89,6 +92,8 @@ export class SlackDelegationService {
       options.createSlackClient ?? ((token) => new SlackClient(token));
     this.auditWriter = options.auditWriter;
     this.now = options.now ?? Date.now;
+    this.claudeUserId =
+      options.claudeUserId ?? process.env.SLACK_CLAUDE_USER_ID;
   }
 
   async delegateToClaude(
@@ -119,7 +124,11 @@ export class SlackDelegationService {
         );
       }
 
-      const message = buildClaudeDelegationMessage(task, input.instruction);
+      const message = buildClaudeDelegationMessage(
+        task,
+        input.instruction,
+        this.claudeUserId,
+      );
       // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
       const userToken = await this.getUserToken(input.userId);
       const token = userToken ?? (await this.getToken(input.userId));
@@ -196,7 +205,11 @@ export function buildClaudeDelegationMessage(
     "title" | "description" | "deadline" | "requester" | "plannedSteps"
   >,
   instruction?: string,
+  claudeUserId?: string,
 ): SlackDelegationMessage {
+  // Slack メンション: ユーザー ID が設定されていれば <@UXXXXXXXXX>、なければ @Claude
+  const mention = claudeUserId ? `<@${claudeUserId}>` : "@Claude";
+
   const background =
     bounded(task.description) ||
     bounded(task.requester ? `Requester: ${task.requester}` : "") ||
@@ -209,7 +222,7 @@ export function buildClaudeDelegationMessage(
 
   const text = truncate(
     [
-      "@Claude Please help with this SABOROU task.",
+      `${mention} Please help with this SABOROU task.`,
       "",
       `Task: ${bounded(task.title)}`,
       `Background: ${background}`,
