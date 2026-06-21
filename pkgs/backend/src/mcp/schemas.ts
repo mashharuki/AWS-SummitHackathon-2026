@@ -97,6 +97,9 @@ export const mcpToolInputSchemas = {
   saborou_create_marp_slides: MarpCreateSlidesRequestSchema,
   saborou_create_marp_slides_and_post_to_slack:
     MarpCreateSlidesAndPostToSlackRequestSchema,
+  saborou_find_slack_channel: z
+    .object({ name: z.string().min(1).max(80) })
+    .strict(),
 } satisfies Record<McpToolName, z.ZodTypeAny>;
 
 export const mcpToolOutputSchemas = {

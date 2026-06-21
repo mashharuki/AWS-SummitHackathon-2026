@@ -25,7 +25,8 @@ export type McpToolName =
   | "saborou_plan_trip"
   | "saborou_plan_trip_and_post_to_slack"
   | "saborou_create_marp_slides"
-  | "saborou_create_marp_slides_and_post_to_slack";
+  | "saborou_create_marp_slides_and_post_to_slack"
+  | "saborou_find_slack_channel";
 
 export type McpHttpMethod = "GET" | "POST";
 
