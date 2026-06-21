@@ -68,14 +68,21 @@ describe("SaborouDataStack", () => {
     });
   });
 
-  test("3 Secrets Manager secrets are created (Slack client, Slack signing, Google client)", () => {
-    template.resourceCountIs("AWS::SecretsManager::Secret", 3);
+  test("4 Secrets Manager secrets are created (Slack client, Slack signing, Google client, Travelpayouts)", () => {
+    template.resourceCountIs("AWS::SecretsManager::Secret", 4);
   });
 
   test("Google OAuth client secret is created with correct naming", () => {
     template.hasResourceProperties("AWS::SecretsManager::Secret", {
       Name: Match.stringLikeRegexp("/saborou/google/client-secret"),
       Description: "Google OAuth Client ID and Secret (JSON format)",
+    });
+  });
+
+  test("Travelpayouts credentials secret is created with correct naming", () => {
+    template.hasResourceProperties("AWS::SecretsManager::Secret", {
+      Name: Match.stringLikeRegexp("/saborou/travelpayouts/credentials-test"),
+      Description: "Travelpayouts credentials JSON: apiToken, marker, trs",
     });
   });
 

@@ -19,24 +19,42 @@
 
 ---
 
-## §2 McpToolsBaseUrl の確認
+## §2 MCP URL の確認
 
-CDK デプロイ後の CloudFormation Outputs から `McpToolsBaseUrl` を取得します。
+CDK デプロイ後の CloudFormation Outputs から、用途に応じて以下の URL を取得します。
+
+| Output | 用途 | 形式 |
+|---|---|---|
+| `McpJsonRpcUrl` | direct MCP Streamable HTTP 登録先 | `https://<apiGatewayId>.execute-api.ap-northeast-1.amazonaws.com/api/mcp` |
+| `GatewayUrl` | Bedrock AgentCore Gateway MCP 登録先 | `https://<gatewayId>.gateway.bedrock-agentcore.<region>.amazonaws.com/mcp` |
+| `McpToolsBaseUrl` | AgentCore OpenAPI target / REST adapter boundary | `https://<apiGatewayId>.execute-api.ap-northeast-1.amazonaws.com/api/mcp/tools` |
+
+Direct MCP クライアントに `McpToolsBaseUrl` を登録しないでください。`McpToolsBaseUrl` は `initialize` / `tools/list` / `tools/call` を話す JSON-RPC endpoint ではなく、AgentCore OpenAPI target が個別 tool operation を呼ぶための REST adapter base URL です。
 
 ### AWS マネジメントコンソールから確認
 
 1. CloudFormation → スタック一覧 → `SaborouApiStack-<environment>` を開く
 2. 「出力」タブを開く
-3. `McpToolsBaseUrl` キーの値をコピーする
+3. direct MCP の場合は `McpJsonRpcUrl`、AgentCore Gateway の場合は `GatewayUrl` をコピーする
 
-形式:
+direct MCP Streamable HTTP:
+```
+https://<apiGatewayId>.execute-api.ap-northeast-1.amazonaws.com/api/mcp
+```
+
+Bedrock AgentCore Gateway:
+```
+https://<gatewayId>.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com/mcp
+```
+
+REST adapter boundary:
 ```
 https://<apiGatewayId>.execute-api.ap-northeast-1.amazonaws.com/api/mcp/tools
 ```
 
-または カスタムドメイン有効時:
+direct MCP のカスタムドメイン有効時:
 ```
-https://saborou-api.agentic-jp.com/api/mcp/tools
+https://saborou-api.agentic-jp.com/api/mcp
 ```
 
 ### AWS CLI から確認
@@ -44,12 +62,22 @@ https://saborou-api.agentic-jp.com/api/mcp/tools
 ```bash
 aws cloudformation describe-stacks \
   --stack-name SaborouApiStack-dev \
-  --query "Stacks[0].Outputs[?OutputKey=='McpToolsBaseUrl'].OutputValue" \
+  --query "Stacks[0].Outputs[?OutputKey=='McpJsonRpcUrl'].OutputValue" \
   --output text \
   --region ap-northeast-1
 ```
 
-> **注意**: この URL はエンドポイントのベース URL です。シークレット・API キー・JWT は含まれていません。
+AgentCore Gateway URL:
+
+```bash
+aws cloudformation describe-stacks \
+  --stack-name SaborouAgentCore-dev \
+  --query "Stacks[0].Outputs[?OutputKey=='GatewayUrl'].OutputValue" \
+  --output text \
+  --region ap-northeast-1
+```
+
+> **注意**: これらの URL はエンドポイント値のみです。シークレット・API キー・JWT は含まれていません。
 
 ---
 
@@ -71,7 +99,9 @@ aws cloudformation describe-stacks \
 |-----------|--------|
 | **Server Name** | `SABOROU` |
 | **Transport Type** | `streamable_http` (primary) |
-| **Endpoint URL** | `McpToolsBaseUrl` の値（§2 で取得） |
+| **Endpoint URL** | direct MCP の場合は `McpJsonRpcUrl`、AgentCore Gateway 経由の場合は `GatewayUrl` |
+
+`sse` は現在の SABOROU backend では未実装です。`GET /api/mcp` は `text/event-stream` を返さないため、SSE transport で登録しないでください。
 
 ### ステップ 4: 認証設定
 
@@ -100,7 +130,7 @@ SABOROU の MCP 統合は段階的なフォールバックを提供します。
 | モード | 説明 | 移行条件 |
 |--------|------|----------|
 | `remote_mcp_primary` | ElevenLabs Dashboard 登録済み・検証済み | U-V3-05 で `VITE_MCP_VERIFIED=true` を設定後 |
-| `remote_mcp_unverified` | Dashboard 登録設定あり・未検証 | `VITE_MCP_TOOLS_BASE_URL` を設定した直後 |
+| `remote_mcp_unverified` | Dashboard 登録設定あり・未検証 | MCP endpoint URL を設定した直後 |
 | `client_tools_fallback` | 拡張機能 clientTools フォールバック | `VITE_MCP_TOOLS_BASE_URL` 未設定時（デフォルト） |
 | `hono_direct_fallback` | Hono API 直接フォールバック | clientTools 外から直接呼び出す場合 |
 | `unconfigured` | 設定なし | `VITE_MCP_TOOLS_BASE_URL` も未設定で設定画面未操作時 |
@@ -133,7 +163,7 @@ SABOROU の MCP 統合は段階的なフォールバックを提供します。
 本ガイドで設定した内容は U-V3-05 で実際に検証されます。
 
 U-V3-05 スコープ（本ガイドのスコープ外）:
-- ElevenLabs エージェントから実際に `McpToolsBaseUrl` を叩いての通信確認
+- ElevenLabs エージェントから実際に `McpJsonRpcUrl` または `GatewayUrl` を叩いての通信確認
 - `remote_mcp_primary` モードへの昇格（`VITE_MCP_VERIFIED=true` の設定）
 - ElevenLabs と SABOROU バックエンドの E2E MCP ツール呼び出しテスト
 - AgentCore Gateway との統合確認（将来対応）

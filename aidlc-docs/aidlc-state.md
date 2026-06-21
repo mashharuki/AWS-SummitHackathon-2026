@@ -5,8 +5,59 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: v3 Build and Test 完了（2026-06-18 JST）。全 5 Unit（U-V3-01〜05）のビルド・テスト・統合検証手順書を作成完了。backend 437 tests / CDK 90 tests / extension 187 tests 全パス確認。実環境手動テスト手順を DEMO_RUNBOOK.md に集約。次: Operations フェーズ（デプロイ検証）またはデモ準備へ。
-- **ドキュメントバージョン**: v4.2.31（2026-06-18 v3 Build and Test 完了）
+- **現在のステージ**: `mcp-agentcore-connection-fix` Code Generation Part 2 実装・ローカル検証完了（2026-06-21 JST）。Endpoint documentation、CDK output semantics test、AgentCore/direct MCP verification scripts、backend JSON-RPC tests、operations docs、code summaryを更新。backend 466 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス。残: 実Cognito token付きAgentCore Gateway live verification。
+- **ドキュメントバージョン**: v4.4.0（2026-06-20 旅行プランSlack投稿機能 実装完了）
+
+---
+
+## 旅行プランMarkdown整形＋Slack投稿機能（2026-06-20）
+
+### 実装状態
+- [x] Backend route — `POST /api/travel/plan-and-post-to-slack` を追加。`approved !== true` は403で拒否し、clarification時はSlack投稿しない。
+- [x] Slack mrkdwn formatter — タイトル、概要、フライト、ホテル、日別アクティビティ、前提/注意点を整形。Slack特殊文字をエスケープし、credential-like markerをredactし、4000文字に制限。
+- [x] Slack posting service — Slack User Token優先、Bot Token fallback、`threadTs`対応、Slack API失敗時は安全な `502 SLACK_API_ERROR`。
+- [x] MCP exposure — `saborou_plan_trip_and_post_to_slack` を side-effect / approval required / implemented として registry、schema、REST adapter、JSON-RPC、OpenAPI に追加。
+- [x] Tests — backend 464 tests、CDK 93 tests、backend typecheck、backend build、CDK build 全パス。
+
+### 成果物
+- `pkgs/backend/src/travel/TravelPlanSlackPostService.ts`
+- `pkgs/backend/src/travel/slackMarkdown.ts`
+- `pkgs/backend/src/routes/travel.ts`
+- `pkgs/backend/src/mcp/registry.ts`
+- `pkgs/backend/src/mcp/schemas.ts`
+- `pkgs/backend/src/routes/mcp.ts`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/construction/travel-plan-slack-post/code/code-generation-summary.md`
+
+### 残作業
+- [ ] デプロイ環境でSlack User Token優先投稿をE2E確認
+- [ ] AgentCore Gateway経由で `saborou_plan_trip_and_post_to_slack` のapproval付き実行を確認
+
+---
+
+## Travelpayouts旅行プラン代行機能（2026-06-20）
+
+### 実装状態
+- [x] Backend route — `POST /api/travel/plan` を追加。認証済みユーザー向けに旅行条件からプランを返す。
+- [x] Travel planning domain — `TravelPlanningService` / `TravelpayoutsClient` / fixture provider / strict Zod schemas を追加。
+- [x] MCP exposure — `saborou_plan_trip` を registry / schema / JSON-RPC tools/list / REST MCP adapter / AgentCore OpenAPI schema に追加。
+- [x] CDK secret wiring — `/saborou/travelpayouts/credentials-${environment}` secret、API Lambda env、read権限を追加。
+- [x] Schema drift fix — 既存 published tool `saborou_find_task` の OpenAPI operation を追加。
+- [x] Tests — backend 451 tests、CDK 93 tests、typecheck/build 全パス。
+
+### 成果物
+- `pkgs/backend/src/routes/travel.ts`
+- `pkgs/backend/src/travel/`
+- `pkgs/backend/src/__tests__/travel/TravelPlanningService.test.ts`
+- `pkgs/backend/src/__tests__/routes/travel.test.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/construction/travelpayouts-trip-planner/code/code-generation-summary.md`
+
+### 残作業
+- [ ] 実AWS環境でTravelpayouts secret JSONを設定: `apiToken`, `marker`, `trs`
+- [ ] デプロイ後に既存MCP auth verification scriptを実行
 
 ---
 

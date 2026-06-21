@@ -89,6 +89,39 @@ describe("SaborouApiStack", () => {
     });
   });
 
+  test("Lambda function has TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN environment variable", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
+  test("HonoFn can read only the Travelpayouts credentials secret resource", () => {
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const allStatements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((p) => p.Properties.PolicyDocument.Statement ?? []);
+    const travelpayoutsStatements = allStatements.filter((stmt) => {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const resourceStr = JSON.stringify(s.Resource);
+      return resourceStr.includes("TravelpayoutsCredentialsSecret");
+    });
+
+    expect(travelpayoutsStatements.length).toBeGreaterThan(0);
+    for (const stmt of travelpayoutsStatements) {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const actions = Array.isArray(s.Action) ? s.Action : [s.Action];
+      expect(actions).toContain("secretsmanager:GetSecretValue");
+      expect(JSON.stringify(s.Resource)).not.toContain("*");
+    }
+  });
+
   test("HonoFn has IAM policy for saborou/google-token/* (secretsmanager:GetSecretValue)", () => {
     // Google token IAM ポリシーが存在することを Statement の Action から確認する
     const policies = template.findResources("AWS::IAM::Policy");
@@ -161,14 +194,23 @@ describe("SaborouApiStack", () => {
     });
   });
 
-  test("McpToolsBaseUrl CfnOutput is present and contains /api/mcp/tools (U-V3-04)", () => {
-    // U-V3-04: ElevenLabs Dashboard の streamable_http 登録先 URL が CloudFormation Outputs に存在することを確認
+  test("MCP CfnOutputs distinguish JSON-RPC endpoint from REST tool boundary", () => {
+    const jsonRpcOutputs = template.findOutputs("McpJsonRpcUrl");
+    expect(Object.keys(jsonRpcOutputs)).toHaveLength(1);
+    const jsonRpcOutput = jsonRpcOutputs["McpJsonRpcUrl"];
+    const jsonRpcValueStr = JSON.stringify(jsonRpcOutput.Value);
+    expect(jsonRpcValueStr).toContain("/api/mcp");
+    expect(jsonRpcValueStr).not.toContain("/api/mcp/tools");
+    expect(jsonRpcOutput.Export?.Name).toContain("SaborouMcpJsonRpcUrl");
+
+    // REST adapter base for AgentCore OpenAPI target. This is not the direct
+    // Streamable HTTP JSON-RPC registration URL.
     const outputs = template.findOutputs("McpToolsBaseUrl");
     expect(Object.keys(outputs)).toHaveLength(1);
     const output = outputs["McpToolsBaseUrl"];
-    // value は {"Fn::Join": ["", [apiEndpoint, "/api/mcp/tools"]]} の形式になる
     const valueStr = JSON.stringify(output.Value);
     expect(valueStr).toContain("/api/mcp/tools");
+    expect(valueStr).not.toEqual(jsonRpcValueStr);
     expect(output.Export?.Name).toContain("SaborouMcpToolsBaseUrl");
   });
 });

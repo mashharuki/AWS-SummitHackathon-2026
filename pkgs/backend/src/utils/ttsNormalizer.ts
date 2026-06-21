@@ -22,5 +22,8 @@ const ABBR_MAP: [RegExp, string][] = [
 ];
 
 export function normalizeForTts(jsonString: string): string {
-  return ABBR_MAP.reduce((s, [pattern, reading]) => s.replace(pattern, reading), jsonString);
+  return ABBR_MAP.reduce(
+    (s, [pattern, reading]) => s.replace(pattern, reading),
+    jsonString,
+  );
 }

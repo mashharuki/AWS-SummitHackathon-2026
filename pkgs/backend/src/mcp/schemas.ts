@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  MarpCreateSlidesAndPostToSlackRequestSchema,
+  MarpCreateSlidesRequestSchema,
+} from "../marp/schemas.js";
+import {
+  TravelPlanAndPostToSlackRequestSchema,
+  TravelPlanRequestSchema,
+} from "../travel/schemas.js";
 import type { McpToolName } from "./types.js";
 
 const idSchema = z
@@ -84,6 +92,11 @@ export const mcpToolInputSchemas = {
       instruction: safeTextSchema.max(2000),
     })
     .strict(),
+  saborou_plan_trip: TravelPlanRequestSchema,
+  saborou_plan_trip_and_post_to_slack: TravelPlanAndPostToSlackRequestSchema,
+  saborou_create_marp_slides: MarpCreateSlidesRequestSchema,
+  saborou_create_marp_slides_and_post_to_slack:
+    MarpCreateSlidesAndPostToSlackRequestSchema,
 } satisfies Record<McpToolName, z.ZodTypeAny>;
 
 export const mcpToolOutputSchemas = {

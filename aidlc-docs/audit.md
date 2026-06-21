@@ -1,6 +1,71 @@
 # AI-DLC 監査ログ
 
 ---
+## Code Generation Completion
+**Timestamp**: 2026-06-20T15:40:00Z
+**User Input**: "N/A - implementation completion update"
+**AI Response**: "Completed Code Generation Part 2 for `mcp-agentcore-connection-fix`. Updated endpoint documentation, CDK output semantics test, AgentCore/direct MCP verification scripts, backend JSON-RPC tests, operations documentation, code generation summary, and AI-DLC state. Verification passed: shell syntax checks, git diff --check, backend tests (45 files / 466 tests), backend typecheck, backend build, CDK tests (10 suites / 93 tests), and CDK build. Live Cognito-token AgentCore Gateway checks remain manual because credentials were not available in-session."
+**Context**: CONSTRUCTION - Code Generation Part 2 completion
+
+---
+## Code Generation Plan Approval
+**Timestamp**: 2026-06-20T15:33:38Z
+**User Input**: "ありがとうございます。 Code Genereation計画に進んで"
+**AI Response**: "Recorded approval to proceed with Code Generation Part 2 for `mcp-agentcore-connection-fix`. Starting implementation from Step 1 of the approved plan."
+**Context**: CONSTRUCTION - Code Generation Part 2 approval
+
+---
+## Workflow Planning Approval
+**Timestamp**: 2026-06-20T15:31:31Z
+**User Input**: "ありがとうございます。テスト計画書を承認します。"
+**AI Response**: "Recorded approval of the MCP / AgentCore Gateway connection test/fix plan and started Construction Code Generation Part 1 planning for unit `mcp-agentcore-connection-fix`."
+**Context**: INCEPTION approval / transition to CONSTRUCTION Code Generation planning
+
+---
+## Code Generation Plan Prompt
+**Timestamp**: 2026-06-20T15:31:31Z
+**User Input**: "N/A - approval prompt"
+**AI Response**: "Created `aidlc-docs/construction/plans/mcp-agentcore-connection-fix-code-generation-plan.md` with 9 implementation and verification steps. Awaiting explicit approval before code changes."
+**Context**: CONSTRUCTION - Code Generation Part 1
+
+---
+## User Verification Update
+**Timestamp**: 2026-06-20T15:25:19Z
+**User Input**: "MCPサーバーの方ですが、 Streable HTTP形式であれば各種ツールを呼び出すことができました！"
+**AI Response**: "Incorporated the user's verification that the MCP server can call tools successfully over Streamable HTTP. Narrowed the remaining root-cause scope to unsupported SSE and Bedrock AgentCore Gateway authentication / target identity propagation."
+**Context**: INCEPTION - Requirements / Workflow Planning update
+
+---
+## Planning Request
+**Timestamp**: 2026-06-20T15:16:12Z
+**User Input**: "› /plan MCPサーバーの接続時に以下のようなエラーメッセージが出るようになってしまいました。 Internal error: Unexpected ExceptionGroup
+  occurred while connecting to MCP server at https://saborou-mcp-gateway-dev-dcmjxh8d4z.gateway.bedrock-agentcore.ap-northeast-
+  1.amazonaws.com/mcp using TransportType.STREAMABLE_HTTP transport. Please try again or contact support if the issue persists.
+  Internal error: Unexpected ExceptionGroup occurred while connecting to MCP server at https://saborou-mcp-gateway-dev-
+  dcmjxh8d4z.gateway.bedrock-agentcore.ap-northeast-1.amazonaws.com/mcp using TransportType.SSE transport. Please try again or
+  contact support if the issue persists. Internal error: Unexpected ExceptionGroup occurred while connecting to MCP server at
+  https://71m86enw87.execute-api.ap-northeast-1.amazonaws.com/api/mcp using TransportType.SSE transport. Please try again or contact
+  support if the issue persists. この根本原因を特定して、Bedrock AgentCore Gatewayでも接続できるようにしてもらうための修正プランを立
+  案してくもらいたいです"
+**AI Response**: "Started AI-DLC planning workflow for MCP/Bedrock AgentCore Gateway connection failure root-cause analysis. Loaded common workflow rules, extension opt-in prompts, existing AI-DLC state, and AgentCore Gateway reference guidance."
+**Context**: INCEPTION - Workspace Detection / Requirements Analysis planning
+
+---
+## Workflow Planning Completion
+**Timestamp**: 2026-06-20T15:20:00Z
+**User Input**: "N/A - planning artifact creation"
+**AI Response**: "Created requirements and fix plan for MCP / Bedrock AgentCore Gateway connection failure. Root cause assessment: SSE endpoint is not implemented, direct MCP documentation points at REST adapter base instead of JSON-RPC endpoint, AgentCore Gateway requires bearer authentication before initialization, and Gateway target identity propagation must be verified before implementing any bridge. Updated AI-DLC state and prepared approval gate before code changes."
+**Context**: INCEPTION - Requirements Analysis / Workflow Planning
+
+---
+
+## Implementation Completion
+**Timestamp**: 2026-06-20T09:59:37Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification."
+**AI Response**: "Implemented Travelpayouts trip planning capability. Added backend /api/travel/plan, TravelPlanningService, TravelpayoutsClient, deterministic fixtures, MCP tool saborou_plan_trip, JSON-RPC and REST MCP execution wiring, CDK Travelpayouts credentials secret/env/IAM, AgentCore OpenAPI schema updates, tests, and AI-DLC state/code summary updates. Verification passed: pnpm --filter backend test (44 files / 451 tests), pnpm --filter backend typecheck, pnpm --filter backend build, pnpm --filter cdk test (10 suites / 93 tests), pnpm --filter cdk build. Backend build emitted pre-existing esbuild duplicate-key warnings from bundled agent dependency."
+**Context**: Travelpayouts trip planner implementation and verification.
+
+---
 ## Skill Creation Request
 **Timestamp**: 2026-06-20T09:04:07Z
 **User Input**: "あなたに以下の要件を満たす最高のAgent SKILLを作成してもらいたいと考えています。具体的には 旅行プランの立案に最適なTravel Payout社のAPIの機能を使ったプロダクトの設計・実装・テストを網羅的にカバーした最高のAgent SKILLになります。 Travel Payout社のAPIのドキュメントのリンクを参考文献として共有しますのでSKILL作成に役立ててください。あなたには期待しています！！ https://support.travelpayouts.com/hc/en-us/categories/200358578-API-and-data https://support.travelpayouts.com/hc/en-us/articles/360019864079-API-of-affiliate-programs-booking-statistics https://support.travelpayouts.com/hc/en-us/articles/5169505760402-API-of-affiliates-balance-and-payment https://support.travelpayouts.com/hc/en-us/articles/25289759198226-API-for-Travelpayouts-partner-links https://support.travelpayouts.com/hc/en-us/articles/205895898-How-to-determine-the-user-s-location-by-IP-address https://support.travelpayouts.com/hc/en-us/articles/206111067-API-of-affiliate-booking-balance-and-payment-deprecated https://support.travelpayouts.com/hc/en-us/articles/203956083-Requirements-for-Aviasales-data-API-access https://support.travelpayouts.com/hc/en-us/articles/203956163-Aviasales-Data-API https://support.travelpayouts.com/hc/en-us/articles/4417975783314-Aviasales-GraphQL-for-access-to-Flights-Data-API https://support.travelpayouts.com/hc/en-us/articles/360018907280-Flight-data-by-Aviasales https://support.travelpayouts.com/hc/en-us/articles/360002322572-Autocomplete-API-for-countries-cities-and-airports-by-Aviasales https://support.travelpayouts.com/hc/en-us/articles/226985367-Useful-additions-to-work-with-the-Aviasales-API https://support.travelpayouts.com/hc/en-us/articles/210995808-How-to-get-access-to-the-Aviasales-Search-API https://support.travelpayouts.com/hc/en-us/articles/30565016140434-Aviasales-Flight-Search-API-real-time-and-multi-city-search https://support.travelpayouts.com/hc/en-us/articles/210996008-How-to-create-a-signature-md-5 https://support.travelpayouts.com/hc/en-us/articles/34788165535250-Search-API-usage-rules https://support.travelpayouts.com/hc/en-us/articles/216092357-Why-ajax-request-does-not-work https://support.travelpayouts.com/hc/en-us/articles/115007743388-Why-the-search-API-rules-limit-conversion-rate-and-prohibit-the-automatic-collection-of-links-to-a-booking https://support.travelpayouts.com/hc/en-us/articles/360012655219-DiscoverCars-affiliate-program-API https://support.travelpayouts.com/hc/en-us/articles/360016375920-GetTransfer-API https://support.travelpayouts.com/hc/en-us/articles/360019237899-Kiwi-com-affiliate-program-API https://support.travelpayouts.com/hc/en-us/articles/360024389872-Data-from-Omio https://support.travelpayouts.com/hc/en-us/articles/360010455179-Data-from-Tiqets https://support.travelpayouts.com/hc/en-us/articles/360016170039-WeGoTrip-affiliate-program-API https://support.travelpayouts.com/hc/en-us/articles/23940843009426-Data-from-Viator https://support.travelpayouts.com/hc/en-us/articles/17131439719826-Data-from-Airalo https://support.travelpayouts.com/hc/en-us/articles/204529267-FAQ-about-Aviasales-API https://support.travelpayouts.com/hc/en-us/articles/4402565416594-API-rate-limits https://support.travelpayouts.com/hc/en-us/articles/13024069738386-Where-to-find-API-token https://support.travelpayouts.com/hc/en-us/articles/205895888-What-languages-are-supported-in-the-Flights-and-Hotel-Search-API https://support.travelpayouts.com/hc/en-us/articles/205895848-What-are-the-restrictions-on-API-requests https://support.travelpayouts.com/hc/en-us/articles/360020759251-Where-to-get-currency-names"
@@ -2669,5 +2734,233 @@ selectors.ts(セレクター集約)/slackDom.ts(URL判定/抽出/自動入力exe
 **User Input**: "(verify-cloudwatch.sh 実行完了)"
 **AI Response**: "O-02 全 verify スクリプト PASS 確認。verify-build-test.sh PASS=10 / verify-agentcore.sh PASS=3（HTTP 401 到達確認・CFスタック CREATE_COMPLETE）/ verify-secret-scan.sh PASS（シークレット漏洩なし）/ verify-mcp-auth.sh PASS=3（NFR-V305-E4 クリア: 認証なし→401・無効トークン→401・認証あり→エンドポイント到達）/ verify-cloudwatch.sh PASS（O1: saborou_list_tasks 3件監査ログ確認・O2: エラーログシークレット漏洩なし）。証拠ログ一式 evidence/ ディレクトリに保存済み。"
 **Context**: OPERATIONS / O-02 verify scripts / all pass confirmed
+
+---
+## Implementation Resume
+**Timestamp**: 2026-06-20T09:41:20Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# Travelpayouts旅行プラン代行機能 実装計画
+
+## Summary
+
+SABOROUの既存Hono API/MCP基盤に、旅行プラン立案を代行する統合ツール `saborou_plan_trip` を追加する。ElevenLabs remote MCPとチャットクライアントの両方から同じHono APIを呼べる構成にし、デモではTravelpayouts実APIを優先しつつ、認証未設定・空結果・API失敗時は安全なfixtureへ自動フォールバックする。
+
+v1ではAviasales Search APIは使わない。規約・アクセス・デモ安定性の都合で、フライトはAviasales Data API/GraphQL相当のキャッシュ系データ、ホテルとアクティビティはAI選定 + Travelpayouts Partner Links APIによる予約導線生成で実装する。
+
+## Key Changes
+
+- Backendに `POST /api/travel/plan` を追加し、認証済みユーザーの旅行条件から統合プランを返す。
+- MCP registry/schema/OpenAPIに `saborou_plan_trip` を追加し、ElevenLabs Dashboardのstreamable HTTP MCPから呼べるようにする。
+- `TravelPlanningService` を新設し、以下を一括実行する。
+  - 不足条件がある場合は `needs_clarification` と音声向け質問を返す。
+  - Travelpayouts/Aviasalesからフライト候補を取得、失敗時はfixture候補へフォールバック。
+  - ホテル候補は目的地・予算・嗜好からAIで3件選定し、Partner Links APIが使える場合のみ予約URLを変換。
+  - アクティビティ候補は目的地・興味・日数から日別に選定し、Viator/Tiqets/WeGoTrip/Airalo等の導線はPartner Links APIまたはfixture URLで表現。
+  - 最終結果を日本語の短い音声要約と構造化JSONで返す。
+- CDK/DataStackにTravelpayouts用Secrets Manager secretを追加する。
+  - secret name: `/saborou/travelpayouts/credentials-${environment}`
+  - JSON fields: `apiToken`, `marker`, `trs`
+  - API Lambdaへ `TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN` を注入し、read権限を付与する。
+- Chat/UIの新規画面は今回含めない。既存/外部チャットはHono APIまたはMCPを呼ぶ前提にする。
+
+## Public Interfaces
+
+`POST /api/travel/plan`
+
+Request body:
+
+```json
+{
+  \"origin\": \"Tokyo\",
+  \"destination\": \"Paris\",
+  \"departureDate\": \"2026-07-10\",
+  \"returnDate\": \"2026-07-15\",
+  \"travelers\": 1,
+  \"currency\": \"JPY\",
+  \"budgetPerPerson\": 250000,
+  \"interests\": [\"food\", \"art\", \"history\"],
+  \"flightPreference\": \"balanced\",
+  \"hotelPreference\": \"standard\",
+  \"language\": \"ja\"
+}
+```
+
+Defaults:
+
+- `origin`: `\"Tokyo\"`
+- `travelers`: `1`
+- `currency`: `\"JPY\"`
+- `interests`: `[\"sightseeing\", \"food\", \"culture\"]`
+- `flightPreference`: `\"balanced\"`
+- `hotelPreference`: `\"standard\"`
+- `language`: `\"ja\"`
+
+Required for full planning:
+
+- `destination`
+- `departureDate`
+- `returnDate`
+
+Response body:
+
+```json
+{
+  \"status\": \"planned\",
+  \"message\": \"音声で読み上げやすい短い要約\",
+  \"missingFields\": [],
+  \"sourceMode\": \"live|fixture|mixed\",
+  \"plan\": {
+    \"summary\": \"...\",
+    \"assumptions\": [\"...\"],
+    \"flights\": [{ \"rank\": 1, \"title\": \"...\", \"price\": { \"amount\": 120000, \"currency\": \"JPY\" }, \"reason\": \"...\", \"bookingUrl\": null }],
+    \"hotels\": [{ \"rank\": 1, \"name\": \"...\", \"area\": \"...\", \"reason\": \"...\", \"bookingUrl\": \"...\" }],
+    \"activitiesByDay\": [{ \"day\": 1, \"date\": \"2026-07-10\", \"items\": [{ \"title\": \"...\", \"timeOfDay\": \"afternoon\", \"reason\": \"...\", \"bookingUrl\": \"...\" }] }],
+    \"nextQuestion\": null
+  }
+}
+```
+
+MCP tool:
+
+- name: `saborou_plan_trip`
+- effect: `read`
+- approval required: `false`
+- implementation status: `implemented`
+- input schema mirrors `/api/travel/plan`
+- output mode: `safe_summary`
+
+## Implementation Details
+
+- Add backend schemas with Zod: `TravelPlanRequestSchema`, `TravelPlanResponseSchema`, strict validation, max text lengths, date format `YYYY-MM-DD`.
+- Add `TravelpayoutsClient` with methods:
+  - `getFlightPricesForDates`
+  - `createPartnerLinks`
+  - `getAutocompletePlaces` only if needed for IATA normalization
+- Add fixture provider for demo stability:
+  - deterministic Paris/Tokyo sample flights, hotels, and activities
+  - generic fallback for unknown destination
+  - response always marks `sourceMode`
+- Add Bedrock-backed planner prompt in backend service using existing `BedrockClientAdapter`.
+  - Temperature `0`
+  - Output validated by Zod
+  - Prompt must not expose API tokens or raw secret values
+- Wire the service into `createApp()` and mount `app.route(\"/api/travel\", createTravelRoute(...))`.
+- Update MCP dispatch so `saborou_plan_trip` calls `/api/travel/plan` internally through the existing JSON-RPC caller path.
+- Update `pkgs/cdk/schemas/saborou-openapi.yaml` so AgentCore schema drift tests pass.
+- Do not persist travel plans in DynamoDB for v1. The feature is ephemeral and demo-oriented.
+
+## Test Plan
+
+- Backend unit tests:
+  - missing destination/date returns `needs_clarification`
+  - valid request returns `planned`
+  - no Travelpayouts credentials returns fixture result, not 500
+  - Travelpayouts 401/429/5xx falls back to fixture and marks `sourceMode: mixed` or `fixture`
+  - Partner Links partial failure preserves unlinked hotel/activity options
+  - response never includes API token, marker, trs, or raw Authorization header
+- MCP tests:
+  - `saborou_plan_trip` appears in registry and published tool list
+  - schema accepts valid voice-friendly partial input
+  - unknown fields are rejected
+  - JSON-RPC `tools/list` includes the tool
+  - JSON-RPC `tools/call` invokes the internal API and returns safe text content
+- CDK tests:
+  - Travelpayouts secret exists
+  - API Lambda receives `TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN`
+  - Lambda has read access to only the Travelpayouts secret
+  - AgentCore OpenAPI drift gate passes
+- Verification commands:
+  - `pnpm --filter backend test`
+  - `pnpm --filter backend typecheck`
+  - `pnpm --filter cdk test`
+  - `pnpm --filter cdk build`
+  - existing MCP auth verification script after deploy
+
+## Assumptions
+
+- Product/API name is Travelpayouts; user textの「travelpayments」は同社APIの意図として扱う。
+- ハッカソンデモ優先のため、実API + fixture fallbackのハイブリッド方式を採用する。
+- ホテルはTravelpayouts Partner Links APIによる予約導線生成をv1の実装範囲にし、専用ホテル検索APIの追加調査は後続に回す。
+- 音声デモはElevenLabs remote MCPを主経路にし、Chrome拡張clientTools fallbackへの旅行ツール追加は必須にしない。
+- Aviasales Search APIはv1で使わないため、Bookクリック時のみリンク生成などのSearch API固有規約対応は今回の実装対象外にする。"
+**AI Response**: "Started implementation from the provided Travelpayouts travel planning plan. Resolved project as brownfield/resumed AI-DLC workflow; expected rule-detail directory was not present, so AGENTS.md embedded rules are being followed. Loaded Travelpayouts skill and began backend/MCP/CDK inspection."
+**Context**: Implementation resume, workspace detection, audit trail.
+
+---
+## Code Generation Request
+**Timestamp**: 2026-06-20T12:55:17Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# 旅行プランMarkdown整形＋Slack投稿機能 実装計画
+
+## Summary
+
+既存の旅行プラン生成機能に、Slack投稿まで行う一体型ツールを追加する。新MCP/APIは旅行条件からプランを生成し、Slack向けMarkdown形式に整形し、指定された `channelId` へユーザー自身のSlack User Token優先で投稿する。MCP経由では副作用ツールとして `approved=true` を必須にする。
+
+## Key Changes
+
+- Backendに `POST /api/travel/plan-and-post-to-slack` を追加する。
+  - 入力は既存旅行プラン条件に加えて `channelId` 必須、`threadTs` 任意、`approved` 必須。
+  - `approved !== true` の場合は `403` を返し、Slack投稿しない。
+  - 内部で既存 `TravelPlanningService.plan()` を呼び、`needs_clarification` の場合は投稿せず確認質問を返す。
+  - `planned` の場合だけSlack向けMarkdownを生成し、既存Slack投稿ロジックと同じく `getSlackUserToken(userId)` 優先、なければBot Token fallbackで `chat.postMessage` する。
+
+- Slack Markdown formatterを追加する。
+  - 出力はSlack `mrkdwn` 前提のプレーンテキスト。
+  - 構成は、タイトル、短い概要、フライト候補、ホテル候補、日別アクティビティ、前提/注意点。
+  - Slack特殊文字 `&`, `<`, `>` はエスケープする。
+  - booking URLがある場合は `<url|予約リンク>` 形式にする。
+  - 長すぎる投稿を避けるため最大4000文字程度に収め、必要なら候補数を上位中心に丸める。
+
+- MCP tool `saborou_plan_trip_and_post_to_slack` を追加する。
+  - `effect: "side_effect"`
+  - `approval.required: true`
+  - `implementationStatus: "implemented"`
+  - input schemaは旅行プラン条件 + `channelId` + `threadTs` + `approved`
+  - REST MCP adapterとJSON-RPC internal callerの両方で既存のHono API経由に統一する。
+  - OpenAPI schemaにも `/api/mcp/tools/saborou_plan_trip_and_post_to_slack` を追加し、AgentCore drift testを通す。
+
+## Test Plan
+
+- Backend route/service tests:
+  - `approved=false` または未指定ではSlack投稿せず `403`
+  - `destination/departureDate/returnDate` 不足時はSlack投稿せず `needs_clarification`
+  - 正常入力では旅行プラン生成、Markdown整形、Slack投稿まで成功
+  - `threadTs` 指定時はスレッド返信になる
+  - User TokenがあればUser Token、なければBot Tokenで投稿する
+  - Slack API失敗時は安全な `502 SLACK_API_ERROR`
+  - MarkdownにAPI token、marker、trs、Authorizationが含まれない
+
+- MCP tests:
+  - 新ツールがregistry/published tools/list/OpenAPIに出る
+  - `approved=true` 必須
+  - unknown fieldsをreject
+  - JSON-RPC `tools/call` が内部APIへ `channelId` と旅行条件を渡す
+  - REST MCP adapter経由でも実投稿ルートに到達する
+
+- Verification:
+  - `pnpm --filter backend test`
+  - `pnpm --filter backend typecheck`
+  - `pnpm --filter backend build`
+  - `pnpm --filter cdk test`
+  - `pnpm --filter cdk build`
+
+## Assumptions
+
+- 投稿先は `channelId` 必須にする。
+- MCP投稿は必ず `approved=true` を要求する。
+- 既存 `/api/slack/reply` と同じ思想で、Slack投稿はUser Token優先、Bot Token fallbackにする。
+- 新機能は旅行プランの保存を行わず、生成結果をその場でSlack投稿するだけにする。
+- Slack投稿本文は1メッセージに収め、ファイルアップロードやBlock Kitはv1範囲外にする。"
+**AI Response**: "Loaded AI-DLC common rules, displayed the welcome message, and started focused code generation for the approved travel plan Slack posting unit."
+**Context**: Construction Code Generation, follow-on brownfield unit
+
+---
+## Code Generation Completion
+**Timestamp**: 2026-06-20T13:07:02Z
+**User Input**: "N/A - implementation completion update"
+**AI Response**: "Implemented travel plan Slack posting route, Slack mrkdwn formatter, approval-gated posting service, MCP registry/schema/REST/JSON-RPC wiring, AgentCore OpenAPI schema update, route/service/MCP tests, code-generation summary, and AI-DLC state update. Verified backend tests, backend typecheck, backend build, CDK tests, and CDK build."
+**Context**: Construction Code Generation, travel-plan-slack-post unit completion
 
 ---

@@ -8,7 +8,7 @@ import type { McpToolDefinition } from "../mcp/types.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
 import { normalizeForTts } from "../utils/ttsNormalizer.js";
 
-const PROTOCOL_VERSION = "2024-11-05";
+const PROTOCOL_VERSION = "2025-03-26";
 
 type JsonRpcId = number | string | null;
 interface JsonRpcRequest {
@@ -103,7 +103,10 @@ export function createMcpJsonRpcRoute(options: McpJsonRpcRouteOptions) {
           return c.json(
             rpcResult(id, {
               content: [
-                { type: "text", text: normalizeForTts(JSON.stringify(result, null, 2)) },
+                {
+                  type: "text",
+                  text: normalizeForTts(JSON.stringify(result, null, 2)),
+                },
               ],
             }),
           );
@@ -318,6 +321,278 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
         },
         required: ["taskId", "instruction"],
       };
+    case "saborou_plan_trip":
+      return {
+        type: "object",
+        properties: {
+          origin: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "出発地。省略するとTokyo。都市名またはIATAコードを指定できます。",
+          },
+          destination: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "目的地。例: Paris、パリ、Seoul。未指定の場合は確認質問を返します。",
+          },
+          departureDate: {
+            type: "string",
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+            description:
+              "出発日。YYYY-MM-DD形式。未指定の場合は確認質問を返します。",
+          },
+          returnDate: {
+            type: "string",
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+            description:
+              "帰国日。YYYY-MM-DD形式。未指定の場合は確認質問を返します。",
+          },
+          travelers: {
+            type: "integer",
+            minimum: 1,
+            maximum: 8,
+            description: "旅行人数。省略すると1人。",
+          },
+          currency: {
+            type: "string",
+            pattern: "^[A-Z]{3}$",
+            description: "通貨コード。省略するとJPY。",
+          },
+          budgetPerPerson: {
+            type: "integer",
+            minimum: 0,
+            maximum: 10000000,
+            description: "1人あたり予算。",
+          },
+          interests: {
+            type: "array",
+            minItems: 1,
+            maxItems: 8,
+            items: { type: "string", minLength: 1, maxLength: 40 },
+            description: "興味関心。省略するとsightseeing、food、culture。",
+          },
+          flightPreference: {
+            type: "string",
+            enum: ["cheapest", "fastest", "balanced"],
+            description: "フライト選定方針。省略するとbalanced。",
+          },
+          hotelPreference: {
+            type: "string",
+            enum: ["budget", "standard", "premium"],
+            description: "ホテル選定方針。省略するとstandard。",
+          },
+          language: {
+            type: "string",
+            enum: ["ja", "en"],
+            description: "応答言語。省略するとja。",
+          },
+        },
+        additionalProperties: false,
+      };
+    case "saborou_plan_trip_and_post_to_slack":
+      return {
+        type: "object",
+        properties: {
+          origin: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "出発地。省略するとTokyo。都市名またはIATAコードを指定できます。",
+          },
+          destination: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "目的地。例: Paris、パリ、Seoul。未指定の場合は確認質問を返します。",
+          },
+          departureDate: {
+            type: "string",
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+            description:
+              "出発日。YYYY-MM-DD形式。未指定の場合は確認質問を返します。",
+          },
+          returnDate: {
+            type: "string",
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+            description:
+              "帰国日。YYYY-MM-DD形式。未指定の場合は確認質問を返します。",
+          },
+          travelers: {
+            type: "integer",
+            minimum: 1,
+            maximum: 8,
+            description: "旅行人数。省略すると1人。",
+          },
+          currency: {
+            type: "string",
+            pattern: "^[A-Z]{3}$",
+            description: "通貨コード。省略するとJPY。",
+          },
+          budgetPerPerson: {
+            type: "integer",
+            minimum: 0,
+            maximum: 10000000,
+            description: "1人あたり予算。",
+          },
+          interests: {
+            type: "array",
+            minItems: 1,
+            maxItems: 8,
+            items: { type: "string", minLength: 1, maxLength: 40 },
+            description: "興味関心。省略するとsightseeing、food、culture。",
+          },
+          flightPreference: {
+            type: "string",
+            enum: ["cheapest", "fastest", "balanced"],
+            description: "フライト選定方針。省略するとbalanced。",
+          },
+          hotelPreference: {
+            type: "string",
+            enum: ["budget", "standard", "premium"],
+            description: "ホテル選定方針。省略するとstandard。",
+          },
+          language: {
+            type: "string",
+            enum: ["ja", "en"],
+            description: "応答言語。省略するとja。",
+          },
+          channelId: {
+            type: "string",
+            minLength: 1,
+            maxLength: 80,
+            description: "投稿先のSlackチャンネルID（必須）。例: C01234567。",
+          },
+          threadTs: {
+            type: "string",
+            description:
+              "スレッドに返信する場合の親メッセージのタイムスタンプ（省略可）。「1234567890.123456」形式。",
+          },
+          approved: {
+            type: "boolean",
+            description:
+              "Slack投稿の明示承認。必ずユーザー確認後にtrueを指定してください。",
+          },
+        },
+        required: ["channelId", "approved"],
+        additionalProperties: false,
+      };
+    case "saborou_create_marp_slides":
+      return {
+        type: "object",
+        properties: {
+          topic: {
+            type: "string",
+            minLength: 1,
+            maxLength: 200,
+            description:
+              "スライドのトピック（必須）。例:「AWS Bedrockの活用方法」「2024年Q3事業報告」。",
+          },
+          content: {
+            type: "string",
+            minLength: 1,
+            maxLength: 4000,
+            description:
+              "スライドに含める具体的なコンテンツ・情報（省略可）。箇条書きや段落テキストを渡すと精度が上がる。",
+          },
+          audience: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "対象オーディエンス（省略可）。例:「エンジニア向け」「経営層向け」。省略するとgeneral business。",
+          },
+          slideCount: {
+            type: "integer",
+            minimum: 8,
+            maximum: 20,
+            description: "スライド枚数（省略可）。省略すると12枚。",
+          },
+          language: {
+            type: "string",
+            enum: ["ja", "en"],
+            description: "スライドの言語（省略可）。省略するとja（日本語）。",
+          },
+          purpose: {
+            type: "string",
+            minLength: 1,
+            maxLength: 400,
+            description:
+              "プレゼンの目的・文脈（省略可）。例:「社内勉強会での発表」「顧客提案資料」。",
+          },
+        },
+        required: ["topic"],
+        additionalProperties: false,
+      };
+    case "saborou_create_marp_slides_and_post_to_slack":
+      return {
+        type: "object",
+        properties: {
+          topic: {
+            type: "string",
+            minLength: 1,
+            maxLength: 200,
+            description:
+              "スライドのトピック（必須）。例:「AWS Bedrockの活用方法」「2024年Q3事業報告」。",
+          },
+          content: {
+            type: "string",
+            minLength: 1,
+            maxLength: 4000,
+            description:
+              "スライドに含める具体的なコンテンツ・情報（省略可）。箇条書きや段落テキストを渡すと精度が上がる。",
+          },
+          audience: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "対象オーディエンス（省略可）。例:「エンジニア向け」「経営層向け」。省略するとgeneral business。",
+          },
+          slideCount: {
+            type: "integer",
+            minimum: 8,
+            maximum: 20,
+            description: "スライド枚数（省略可）。省略すると12枚。",
+          },
+          language: {
+            type: "string",
+            enum: ["ja", "en"],
+            description: "スライドの言語（省略可）。省略するとja（日本語）。",
+          },
+          purpose: {
+            type: "string",
+            minLength: 1,
+            maxLength: 400,
+            description:
+              "プレゼンの目的・文脈（省略可）。例:「社内勉強会での発表」「顧客提案資料」。",
+          },
+          channelId: {
+            type: "string",
+            minLength: 1,
+            maxLength: 80,
+            description:
+              "投稿先のSlackチャンネルID（必須）。例: C01234567。スライドURLをここに投稿する。",
+          },
+          threadTs: {
+            type: "string",
+            description:
+              "スレッドに返信する場合の親メッセージのタイムスタンプ（省略可）。「1234567890.123456」形式。",
+          },
+          approved: {
+            type: "boolean",
+            description:
+              "S3アップロードおよびSlack投稿の明示承認（必須）。必ずユーザー確認後にtrueを指定してください。",
+          },
+        },
+        required: ["topic", "channelId", "approved"],
+        additionalProperties: false,
+      };
     default:
       return { type: "object" };
   }
@@ -335,6 +610,14 @@ async function invokeTool(
   const tool = getMcpToolDefinition(toolName);
   if (!tool) {
     throw new Error(`Unknown tool: ${toolName}`);
+  }
+
+  if (
+    (toolName === "saborou_plan_trip_and_post_to_slack" ||
+      toolName === "saborou_create_marp_slides_and_post_to_slack") &&
+    args.approved !== true
+  ) {
+    throw new Error("Tool requires explicit approval");
   }
 
   // saborou_delegate_to_claude: call the delegation service directly

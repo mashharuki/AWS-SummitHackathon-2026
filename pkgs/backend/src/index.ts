@@ -62,15 +62,23 @@ import { createGoogleAuthRoute } from "./routes/google-auth.js";
 import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
 import { createHonneRoute } from "./routes/honne.js";
+import { createMarpRoute } from "./routes/marp.js";
 import { createMcpJsonRpcRoute } from "./routes/mcp-jsonrpc.js";
 import { createMcpRoute } from "./routes/mcp.js";
 import { createProposalsRoute } from "./routes/proposals.js";
 import { createScheduleRoute } from "./routes/schedule.js";
 import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
+import { createTravelRoute } from "./routes/travel.js";
 import { createUsersRoute } from "./routes/users.js";
 import { GoogleTokenService } from "./services/GoogleTokenService.js";
 import { SlackDelegationService } from "./services/SlackDelegationService.js";
+import { S3Client } from "@aws-sdk/client-s3";
+import { MarpSlideService } from "./marp/MarpSlideService.js";
+import { MarpSlideSlackPostService } from "./marp/MarpSlideSlackPostService.js";
+import { TravelPlanSlackPostService } from "./travel/TravelPlanSlackPostService.js";
+import { TravelPlanningService } from "./travel/TravelPlanningService.js";
+import { TravelpayoutsClient } from "./travel/TravelpayoutsClient.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
@@ -129,6 +137,30 @@ const schedulePlannerAgent = new SchedulePlannerAgent(bedrockClient);
 
 // Initialize SaboriProposerAgentV2 (進捗報告文生成で使用 / U-V2-07)
 const saboriProposerAgentV2 = new SaboriProposerAgentV2(bedrockClient);
+const travelpayoutsClient = env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN
+  ? new TravelpayoutsClient({
+      credentialsSecretArn: env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN,
+    })
+  : undefined;
+const travelPlanningService = new TravelPlanningService({
+  travelpayoutsClient,
+  bedrockClient,
+});
+const travelPlanSlackPostService = new TravelPlanSlackPostService(
+  travelPlanningService,
+);
+
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
+});
+const marpSlideService = new MarpSlideService({
+  bedrockClient,
+  s3BucketName: env.MARP_SLIDES_BUCKET_NAME,
+  s3Client,
+});
+const marpSlideSlackPostService = new MarpSlideSlackPostService(
+  marpSlideService,
+);
 
 /**
  * Google アクセストークン取得のデフォルト実装（U-G04 schedule ルート用）。
@@ -219,19 +251,40 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
-  // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
   app.route(
-    "/api/mcp",
-    createMcpRoute({ delegationService: slackDelegationService }),
+    "/api/travel",
+    createTravelRoute({
+      plan: (input) => travelPlanningService.plan(input),
+      planAndPostToSlack: (input) =>
+        travelPlanSlackPostService.planAndPostToSlack(input),
+    }),
   );
-
-  // MCP JSON-RPC 2.0 (streamable_http): POST /api/mcp  (ElevenLabs 向け)
-  // internalCaller は app を遅延参照するクロージャ — app 初期化後に呼ばれるため安全
+  app.route(
+    "/api/marp",
+    createMarpRoute({
+      createSlides: (input) => marpSlideService.createSlides(input),
+      createSlidesAndPostToSlack: (input) =>
+        marpSlideSlackPostService.createSlidesAndPostToSlack(input),
+    }),
+  );
   const internalCaller = async (
     path: string,
     init: RequestInit,
   ): Promise<Response> =>
     app.fetch(new Request(`http://internal${path}`, init));
+  // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
+  app.route(
+    "/api/mcp",
+    createMcpRoute({
+      delegationService: slackDelegationService,
+      travelPlanningService,
+      marpSlideService,
+      caller: internalCaller,
+    }),
+  );
+
+  // MCP JSON-RPC 2.0 (streamable_http): POST /api/mcp  (ElevenLabs 向け)
+  // internalCaller は app を遅延参照するクロージャ — app 初期化後に呼ばれるため安全
   app.route(
     "/api/mcp",
     createMcpJsonRpcRoute({

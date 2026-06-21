@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as cr from "aws-cdk-lib/custom-resources";
 import { NagSuppressions } from "cdk-nag";
@@ -22,6 +23,10 @@ export interface DataStackExports {
     readonly slackClientSecret: secretsmanager.Secret;
     readonly slackSigningSecret: secretsmanager.Secret;
     readonly googleClientSecret: secretsmanager.Secret;
+    readonly travelpayoutsCredentialsSecret: secretsmanager.Secret;
+  };
+  readonly buckets: {
+    readonly marpSlides: s3.Bucket;
   };
 }
 
@@ -144,6 +149,19 @@ export class SaborouDataStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    // --- S3: Marp Slides ---
+    const marpSlidesBucket = new s3.Bucket(this, "MarpSlidesBucket", {
+      bucketName: `saborou-marp-slides-${this.account}-${environment}`,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      versioned: false,
+      removalPolicy: isProd
+        ? cdk.RemovalPolicy.RETAIN
+        : cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: !isProd,
+    });
+
     // --- Secrets Manager ---
     // 常に固定名を使用。dev では cdk destroy 時に即時削除カスタムリソースが動作する（30日回復期間を回避）
     const slackClientSecret = new secretsmanager.Secret(
@@ -174,6 +192,16 @@ export class SaborouDataStack extends cdk.Stack {
       {
         secretName: `/saborou/google/client-secret-${environment}`,
         description: "Google OAuth Client ID and Secret (JSON format)",
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+      },
+    );
+
+    const travelpayoutsCredentialsSecret = new secretsmanager.Secret(
+      this,
+      "TravelpayoutsCredentialsSecret",
+      {
+        secretName: `/saborou/travelpayouts/credentials-${environment}`,
+        description: "Travelpayouts credentials JSON: apiToken, marker, trs",
         removalPolicy: cdk.RemovalPolicy.RETAIN,
       },
     );
@@ -253,6 +281,30 @@ export class SaborouDataStack extends cdk.Stack {
           ]),
         },
       );
+
+      const forceDeleteTravelpayouts = new cr.AwsCustomResource(
+        this,
+        "ForceDeleteTravelpayoutsCredentialsSecret",
+        {
+          onDelete: {
+            service: "SecretsManager",
+            action: "deleteSecret",
+            parameters: {
+              SecretId: travelpayoutsCredentialsSecret.secretArn,
+              ForceDeleteWithoutRecovery: true,
+            },
+            physicalResourceId: cr.PhysicalResourceId.of(
+              travelpayoutsCredentialsSecret.secretArn,
+            ),
+          },
+          policy: cr.AwsCustomResourcePolicy.fromStatements([
+            new iam.PolicyStatement({
+              actions: ["secretsmanager:DeleteSecret"],
+              resources: [travelpayoutsCredentialsSecret.secretArn],
+            }),
+          ]),
+        },
+      );
     }
 
     // --- CfnOutputs ---
@@ -273,6 +325,14 @@ export class SaborouDataStack extends cdk.Stack {
     });
 
     // --- cdk-nag 抑制 ---
+    NagSuppressions.addResourceSuppressions(marpSlidesBucket, [
+      {
+        id: "AwsSolutions-S1",
+        reason:
+          "Server access logs disabled for hackathon cost scope; slides bucket is internal only",
+      },
+    ]);
+
     NagSuppressions.addStackSuppressions(this, [
       {
         id: "AwsSolutions-DDB3",
@@ -316,7 +376,15 @@ export class SaborouDataStack extends cdk.Stack {
         personas,
         googleCalendarCache,
       },
-      secrets: { slackClientSecret, slackSigningSecret, googleClientSecret },
+      secrets: {
+        slackClientSecret,
+        slackSigningSecret,
+        googleClientSecret,
+        travelpayoutsCredentialsSecret,
+      },
+      buckets: {
+        marpSlides: marpSlidesBucket,
+      },
     };
   }
 }
