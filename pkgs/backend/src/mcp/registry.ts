@@ -108,7 +108,7 @@ export const MCP_TOOL_REGISTRY = [
     name: "saborou_send_slack_reply",
     effect: "side_effect",
     description:
-      "ユーザーが明示的に承認したSlack返信を実際に送信します。「この返信を送って」「OKなので送信して」「Slackに投稿して」などと言われたときに使用してください。replyTextに送信するメッセージ本文（必須）、channelIdにSlackチャンネルID（必須、例:C01234567）を指定してください。threadTsを指定するとスレッドへの返信になります。送信後は取り消し不可のため、必ずユーザーに内容を読み上げて確認を取ってから呼び出してください。",
+      "ユーザーが明示的に承認したSlack返信を実際に送信します。「この返信を送って」「OKなので送信して」「Slackに投稿して」などと言われたときに使用してください。replyTextに送信するメッセージ本文（必須）を指定してください。channelIdはSlackチャンネルID（例:C01234567）で省略可能です—省略した場合やtaskIdを渡した場合はタスク履歴から自動取得します。threadTsを指定するとスレッドへの返信になります。送信後は取り消し不可のため、必ずユーザーに内容を読み上げて確認を取ってから呼び出してください。",
     http: { method: "POST", path: "/api/slack/reply" },
     schema: { input: "saborou_send_slack_reply", output: "safe_action_result" },
     approval: {

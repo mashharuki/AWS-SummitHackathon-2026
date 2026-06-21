@@ -88,6 +88,7 @@ export class MarpSlideSlackPostService {
     const token = userToken ?? (await this.getToken(input.userId));
     const client = this.createSlackClient(token);
 
+    console.log(`[MarpSlideSlackPostService] posting to Slack channelId=${resolvedChannelId}`);
     try {
       const result = await client.postMessage({
         channel: resolvedChannelId,
@@ -97,6 +98,7 @@ export class MarpSlideSlackPostService {
           : {}),
       });
 
+      console.log(`[MarpSlideSlackPostService] Slack post success ts=${result.ts}`);
       return MarpCreateSlidesAndPostToSlackResponseSchema.parse({
         status: "posted",
         message: "MarpスライドをSlackに投稿しました。",
@@ -114,11 +116,12 @@ export class MarpSlideSlackPostService {
         },
       });
     } catch (error) {
+      console.log(`[MarpSlideSlackPostService] Slack post error channelId=${resolvedChannelId} error=${(error as Error)?.message}`);
       if (error instanceof SlackApiError) {
         throw new AppError(
           502,
           "SLACK_API_ERROR",
-          "Slackへのスライド投稿に失敗しました",
+          `Slackへのスライド投稿に失敗しました: ${(error as Error)?.message}`,
         );
       }
       throw error;
