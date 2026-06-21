@@ -2985,6 +2985,78 @@ MCP tool:
 **Context**: Construction Code Generation, travel-plan-slack-post unit completion
 
 ---
+## Software Development Request - TTS Normalizer Enhancement
+**Timestamp**: 2026-06-21T05:27:26Z
+**User Input**: "# ttsNormalizer 強化プラン
+
+  ## Summary
+  `ttsNormalizer` を、英字略語だけを置換する簡易処理から、ElevenLabs に渡す発話テキスト全般を日本語で読みやすく整える正規化パイプラインへ拡張しま
+  す。
+
+  辞書ファイルは固有名詞の補助として残し、動的に生成される数字、日時、単位、URL、技術用語はバックエンド側で整形します。
+
+  ## Key Changes
+  - `normalizeForTts` は既存の公開関数名を維持し、JSON文字列だけでなく通常の発話文にも使える関数として扱う。
+  - 内部処理を段階化する。
+    - 技術用語、略語の読み変換
+    - 日付と時刻の自然な表記変換
+    - 個、件、人、分、時間などの助数詞変換
+    - URL、ID、Slackタイムスタンプなど読み上げに不向きな断片の簡略化
+    - 優先度やステータス表記の読み変換
+  - 既存の `AWS`、`API`、`URL` などに加えて、プロジェクトで出やすい語を追加する。
+    - `S3`, `CloudFront`, `CloudWatch`, `DynamoDB`, `Lambda`, `Bedrock`, `AgentCore`
+    - `ElevenLabs`, `Slack`, `Chrome`, `TypeScript`, `GitHub`, `Hono`, `Vitest`, `Biome`
+    - `AWS Summit Japan 2026`, `Summit`, `Hackathon`, `SABOROU`
+  - 数字の一般変換はやりすぎない。
+    - `1個`, `2個`, `3個`, `10個`, `100個` など、助数詞つきの確定パターンだけを対象にする。
+    - 単独の数字や漢字一文字の読みは、文脈依存が強いため v1 では対象外にする。
+  - URL は全文を読み上げず、発話用には `リンク` または `ユーアールエル` に短縮する。
+  - camelCase の JSON キーは壊さない。
+    - `taskId`, `channelId`, `threadTs` などは変換対象にしない。
+    - 値や自然文に現れる語だけを中心に変換する。
+
+  ## Integration
+  - `pkgs/backend/src/routes/mcp-jsonrpc.ts` の既存呼び出しは維持する。
+  - `pkgs/backend/src/routes/proposals.ts` の `ttsSummary` 生成にも `normalizeForTts` を適用する。
+    - 返信文から短い要約を作る
+    - 発話用に正規化する
+    - 最後に100文字前後へ丸める
+  - `pkgs/agent/src/sabori-proposer/PersonaRenderer.ts` の音声向け整形とは役割を分ける。
+    - `PersonaRenderer` は人格や話し方の整形
+    - `ttsNormalizer` は読み間違い防止の機械的正規化
+
+  ## Test Plan
+  - `pkgs/backend/src/__tests__/utils/ttsNormalizer.test.ts` を追加する。
+  - テスト対象:
+    - 既存略語の変換が維持されること
+    - `taskId`, `channelId`, `threadTs` などのキー名を変換しないこと
+    - `1個`, `2個`, `10個`, `100個` が期待する読みになること
+    - `1件`, `3人`, `15分`, `2時間` などが自然な読みになること
+    - `2026-06-21` が `2026年6月21日` 形式になること
+    - `13:30` が `13時30分` 形式になること
+    - URL が長い文字列として残らないこと
+    - `S3`, `CloudFront`, `ElevenLabs`, `Slack` などが期待する読みになること
+  - 既存の proposal 系テストを更新し、`ttsSummary` が正規化後も長すぎないことを確認する。
+  - 実行確認:
+    - `pnpm --filter backend test`
+    - 必要に応じて `pnpm --filter backend build`
+
+  ## Assumptions
+  - v1 では外部の日本語形態素解析ライブラリは追加しない。
+  - 漢字全般の音読み、訓読みを網羅的に変換する処理は入れない。
+  - プロジェクト固有語は辞書ファイルと `ttsNormalizer` の両方で補助する。
+  - 目的は完璧な日本語読みではなく、SABOROU の実利用で目立つ読み間違いを安定して減らすこと。 このプランを実行して"
+**AI Response**: "Loaded AI-DLC common rules, welcome message, extension opt-in prompts, workspace-detection rules, requirements/workflow/code-generation/build-test rules, and Security Baseline because the existing state has Security Baseline enabled. Proceeding with a scoped brownfield implementation path for the approved TTS normalizer enhancement plan."
+**Context**: Workspace Detection / Requirements Analysis / Code Generation setup for tts-normalizer-enhancement
+
+---
+## Code Generation and Build Test Completion - TTS Normalizer Enhancement
+**Timestamp**: 2026-06-21T09:07:38Z
+**User Input**: "N/A - implementation completion update"
+**AI Response**: "Implemented ttsNormalizer staged normalization pipeline, JSON key preservation, project term/date/time/counter/URL/ID/status normalization, proposal ttsSummary integration, utility tests, proposal route tests, MCP JSON-RPC expectation update, AI-DLC requirements/execution/code summary artifacts, AI-DLC state update, and build/test summary update. Verified `pnpm --filter backend test` (48 files / 480 tests), `pnpm --filter backend build`, and `pnpm --filter backend typecheck`."
+**Context**: Construction Code Generation and Build and Test completion for tts-normalizer-enhancement
+
+---
 ## Plan Request - Travel Itinerary HTML S3 Slack
 **Timestamp**: 2026-06-21T01:50:42Z
 **User Input**: "/plan                                                                                                                                 

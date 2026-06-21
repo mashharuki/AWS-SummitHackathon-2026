@@ -363,3 +363,28 @@ CDK synth: **Errors=0** / `McpToolsBaseUrl` 出力確認済み
 3. **Slack @Claude 委譲**: 委譲後の Claude の実行品質はこの Unit のスコープ外。Slack チャンネルに @claude メンションが投稿されることまでを検証対象とする。
 
 4. **evidence/ ディレクトリ**: Git に `.gitkeep` のみコミット済み。実際のスクリーンショット・ログは手動テスト実施後に各サブディレクトリに保存すること。
+
+---
+
+## tts-normalizer-enhancement Build and Test Summary（2026-06-21）
+
+### 対象
+
+- `pkgs/backend/src/utils/ttsNormalizer.ts`
+- `pkgs/backend/src/routes/proposals.ts`
+- `pkgs/backend/src/__tests__/utils/ttsNormalizer.test.ts`
+- `pkgs/backend/src/__tests__/routes/proposals.test.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+
+### 実行結果
+
+| コマンド | 結果 |
+|---------|------|
+| `pnpm --filter backend test` | PASS: 48 test files / 480 tests |
+| `pnpm --filter backend build` | PASS |
+| `pnpm --filter backend typecheck` | PASS |
+
+### 注意事項
+
+- `pnpm --filter backend build` は既存の `../agent/dist/index.mjs` duplicate key warning を出すが、ビルドは成功。
+- 新規AWSリソース、IAM権限、外部依存、secret handlingは追加していない。

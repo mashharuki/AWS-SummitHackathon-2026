@@ -662,8 +662,30 @@ describe("POST /judge — Chrome 拡張向け返信文ドラフト生成", () =>
     expect(arg.contextHint).toBeUndefined();
   });
 
+  it("ttsSummary は発話向けに正規化して返す", async () => {
+    const draftReply = vi.fn().mockResolvedValue({
+      replyText:
+        "AWS API のURLは https://example.com/path です。3人で15分確認します。",
+      reasoning: ["r"],
+    });
+    const app = buildJudgeApp(draftReply);
+
+    const res = await app.request("/tasks/judge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "音声向けに要約して" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ttsSummary).toBe(
+      "エーダブリューエス エーピーアイ のユーアールエルは リンク です。さんにんでじゅうごふん確認します。",
+    );
+    expect(body.ttsSummary.length).toBeLessThanOrEqual(101);
+  });
+
   it("長い replyText は ttsSummary で 100 字程度に短縮される", async () => {
-    const longText = "あ".repeat(250);
+    const longText = `${"AWS API ".repeat(20)}${"あ".repeat(250)}`;
     const draftReply = vi
       .fn()
       .mockResolvedValue({ replyText: longText, reasoning: ["r"] });
@@ -681,6 +703,7 @@ describe("POST /judge — Chrome 拡張向け返信文ドラフト生成", () =>
     // 100 字 + 省略記号
     expect(body.ttsSummary.length).toBeLessThanOrEqual(101);
     expect(body.ttsSummary.endsWith("…")).toBe(true);
+    expect(body.ttsSummary).toContain("エーダブリューエス");
   });
 
   it("認証なしの場合 401 を返す", async () => {

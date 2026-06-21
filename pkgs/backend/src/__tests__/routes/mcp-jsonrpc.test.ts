@@ -290,7 +290,7 @@ describe("POST /api/mcp JSON-RPC", () => {
     );
     const body = await res.json();
     expect(body.result.content[0].text).toContain(
-      "旅行しおりユーアールエルをSlackに投稿しました。",
+      "旅行しおりユーアールエルをスラックに投稿しました。",
     );
     expect(body.result.content[0].text).not.toContain("valid-token");
   });
