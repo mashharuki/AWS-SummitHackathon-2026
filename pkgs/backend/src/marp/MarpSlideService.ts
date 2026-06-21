@@ -93,7 +93,7 @@ export class MarpSlideService {
             tools: [MARP_GENERATOR_TOOL as never],
             toolChoice: { tool: { name: MARP_GENERATOR_TOOL_NAME } },
           },
-          inferenceConfig: { maxTokens: 4000, temperature: 0.3 },
+          inferenceConfig: { maxTokens: 2000, temperature: 0.3 },
         });
 
         const toolUse = response.output?.message?.content?.find(

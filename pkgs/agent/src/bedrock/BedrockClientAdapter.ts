@@ -33,7 +33,8 @@ export class BedrockClientAdapter implements IBedrockClient {
       maxAttempts: 5,
       retryMode: "adaptive",
       requestHandler: new NodeHttpHandler({
-        requestTimeout: 25_000, // Lambda timeout (30s) より短く設定
+        requestTimeout: 25_000, // Lambda timeout (29s) より短く設定
+        throwOnRequestTimeout: true, // タイムアウト時に警告ではなくエラーをthrowしてcatchブロックを動作させる
       }),
     });
   }
