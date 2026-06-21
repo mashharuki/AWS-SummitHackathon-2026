@@ -70,6 +70,7 @@ export class MarpSlideService {
 
     if (this.options.bedrockClient) {
       try {
+        console.log(`[MarpSlideService] bedrock converse start topic=${request.topic} maxTokens=800`);
         const response = await this.options.bedrockClient.converse({
           modelId: MODEL_ID,
           system: [{ text: systemPrompt }],
@@ -93,9 +94,10 @@ export class MarpSlideService {
             tools: [MARP_GENERATOR_TOOL as never],
             toolChoice: { tool: { name: MARP_GENERATOR_TOOL_NAME } },
           },
-          inferenceConfig: { maxTokens: 2000, temperature: 0.3 },
+          inferenceConfig: { maxTokens: 800, temperature: 0.3 },
         });
 
+        console.log(`[MarpSlideService] bedrock converse done`);
         const toolUse = response.output?.message?.content?.find(
           (block) => block.toolUse?.name === MARP_GENERATOR_TOOL_NAME,
         );
@@ -110,7 +112,8 @@ export class MarpSlideService {
             request.language,
           );
         slideCount = input?.slideCount ?? request.slideCount;
-      } catch {
+      } catch (err) {
+        console.log(`[MarpSlideService] bedrock error, using fixture: ${(err as Error)?.name}`);
         marpMarkdown = buildFixtureMarpMarkdown(
           request.topic,
           request.slideCount,
@@ -125,16 +128,20 @@ export class MarpSlideService {
       );
     }
 
+    console.log(`[MarpSlideService] importing @marp-team/marp-core`);
     const { Marp } = await import("@marp-team/marp-core");
+    console.log(`[MarpSlideService] rendering marp markdown len=${marpMarkdown.length}`);
     const marp = new Marp({ html: true });
     const { html, css } = marp.render(marpMarkdown);
     const fullHtml = buildFullHtmlDocument(html, css, request.topic);
+    console.log(`[MarpSlideService] render done htmlLen=${fullHtml.length}`);
 
     let slideUrl: string | undefined;
 
     if (this.options.s3BucketName) {
       try {
         const key = `marp-slides/${Date.now()}-${crypto.randomUUID()}.html`;
+        console.log(`[MarpSlideService] s3 upload start bucket=${this.options.s3BucketName} key=${key}`);
         await this.s3Client.send(
           new PutObjectCommand({
             Bucket: this.options.s3BucketName,
@@ -143,13 +150,16 @@ export class MarpSlideService {
             ContentType: "text/html; charset=utf-8",
             ContentDisposition: "inline",
           }),
+          { abortSignal: AbortSignal.timeout(8_000) },
         );
         slideUrl = await getSignedUrl(
           this.s3Client,
           new GetObjectCommand({ Bucket: this.options.s3BucketName, Key: key }),
           { expiresIn: 604800 },
         );
-      } catch {
+        console.log(`[MarpSlideService] s3 upload done slideUrl=${slideUrl?.slice(0, 60)}`);
+      } catch (err) {
+        console.log(`[MarpSlideService] s3 upload error: ${(err as Error)?.message?.slice(0, 120)}`);
         // S3 upload failed; slideUrl remains undefined
       }
     }
