@@ -18,7 +18,7 @@ import { Coffee, FileText, Film, Footprints, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function SlackTab() {
-  const { jwt, tasks, representativeProposal } = useSaborou();
+  const { jwt, tasks, representativeProposal, chatMessages } = useSaborou();
   const [proposal, setProposal] = useState<Proposal | null>(
     representativeProposal,
   );
@@ -87,12 +87,44 @@ export function SlackTab() {
               </Card>
             )}
 
-            {!activeTask && reasons.length === 0 && (
-              <EmptyState
-                icon={<Coffee size={32} />}
-                title="まだ余白の提案はありません"
-                hint="タスクを承認すると、サボれる理由を提示します"
-              />
+            {!activeTask &&
+              reasons.length === 0 &&
+              chatMessages.length === 0 && (
+                <EmptyState
+                  icon={<Coffee size={32} />}
+                  title="まだ余白の提案はありません"
+                  hint="下のチャットで質問するか、タスクを承認するとサボれる理由を提示します"
+                />
+              )}
+
+            {/* ユーザーとのチャット履歴（下部の共通チャットバーから投稿される） */}
+            {chatMessages.map((m) =>
+              m.role === "user" ? (
+                <div
+                  key={m.id}
+                  className="flex justify-end"
+                  data-testid="chat-user"
+                >
+                  <div className="max-w-[80%] p-2.5 rounded-xl rounded-tr-sm bg-[#f97316] text-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
+                    <p className="text-sm leading-relaxed">{m.text}</p>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  key={m.id}
+                  className="flex gap-2"
+                  data-testid="chat-saborou"
+                >
+                  <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+                    サ
+                  </div>
+                  <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
+                    <p className="text-sm text-[#1f2937] leading-relaxed">
+                      {m.text}
+                    </p>
+                  </div>
+                </div>
+              ),
             )}
           </>
         )}

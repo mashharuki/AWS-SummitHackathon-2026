@@ -38,6 +38,13 @@ export interface SendResult {
   error?: string;
 }
 
+/** 余白タブのサボローチャット 1 発話 */
+export interface ChatMessage {
+  id: string;
+  role: "user" | "saborou";
+  text: string;
+}
+
 interface SaborouContextValue {
   userInfo: UserInfo | null;
   jwt: string | null;
@@ -67,6 +74,11 @@ interface SaborouContextValue {
 
   /** 完了通知（デスクトップ通知）を background に依頼する */
   notifyReplyCompleted: () => void;
+
+  /** 余白タブのサボローチャット履歴 */
+  chatMessages: ChatMessage[];
+  /** ユーザー発話を投稿する（応答もここで生成して履歴に積む） */
+  postChatMessage: (text: string) => void;
 }
 
 const SaborouContext = createContext<SaborouContextValue | null>(null);
@@ -210,7 +222,7 @@ export function SaborouProvider({
               ok: false,
               error:
                 res?.error ??
-                "Slack タブが見つかりませんでした。隣に Slack を開いてください。",
+                "Slack タブが見つかりませんでした。隣のブラウザで app.slack.com を開いてください。",
             });
           }
         })
@@ -232,6 +244,37 @@ export function SaborouProvider({
       });
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // 余白タブのサボローチャット
+  // テキストチャット専用バックエンドは未提供のため、応答は代表 proposal の
+  // chatMessage / reasoning をフォールバックとして返す。
+  // ---------------------------------------------------------------------------
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const chatSeqRef = useRef(0);
+
+  const postChatMessage = useCallback(
+    (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+
+      const userId = `u${chatSeqRef.current++}`;
+      const saborouId = `s${chatSeqRef.current++}`;
+
+      const reply =
+        representativeProposal?.chatMessage ??
+        (representativeProposal?.reasoning?.[0]
+          ? `${representativeProposal.reasoning[0]} なので、いまは少し休んでも大丈夫だよ。`
+          : "いまの状況だと、その件は急ぎじゃなさそうだよ。少し余白を作っても後続には影響しないはず。");
+
+      setChatMessages((prev) => [
+        ...prev,
+        { id: userId, role: "user", text: trimmed },
+        { id: saborouId, role: "saborou", text: reply },
+      ]);
+    },
+    [representativeProposal],
+  );
+
   const value = useMemo<SaborouContextValue>(
     () => ({
       userInfo,
@@ -247,6 +290,8 @@ export function SaborouProvider({
       latestSlackMessage,
       sendSlackViaDom,
       notifyReplyCompleted,
+      chatMessages,
+      postChatMessage,
     }),
     [
       userInfo,
@@ -262,6 +307,8 @@ export function SaborouProvider({
       latestSlackMessage,
       sendSlackViaDom,
       notifyReplyCompleted,
+      chatMessages,
+      postChatMessage,
     ],
   );
 

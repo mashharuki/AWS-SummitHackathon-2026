@@ -37,7 +37,7 @@ import { HomeTab } from "@/panel/tabs/HomeTab";
 import { InboxTab } from "@/panel/tabs/InboxTab";
 import { SlackTab } from "@/panel/tabs/SlackTab";
 import { WorkingTab } from "@/panel/tabs/WorkingTab";
-import { LogIn, LogOut, Mic, MicOff, User } from "lucide-react";
+import { ArrowRight, LogIn, LogOut, Mic, MicOff, User } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export function App() {
@@ -280,7 +280,10 @@ export function App() {
   );
 }
 
-/** タブ本体 + タブバー（Provider 配下で件数バッジを出すため分離） */
+/**
+ * タブバー（上部）+ タブ本体 + 全タブ共通の固定チャットバー（下部）。
+ * チャットバーに送信すると余白(slack)タブへ自動遷移し、会話に積む。
+ */
 function TabContent({
   activeTab,
   onTabChange,
@@ -288,35 +291,86 @@ function TabContent({
   activeTab: TabId;
   onTabChange: (id: TabId) => void;
 }) {
-  // 依頼整理の件数バッジは Context から取得（Provider 配下なので useSaborou 可）
+  // 依頼整理の件数バッジ・チャット投稿は Context から取得（Provider 配下）
+  const { candidates, postChatMessage } = useSaborou();
+
+  const handleChatSend = useCallback(
+    (text: string) => {
+      postChatMessage(text);
+      // どのタブで打っても、会話が見える余白タブへ自動で移動する
+      onTabChange("slack");
+    },
+    [postChatMessage, onTabChange],
+  );
+
   return (
     <>
+      {/* タブバーは上部 */}
+      <TabBar
+        active={activeTab}
+        onChange={onTabChange}
+        inboxCount={candidates.length}
+      />
+
       <div className="flex-1 overflow-y-auto min-h-0">
         {activeTab === "home" && <HomeTab />}
         {activeTab === "inbox" && <InboxTab />}
         {activeTab === "working" && <WorkingTab />}
         {activeTab === "slack" && <SlackTab />}
       </div>
-      <TabBarWithBadge active={activeTab} onChange={onTabChange} />
+
+      {/* 全タブ共通の固定チャットバー（下部） */}
+      <GlobalChatBar onSend={handleChatSend} />
     </>
   );
 }
 
-/** Context の候補件数を TabBar の inbox バッジに反映 */
-function TabBarWithBadge({
-  active,
-  onChange,
-}: {
-  active: TabId;
-  onChange: (id: TabId) => void;
-}) {
-  const { candidates } = useSaborou();
+/** 全タブ共通・下部固定のチャット入力欄 */
+function GlobalChatBar({ onSend }: { onSend: (text: string) => void }) {
+  const [text, setText] = useState("");
+
+  const submit = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    onSend(trimmed);
+    setText("");
+  };
+
   return (
-    <TabBar
-      active={active}
-      onChange={onChange}
-      inboxCount={candidates.length}
-    />
+    <div
+      className="flex items-center gap-2 px-3 py-2.5 border-t-2 border-[#2b1e16] bg-white"
+      data-testid="global-chat-bar"
+    >
+      <input
+        type="text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        placeholder="サボろうについて質問..."
+        data-testid="chat-input"
+        className="flex-1 px-3 py-2 rounded-full text-sm border-2 border-[#2b1e16] outline-none focus:border-[#f97316] bg-white text-[#1f2937] placeholder:text-[#9ca3af]"
+      />
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!text.trim()}
+        aria-label="送信"
+        data-testid="chat-send"
+        className={cn(
+          "flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-full text-white border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] transition-all",
+          text.trim()
+            ? "bg-[#f97316] hover:bg-[#ea580c] active:translate-y-[2px] active:shadow-none"
+            : "bg-[#e5e7eb] border-[#d1d5db] shadow-none cursor-not-allowed",
+        )}
+      >
+        <ArrowRight size={16} />
+      </button>
+    </div>
   );
 }
 
