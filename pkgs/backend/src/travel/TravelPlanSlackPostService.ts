@@ -11,8 +11,12 @@ import {
   TravelPlanAndPostToSlackResponseSchema,
   type TravelPlanRequest,
 } from "./schemas.js";
-import { formatTravelPlanForSlack, previewSlackText } from "./slackMarkdown.js";
+import type {
+  PublishedTravelItinerary,
+  TravelItineraryPublisher,
+} from "./TravelItineraryPublisher.js";
 import type { TravelPlanningService } from "./TravelPlanningService.js";
+import { renderTravelItineraryHtml } from "./travelItineraryHtml.js";
 
 type SlackPostClient = {
   postMessage(input: {
@@ -26,12 +30,16 @@ export type TravelPlanSlackPostServiceOptions = {
   getToken?: (userId: string) => Promise<string>;
   getUserToken?: (userId: string) => Promise<string | null>;
   createSlackClient?: (token: string) => SlackPostClient;
+  itineraryPublisher?: Pick<TravelItineraryPublisher, "publishHtml">;
 };
 
 export class TravelPlanSlackPostService {
   private readonly getToken: (userId: string) => Promise<string>;
   private readonly getUserToken: (userId: string) => Promise<string | null>;
   private readonly createSlackClient: (token: string) => SlackPostClient;
+  private readonly itineraryPublisher:
+    | Pick<TravelItineraryPublisher, "publishHtml">
+    | undefined;
 
   constructor(
     private readonly travelPlanningService: Pick<TravelPlanningService, "plan">,
@@ -41,6 +49,7 @@ export class TravelPlanSlackPostService {
     this.getUserToken = options.getUserToken ?? getSlackUserToken;
     this.createSlackClient =
       options.createSlackClient ?? ((token) => new SlackClient(token));
+    this.itineraryPublisher = options.itineraryPublisher;
   }
 
   async planAndPostToSlack(input: {
@@ -65,7 +74,12 @@ export class TravelPlanSlackPostService {
       });
     }
 
-    const text = formatTravelPlanForSlack(planResponse);
+    const itinerary = await this.publishItinerary(planResponse);
+    const text = formatTravelPlanUrlForSlack({
+      destination: input.request.destination,
+      summary: planResponse.plan.summary,
+      itineraryUrl: itinerary.url,
+    });
     const userToken = await this.getUserToken(input.userId);
     const token = userToken ?? (await this.getToken(input.userId));
     const client = this.createSlackClient(token);
@@ -81,7 +95,7 @@ export class TravelPlanSlackPostService {
 
       return TravelPlanAndPostToSlackResponseSchema.parse({
         status: "posted",
-        message: "旅行プランをSlackに投稿しました。",
+        message: "旅行しおりURLをSlackに投稿しました。",
         missingFields: [],
         sourceMode: planResponse.sourceMode,
         plan: planResponse.plan,
@@ -94,6 +108,10 @@ export class TravelPlanSlackPostService {
             : {}),
           textPreview: previewSlackText(text),
         },
+        itinerary: {
+          url: itinerary.url,
+          objectKey: itinerary.objectKey,
+        },
       });
     } catch (error) {
       if (error instanceof SlackApiError) {
@@ -104,6 +122,30 @@ export class TravelPlanSlackPostService {
         );
       }
       throw error;
+    }
+  }
+
+  private async publishItinerary(
+    planResponse: Awaited<ReturnType<TravelPlanningService["plan"]>>,
+  ): Promise<PublishedTravelItinerary> {
+    if (!this.itineraryPublisher) {
+      throw new AppError(
+        502,
+        "TRAVEL_ITINERARY_PUBLISH_ERROR",
+        "旅行しおりURLの生成に失敗しました",
+      );
+    }
+
+    try {
+      return await this.itineraryPublisher.publishHtml(
+        renderTravelItineraryHtml(planResponse),
+      );
+    } catch {
+      throw new AppError(
+        502,
+        "TRAVEL_ITINERARY_PUBLISH_ERROR",
+        "旅行しおりURLの生成に失敗しました",
+      );
     }
   }
 }
@@ -118,4 +160,40 @@ function toTravelPlanRequest(
     ...travelRequest
   } = request;
   return travelRequest;
+}
+
+function formatTravelPlanUrlForSlack(input: {
+  destination?: string;
+  summary: string;
+  itineraryUrl: string;
+}): string {
+  const title = input.destination
+    ? `${escapeSlackText(input.destination)}の旅のしおり`
+    : "旅のしおり";
+  return [
+    `*${title}* を作成しました。`,
+    escapeSlackText(input.summary),
+    `<${sanitizeSlackLinkUrl(input.itineraryUrl)}|HTMLの旅のしおりを開く>`,
+  ].join("\n");
+}
+
+function previewSlackText(text: string): string {
+  const normalized = text.replace(/\s+/g, " ");
+  if (normalized.length <= 220) return normalized;
+  return `${normalized.slice(0, 200).trimEnd()} ...省略しました`;
+}
+
+function escapeSlackText(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function sanitizeSlackLinkUrl(url: string): string {
+  return url
+    .replace(/</g, "%3C")
+    .replace(/>/g, "%3E")
+    .replace(/\|/g, "%7C")
+    .replace(/\s/g, "%20");
 }

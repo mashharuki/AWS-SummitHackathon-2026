@@ -250,11 +250,12 @@ paths:
       x-saborou-mcp-tool: saborou_plan_trip_and_post_to_slack
       x-saborou-approval-required: true
       x-saborou-implementation-status: implemented
-      summary: Plan a trip and post it to Slack
+      summary: Publish a travel itinerary and post its URL to Slack
       description: >-
-        Create a travel plan, format it as Slack mrkdwn, and post it to the
-        approved channel. The adapter requires explicit approval because the
-        tool posts externally to Slack.
+        Create a travel plan, render it as a styled HTML itinerary, publish it
+        behind CloudFront, and post the public URL to the approved Slack channel.
+        The adapter requires explicit approval because the tool publishes a URL
+        and posts externally to Slack.
       requestBody:
         $ref: "#/components/requestBodies/McpPlanTripAndPostToSlackRequest"
       responses:

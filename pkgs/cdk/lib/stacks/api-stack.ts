@@ -223,6 +223,11 @@ export class SaborouApiStack extends cdk.Stack {
           props.data.secrets.travelpayoutsCredentialsSecret.secretArn,
         // --- Marp Slides S3 bucket ---
         MARP_SLIDES_BUCKET_NAME: props.data.buckets.marpSlides.bucketName,
+        // --- Travel itinerary HTML publishing ---
+        TRAVEL_ITINERARY_BUCKET_NAME:
+          props.data.buckets.travelItineraries.bucketName,
+        TRAVEL_ITINERARY_PUBLIC_BASE_URL:
+          props.data.travelItineraryPublicBaseUrl,
       },
     });
 
@@ -288,6 +293,23 @@ export class SaborouApiStack extends cdk.Stack {
         effect: iam.Effect.ALLOW,
         actions: ["s3:PutObject", "s3:GetObject"],
         resources: [`${props.data.buckets.marpSlides.bucketArn}/*`],
+      }),
+    );
+
+    // --- Travel Itineraries S3: PutObject only under generated prefix ---
+    // Keep this in a separate inline policy so the large default Lambda policy
+    // does not drop later statements when it approaches the IAM size limit.
+    honoFn.role?.attachInlinePolicy(
+      new iam.Policy(this, "TravelItineraryPutPolicy", {
+        statements: [
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ["s3:PutObject"],
+            resources: [
+              `${props.data.buckets.travelItineraries.bucketArn}/travel-itineraries/*`,
+            ],
+          }),
+        ],
       }),
     );
 

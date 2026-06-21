@@ -358,7 +358,7 @@ describe("POST /api/mcp/tools/:toolName", () => {
         captured = { path, init };
         return Response.json({
           status: "posted",
-          message: "旅行プランをSlackに投稿しました。",
+          message: "旅行しおりURLをSlackに投稿しました。",
           missingFields: [],
           sourceMode: "fixture",
           plan: {

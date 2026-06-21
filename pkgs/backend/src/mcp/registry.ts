@@ -180,7 +180,7 @@ export const MCP_TOOL_REGISTRY = [
     name: "saborou_plan_trip_and_post_to_slack",
     effect: "side_effect",
     description:
-      "旅行条件から旅行プランを作成し、Slack向けMarkdownに整形して指定チャンネルへ投稿します。「旅行プランを作ってSlackに投稿して」「この旅程をチャンネルに送って」など、投稿まで明示されたときにのみ使用してください。destination、departureDate、returnDate、channelIdが必要です。投稿は取り消し不可のため、必ず内容と投稿先をユーザーに確認し、approved=trueで呼び出してください。",
+      "旅行条件から旅行プランを作成し、スタイル付きHTMLの旅のしおりとしてS3/CloudFrontに公開し、そのURLを指定Slackチャンネルへ投稿します。「旅行プランを作ってSlackに投稿して」「この旅程をしおりURLでチャンネルに送って」など、投稿まで明示されたときにのみ使用してください。destination、departureDate、returnDate、channelIdが必要です。公開URL作成と投稿は取り消し不可のため、必ず内容と投稿先をユーザーに確認し、approved=trueで呼び出してください。",
     http: { method: "POST", path: "/api/travel/plan-and-post-to-slack" },
     schema: {
       input: "saborou_plan_trip_and_post_to_slack",
@@ -188,7 +188,8 @@ export const MCP_TOOL_REGISTRY = [
     },
     approval: {
       required: true,
-      reason: "Posts a generated travel plan to Slack externally.",
+      reason:
+        "Publishes a generated travel itinerary URL and posts it externally to Slack.",
     },
     outputMode: "safe_action_result",
     implementationStatus: "implemented",

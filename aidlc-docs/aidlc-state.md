@@ -5,8 +5,41 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: `mcp-agentcore-connection-fix` Code Generation Part 2 実装・ローカル検証完了（2026-06-21 JST）。Endpoint documentation、CDK output semantics test、AgentCore/direct MCP verification scripts、backend JSON-RPC tests、operations docs、code summaryを更新。backend 466 tests / CDK 93 tests / backend typecheck / backend build / CDK build 全パス。残: 実Cognito token付きAgentCore Gateway live verification。
-- **ドキュメントバージョン**: v4.4.0（2026-06-20 旅行プランSlack投稿機能 実装完了）
+- **現在のステージ**: `travel-itinerary-html-s3-slack` Code Generation 実装・ローカル検証完了（2026-06-21 JST）。旅行プランSlack投稿を直接Markdown本文投稿から、HTML旅のしおりS3格納 + CloudFront公開URL Slack投稿へ変更。backend 471 tests / CDK 97 tests / backend typecheck / backend build / CDK build 全パス。残: デプロイ後のCloudFront URL表示と実Slack投稿E2E確認。
+- **ドキュメントバージョン**: v4.5.0（2026-06-21 旅行プランHTMLしおり公開URL Slack投稿機能 実装完了）
+
+---
+
+## 旅行プランHTMLしおり公開URL＋Slack投稿機能（2026-06-21）
+
+### 実装状態
+- [x] HTML itinerary renderer — 旅行プランをスタイル付きHTMLの旅のしおりへ整形。HTML escape、HTTP(S)リンクsanitize、credential-like marker redactを実施。
+- [x] S3 publisher — `travel-itineraries/YYYY/MM/DD/<uuid>.html` に `text/html; charset=utf-8` としてアップロードし、CloudFront公開URLを返す。
+- [x] Slack posting service — 旅行プラン本文ではなく、HTMLしおりURLをSlackへ投稿。User Token優先、Bot Token fallback、`threadTs`対応を維持。
+- [x] Clarification safety — 入力不足時はS3アップロードもSlack投稿も行わない。
+- [x] Infrastructure — 非公開S3 bucket、CloudFront OAC、CloudFront access logging、response security headers、90日lifecycle、Lambda env、`s3:PutObject` prefix最小権限を追加。
+- [x] MCP/OpenAPI metadata — `saborou_plan_trip_and_post_to_slack` の説明をHTMLしおり公開URL投稿へ更新。
+- [x] Tests — backend 471 tests、CDK 97 tests、backend typecheck、backend build、CDK build 全パス。
+
+### 成果物
+- `pkgs/backend/src/travel/travelItineraryHtml.ts`
+- `pkgs/backend/src/travel/TravelItineraryPublisher.ts`
+- `pkgs/backend/src/travel/TravelPlanSlackPostService.ts`
+- `pkgs/backend/src/travel/schemas.ts`
+- `pkgs/backend/src/config/env.ts`
+- `pkgs/backend/src/index.ts`
+- `pkgs/backend/src/mcp/registry.ts`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/cdk/lib/stacks/data-stack.ts`
+- `pkgs/cdk/lib/stacks/api-stack.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/inception/plans/travel-itinerary-html-s3-slack-plan.md`
+- `aidlc-docs/construction/travel-itinerary-html-s3-slack/code/code-generation-summary.md`
+
+### 残作業
+- [ ] CDK deploy後にCloudFront URLでHTMLしおりが表示されることを確認
+- [ ] 実Slackチャンネルで `saborou_plan_trip_and_post_to_slack` approval付き実行を確認
+- [ ] CloudFront/S3ログが想定通り出力されることを確認
 
 ---
 

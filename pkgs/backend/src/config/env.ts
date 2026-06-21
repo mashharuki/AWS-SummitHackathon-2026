@@ -82,4 +82,11 @@ export const env = {
   get MARP_SLIDES_BUCKET_NAME(): string | undefined {
     return optionalEnv("MARP_SLIDES_BUCKET_NAME");
   },
+  // --- Travel itinerary HTML publishing ---
+  get TRAVEL_ITINERARY_BUCKET_NAME(): string | undefined {
+    return optionalEnv("TRAVEL_ITINERARY_BUCKET_NAME");
+  },
+  get TRAVEL_ITINERARY_PUBLIC_BASE_URL(): string | undefined {
+    return optionalEnv("TRAVEL_ITINERARY_PUBLIC_BASE_URL");
+  },
 } as const;

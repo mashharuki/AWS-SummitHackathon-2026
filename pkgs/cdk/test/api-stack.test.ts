@@ -99,6 +99,37 @@ describe("SaborouApiStack", () => {
     });
   });
 
+  test("Lambda function has travel itinerary publishing environment variables", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          TRAVEL_ITINERARY_BUCKET_NAME: Match.anyValue(),
+          TRAVEL_ITINERARY_PUBLIC_BASE_URL: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
+  test("HonoFn can only put generated travel itinerary objects", () => {
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const allStatements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((p) => p.Properties.PolicyDocument.Statement ?? []);
+    const itineraryStatement = allStatements.find((stmt) => {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      return JSON.stringify(s.Resource).includes("travel-itineraries/*");
+    }) as { Action: unknown; Resource: unknown } | undefined;
+
+    expect(itineraryStatement).toBeDefined();
+    expect(itineraryStatement?.Action).toEqual("s3:PutObject");
+    expect(JSON.stringify(itineraryStatement?.Resource)).toContain(
+      "/travel-itineraries/*",
+    );
+  });
+
   test("HonoFn can read only the Travelpayouts credentials secret resource", () => {
     const policies = template.findResources("AWS::IAM::Policy");
     type PolicyDoc = {

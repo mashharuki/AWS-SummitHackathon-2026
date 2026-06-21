@@ -1,4 +1,6 @@
 import * as cdk from "aws-cdk-lib";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
@@ -27,7 +29,9 @@ export interface DataStackExports {
   };
   readonly buckets: {
     readonly marpSlides: s3.Bucket;
+    readonly travelItineraries: s3.Bucket;
   };
+  readonly travelItineraryPublicBaseUrl: string;
 }
 
 /**
@@ -161,6 +165,97 @@ export class SaborouDataStack extends cdk.Stack {
         : cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: !isProd,
     });
+
+    // --- S3 + CloudFront: Travel Itinerary HTML ---
+    const travelItinerariesBucket = new s3.Bucket(
+      this,
+      "TravelItinerariesBucket",
+      {
+        bucketName: `saborou-travel-itineraries-${this.account}-${environment}`,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        enforceSSL: true,
+        versioned: false,
+        lifecycleRules: [{ expiration: cdk.Duration.days(90) }],
+        removalPolicy: isProd
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY,
+        autoDeleteObjects: !isProd,
+      },
+    );
+
+    const travelItineraryAccessLogsBucket = new s3.Bucket(
+      this,
+      "TravelItineraryAccessLogsBucket",
+      {
+        bucketName: `saborou-travel-itinerary-logs-${this.account}-${environment}`,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        enforceSSL: true,
+        objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_PREFERRED,
+        lifecycleRules: [{ expiration: cdk.Duration.days(90) }],
+        removalPolicy: isProd
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY,
+        autoDeleteObjects: !isProd,
+      },
+    );
+
+    const itineraryOrigin = origins.S3BucketOrigin.withOriginAccessControl(
+      travelItinerariesBucket,
+    );
+    const itineraryResponseHeaders = new cloudfront.ResponseHeadersPolicy(
+      this,
+      "TravelItineraryResponseHeadersPolicy",
+      {
+        responseHeadersPolicyName: `saborou-travel-itinerary-security-${environment}`,
+        securityHeadersBehavior: {
+          contentSecurityPolicy: {
+            override: true,
+            contentSecurityPolicy:
+              "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+          },
+          strictTransportSecurity: {
+            override: true,
+            accessControlMaxAge: cdk.Duration.days(365),
+            includeSubdomains: true,
+          },
+          contentTypeOptions: { override: true },
+          frameOptions: {
+            override: true,
+            frameOption: cloudfront.HeadersFrameOption.DENY,
+          },
+          referrerPolicy: {
+            override: true,
+            referrerPolicy:
+              cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+          },
+        },
+      },
+    );
+
+    const travelItineraryDistribution = new cloudfront.Distribution(
+      this,
+      "TravelItineraryDistribution",
+      {
+        defaultBehavior: {
+          origin: itineraryOrigin,
+          viewerProtocolPolicy:
+            cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          responseHeadersPolicy: itineraryResponseHeaders,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          compress: true,
+        },
+        enableLogging: true,
+        logBucket: travelItineraryAccessLogsBucket,
+        logFilePrefix: "cloudfront/",
+        priceClass: cloudfront.PriceClass.PRICE_CLASS_200,
+        comment: `Saborou Travel Itinerary Distribution (${environment})`,
+      },
+    );
+
+    const travelItineraryPublicBaseUrl = `https://${travelItineraryDistribution.distributionDomainName}`;
 
     // --- Secrets Manager ---
     // 常に固定名を使用。dev では cdk destroy 時に即時削除カスタムリソースが動作する（30日回復期間を回避）
@@ -324,12 +419,48 @@ export class SaborouDataStack extends cdk.Stack {
       description: "DynamoDB Proposals Table Name",
     });
 
+    new cdk.CfnOutput(this, "TravelItinerariesBucketName", {
+      value: travelItinerariesBucket.bucketName,
+      description: "S3 bucket name for generated travel itinerary HTML",
+    });
+
+    new cdk.CfnOutput(this, "TravelItineraryPublicBaseUrl", {
+      value: travelItineraryPublicBaseUrl,
+      description:
+        "CloudFront public base URL for generated travel itinerary HTML",
+      exportName: `SaborouTravelItineraryPublicBaseUrl-${environment}`,
+    });
+
     // --- cdk-nag 抑制 ---
     NagSuppressions.addResourceSuppressions(marpSlidesBucket, [
       {
         id: "AwsSolutions-S1",
         reason:
           "Server access logs disabled for hackathon cost scope; slides bucket is internal only",
+      },
+    ]);
+
+    NagSuppressions.addResourceSuppressions(travelItinerariesBucket, [
+      {
+        id: "AwsSolutions-S1",
+        reason:
+          "CloudFront access logs are enabled; S3 server access logs are not required for generated itinerary objects",
+      },
+    ]);
+
+    NagSuppressions.addResourceSuppressions(travelItineraryAccessLogsBucket, [
+      {
+        id: "AwsSolutions-S1",
+        reason:
+          "This bucket stores CloudFront access logs and does not require recursive S3 server access logging",
+      },
+    ]);
+
+    NagSuppressions.addResourceSuppressions(travelItineraryDistribution, [
+      {
+        id: "AwsSolutions-CFR4",
+        reason:
+          "The itinerary distribution intentionally uses the default CloudFront viewer certificate for a hackathon-generated public URL. CloudFront default certificates are reported by cdk-nag as TLSv1 policy even though no custom ACM certificate is configured; a custom domain and ACM certificate can be added later for production TLS policy enforcement.",
       },
     ]);
 
@@ -384,7 +515,9 @@ export class SaborouDataStack extends cdk.Stack {
       },
       buckets: {
         marpSlides: marpSlidesBucket,
+        travelItineraries: travelItinerariesBucket,
       },
+      travelItineraryPublicBaseUrl,
     };
   }
 }

@@ -76,6 +76,7 @@ import { SlackDelegationService } from "./services/SlackDelegationService.js";
 import { S3Client } from "@aws-sdk/client-s3";
 import { MarpSlideService } from "./marp/MarpSlideService.js";
 import { MarpSlideSlackPostService } from "./marp/MarpSlideSlackPostService.js";
+import { TravelItineraryPublisher } from "./travel/TravelItineraryPublisher.js";
 import { TravelPlanSlackPostService } from "./travel/TravelPlanSlackPostService.js";
 import { TravelPlanningService } from "./travel/TravelPlanningService.js";
 import { TravelpayoutsClient } from "./travel/TravelpayoutsClient.js";
@@ -146,13 +147,21 @@ const travelPlanningService = new TravelPlanningService({
   travelpayoutsClient,
   bedrockClient,
 });
-const travelPlanSlackPostService = new TravelPlanSlackPostService(
-  travelPlanningService,
-);
-
 const s3Client = new S3Client({
   region: process.env.AWS_REGION ?? "ap-northeast-1",
 });
+const travelItineraryPublisher =
+  env.TRAVEL_ITINERARY_BUCKET_NAME && env.TRAVEL_ITINERARY_PUBLIC_BASE_URL
+    ? new TravelItineraryPublisher({
+        s3BucketName: env.TRAVEL_ITINERARY_BUCKET_NAME,
+        publicBaseUrl: env.TRAVEL_ITINERARY_PUBLIC_BASE_URL,
+        s3Client,
+      })
+    : undefined;
+const travelPlanSlackPostService = new TravelPlanSlackPostService(
+  travelPlanningService,
+  { itineraryPublisher: travelItineraryPublisher },
+);
 const marpSlideService = new MarpSlideService({
   bedrockClient,
   s3BucketName: env.MARP_SLIDES_BUCKET_NAME,

@@ -466,7 +466,8 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
             type: "string",
             minLength: 1,
             maxLength: 80,
-            description: "投稿先のSlackチャンネルID（必須）。例: C01234567。",
+            description:
+              "投稿先のSlackチャンネルID（必須）。例: C01234567。HTMLの旅のしおりURLをここに投稿する。",
           },
           threadTs: {
             type: "string",
@@ -476,7 +477,7 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
           approved: {
             type: "boolean",
             description:
-              "Slack投稿の明示承認。必ずユーザー確認後にtrueを指定してください。",
+              "S3/CloudFrontへのHTML公開およびSlack投稿の明示承認。必ずユーザー確認後にtrueを指定してください。",
           },
         },
         required: ["channelId", "approved"],

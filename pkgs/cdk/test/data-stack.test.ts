@@ -96,6 +96,81 @@ describe("SaborouDataStack", () => {
     });
   });
 
+  test("Travel itinerary bucket is private, encrypted, and HTTPS-only", () => {
+    template.hasResourceProperties("AWS::S3::Bucket", {
+      BucketEncryption: Match.objectLike({
+        ServerSideEncryptionConfiguration: Match.arrayWith([
+          Match.objectLike({
+            ServerSideEncryptionByDefault: { SSEAlgorithm: "AES256" },
+          }),
+        ]),
+      }),
+      PublicAccessBlockConfiguration: {
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      },
+      LifecycleConfiguration: Match.objectLike({
+        Rules: Match.arrayWith([
+          Match.objectLike({
+            Status: "Enabled",
+            ExpirationInDays: 90,
+          }),
+        ]),
+      }),
+    });
+    const buckets = template.findResources("AWS::S3::Bucket");
+    const bucketNames = JSON.stringify(
+      Object.values(buckets).map((bucket) => bucket.Properties?.BucketName),
+    );
+    expect(bucketNames).toContain("saborou-travel-itineraries");
+    template.hasResourceProperties("AWS::S3::BucketPolicy", {
+      PolicyDocument: Match.objectLike({
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Effect: "Deny",
+            Action: "s3:*",
+            Condition: { Bool: { "aws:SecureTransport": "false" } },
+          }),
+        ]),
+      }),
+    });
+  });
+
+  test("Travel itinerary CloudFront distribution uses OAC, logging, and security headers", () => {
+    template.resourceCountIs("AWS::CloudFront::OriginAccessControl", 1);
+    template.hasResourceProperties("AWS::CloudFront::Distribution", {
+      DistributionConfig: Match.objectLike({
+        Enabled: true,
+        Logging: Match.objectLike({
+          Prefix: "cloudfront/",
+        }),
+        DefaultCacheBehavior: Match.objectLike({
+          ViewerProtocolPolicy: "redirect-to-https",
+          AllowedMethods: ["GET", "HEAD"],
+        }),
+      }),
+    });
+    template.hasResourceProperties("AWS::CloudFront::ResponseHeadersPolicy", {
+      ResponseHeadersPolicyConfig: Match.objectLike({
+        SecurityHeadersConfig: Match.objectLike({
+          ContentSecurityPolicy: Match.objectLike({
+            ContentSecurityPolicy: Match.stringLikeRegexp("default-src 'none'"),
+          }),
+          StrictTransportSecurity: Match.objectLike({
+            AccessControlMaxAgeSec: 31536000,
+          }),
+          ContentTypeOptions: Match.anyValue(),
+          FrameOptions: Match.objectLike({ FrameOption: "DENY" }),
+          ReferrerPolicy: Match.objectLike({
+            ReferrerPolicy: "strict-origin-when-cross-origin",
+          }),
+        }),
+      }),
+    });
+  });
+
   test("All tables have DESTROY removal policy in non-prod (test) environment", () => {
     // context: environment = "test" (非 prod) なので DESTROY が正しい
     const tables = template.findResources("AWS::DynamoDB::Table");

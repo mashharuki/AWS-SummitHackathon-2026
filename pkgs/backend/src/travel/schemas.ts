@@ -159,6 +159,13 @@ export const TravelPlanAndPostToSlackResponseSchema = z
       })
       .strict()
       .optional(),
+    itinerary: z
+      .object({
+        url: z.string().url().max(1000),
+        objectKey: z.string().min(1).max(500).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

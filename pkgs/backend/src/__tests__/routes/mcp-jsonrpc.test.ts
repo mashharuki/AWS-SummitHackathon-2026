@@ -225,7 +225,7 @@ describe("POST /api/mcp JSON-RPC", () => {
           captured = { path, init };
           return Response.json({
             status: "posted",
-            message: "旅行プランをSlackに投稿しました。",
+            message: "旅行しおりURLをSlackに投稿しました。",
             missingFields: [],
             sourceMode: "fixture",
             plan: {
@@ -290,7 +290,7 @@ describe("POST /api/mcp JSON-RPC", () => {
     );
     const body = await res.json();
     expect(body.result.content[0].text).toContain(
-      "旅行プランをSlackに投稿しました。",
+      "旅行しおりユーアールエルをSlackに投稿しました。",
     );
     expect(body.result.content[0].text).not.toContain("valid-token");
   });

@@ -7,16 +7,26 @@ import type {
 import { TravelPlanSlackPostService } from "../../travel/TravelPlanSlackPostService.js";
 
 describe("TravelPlanSlackPostService", () => {
-  it("posts formatted Slack markdown with the user token when available", async () => {
+  it("publishes an HTML itinerary and posts its URL with the user token when available", async () => {
     const captured: Array<{
       token: string;
       input: { channel: string; text: string; thread_ts?: string };
     }> = [];
+    const publishedHtml: string[] = [];
     const service = new TravelPlanSlackPostService(
       { plan: async () => plannedResponse },
       {
         getUserToken: async () => "xoxp-user",
         getToken: async () => "xoxb-bot",
+        itineraryPublisher: {
+          publishHtml: async (html) => {
+            publishedHtml.push(html);
+            return {
+              url: "https://travel.example.com/travel-itineraries/itinerary.html",
+              objectKey: "travel-itineraries/itinerary.html",
+            };
+          },
+        },
         createSlackClient: (token) => ({
           postMessage: async (input) => {
             captured.push({ token, input });
@@ -53,20 +63,26 @@ describe("TravelPlanSlackPostService", () => {
         ts: "1718600000.123456",
         threadTs: "1718500000.111111",
       },
+      itinerary: {
+        url: "https://travel.example.com/travel-itineraries/itinerary.html",
+        objectKey: "travel-itineraries/itinerary.html",
+      },
     });
+    expect(publishedHtml).toHaveLength(1);
+    expect(publishedHtml[0]).toContain("<!DOCTYPE html>");
+    expect(publishedHtml[0]).toContain("Paris &amp; Lyon");
+    expect(publishedHtml[0]).toContain("Central &lt;Hotel&gt;");
+    expect(publishedHtml[0]).not.toContain("api-token-secret");
     expect(captured).toHaveLength(1);
     expect(captured[0]?.token).toBe("xoxp-user");
     expect(captured[0]?.input).toMatchObject({
       channel: "C12345",
       thread_ts: "1718500000.111111",
     });
-    expect(captured[0]?.input.text).toContain("*SABOROU旅行プラン*");
-    expect(captured[0]?.input.text).toContain("Paris &amp; Lyon");
-    expect(captured[0]?.input.text).toContain("Central &lt;Hotel&gt;");
     expect(captured[0]?.input.text).toContain(
-      "<https://example.com/book?x=1&y=2|予約リンク>",
+      "<https://travel.example.com/travel-itineraries/itinerary.html|HTMLの旅のしおりを開く>",
     );
-    expect(captured[0]?.input.text.length).toBeLessThanOrEqual(4000);
+    expect(captured[0]?.input.text).not.toContain("Central &lt;Hotel&gt;");
     expect(captured[0]?.input.text).not.toContain("api-token-secret");
     expect(captured[0]?.input.text).not.toContain("marker-secret");
     expect(captured[0]?.input.text).not.toContain("trs-secret");
@@ -80,6 +96,12 @@ describe("TravelPlanSlackPostService", () => {
       {
         getUserToken: async () => null,
         getToken: async () => "xoxb-bot",
+        itineraryPublisher: {
+          publishHtml: async () => ({
+            url: "https://travel.example.com/itinerary.html",
+            objectKey: "travel-itineraries/itinerary.html",
+          }),
+        },
         createSlackClient: (token) => ({
           postMessage: async () => {
             tokenUsed = token;
@@ -103,6 +125,12 @@ describe("TravelPlanSlackPostService", () => {
       {
         getUserToken: async () => null,
         getToken: async () => "xoxb-bot",
+        itineraryPublisher: {
+          publishHtml: async () => ({
+            url: "https://travel.example.com/itinerary.html",
+            objectKey: "travel-itineraries/itinerary.html",
+          }),
+        },
         createSlackClient: () => ({
           postMessage: async () => {
             throw new SlackApiError("channel_not_found", "chat.postMessage");
@@ -119,6 +147,73 @@ describe("TravelPlanSlackPostService", () => {
     ).rejects.toMatchObject({
       statusCode: 502,
       code: "SLACK_API_ERROR",
+    });
+  });
+
+  it("does not publish or post when the plan needs clarification", async () => {
+    let publishCalled = false;
+    let postCalled = false;
+    const service = new TravelPlanSlackPostService(
+      {
+        plan: async () => ({
+          ...plannedResponse,
+          status: "needs_clarification",
+          missingFields: ["departureDate"],
+        }),
+      },
+      {
+        getUserToken: async () => null,
+        getToken: async () => "xoxb-bot",
+        itineraryPublisher: {
+          publishHtml: async () => {
+            publishCalled = true;
+            return {
+              url: "https://travel.example.com/itinerary.html",
+              objectKey: "travel-itineraries/itinerary.html",
+            };
+          },
+        },
+        createSlackClient: () => ({
+          postMessage: async () => {
+            postCalled = true;
+            return { ts: "1718600000.123456" };
+          },
+        }),
+      },
+    );
+
+    const result = await service.planAndPostToSlack({
+      userId: "user-123",
+      request: approvedRequest(),
+    });
+
+    expect(result.status).toBe("needs_clarification");
+    expect(publishCalled).toBe(false);
+    expect(postCalled).toBe(false);
+  });
+
+  it("maps itinerary publishing failures to a safe 502 AppError", async () => {
+    const service = new TravelPlanSlackPostService(
+      { plan: async () => plannedResponse },
+      {
+        getUserToken: async () => null,
+        getToken: async () => "xoxb-bot",
+        itineraryPublisher: {
+          publishHtml: async () => {
+            throw new Error("s3 failed with secret");
+          },
+        },
+      },
+    );
+
+    await expect(
+      service.planAndPostToSlack({
+        userId: "user-123",
+        request: approvedRequest(),
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 502,
+      code: "TRAVEL_ITINERARY_PUBLISH_ERROR",
     });
   });
 });
