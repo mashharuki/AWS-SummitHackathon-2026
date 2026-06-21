@@ -38,6 +38,11 @@ export interface PendingTaskResponse {
   task: NewSlackMessagePayload | null;
 }
 
+export interface SendSlackReplyResponse {
+  ok: boolean;
+  error?: string;
+}
+
 export interface NotificationSettings {
   enabled: boolean;
   taskDetected: boolean;
