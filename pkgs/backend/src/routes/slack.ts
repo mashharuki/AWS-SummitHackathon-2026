@@ -58,12 +58,12 @@ const NotifyTaskSchema = z.object({
  * 受け取った文面をそのまま Slack へ投稿する（送信は不可逆なので承認後のみ呼ぶ）。
  */
 const SlackReplySchema = z.object({
-  /** 返信が紐づくタスク ID（任意。トレーサビリティ用） */
+  /** 返信が紐づくタスク ID（任意。channelId の自動解決にも使用） */
   taskId: z.string().min(1).optional(),
   /** ユーザー承認済みの返信文（このまま Slack に投稿される） */
   replyText: z.string().min(1).max(4000),
-  /** 投稿先の Slack チャンネル / DM の ID */
-  channelId: z.string().min(1),
+  /** 投稿先の Slack チャンネル / DM の ID（省略時はタスクの slackChannelId を使用） */
+  channelId: z.string().min(1).optional(),
   /** スレッド返信にする場合の親メッセージ ts */
   threadTs: z.string().optional(),
 });
@@ -116,15 +116,30 @@ export function createSlackRoute(
   const slack = new Hono<AppEnv>();
   slack.use("*", authMiddleware);
 
-  /** GET /api/slack/channels — Bot が参加しているチャンネル一覧（UI のドロップダウン用） */
+  /** GET /api/slack/channels — Bot が参加しているチャンネル一覧（UI のドロップダウン用）
+   *  ?name=xxx を指定すると名前で部分一致フィルタ（大文字小文字・スペース無視）
+   */
   slack.get("/channels", async (c) => {
     const userId = c.get("userId");
+    const nameQuery = c.req.query("name");
     const botToken = await getSlackToken(userId);
     const client = new SlackClient(botToken);
     const channels = await client.conversationsList();
-    return c.json({
-      channels: channels.map((ch) => ({ id: ch.id, name: ch.name })),
-    });
+    const mapped = channels.map((ch) => ({ id: ch.id, name: ch.name ?? "" }));
+
+    if (nameQuery) {
+      const needle = nameQuery.toLowerCase().replace(/\s+/g, "");
+      const matched = mapped.filter((ch) =>
+        ch.name.toLowerCase().replace(/\s+/g, "").includes(needle),
+      );
+      return c.json({
+        channels: matched,
+        query: nameQuery,
+        total: matched.length,
+      });
+    }
+
+    return c.json({ channels: mapped });
   });
 
   /** POST /api/slack/sync-messages — Slack 履歴を遡及取得してタスク化キューへ投入 */
@@ -303,7 +318,26 @@ export function createSlackRoute(
     }),
     async (c) => {
       const userId = c.get("userId");
-      const { taskId, replyText, channelId, threadTs } = c.req.valid("json");
+      const { taskId, replyText, channelId: rawChannelId, threadTs } = c.req.valid("json");
+
+      // channelId が省略または無効な場合、taskId からタスクの slackChannelId を解決する
+      let channelId = rawChannelId;
+      if (!channelId || !/^[A-Z0-9][A-Z0-9_-]*$/.test(channelId)) {
+        if (taskId) {
+          const task = await taskRepository.findById(userId, taskId);
+          channelId = (task as { slackChannelId?: string } | null)?.slackChannelId;
+        }
+        if (!channelId) {
+          // taskId なし or タスクにも channelId がない場合は最近のタスクから探す
+          const tasks = await taskRepository.findApprovedByUserId(userId);
+          channelId = tasks
+            .map((t) => (t as { slackChannelId?: string }).slackChannelId)
+            .find(Boolean);
+        }
+        if (!channelId) {
+          return c.json({ error: { code: "MISSING_CHANNEL", message: "channelId が特定できませんでした。channelId を指定してください。" } }, 400);
+        }
+      }
 
       // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
       const userToken = await getSlackUserToken(userId);

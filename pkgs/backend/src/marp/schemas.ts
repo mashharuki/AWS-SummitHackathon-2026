@@ -46,7 +46,7 @@ export type MarpCreateSlidesResponse = z.infer<
 
 export const MarpCreateSlidesAndPostToSlackRequestSchema =
   MarpCreateSlidesRequestSchema.extend({
-    channelId: slackChannelSchema,
+    channelId: slackChannelSchema.optional(),
     threadTs: slackThreadTsSchema,
     approved: z.boolean().default(false),
   });

@@ -4,6 +4,7 @@ import {
   getSlackToken,
   getSlackUserToken,
 } from "@saboru/agent";
+import type { Task } from "@saboru/shared";
 import { AppError, ForbiddenError } from "../errors.js";
 import {
   type MarpCreateSlidesAndPostToSlackRequest,
@@ -21,16 +22,22 @@ type SlackPostClient = {
   }): Promise<{ ts?: string }>;
 };
 
+type TaskRepository = {
+  findApprovedByUserId(userId: string): Promise<Task[]>;
+};
+
 export type MarpSlideSlackPostServiceOptions = {
   getToken?: (userId: string) => Promise<string>;
   getUserToken?: (userId: string) => Promise<string | null>;
   createSlackClient?: (token: string) => SlackPostClient;
+  taskRepository?: TaskRepository;
 };
 
 export class MarpSlideSlackPostService {
   private readonly getToken: (userId: string) => Promise<string>;
   private readonly getUserToken: (userId: string) => Promise<string | null>;
   private readonly createSlackClient: (token: string) => SlackPostClient;
+  private readonly taskRepository?: TaskRepository;
 
   constructor(
     private readonly marpSlideService: Pick<MarpSlideService, "createSlides">,
@@ -40,6 +47,7 @@ export class MarpSlideSlackPostService {
     this.getUserToken = options.getUserToken ?? getSlackUserToken;
     this.createSlackClient =
       options.createSlackClient ?? ((token) => new SlackClient(token));
+    this.taskRepository = options.taskRepository;
   }
 
   async createSlidesAndPostToSlack(input: {
@@ -48,6 +56,18 @@ export class MarpSlideSlackPostService {
   }): Promise<MarpCreateSlidesAndPostToSlackResponse> {
     if (input.request.approved !== true) {
       throw new ForbiddenError("Marp slide Slack posting requires approval");
+    }
+
+    const resolvedChannelId = await this.resolveChannelId(
+      input.userId,
+      input.request.channelId,
+    );
+    if (!resolvedChannelId) {
+      throw new AppError(
+        400,
+        "MISSING_CHANNEL",
+        "channelId が指定されておらず、タスク履歴からも取得できませんでした。channelId を指定してください。",
+      );
     }
 
     const response = await this.marpSlideService.createSlides(
@@ -68,15 +88,17 @@ export class MarpSlideSlackPostService {
     const token = userToken ?? (await this.getToken(input.userId));
     const client = this.createSlackClient(token);
 
+    console.log(`[MarpSlideSlackPostService] posting to Slack channelId=${resolvedChannelId}`);
     try {
       const result = await client.postMessage({
-        channel: input.request.channelId,
+        channel: resolvedChannelId,
         text,
         ...(input.request.threadTs
           ? { thread_ts: input.request.threadTs }
           : {}),
       });
 
+      console.log(`[MarpSlideSlackPostService] Slack post success ts=${result.ts}`);
       return MarpCreateSlidesAndPostToSlackResponseSchema.parse({
         status: "posted",
         message: "MarpスライドをSlackに投稿しました。",
@@ -85,7 +107,7 @@ export class MarpSlideSlackPostService {
         slideCount: response.slideCount,
         slack: {
           posted: true,
-          channelId: input.request.channelId,
+          channelId: resolvedChannelId,
           ...(result.ts ? { ts: result.ts } : {}),
           ...(input.request.threadTs
             ? { threadTs: input.request.threadTs }
@@ -94,15 +116,30 @@ export class MarpSlideSlackPostService {
         },
       });
     } catch (error) {
+      console.log(`[MarpSlideSlackPostService] Slack post error channelId=${resolvedChannelId} error=${(error as Error)?.message}`);
       if (error instanceof SlackApiError) {
         throw new AppError(
           502,
           "SLACK_API_ERROR",
-          "Slackへのスライド投稿に失敗しました",
+          `Slackへのスライド投稿に失敗しました: ${(error as Error)?.message}`,
         );
       }
       throw error;
     }
+  }
+
+  private async resolveChannelId(
+    userId: string,
+    channelId: string | undefined,
+  ): Promise<string | undefined> {
+    if (channelId) return channelId;
+    if (!this.taskRepository) return undefined;
+    const tasks = await this.taskRepository.findApprovedByUserId(userId);
+    const taskWithChannel = tasks.find(
+      (t) => (t as { slackChannelId?: string }).slackChannelId,
+    );
+    return (taskWithChannel as { slackChannelId?: string } | undefined)
+      ?.slackChannelId;
   }
 }
 

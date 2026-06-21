@@ -105,10 +105,22 @@ export const MCP_TOOL_REGISTRY = [
     published: true,
   },
   {
+    name: "saborou_find_slack_channel",
+    effect: "read",
+    description:
+      "チャンネル名からSlackチャンネルIDを検索します。「オールサボローチャンネルのIDを教えて」「generalチャンネルはどこ？」「チャンネルIDがわからない」などと言われたときに使用してください。nameにチャンネル名の一部（日本語・英語どちらでも可）を指定すると、一致するチャンネルのID一覧を返します。見つかったIDを使って saborou_send_slack_reply や saborou_create_marp_slides_and_post_to_slack を呼び出してください。",
+    http: { method: "GET", path: "/api/slack/channels" },
+    schema: { input: "saborou_find_slack_channel", output: "safe_summary" },
+    approval: { required: false },
+    outputMode: "safe_summary",
+    implementationStatus: "adapter_validated",
+    published: true,
+  },
+  {
     name: "saborou_send_slack_reply",
     effect: "side_effect",
     description:
-      "ユーザーが明示的に承認したSlack返信を実際に送信します。「この返信を送って」「OKなので送信して」「Slackに投稿して」などと言われたときに使用してください。replyTextに送信するメッセージ本文（必須）、channelIdにSlackチャンネルID（必須、例:C01234567）を指定してください。threadTsを指定するとスレッドへの返信になります。送信後は取り消し不可のため、必ずユーザーに内容を読み上げて確認を取ってから呼び出してください。",
+      "ユーザーが明示的に承認したSlack返信を実際に送信します。「この返信を送って」「OKなので送信して」「Slackに投稿して」などと言われたときに使用してください。replyTextに送信するメッセージ本文（必須）を指定してください。channelIdはSlackチャンネルID（例:C01234567）で省略可能です—省略した場合やtaskIdを渡した場合はタスク履歴から自動取得します。threadTsを指定するとスレッドへの返信になります。送信後は取り消し不可のため、必ずユーザーに内容を読み上げて確認を取ってから呼び出してください。",
     http: { method: "POST", path: "/api/slack/reply" },
     schema: { input: "saborou_send_slack_reply", output: "safe_action_result" },
     approval: {
@@ -211,7 +223,7 @@ export const MCP_TOOL_REGISTRY = [
     name: "saborou_create_marp_slides_and_post_to_slack",
     effect: "side_effect",
     description:
-      "Marpスライドを自動生成してS3にアップロードし、プレビューURLを指定Slackチャンネルへ投稿します。「スライドを作ってSlackに送って」「プレゼン資料をチャンネルに投稿して」などと言われたときにのみ使用してください。topicとchannelIdが必須です。投稿は取り消し不可のため、必ずトピックと投稿先をユーザーに確認し、approved=trueで呼び出してください。",
+      "Marpスライドを自動生成してS3にアップロードし、プレビューURLを指定Slackチャンネルへ投稿します。「スライドを作ってSlackに送って」「プレゼン資料をチャンネルに投稿して」などと言われたときにのみ使用してください。topicは必須です。channelIdは省略可能で、省略した場合はタスク履歴から自動的に取得します（タスクが存在する場合）。投稿は取り消し不可のため、必ずトピックと投稿先をユーザーに確認し、approved=trueで呼び出してください。",
     http: {
       method: "POST",
       path: "/api/marp/create-slides-and-post-to-slack",

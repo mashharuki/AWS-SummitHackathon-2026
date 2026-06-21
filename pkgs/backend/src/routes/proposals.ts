@@ -26,6 +26,7 @@ import type { DynamoProposalRepository } from "../repositories/DynamoProposalRep
 import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
 import type { DynamoUserRepository } from "../repositories/DynamoUserRepository.js";
 import type { AppEnv } from "../types.js";
+import { normalizeForTts } from "../utils/ttsNormalizer.js";
 
 /**
  * POST /judge リクエストボディの Zod スキーマ（Chrome 拡張 agentClient の契約に準拠）
@@ -267,11 +268,7 @@ export function createProposalsRoute(
         contextHint: senderName ? `送信者: ${senderName}` : undefined,
       });
 
-      // ttsSummary: 返信文ドラフトを TTS 向けに短縮（先頭 100 字程度）
-      const ttsSummary =
-        draft.replyText.length > 100
-          ? `${draft.replyText.slice(0, 100)}…`
-          : draft.replyText;
+      const ttsSummary = truncateTtsSummary(normalizeForTts(draft.replyText));
 
       // TODO(v2): saboriScore（サボってよい度 0-1）を専用 judge ロジックで算出する。
       // 現状 draftReply は本値を返さないため、デモ表示用に固定値 0.5 を返す。
@@ -286,4 +283,8 @@ export function createProposalsRoute(
   );
 
   return proposals;
+}
+
+function truncateTtsSummary(text: string): string {
+  return text.length > 100 ? `${text.slice(0, 100)}…` : text;
 }

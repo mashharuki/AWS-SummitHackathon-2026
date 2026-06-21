@@ -5,8 +5,36 @@
 - **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
-- **現在のステージ**: `travel-itinerary-html-s3-slack` Code Generation 実装・ローカル検証完了（2026-06-21 JST）。旅行プランSlack投稿を直接Markdown本文投稿から、HTML旅のしおりS3格納 + CloudFront公開URL Slack投稿へ変更。backend 471 tests / CDK 97 tests / backend typecheck / backend build / CDK build 全パス。残: デプロイ後のCloudFront URL表示と実Slack投稿E2E確認。
-- **ドキュメントバージョン**: v4.5.0（2026-06-21 旅行プランHTMLしおり公開URL Slack投稿機能 実装完了）
+- **現在のステージ**: `tts-normalizer-enhancement` Code Generation / Build and Test 完了（2026-06-21 JST）。ElevenLabs向け発話テキスト正規化を略語変換から、JSONキー保護・技術用語・日付時刻・助数詞・URL/ID/Slack timestamp簡略化・proposal ttsSummary正規化へ拡張。backend 480 tests / backend typecheck / backend build 全パス。
+- **ドキュメントバージョン**: v4.6.0（2026-06-21 ttsNormalizer発話正規化強化 実装完了）
+
+---
+
+## ttsNormalizer 発話正規化強化（2026-06-21）
+
+### 実装状態
+- [x] Normalization pipeline — `normalizeForTts` を公開関数名のまま、JSON文字列と通常発話文の両方に対応。JSON入力ではキー名を保持し、文字列値だけを正規化。
+- [x] Technical terms — 既存 `AWS` / `API` / `URL` に加えて、`S3`、`CloudFront`、`CloudWatch`、`DynamoDB`、`Lambda`、`Bedrock`、`AgentCore`、`ElevenLabs`、`Slack`、`Chrome`、`TypeScript`、`GitHub`、`Hono`、`Vitest`、`Biome`、`AWS Summit Japan 2026`、`Summit`、`Hackathon`、`SABOROU` を追加。
+- [x] Dynamic fragments — `YYYY-MM-DD`、`HH:mm`、個/件/人/分/時間の確定助数詞、URL、ID-like値、Slack `threadTs`、優先度/ステータス表記を発話向けに整形。
+- [x] JSON key safety — `taskId`、`channelId`、`threadTs` などのキー名を変換しないテストを追加。
+- [x] Proposal integration — `pkgs/backend/src/routes/proposals.ts` の `ttsSummary` 生成で、返信文を正規化してから100文字前後へ丸める。
+- [x] Tests — backend 480 tests、backend typecheck、backend build 全パス。
+
+### 成果物
+- `pkgs/backend/src/utils/ttsNormalizer.ts`
+- `pkgs/backend/src/routes/proposals.ts`
+- `pkgs/backend/src/__tests__/utils/ttsNormalizer.test.ts`
+- `pkgs/backend/src/__tests__/routes/proposals.test.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+- `aidlc-docs/inception/requirements/tts-normalizer-enhancement-requirements.md`
+- `aidlc-docs/inception/plans/tts-normalizer-enhancement-execution-plan.md`
+- `aidlc-docs/construction/plans/tts-normalizer-enhancement-code-generation-plan.md`
+- `aidlc-docs/construction/tts-normalizer-enhancement/code/code-generation-summary.md`
+
+### Security Baseline
+- [x] 新規ストレージ、ネットワーク公開面、IAM権限、secret handlingなし。
+- [x] 既存API認証・認可境界を維持。
+- [x] URL/ID簡略化は発話用出力のみで、ログや永続化を追加しない。
 
 ---
 
