@@ -2,6 +2,7 @@ import type {
   ExtensionRuntimeMessage,
   NewSlackMessagePayload,
   PendingTaskResponse,
+  SendSlackReplyResponse,
   SidePanelReadyMessage,
 } from "@/messages";
 import { SIDE_PANEL_PORT_NAME } from "@/messages";
@@ -61,8 +62,67 @@ chrome.runtime.onMessage.addListener(
       void takePendingTask().then(sendResponse);
       return true;
     }
+
+    if (message.type === "SEND_SLACK_REPLY") {
+      void forwardSlackReply(message.text).then(
+        sendResponse as (response: SendSlackReplyResponse) => void,
+      );
+      return true;
+    }
   },
 );
+
+/**
+ * 開いている Slack タブを探し、その content script に返信送信を依頼する。
+ * Side Panel からの runtime.sendMessage ブロードキャストでは Slack タブが
+ * 無いと誰も応答せず undefined になり「タブが見つからない」誤判定になるため、
+ * background が明示的に tabs.query → tabs.sendMessage で確実に届ける。
+ */
+export async function forwardSlackReply(
+  text: string,
+): Promise<SendSlackReplyResponse> {
+  let tabs: chrome.tabs.Tab[];
+  try {
+    tabs = await chrome.tabs.query({ url: "https://app.slack.com/*" });
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "Slack タブの検索に失敗しました",
+    };
+  }
+
+  if (tabs.length === 0) {
+    return {
+      ok: false,
+      error:
+        "Slack タブが見つかりませんでした。隣のブラウザで app.slack.com を開いてください。",
+    };
+  }
+
+  // アクティブなタブを優先（複数 Slack タブが開いている場合）
+  const sorted = [...tabs].sort(
+    (a, b) => Number(b.active ?? false) - Number(a.active ?? false),
+  );
+
+  let lastError = "Slack タブへの送信に失敗しました";
+  for (const tab of sorted) {
+    if (tab.id === undefined) continue;
+    try {
+      const res = (await chrome.tabs.sendMessage(tab.id, {
+        type: "SEND_SLACK_REPLY",
+        text,
+      })) as SendSlackReplyResponse | undefined;
+      if (res?.ok) return { ok: true };
+      if (res?.error) lastError = res.error;
+    } catch (err) {
+      // content script 未注入のタブ等。次の候補へ。
+      lastError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  return { ok: false, error: lastError };
+}
 
 chrome.notifications.onClicked.addListener((notificationId) => {
   void focusSaborouWindow(notificationId);

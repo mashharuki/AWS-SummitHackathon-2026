@@ -15,22 +15,7 @@ vi.mock("@/auth/cognitoAuth", () => ({
   signOut: vi.fn().mockResolvedValue(undefined),
 }));
 
-// useConversationalAgent をモックして音声 SDK への依存を排除
-vi.mock("@/panel/hooks/useConversationalAgent", () => ({
-  useConversationalAgent: vi.fn().mockReturnValue({
-    status: "disconnected",
-    mode: null,
-    error: null,
-    lastAgentMessage: null,
-    lastUserTranscript: null,
-    isConnected: false,
-    connect: vi.fn().mockResolvedValue(undefined),
-    disconnect: vi.fn().mockResolvedValue(undefined),
-    pushContext: vi.fn(),
-  }),
-}));
-
-// agentClient をモックして API 呼び出しを制御する
+// agentClient をモックして API 呼び出しを制御する（4タブが初回ロードで叩く）
 vi.mock("@/panel/lib/agentClient", () => ({
   judgeTask: vi.fn().mockResolvedValue({
     replyDraft: "了解しました。後ほど確認します。",
@@ -39,313 +24,326 @@ vi.mock("@/panel/lib/agentClient", () => ({
   }),
   sendSlackReply: vi.fn().mockResolvedValue({ ok: true }),
   isMcpAvailable: vi.fn().mockReturnValue(false),
+  getCandidates: vi.fn().mockResolvedValue([]),
+  getTaskSummaries: vi.fn().mockResolvedValue([]),
+  getTask: vi.fn().mockResolvedValue(null),
+  getCalendarStatus: vi.fn().mockResolvedValue({ cached: false }),
+  getProposal: vi.fn().mockResolvedValue(null),
+  getSchedule: vi.fn().mockResolvedValue(null),
+  getProgressReport: vi.fn(),
+  fetchPlanSteps: vi.fn().mockResolvedValue([]),
+  approveCandidate: vi.fn(),
+  rejectCandidate: vi.fn().mockResolvedValue(undefined),
 }));
 
 import * as cognitoAuth from "@/auth/cognitoAuth";
-import * as conversationalAgentModule from "@/panel/hooks/useConversationalAgent";
 import * as agentClient from "@/panel/lib/agentClient";
 
-describe("App (Side Panel)", () => {
+const AUTH = "fake-id-token";
+
+describe("App (4タブ Side Panel)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // デフォルト: 未認証（getValidToken が null を返す）
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(null);
     vi.mocked(chrome.runtime.sendMessage).mockResolvedValue(undefined);
-    // デフォルト: disconnected agent
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
-      {
-        status: "disconnected",
-        mode: null,
-        error: null,
-        lastAgentMessage: null,
-        lastUserTranscript: null,
-        isConnected: false,
-        connect: vi.fn().mockResolvedValue(undefined),
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: vi.fn(),
-      },
-    );
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([]);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([]);
+    vi.mocked(agentClient.getCalendarStatus).mockResolvedValue({
+      cached: false,
+    });
+    vi.mocked(agentClient.getProposal).mockResolvedValue(null);
   });
+
+  // ---------------------------------------------------------------------------
+  // 認証・基本レンダリング
+  // ---------------------------------------------------------------------------
 
   it("ルート要素がレンダリングされる", async () => {
     render(<App />);
     expect(screen.getByTestId("app-root")).toBeInTheDocument();
-    // 認証チェック完了を待つ
     await waitFor(() =>
       expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
     );
   });
 
-  it("SABOROU ヘッダーが表示される", async () => {
+  it("Saborou ヘッダーが表示される", async () => {
     render(<App />);
-    expect(screen.getByText("SABOROU")).toBeInTheDocument();
-    expect(screen.getByText("サボりの最適解")).toBeInTheDocument();
+    expect(screen.getByText("Saborou")).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
     );
   });
 
-  it("未認証時: ログインボタンが表示される", async () => {
+  it("未認証時: ログインボタンと未認証メッセージが表示される", async () => {
     render(<App />);
     await waitFor(() =>
       expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
     );
     expect(screen.getByTestId("sign-in-button")).toBeInTheDocument();
     expect(screen.getByTestId("unauthenticated-message")).toBeInTheDocument();
+    // 未認証時はタブバーを出さない
+    expect(screen.queryByTestId("tab-bar")).not.toBeInTheDocument();
   });
 
-  it("認証済み時: ウェルカムメッセージとユーザー情報が表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
+  it("認証済み時: ユーザー情報とサインアウトボタンが表示される", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     render(<App />);
     await waitFor(() =>
-      expect(screen.getByTestId("welcome-message")).toBeInTheDocument(),
+      expect(screen.getByTestId("user-info")).toBeInTheDocument(),
     );
-    expect(screen.getByTestId("user-info")).toBeInTheDocument();
     expect(screen.getByTestId("sign-out-button")).toBeInTheDocument();
   });
 
-  it("承認ボタンが表示される（未認証時: 無効状態）", async () => {
+  // ---------------------------------------------------------------------------
+  // 4タブ表示・切替
+  // ---------------------------------------------------------------------------
+
+  it("認証済み時: 4タブのタブバーが表示される", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
-    const approvalButton = screen.getByTestId("approval-button");
-    expect(approvalButton).toBeInTheDocument();
-    expect(approvalButton).toBeDisabled();
+    expect(screen.getByTestId("tab-home")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-inbox")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-working")).toBeInTheDocument();
+    expect(screen.getByTestId("tab-slack")).toBeInTheDocument();
   });
 
-  it("返信案が無い状態で承認ボタンをクリックすると承認待ちになる（認証済み）", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
+  it("認証済み時: 初期タブはホーム", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("home-tab")).toBeInTheDocument(),
+    );
+  });
+
+  it("依頼整理タブに切り替えられる", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
-
-    const approvalButton = screen.getByTestId("approval-button");
-    // 返信案が無い状態では 1 クリックで承認待ち（startListening）になる
-    await user.click(approvalButton);
-    expect(approvalButton).toHaveTextContent("「いいよ」待機中...");
+    await user.click(screen.getByTestId("tab-inbox"));
+    expect(screen.getByTestId("inbox-tab")).toBeInTheDocument();
   });
 
-  it("チャット入力フィールドが表示される", async () => {
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("chat-input")).toBeInTheDocument();
-    // 未認証時はプレースホルダーが「ログインしてください」
-    expect(
-      screen.getByPlaceholderText("ログインしてください"),
-    ).toBeInTheDocument();
-  });
-
-  it("テキスト未入力時は送信ボタンが無効", async () => {
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-    const sendButton = screen.getByTestId("send-button");
-    expect(sendButton).toBeDisabled();
-  });
-
-  it("認証済み時: テキスト入力後は送信ボタンが有効になる", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
+  it("作業中タブに切り替えられる", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
-
-    const chatInput = screen.getByTestId("chat-input");
-    const sendButton = screen.getByTestId("send-button");
-
-    await user.type(chatInput, "テスト入力");
-    expect(sendButton).not.toBeDisabled();
+    await user.click(screen.getByTestId("tab-working"));
+    expect(screen.getByTestId("working-tab")).toBeInTheDocument();
   });
 
-  it("認証済み時: 送信後に入力フィールドがクリアされる", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
+  it("余白タブに切り替えられる", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
-
-    const chatInput = screen.getByTestId("chat-input");
-    await user.type(chatInput, "テスト入力");
-    await user.click(screen.getByTestId("send-button"));
-    expect(chatInput).toHaveValue("");
+    await user.click(screen.getByTestId("tab-slack"));
+    expect(screen.getByTestId("slack-tab")).toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------
-  // U-V2-03: 音声 UI テスト
+  // ホームタブ: 指標表示
   // ---------------------------------------------------------------------------
 
-  it("マイクボタンが表示される（未認証時は無効）", async () => {
+  it("ホームタブに余白・認知負荷スコアが表示される", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCalendarStatus).mockResolvedValue({
+      cached: true,
+      valid: true,
+      busyScore: 0.76,
+    });
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("saboru-minutes")).toBeInTheDocument(),
     );
-    const micButton = screen.getByTestId("mic-button");
-    expect(micButton).toBeInTheDocument();
-    expect(micButton).toBeDisabled();
+    expect(screen.getByTestId("cognitive-score")).toBeInTheDocument();
   });
 
-  it("認証済み時: マイクボタンが有効になる", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
+  // ---------------------------------------------------------------------------
+  // 依頼整理タブ: 候補一覧・承認/お断り
+  // ---------------------------------------------------------------------------
+
+  it("依頼整理タブに候補カードが表示される", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
       {
-        status: "disconnected",
-        mode: null,
-        error: null,
-        lastAgentMessage: null,
-        lastUserTranscript: null,
-        isConnected: false,
-        connect: vi.fn().mockResolvedValue(undefined),
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: vi.fn(),
+        candidateId: "c1",
+        title: "資料の確認をお願いします",
+        deadline: null,
+        requester: "田中太郎",
+        description: "資料の確認をお願いします",
+        sourceType: "slack",
+        slackChannelId: "C123",
+        threadTs: "1.1",
       },
-    );
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-    const micButton = screen.getByTestId("mic-button");
-    // When agent status is "disconnected" (not "unconfigured"), button is enabled
-    expect(micButton).not.toBeDisabled();
-  });
-
-  it("「いいよ」ボタン（承認フォールバック）: クリックで awaiting → approved", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    const user = userEvent.setup();
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    const approvalButton = screen.getByTestId("approval-button");
-    // Initial state: idle → "いいよ"
-    expect(approvalButton).toHaveTextContent("いいよ");
-
-    // 返信案が無い状態では 1 クリックで承認待ち（awaiting）になる
-    await user.click(approvalButton);
-    expect(approvalButton).toHaveTextContent("「いいよ」待機中...");
-  });
-
-  it("エージェント接続済み時: 音声オフメッセージが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
-      {
-        status: "connected",
-        mode: "listening",
-        error: null,
-        lastAgentMessage: null,
-        lastUserTranscript: null,
-        isConnected: true,
-        connect: vi.fn().mockResolvedValue(undefined),
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: vi.fn(),
-      },
-    );
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("agent-status-label")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("agent-status-label")).toHaveTextContent(
-      "音声接続中",
-    );
-  });
-
-  it("エージェントエラー時: エラーメッセージが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
-      {
-        status: "disconnected",
-        mode: null,
-        error: "WebSocket connection failed",
-        lastAgentMessage: null,
-        lastUserTranscript: null,
-        isConnected: false,
-        connect: vi.fn().mockResolvedValue(undefined),
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: vi.fn(),
-      },
-    );
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("agent-error")).toBeInTheDocument();
-    expect(screen.getByTestId("agent-error")).toHaveTextContent(
-      "WebSocket connection failed",
-    );
-  });
-
-  it("lastAgentMessage がある時: 返信文ドラフトエリアが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
-      {
-        status: "connected",
-        mode: "listening",
-        error: null,
-        lastAgentMessage: "了解しました、後ほど対応します",
-        lastUserTranscript: null,
-        isConnected: true,
-        connect: vi.fn().mockResolvedValue(undefined),
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: vi.fn(),
-      },
-    );
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByTestId("agent-draft-area")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("reply-draft")).toHaveTextContent(
-      "了解しました、後ほど対応します",
-    );
-  });
-
-  it("マイクボタンクリックで connect が呼ばれる", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    const mockConnect = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
-      {
-        status: "disconnected",
-        mode: null,
-        error: null,
-        lastAgentMessage: null,
-        lastUserTranscript: null,
-        isConnected: false,
-        connect: mockConnect,
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: vi.fn(),
-      },
-    );
-
+    ]);
     const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-card")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("candidate-title")).toHaveTextContent(
+      "資料の確認をお願いします",
+    );
+    expect(screen.getByTestId("candidate-approve")).toBeInTheDocument();
+    expect(screen.getByTestId("candidate-decline")).toBeInTheDocument();
+  });
 
-    await user.click(screen.getByTestId("mic-button"));
-    expect(mockConnect).toHaveBeenCalledOnce();
+  it("候補の承認ボタンで進め方モーダルが開く", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
+      {
+        candidateId: "c1",
+        title: "資料の確認をお願いします",
+        deadline: null,
+        requester: "田中太郎",
+        description: "資料の確認をお願いします",
+        sourceType: "slack",
+        threadTs: "1.1",
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-approve")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("candidate-approve"));
+    expect(screen.getByTestId("approach-list")).toBeInTheDocument();
+  });
+
+  it("Bias for Action 選択で judge が呼ばれ返信案が表示される", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
+      {
+        candidateId: "c1",
+        title: "資料の件",
+        deadline: null,
+        requester: "田中太郎",
+        description: "資料の件よろしく",
+        sourceType: "slack",
+        threadTs: "1.1",
+      },
+    ]);
+    vi.mocked(agentClient.judgeTask).mockResolvedValue({
+      replyDraft: "承りました。後ほど確認します。",
+      saboriScore: 0.7,
+      ttsSummary: "承りました",
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-approve")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("candidate-approve"));
+    // Bias for Action 型（1番目・enabled）をクリック
+    const approaches = screen.getAllByRole("button");
+    const biasButton = approaches.find((b) =>
+      b.textContent?.includes("Bias for Action"),
+    );
+    expect(biasButton).toBeDefined();
+    await user.click(biasButton as HTMLElement);
+
+    await waitFor(() =>
+      expect(agentClient.judgeTask).toHaveBeenCalledWith(
+        { message: "資料の件よろしく", senderName: "田中太郎" },
+        AUTH,
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("approval-draft")).toHaveValue(
+        "承りました。後ほど確認します。",
+      ),
+    );
+  });
+
+  it("承認モーダルの「この文面で送る」で DOM 送信(SEND_SLACK_REPLY)が呼ばれる", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
+      {
+        candidateId: "c1",
+        title: "資料の件",
+        deadline: null,
+        requester: "田中太郎",
+        description: "資料の件よろしく",
+        sourceType: "slack",
+        threadTs: "1.1",
+      },
+    ]);
+    vi.mocked(agentClient.judgeTask).mockResolvedValue({
+      replyDraft: "承りました。",
+      saboriScore: 0.7,
+      ttsSummary: "承りました",
+    });
+    // sendSlackViaDom は chrome.runtime.sendMessage({type:SEND_SLACK_REPLY}) を呼ぶ
+    vi.mocked(chrome.runtime.sendMessage).mockImplementation(
+      async (msg: unknown) => {
+        if (
+          typeof msg === "object" &&
+          msg !== null &&
+          "type" in msg &&
+          msg.type === "SEND_SLACK_REPLY"
+        ) {
+          return { ok: true };
+        }
+        return undefined;
+      },
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-approve")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("candidate-approve"));
+    const biasButton = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent?.includes("Bias for Action"));
+    await user.click(biasButton as HTMLElement);
+    await waitFor(() =>
+      expect(screen.getByTestId("approval-send")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("approval-send"));
+
+    await waitFor(() =>
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
+        type: "SEND_SLACK_REPLY",
+        text: "承りました。",
+      }),
+    );
   });
 
   // ---------------------------------------------------------------------------
-  // U-V2-02: content script メッセージ受信テスト
+  // content script bridge: NEW_SLACK_MESSAGE
   // ---------------------------------------------------------------------------
 
-  it("content script から NEW_SLACK_MESSAGE を受信すると通知カードが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
+  it("NEW_SLACK_MESSAGE 受信で依頼整理タブにライブ候補が現れる", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
 
-    // onMessage のリスナーをキャプチャする
     let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
       null;
     const addListenerSpy = vi
@@ -354,14 +352,12 @@ describe("App (Side Panel)", () => {
         capturedListener = listener as typeof capturedListener;
       });
 
+    const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
 
-    expect(capturedListener).not.toBeNull();
-
-    // content script からのメッセージをシミュレート
     act(() => {
       capturedListener?.(
         {
@@ -378,411 +374,15 @@ describe("App (Side Panel)", () => {
       );
     });
 
+    // 新着で inbox タブに自動遷移
     await waitFor(() =>
-      expect(
-        screen.getByTestId("slack-message-notification"),
-      ).toBeInTheDocument(),
+      expect(screen.getByTestId("inbox-tab")).toBeInTheDocument(),
     );
-    expect(screen.getByTestId("slack-message-text")).toHaveTextContent(
-      "今日の会議の件ですが",
-    );
-
-    addListenerSpy.mockRestore();
-  });
-
-  // ---------------------------------------------------------------------------
-  // 非音声フロー: judge → 返信案表示 → ボタン承認 → Slack 送信
-  // ---------------------------------------------------------------------------
-
-  it("NEW_SLACK_MESSAGE 受信時に judgeTask が自動呼び出しされ返信案が表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(agentClient.judgeTask).mockResolvedValue({
-      replyDraft: "承りました。後ほど確認します。",
-      saboriScore: 0.7,
-      ttsSummary: "承りました",
-    });
-
-    let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
-      null;
-    const addListenerSpy = vi
-      .spyOn(chrome.runtime.onMessage, "addListener")
-      .mockImplementation((listener) => {
-        capturedListener = listener as typeof capturedListener;
-      });
-
-    render(<App />);
+    await user.click(screen.getByTestId("tab-inbox"));
     await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    act(() => {
-      capturedListener?.(
-        {
-          type: "NEW_SLACK_MESSAGE",
-          payload: {
-            text: "資料の件よろしくお願いします",
-            sender: "田中太郎",
-            channelId: "C0123456789",
-            threadTs: "1717900100.333333",
-            detectedAt: new Date().toISOString(),
-          },
-        },
-        {},
-      );
-    });
-
-    // judgeTask が呼ばれることを確認
-    await waitFor(() =>
-      expect(agentClient.judgeTask).toHaveBeenCalledWith(
-        { message: "資料の件よろしくお願いします", senderName: "田中太郎" },
-        "fake-id-token",
+      expect(screen.getByTestId("candidate-title")).toHaveTextContent(
+        "今日の会議の件ですが",
       ),
-    );
-
-    // 返信案カードが表示されることを確認
-    await waitFor(() =>
-      expect(screen.getByTestId("judge-result-card")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("judge-reply-draft")).toHaveTextContent(
-      "承りました。後ほど確認します。",
-    );
-
-    addListenerSpy.mockRestore();
-  });
-
-  it("NEW_SLACK_MESSAGE 受信時にローディング状態が表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    // judgeTask を遅延させてローディングを観察する
-    vi.mocked(agentClient.judgeTask).mockImplementation(
-      () =>
-        new Promise((resolve) =>
-          setTimeout(
-            () =>
-              resolve({
-                replyDraft: "テスト返信",
-                saboriScore: 0.5,
-                ttsSummary: "テスト",
-              }),
-            200,
-          ),
-        ),
-    );
-
-    let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
-      null;
-    const addListenerSpy = vi
-      .spyOn(chrome.runtime.onMessage, "addListener")
-      .mockImplementation((listener) => {
-        capturedListener = listener as typeof capturedListener;
-      });
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    act(() => {
-      capturedListener?.(
-        {
-          type: "NEW_SLACK_MESSAGE",
-          payload: {
-            text: "ローディングテスト",
-            sender: "テスト送信者",
-            channelId: "C9999999999",
-            threadTs: "1717900200.444444",
-            detectedAt: new Date().toISOString(),
-          },
-        },
-        {},
-      );
-    });
-
-    // ローディング表示を確認
-    await waitFor(() =>
-      expect(screen.getByTestId("judge-loading")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("judge-loading")).toHaveTextContent(
-      "サボローが考え中...",
-    );
-
-    addListenerSpy.mockRestore();
-  });
-
-  it("judge API エラー時にエラーメッセージが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(agentClient.judgeTask).mockRejectedValue(
-      new Error("API 接続エラー"),
-    );
-
-    let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
-      null;
-    const addListenerSpy = vi
-      .spyOn(chrome.runtime.onMessage, "addListener")
-      .mockImplementation((listener) => {
-        capturedListener = listener as typeof capturedListener;
-      });
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    act(() => {
-      capturedListener?.(
-        {
-          type: "NEW_SLACK_MESSAGE",
-          payload: {
-            text: "エラーテスト",
-            sender: "エラー送信者",
-            channelId: "CERR00000",
-            threadTs: "1717900300.555555",
-            detectedAt: new Date().toISOString(),
-          },
-        },
-        {},
-      );
-    });
-
-    await waitFor(() =>
-      expect(screen.getByTestId("judge-error")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("judge-error")).toHaveTextContent(
-      "返信案の生成に失敗しました",
-    );
-
-    addListenerSpy.mockRestore();
-  });
-
-  it("返信案表示後に「いいよ」ボタンで sendSlackReply が呼ばれ送信成功が表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(agentClient.judgeTask).mockResolvedValue({
-      replyDraft: "了解しました。後ほど確認します。",
-      saboriScore: 0.8,
-      ttsSummary: "了解しました",
-    });
-    vi.mocked(agentClient.sendSlackReply).mockResolvedValue({ ok: true });
-
-    let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
-      null;
-    const addListenerSpy = vi
-      .spyOn(chrome.runtime.onMessage, "addListener")
-      .mockImplementation((listener) => {
-        capturedListener = listener as typeof capturedListener;
-      });
-
-    const user = userEvent.setup();
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    // Slack メッセージ受信をシミュレート
-    act(() => {
-      capturedListener?.(
-        {
-          type: "NEW_SLACK_MESSAGE",
-          payload: {
-            text: "承認テストメッセージ",
-            sender: "承認テスト送信者",
-            channelId: "CAPPROVE01",
-            threadTs: "1717900400.666666",
-            detectedAt: new Date().toISOString(),
-          },
-        },
-        {},
-      );
-    });
-
-    // 返信案が表示されるまで待つ
-    await waitFor(() =>
-      expect(screen.getByTestId("judge-reply-draft")).toBeInTheDocument(),
-    );
-
-    // 承認ボタンをクリック（awaiting_approval 状態で1回クリックで送信）
-    const approvalButton = screen.getByTestId("approval-button");
-    await user.click(approvalButton);
-
-    // sendSlackReply が呼ばれることを確認
-    await waitFor(() =>
-      expect(agentClient.sendSlackReply).toHaveBeenCalledWith(
-        {
-          channelId: "CAPPROVE01",
-          threadTs: "1717900400.666666",
-          replyText: "了解しました。後ほど確認します。",
-        },
-        "fake-id-token",
-      ),
-    );
-
-    // 送信成功メッセージが表示されることを確認
-    await waitFor(() =>
-      expect(screen.getByTestId("send-success")).toBeInTheDocument(),
-    );
-    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({
-      type: "TASK_REPLY_COMPLETED",
-    });
-
-    addListenerSpy.mockRestore();
-  });
-
-  it("sendSlackReply 失敗時にエラーが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(agentClient.judgeTask).mockResolvedValue({
-      replyDraft: "送信失敗テスト返信",
-      saboriScore: 0.5,
-      ttsSummary: "テスト",
-    });
-    vi.mocked(agentClient.sendSlackReply).mockRejectedValue(
-      new Error("Slack API エラー"),
-    );
-
-    let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
-      null;
-    const addListenerSpy = vi
-      .spyOn(chrome.runtime.onMessage, "addListener")
-      .mockImplementation((listener) => {
-        capturedListener = listener as typeof capturedListener;
-      });
-
-    const user = userEvent.setup();
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    act(() => {
-      capturedListener?.(
-        {
-          type: "NEW_SLACK_MESSAGE",
-          payload: {
-            text: "送信失敗テスト",
-            sender: "失敗テスト送信者",
-            channelId: "CFAIL00001",
-            threadTs: "1717900500.777777",
-            detectedAt: new Date().toISOString(),
-          },
-        },
-        {},
-      );
-    });
-
-    await waitFor(() =>
-      expect(screen.getByTestId("judge-reply-draft")).toBeInTheDocument(),
-    );
-
-    const approvalButton = screen.getByTestId("approval-button");
-    await user.click(approvalButton);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("send-error")).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("send-error")).toHaveTextContent(
-      "Slack API エラー",
-    );
-    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith({
-      type: "TASK_REPLY_COMPLETED",
-    });
-
-    addListenerSpy.mockRestore();
-  });
-
-  it("パネル起動時に保留タスクを復元して判定処理を再開する", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    vi.mocked(chrome.runtime.sendMessage).mockImplementation(
-      async (message: unknown) => {
-        if (
-          typeof message === "object" &&
-          message !== null &&
-          "type" in message &&
-          message.type === "GET_PENDING_TASK"
-        ) {
-          return {
-            task: {
-              text: "保留されていたタスクです",
-              sender: "復元ユーザー",
-              channelId: "C-PENDING",
-              threadTs: "1717900999.999999",
-              detectedAt: "2026-06-15T14:00:00.000Z",
-            },
-          };
-        }
-        return undefined;
-      },
-    );
-
-    render(<App />);
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("slack-message-notification"),
-      ).toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("slack-message-text")).toHaveTextContent(
-      "保留されていたタスクです",
-    );
-    await waitFor(() =>
-      expect(agentClient.judgeTask).toHaveBeenCalledWith(
-        {
-          message: "保留されていたタスクです",
-          senderName: "復元ユーザー",
-        },
-        "fake-id-token",
-      ),
-    );
-  });
-
-  it("NEW_SLACK_MESSAGE 受信時に agent.pushContext が呼ばれる", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("fake-id-token");
-    const mockPushContext = vi.fn();
-    vi.mocked(conversationalAgentModule.useConversationalAgent).mockReturnValue(
-      {
-        status: "disconnected",
-        mode: null,
-        error: null,
-        lastAgentMessage: null,
-        lastUserTranscript: null,
-        isConnected: false,
-        connect: vi.fn().mockResolvedValue(undefined),
-        disconnect: vi.fn().mockResolvedValue(undefined),
-        pushContext: mockPushContext,
-      },
-    );
-
-    let capturedListener: ((msg: unknown, sender: unknown) => void) | null =
-      null;
-    const addListenerSpy = vi
-      .spyOn(chrome.runtime.onMessage, "addListener")
-      .mockImplementation((listener) => {
-        capturedListener = listener as typeof capturedListener;
-      });
-
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByTestId("loading-spinner")).not.toBeInTheDocument(),
-    );
-
-    act(() => {
-      capturedListener?.(
-        {
-          type: "NEW_SLACK_MESSAGE",
-          payload: {
-            text: "資料の確認をお願いします",
-            sender: "鈴木一郎",
-            channelId: "U1111111111",
-            threadTs: "1717900001.222222",
-            detectedAt: new Date().toISOString(),
-          },
-        },
-        {},
-      );
-    });
-
-    await waitFor(() => expect(mockPushContext).toHaveBeenCalled());
-    expect(mockPushContext).toHaveBeenCalledWith(
-      expect.stringContaining("鈴木一郎"),
-    );
-    expect(mockPushContext).toHaveBeenCalledWith(
-      expect.stringContaining("資料の確認をお願いします"),
     );
 
     addListenerSpy.mockRestore();
