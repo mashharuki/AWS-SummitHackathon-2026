@@ -191,8 +191,21 @@ function buildFullHtmlDocument(
 <title>${escapeHtml(title)}</title>
 <style>${css}</style>
 <style>
-body { margin: 0; background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-section.marpit { box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin: 20px auto; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #1a1a2e; }
+div.marpit {
+  display: block;
+  margin: 24px auto;
+  max-width: 960px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  border-radius: 4px;
+  overflow: hidden;
+}
+div.marpit > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 </style>
 </head>
 <body>
