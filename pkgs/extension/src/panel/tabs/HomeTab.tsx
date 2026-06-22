@@ -104,7 +104,8 @@ function getSuggestions(freeMinutes: number): FreeSuggestion[] {
 }
 
 export function HomeTab() {
-  const { jwt, candidates, tasks, representativeProposal } = useSaborou();
+  const { jwt, candidates, tasks, representativeProposal, scheduleSaboruMinutes } =
+    useSaborou();
   const [calendar, setCalendar] = useState<CalendarStatus>({ cached: false });
   const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
 
@@ -120,7 +121,7 @@ export function HomeTab() {
     };
   }, [jwt]);
 
-  // 指標を算出（カレンダー / proposal / タスク件数が変わるたび）
+  // 指標を算出（カレンダー / proposal / タスク件数 / スケジュールが変わるたび）
   useEffect(() => {
     const pendingTaskCount = candidates.length + tasks.length;
     setMetrics(
@@ -129,9 +130,10 @@ export function HomeTab() {
         calendar,
         proposal: representativeProposal,
         pendingTaskCount,
+        scheduleSaboruMinutes,
       }),
     );
-  }, [calendar, representativeProposal, candidates.length, tasks.length]);
+  }, [calendar, representativeProposal, candidates.length, tasks.length, scheduleSaboruMinutes]);
 
   if (!metrics) {
     return (
