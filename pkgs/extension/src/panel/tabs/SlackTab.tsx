@@ -169,15 +169,15 @@ export function SlackTab() {
   );
 }
 
-/** 余白の使い道提案（Netflix / 散歩 など。モック） */
+/** 余白の使い道提案（Amazon Prime / 散歩 など。モック） */
 function LeisureSuggestion({ onClose }: { onClose: () => void }) {
   const suggestions = [
     {
       icon: Film,
-      title: "Netflix の続きを見る",
+      title: "Amazon Prime の続きを見る",
       sub: "先週見ていたアニメの続き、残り 15 分で1話終わります。",
-      cta: "Netflix を開く",
-      color: "#e50914",
+      cta: "Amazon Prime を開く",
+      color: "#00A8E0",
     },
     {
       icon: Footprints,
