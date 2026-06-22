@@ -9,6 +9,7 @@
 import { useSaborou } from "@/panel/SaborouContext";
 import { Card, MetricBar, SectionLabel } from "@/panel/components/ui";
 import { getCalendarStatus } from "@/panel/lib/agentClient";
+import { getSuggestions } from "@/panel/lib/freeSuggestions";
 import { type HomeMetrics, computeHomeMetrics } from "@/panel/lib/homeMetrics";
 import type { CalendarStatus } from "@/panel/lib/types";
 import { formatDuration } from "@/panel/lib/workHours";
@@ -21,87 +22,6 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-
-interface FreeSuggestion {
-  label: string;
-  description: string;
-  url: string;
-  service: string;
-}
-
-function getSuggestions(freeMinutes: number): FreeSuggestion[] {
-  if (freeMinutes >= 60) {
-    return [
-      {
-        label: "Prime Video で映画",
-        description: "1本まるごと観られる時間があります",
-        url: "https://www.amazon.co.jp/gp/video/storefront",
-        service: "Amazon Prime Video",
-      },
-      {
-        label: "Kindle で読書",
-        description: "集中して本を読むのに最適な時間です",
-        url: "https://read.amazon.co.jp",
-        service: "Kindle",
-      },
-      {
-        label: "趣味リサーチ",
-        description: "気になることをじっくり調べましょう",
-        url: "https://www.amazon.co.jp",
-        service: "Amazon EC",
-      },
-    ];
-  }
-  if (freeMinutes >= 30) {
-    return [
-      {
-        label: "Audible で短編",
-        description: "30分以内で聴けるポッドキャストや朗読があります",
-        url: "https://www.audible.co.jp",
-        service: "Amazon Audible",
-      },
-      {
-        label: "Prime Video でドラマ1話",
-        description: "短編コンテンツをチェックしましょう",
-        url: "https://www.amazon.co.jp/gp/video/storefront",
-        service: "Amazon Prime Video",
-      },
-    ];
-  }
-  if (freeMinutes >= 15) {
-    return [
-      {
-        label: "Prime Reading でマンガ1話",
-        description: "15分でサクッと読めます",
-        url: "https://www.amazon.co.jp/kindle-dbs/fd/prime-reading",
-        service: "Amazon Prime Reading",
-      },
-      {
-        label: "Amazon Music で音楽",
-        description: "好きな音楽を流してリフレッシュ",
-        url: "https://music.amazon.co.jp",
-        service: "Amazon Music",
-      },
-    ];
-  }
-  if (freeMinutes >= 5) {
-    return [
-      {
-        label: "Amazon Music でひと息",
-        description: "5分だけ音楽を聴いてリセット",
-        url: "https://music.amazon.co.jp",
-        service: "Amazon Music",
-      },
-      {
-        label: "深呼吸 & ストレッチ",
-        description: "5分のマインドフルネスで集中力を回復",
-        url: "https://www.amazon.co.jp/gp/video/storefront?filterId=OFFER_BINDING_TYPE%3AFREE",
-        service: "Prime Video (無料)",
-      },
-    ];
-  }
-  return [];
-}
 
 export function HomeTab() {
   const { jwt, candidates, tasks, representativeProposal, scheduleSaboruMinutes } =

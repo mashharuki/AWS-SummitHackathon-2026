@@ -13,12 +13,14 @@ import { useSaborou } from "@/panel/SaborouContext";
 import { ProgressReportSheet } from "@/panel/components/ProgressReportSheet";
 import { Button, Card, EmptyState } from "@/panel/components/ui";
 import { getProposal } from "@/panel/lib/agentClient";
+import { getSuggestions } from "@/panel/lib/freeSuggestions";
 import type { Proposal } from "@/panel/lib/types";
-import { Coffee, FileText, Film, Footprints, Loader2, X } from "lucide-react";
+import { Coffee, ExternalLink, FileText, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function SlackTab() {
-  const { jwt, tasks, representativeProposal, chatMessages } = useSaborou();
+  const { jwt, tasks, representativeProposal, scheduleSaboruMinutes, chatMessages } =
+    useSaborou();
   const [proposal, setProposal] = useState<Proposal | null>(
     representativeProposal,
   );
@@ -163,30 +165,24 @@ export function SlackTab() {
 
       {/* 使い道提案ポップアップ（モック） */}
       {showLeisure && (
-        <LeisureSuggestion onClose={() => setShowLeisure(false)} />
+        <LeisureSuggestion
+          freeMinutes={scheduleSaboruMinutes ?? 60}
+          onClose={() => setShowLeisure(false)}
+        />
       )}
     </div>
   );
 }
 
-/** 余白の使い道提案（Netflix / 散歩 など。モック） */
-function LeisureSuggestion({ onClose }: { onClose: () => void }) {
-  const suggestions = [
-    {
-      icon: Film,
-      title: "Netflix の続きを見る",
-      sub: "先週見ていたアニメの続き、残り 15 分で1話終わります。",
-      cta: "Netflix を開く",
-      color: "#e50914",
-    },
-    {
-      icon: Footprints,
-      title: "10 分だけ散歩する",
-      sub: "天気は晴れ。少し歩くと午後の集中力が戻ります。",
-      cta: "あとで",
-      color: "#10b981",
-    },
-  ];
+/** 余白の使い道提案（余白時間に応じてAmazonサービスを提案） */
+function LeisureSuggestion({
+  freeMinutes,
+  onClose,
+}: {
+  freeMinutes: number;
+  onClose: () => void;
+}) {
+  const suggestions = getSuggestions(freeMinutes);
 
   return (
     <div
@@ -212,32 +208,29 @@ function LeisureSuggestion({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="flex flex-col gap-2">
-          {suggestions.map((s) => {
-            const Icon = s.icon;
-            return (
-              <div
-                key={s.title}
-                className="p-3 rounded-xl bg-[#111827] border border-white/10"
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Icon size={14} style={{ color: s.color }} />
-                  <p className="text-sm font-bold text-white">{s.title}</p>
-                </div>
-                <p className="text-[11px] text-white/60 mb-2">{s.sub}</p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className={cn(
-                    "w-full py-1.5 rounded-lg text-xs font-bold text-white",
-                    "border border-white/20 hover:bg-white/10 transition-colors",
-                  )}
-                  style={{ backgroundColor: `${s.color}22` }}
-                >
-                  {s.cta}
-                </button>
+          {suggestions.map((s) => (
+            <a
+              key={s.url}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/10 hover:bg-white/5 transition-colors"
+            >
+              <div>
+                <p className="text-sm font-bold text-white">{s.label}</p>
+                <p className="text-[11px] text-white/60 mt-0.5">
+                  {s.description}
+                </p>
+                <p className="text-[9px] text-[#f97316] font-bold mt-0.5">
+                  {s.service}
+                </p>
               </div>
-            );
-          })}
+              <ExternalLink
+                size={13}
+                className="text-white/30 flex-shrink-0 ml-2"
+              />
+            </a>
+          ))}
         </div>
       </div>
     </div>
