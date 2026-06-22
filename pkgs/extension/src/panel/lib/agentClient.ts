@@ -354,7 +354,7 @@ export async function disconnectService(
 
 /** GET /api/auth/slack — Slack OAuth 認可 URL を取得する */
 export async function getSlackOAuthUrl(jwt: string): Promise<string> {
-  const res = await apiFetch<{ url: string }>("/auth/slack", jwt, {
+  const res = await apiFetch<{ url: string }>("/api/auth/slack", jwt, {
     method: "GET",
   });
   return res.url;
