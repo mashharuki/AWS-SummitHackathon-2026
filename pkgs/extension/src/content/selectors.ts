@@ -29,9 +29,13 @@ export const REPLY_BUTTON = '[data-qa="reply_in_thread_button"]';
 
 /**
  * @mention（自分宛てメンション）の表示要素
- * Slack は @mention を span で強調表示する（data-stringify-type="mention"）
+ * Slack は @mention を span で強調表示する。
+ * Slack UI バージョンにより属性・クラス名が異なるため複数フォールバックを用意する。
+ * - data-stringify-type="mention": 従来の属性ベース（最も安定）
+ * - .c-mrkdwn__mention: 新しい Slack UI のクラスベース（data-stringify-type と併用）
  */
-export const MENTION_SPAN = '[data-stringify-type="mention"]';
+export const MENTION_SPAN =
+  '[data-stringify-type="mention"], .c-mrkdwn__mention';
 
 /**
  * メッセージ要素が持つチャンネル ID 属性（最も確実な channelId 取得元）
