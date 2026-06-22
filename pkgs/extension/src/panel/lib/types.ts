@@ -37,6 +37,8 @@ export interface TaskCandidate {
   slackChannelId?: string;
   /** スレッド ts（Slack 候補のみ。返信先解決に使う） */
   threadTs?: string;
+  /** フロント側で付与する検知時刻（ISO8601）。表示フィルタに使う */
+  detectedAt?: string;
 }
 
 /** 作業ステップ（承認モーダルで編集する草案） */

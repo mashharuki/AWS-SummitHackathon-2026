@@ -9,6 +9,7 @@
 import { useSaborou } from "@/panel/SaborouContext";
 import { Card, MetricBar, SectionLabel } from "@/panel/components/ui";
 import { getCalendarStatus } from "@/panel/lib/agentClient";
+import { getSuggestions } from "@/panel/lib/freeSuggestions";
 import { type HomeMetrics, computeHomeMetrics } from "@/panel/lib/homeMetrics";
 import type { CalendarStatus } from "@/panel/lib/types";
 import { formatDuration } from "@/panel/lib/workHours";
@@ -16,13 +17,15 @@ import {
   AlertTriangle,
   CalendarDays,
   Clock,
+  ExternalLink,
   FileWarning,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function HomeTab() {
-  const { jwt, candidates, tasks, representativeProposal } = useSaborou();
+  const { jwt, candidates, tasks, representativeProposal, scheduleSaboruMinutes } =
+    useSaborou();
   const [calendar, setCalendar] = useState<CalendarStatus>({ cached: false });
   const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
 
@@ -38,7 +41,7 @@ export function HomeTab() {
     };
   }, [jwt]);
 
-  // 指標を算出（カレンダー / proposal / タスク件数が変わるたび）
+  // 指標を算出（カレンダー / proposal / タスク件数 / スケジュールが変わるたび）
   useEffect(() => {
     const pendingTaskCount = candidates.length + tasks.length;
     setMetrics(
@@ -47,9 +50,10 @@ export function HomeTab() {
         calendar,
         proposal: representativeProposal,
         pendingTaskCount,
+        scheduleSaboruMinutes,
       }),
     );
-  }, [calendar, representativeProposal, candidates.length, tasks.length]);
+  }, [calendar, representativeProposal, candidates.length, tasks.length, scheduleSaboruMinutes]);
 
   if (!metrics) {
     return (
@@ -171,6 +175,37 @@ export function HomeTab() {
           />
         </div>
       </div>
+
+      {/* 余白の使い方提案 */}
+      {metrics.saboruMinutesToday >= 5 && (
+        <div>
+          <SectionLabel>
+            余白 {formatDuration(metrics.saboruMinutesToday)} の使い方
+          </SectionLabel>
+          <div className="flex flex-col gap-2 mt-1">
+            {getSuggestions(metrics.saboruMinutesToday).map((s) => (
+              <a
+                key={s.url}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] hover:bg-[#f3f4f6] transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-bold text-[#1f2937]">{s.label}</p>
+                  <p className="text-[10px] text-[#9ca3af] mt-0.5">
+                    {s.description}
+                  </p>
+                  <p className="text-[9px] text-[#f97316] font-bold mt-0.5">
+                    {s.service}
+                  </p>
+                </div>
+                <ExternalLink size={13} className="text-[#9ca3af] flex-shrink-0 ml-2" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* このまま行くと予測 */}
       <Card accent="#ef4444">

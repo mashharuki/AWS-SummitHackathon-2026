@@ -13,6 +13,7 @@ import type { NewSlackMessagePayload } from "@/messages";
 import {
   getCandidates,
   getProposal,
+  getSchedule,
   getTaskSummaries,
 } from "@/panel/lib/agentClient";
 import type { Proposal, TaskCandidate, TaskSummary } from "@/panel/lib/types";
@@ -62,6 +63,8 @@ interface SaborouContextValue {
 
   /** 直近の代表 proposal（ホームの psychSignals 用） */
   representativeProposal: Proposal | null;
+  /** スケジュールAPIから取得したsaboriバンドの合計分数（null=未取得） */
+  scheduleSaboruMinutes: number | null;
 
   /** content script 検知の最新 Slack メッセージ（リアルタイム新着） */
   latestSlackMessage: NewSlackMessagePayload | null;
@@ -83,6 +86,13 @@ interface SaborouContextValue {
 
 const SaborouContext = createContext<SaborouContextValue | null>(null);
 
+/** 1日前より古い候補を除外する（ISO8601 detectedAt ベース） */
+function isWithinOneDay(detectedAt?: string): boolean {
+  if (!detectedAt) return true; // detectedAt なし（APIから来た古い形式）は表示する
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  return new Date(detectedAt).getTime() >= oneDayAgo;
+}
+
 /** content 検知の Slack メッセージを TaskCandidate 形に変換する */
 function slackMessageToCandidate(msg: NewSlackMessagePayload): TaskCandidate {
   return {
@@ -94,6 +104,7 @@ function slackMessageToCandidate(msg: NewSlackMessagePayload): TaskCandidate {
     sourceType: "slack",
     slackChannelId: msg.channelId,
     threadTs: msg.threadTs || undefined,
+    detectedAt: new Date().toISOString(),
   };
 }
 
@@ -139,6 +150,9 @@ export function SaborouProvider({
   const [tasksLoading, setTasksLoading] = useState(false);
   const [representativeProposal, setRepresentativeProposal] =
     useState<Proposal | null>(null);
+  const [scheduleSaboruMinutes, setScheduleSaboruMinutes] = useState<
+    number | null
+  >(null);
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
 
   // content 検知メッセージを履歴として蓄積（最新数件）
@@ -166,7 +180,11 @@ export function SaborouProvider({
     setCandidatesLoading(true);
     try {
       const list = await getCandidates(jwt);
-      setApiCandidates(list);
+      // detectedAt が未付与のものはフロント受取時刻を付与
+      const now = new Date().toISOString();
+      setApiCandidates(
+        list.map((c) => (c.detectedAt ? c : { ...c, detectedAt: now })),
+      );
     } catch (err) {
       console.warn("[SABOROU] refreshCandidates failed:", err);
     } finally {
@@ -183,8 +201,12 @@ export function SaborouProvider({
       // 代表 proposal をホーム指標用に1件取得（最初の未完了タスク）
       const target = list[0];
       if (target) {
-        const p = await getProposal(target.taskId, jwt);
+        const [p, s] = await Promise.all([
+          getProposal(target.taskId, jwt),
+          getSchedule(target.taskId, jwt),
+        ]);
         if (p) setRepresentativeProposal(p);
+        if (s) setScheduleSaboruMinutes(s.totalSaboruMinutes);
       }
     } catch (err) {
       console.warn("[SABOROU] refreshTasks failed:", err);
@@ -207,7 +229,9 @@ export function SaborouProvider({
 
   const candidates = useMemo(() => {
     const merged = mergeCandidates(apiCandidates, liveMessages);
-    return merged.filter((c) => !removedIds.has(c.candidateId));
+    return merged.filter(
+      (c) => !removedIds.has(c.candidateId) && isWithinOneDay(c.detectedAt),
+    );
   }, [apiCandidates, liveMessages, removedIds]);
 
   const sendSlackViaDom = useCallback((text: string): Promise<SendResult> => {
@@ -293,6 +317,7 @@ export function SaborouProvider({
       tasksLoading,
       refreshTasks,
       representativeProposal,
+      scheduleSaboruMinutes,
       latestSlackMessage,
       sendSlackViaDom,
       notifyReplyCompleted,
@@ -310,6 +335,7 @@ export function SaborouProvider({
       tasksLoading,
       refreshTasks,
       representativeProposal,
+      scheduleSaboruMinutes,
       latestSlackMessage,
       sendSlackViaDom,
       notifyReplyCompleted,

@@ -186,7 +186,7 @@ export function App() {
             Saborou
           </h1>
         </div>
-        <NotificationSettingsMenu />
+        <NotificationSettingsMenu jwt={sessionJwt} />
         {!authLoading && (
           <div data-testid="auth-status">
             {userInfo ? (
