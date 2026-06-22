@@ -98,17 +98,27 @@ function demoBlocks(): ScheduleBlock[] {
 /** PM WBSサブタスクをScheduleBlock配列に変換する */
 function subtasksToBlocks(subtasks: SubTask[]): ScheduleBlock[] {
   const now = new Date();
-  const startHour = Math.max(WORK_START_HOUR, now.getHours());
-  let currentMin = startHour * 60 + (startHour === now.getHours() ? now.getMinutes() : 0);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const workStartMin = WORK_START_HOUR * 60;
+  const workEndMin = WORK_END_HOUR * 60;
+
+  // 勤務時間外（業後・未明）は9:00始まりで配置し、表示範囲内に収める
+  const startMin =
+    nowMin >= workStartMin && nowMin < workEndMin ? nowMin : workStartMin + 60;
+  let currentMin = startMin;
 
   return subtasks
     .filter((st) => st.status !== "skipped")
     .map((st) => {
+      // 稼働終了を超えた場合は勤務開始に折り返す
+      if (currentMin >= workEndMin) currentMin = workStartMin + 60;
+
       const startAt = new Date();
       startAt.setHours(Math.floor(currentMin / 60), currentMin % 60, 0, 0);
+      const endMin = Math.min(currentMin + st.estimatedMinutes, workEndMin);
       currentMin += st.estimatedMinutes;
       const endAt = new Date();
-      endAt.setHours(Math.floor(currentMin / 60), currentMin % 60, 0, 0);
+      endAt.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
 
       const bandType: BandType =
         st.saborouType === "decision"
@@ -128,16 +138,34 @@ function subtasksToBlocks(subtasks: SubTask[]): ScheduleBlock[] {
     });
 }
 
+/** activeTaskから仮ブロックを生成する（decompose失敗・未実施時のフォールバック） */
+function taskFallbackBlocks(taskTitle: string): ScheduleBlock[] {
+  const at = (h: number, m: number) => {
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.toISOString();
+  };
+  const label = taskTitle.slice(0, 20);
+  return [
+    { stepId: "t1", stepLabel: label, bandType: "work", startAt: at(9, 0), endAt: at(11, 0), durationMinutes: 120 },
+    { stepId: "t2", stepLabel: "確認・調整", bandType: "decision", startAt: at(13, 0), endAt: at(14, 0), durationMinutes: 60 },
+    { stepId: "t3", stepLabel: "さぼろう", bandType: "saboru", startAt: at(15, 0), endAt: at(17, 0), durationMinutes: 120 },
+  ];
+}
+
 export function MiniGantt({
   schedule,
   subtasks,
+  activeTaskTitle,
 }: {
   schedule: SaboriSchedule | null;
   subtasks?: SubTask[];
+  activeTaskTitle?: string;
 }) {
   const blocks = (() => {
     if (subtasks && subtasks.length > 0) return subtasksToBlocks(subtasks);
     if (schedule && schedule.blocks.length > 0) return schedule.blocks;
+    if (activeTaskTitle) return taskFallbackBlocks(activeTaskTitle);
     return demoBlocks();
   })();
 

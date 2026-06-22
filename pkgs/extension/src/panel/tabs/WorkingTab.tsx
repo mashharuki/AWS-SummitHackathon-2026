@@ -80,6 +80,7 @@ export function WorkingTab() {
   const { jwt, tasks, tasksLoading, refreshTasks, goalAnalysis, setGoalAnalysis } = useSaborou();
   const [schedule, setSchedule] = useState<SaboriSchedule | null>(null);
   const [decomposing, setDecomposing] = useState(false);
+  const [decomposeError, setDecomposeError] = useState(false);
   const [stepStates, setStepStates] = useState<StepState[]>([
     "active",
     "pending",
@@ -114,13 +115,16 @@ export function WorkingTab() {
     if (decomposedTaskIdRef.current === activeTask.taskId) return;
     decomposedTaskIdRef.current = activeTask.taskId;
     setDecomposing(true);
+    setDecomposeError(false);
     setGoalAnalysis(null);
 
     void decomposeTask(activeTask.taskId, jwt)
       .then((ga) => setGoalAnalysis(ga))
       .catch((err) => {
         console.warn("[WorkingTab] decomposeTask failed:", err);
-        // フォールバック: 既存のstepDefs表示を維持
+        setDecomposeError(true);
+        // decomposedTaskIdRef をリセットしてリトライできるようにする
+        decomposedTaskIdRef.current = null;
       })
       .finally(() => setDecomposing(false));
   }, [jwt, activeTask]);
@@ -227,7 +231,11 @@ export function WorkingTab() {
           <SectionLabel>今日のスケジュール</SectionLabel>
           <span className="text-[9px] text-[#9ca3af]">8:00 – 17:00</span>
         </div>
-        <MiniGantt schedule={schedule} subtasks={goalAnalysis?.subtasks} />
+        <MiniGantt
+          schedule={schedule}
+          subtasks={goalAnalysis?.subtasks}
+          activeTaskTitle={activeTask?.title}
+        />
       </Card>
 
       {/* PM分析ローディング */}
@@ -239,6 +247,28 @@ export function WorkingTab() {
               <p className="text-xs font-bold text-[#111827]">PM分析中...</p>
               <p className="text-[10px] text-[#6b7280]">PMBOK WBS手法でゴールを分解しています</p>
             </div>
+          </div>
+        </Card>
+      )}
+
+      {/* PM分析エラー */}
+      {decomposeError && !decomposing && activeTask && !goalAnalysis && (
+        <Card>
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <p className="text-xs font-bold text-[#dc2626]">PM分析に失敗しました</p>
+              <p className="text-[10px] text-[#6b7280]">Bedrockへの接続を確認してください</p>
+            </div>
+            <button
+              type="button"
+              className="text-[10px] font-bold text-[#f97316] border border-[#f97316] rounded-lg px-2 py-1 active:scale-95"
+              onClick={() => {
+                decomposedTaskIdRef.current = null;
+                setDecomposeError(false);
+              }}
+            >
+              リトライ
+            </button>
           </div>
         </Card>
       )}

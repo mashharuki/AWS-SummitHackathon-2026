@@ -575,6 +575,13 @@ export class SaborouApiStack extends cdk.Stack {
       });
     }
 
+    // Slack OAuth コールバック URL を Lambda 環境変数に注入する。
+    // auth.ts の SLACK_REDIRECT_URI を参照。Slack App の Redirect URLs にも同じ URL を登録すること。
+    honoFn.addEnvironment(
+      "SLACK_REDIRECT_URI",
+      `${apiUrl}/api/auth/slack/callback`,
+    );
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "HttpApiUrl", {
       value: httpApi.apiEndpoint,

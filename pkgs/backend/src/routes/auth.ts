@@ -68,7 +68,10 @@ export function createAuthRoute(
     //  コールバック時の token 交換は Secrets Manager の client_id/secret を使う。）
     const slackClientId = process.env.SLACK_CLIENT_ID ?? "";
 
-    const redirectUri = `${c.req.url.replace("/auth/slack", "/auth/slack/callback")}`;
+    // SLACK_REDIRECT_URI を優先し、未設定時はリクエスト URL から生成する
+    const redirectUri =
+      process.env.SLACK_REDIRECT_URI ??
+      c.req.url.replace("/auth/slack", "/auth/slack/callback");
 
     // state パラメータに userId + HMAC-SHA256 署名をエンコードして CSRF 対策
     const oauthStateSecret = env.OAUTH_STATE_SECRET;
