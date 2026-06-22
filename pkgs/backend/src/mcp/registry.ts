@@ -240,6 +240,30 @@ export const MCP_TOOL_REGISTRY = [
     implementationStatus: "implemented",
     published: true,
   },
+  {
+    name: "saborou_decompose_task",
+    effect: "read",
+    description:
+      "PMBOK 8th Edition のWBS（Work Breakdown Structure）手法でタスクのゴールを分析し、3〜6個のサブタスクに分解します。「タスクを細分化して」「ゴールを分析して」「PMとしてタスクを分解して」「作業を洗い出して」などと言われたときに使用してください。taskIdは必須です。オプションでslackContextを渡すと余白時間の提案がユーザーの趣味嗜好に合わせてカスタマイズされます。",
+    http: { method: "POST", path: "/api/tasks/{taskId}/decompose" },
+    schema: { input: "saborou_decompose_task", output: "safe_summary" },
+    approval: { required: false },
+    outputMode: "safe_summary",
+    implementationStatus: "implemented",
+    published: true,
+  },
+  {
+    name: "saborou_suggest_free_time",
+    effect: "read",
+    description:
+      "タスク完了後の余白時間にユーザーへ最適な活動を提案します。Slack文脈からユーザーの趣味嗜好を推測し、パーソナライズされた余暇の過ごし方を返します。「サボり方を教えて」「余暇の過ごし方を提案して」「今日の余白で何をすべきか教えて」などと言われたときに使用してください。taskIdは必須です。",
+    http: { method: "GET", path: "/api/tasks/{taskId}/decompose" },
+    schema: { input: "saborou_suggest_free_time", output: "safe_summary" },
+    approval: { required: false },
+    outputMode: "safe_summary",
+    implementationStatus: "implemented",
+    published: true,
+  },
 ] as const satisfies ReadonlyArray<McpToolDefinition>;
 
 export const MCP_TOOL_NAMES = MCP_TOOL_REGISTRY.map((tool) => tool.name);

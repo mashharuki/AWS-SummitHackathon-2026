@@ -95,6 +95,24 @@ export {
   type SlackHistoryMessage,
 } from "./slack-client/SlackClient.js";
 
+// ゴール分解エージェント (PM WBS機能)
+export { GoalDecomposerAgent } from "./goal-decomposer/GoalDecomposerAgent.js";
+export type {
+  GoalDecomposerInput,
+} from "./goal-decomposer/GoalDecomposerAgent.js";
+export type {
+  GoalAnalysis,
+  SubTask,
+  SubTaskStatus,
+  SubTaskType,
+} from "./goal-decomposer/types.js";
+export {
+  GoalAnalysisSchema,
+  SubTaskSchema,
+  SubTaskStatusSchema,
+  SubTaskTypeSchema,
+} from "./goal-decomposer/types.js";
+
 // ユーティリティ
 export type { SlackEventPayload, SlackMessage } from "./types/events.js";
 export { log, logError, logInfo, logWarn } from "./utils/logger.js";

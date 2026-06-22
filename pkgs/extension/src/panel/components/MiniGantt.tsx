@@ -12,6 +12,7 @@ import type {
   BandType,
   SaboriSchedule,
   ScheduleBlock,
+  SubTask,
 } from "@/panel/lib/types";
 import {
   WORK_END_HOUR,
@@ -94,9 +95,51 @@ function demoBlocks(): ScheduleBlock[] {
   ];
 }
 
-export function MiniGantt({ schedule }: { schedule: SaboriSchedule | null }) {
-  const blocks =
-    schedule && schedule.blocks.length > 0 ? schedule.blocks : demoBlocks();
+/** PM WBSサブタスクをScheduleBlock配列に変換する */
+function subtasksToBlocks(subtasks: SubTask[]): ScheduleBlock[] {
+  const now = new Date();
+  const startHour = Math.max(WORK_START_HOUR, now.getHours());
+  let currentMin = startHour * 60 + (startHour === now.getHours() ? now.getMinutes() : 0);
+
+  return subtasks
+    .filter((st) => st.status !== "skipped")
+    .map((st) => {
+      const startAt = new Date();
+      startAt.setHours(Math.floor(currentMin / 60), currentMin % 60, 0, 0);
+      currentMin += st.estimatedMinutes;
+      const endAt = new Date();
+      endAt.setHours(Math.floor(currentMin / 60), currentMin % 60, 0, 0);
+
+      const bandType: BandType =
+        st.saborouType === "decision"
+          ? "decision"
+          : st.saborouType === "saboru" || st.status === "done"
+            ? "saboru"
+            : "work";
+
+      return {
+        stepId: st.id,
+        stepLabel: st.title,
+        bandType,
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        durationMinutes: st.estimatedMinutes,
+      };
+    });
+}
+
+export function MiniGantt({
+  schedule,
+  subtasks,
+}: {
+  schedule: SaboriSchedule | null;
+  subtasks?: SubTask[];
+}) {
+  const blocks = (() => {
+    if (subtasks && subtasks.length > 0) return subtasksToBlocks(subtasks);
+    if (schedule && schedule.blocks.length > 0) return schedule.blocks;
+    return demoBlocks();
+  })();
 
   // 時間目盛（8,10,12,14,16 と 17）
   const ticks = [8, 10, 12, 14, 16, 17];

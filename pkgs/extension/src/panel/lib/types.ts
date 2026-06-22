@@ -115,3 +115,32 @@ export interface ProgressReport {
   tone?: string;
   reasoning: string;
 }
+
+/** PM WBS分解のサブタスク種別 */
+export type SubTaskType = "work" | "decision" | "saboru";
+
+/** PM WBS分解のサブタスクステータス */
+export type SubTaskStatus = "pending" | "approved" | "executing" | "done" | "skipped";
+
+/** PM WBSで分解された1作業単位 */
+export interface SubTask {
+  id: string;
+  taskId: string;
+  title: string;
+  description: string;
+  estimatedMinutes: number;
+  saborouType: SubTaskType;
+  status: SubTaskStatus;
+  order: number;
+}
+
+/** PM WBS分解のゴール分析結果（POST /api/tasks/:id/decompose） */
+export interface GoalAnalysis {
+  goalSummary: string;
+  deliverable: string;
+  subtasks: SubTask[];
+  totalEstimatedMinutes: number;
+  freeTimeMinutes: number;
+  freeTimeSuggestion: string;
+  generatedAt: string;
+}

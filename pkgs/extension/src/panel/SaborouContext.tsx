@@ -16,7 +16,12 @@ import {
   getSchedule,
   getTaskSummaries,
 } from "@/panel/lib/agentClient";
-import type { Proposal, TaskCandidate, TaskSummary } from "@/panel/lib/types";
+import type {
+  GoalAnalysis,
+  Proposal,
+  TaskCandidate,
+  TaskSummary,
+} from "@/panel/lib/types";
 import {
   type ReactNode,
   createContext,
@@ -82,6 +87,11 @@ interface SaborouContextValue {
   chatMessages: ChatMessage[];
   /** ユーザー発話を投稿する（応答もここで生成して履歴に積む） */
   postChatMessage: (text: string) => void;
+
+  /** PM WBS分解結果（WorkingTabが取得・SlackTabが参照） */
+  goalAnalysis: GoalAnalysis | null;
+  /** PM WBS分解結果をセットする（WorkingTabから呼ばれる） */
+  setGoalAnalysis: (ga: GoalAnalysis | null) => void;
 }
 
 const SaborouContext = createContext<SaborouContextValue | null>(null);
@@ -274,6 +284,9 @@ export function SaborouProvider({
       });
   }, []);
 
+  // PM WBS分解結果（WorkingTab ↔ SlackTab 共有）
+  const [goalAnalysis, setGoalAnalysis] = useState<GoalAnalysis | null>(null);
+
   // ---------------------------------------------------------------------------
   // 余白タブのサボローチャット
   // テキストチャット専用バックエンドは未提供のため、応答は代表 proposal の
@@ -323,6 +336,8 @@ export function SaborouProvider({
       notifyReplyCompleted,
       chatMessages,
       postChatMessage,
+      goalAnalysis,
+      setGoalAnalysis,
     }),
     [
       userInfo,
@@ -341,6 +356,8 @@ export function SaborouProvider({
       notifyReplyCompleted,
       chatMessages,
       postChatMessage,
+      goalAnalysis,
+      setGoalAnalysis,
     ],
   );
 

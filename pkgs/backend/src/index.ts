@@ -37,6 +37,7 @@ import { serve } from "@hono/node-server";
 import { swaggerUI } from "@hono/swagger-ui";
 import {
   BedrockClientAdapter,
+  GoalDecomposerAgent,
   PersonaRenderer,
   SaboriProposerAgent,
   SaboriProposerAgentV2,
@@ -138,6 +139,9 @@ const schedulePlannerAgent = new SchedulePlannerAgent(bedrockClient);
 
 // Initialize SaboriProposerAgentV2 (進捗報告文生成で使用 / U-V2-07)
 const saboriProposerAgentV2 = new SaboriProposerAgentV2(bedrockClient);
+
+// Initialize GoalDecomposerAgent (PM WBS分解で使用)
+const goalDecomposerAgent = new GoalDecomposerAgent(bedrockClient);
 const travelpayoutsClient = env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN
   ? new TravelpayoutsClient({
       credentialsSecretArn: env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN,
@@ -218,6 +222,7 @@ export function createApp() {
       candidateRepository,
       schedulePlannerAgent,
       saboriProposerAgentV2,
+      goalDecomposerAgent,
     ),
   );
   // Proposal and honne share the /api/tasks prefix for :taskId param

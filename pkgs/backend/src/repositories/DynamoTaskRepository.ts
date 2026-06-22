@@ -17,6 +17,7 @@ import {
   UpdateItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import type { GoalAnalysis } from "@saboru/agent";
 import type {
   ITransactionalTaskRepository,
   ScheduleStep,
@@ -207,6 +208,61 @@ export class DynamoTaskRepository implements ITransactionalTaskRepository {
     if (!result.Attributes)
       throw new Error(`Task ${taskId} not found after updatePlannedSteps`);
     return unmarshall(result.Attributes) as Task;
+  }
+
+  /**
+   * GoalAnalysis (PM WBS分解結果) をタスクレコードに保存する。
+   * goalAnalysis は optional 属性として追加 (後方互換性維持)。
+   */
+  async updateGoalAnalysis(
+    userId: string,
+    taskId: string,
+    goalAnalysis: GoalAnalysis,
+  ): Promise<void> {
+    const now = toIsoString(new Date());
+
+    await this.client.send(
+      new UpdateItemCommand({
+        TableName: this.tableName,
+        Key: marshall({
+          PK: `${DDB_PREFIX.USER}${userId}`,
+          SK: `${DDB_PREFIX.TASK}${taskId}`,
+        }),
+        UpdateExpression: "SET goalAnalysis = :ga, updatedAt = :updatedAt",
+        ExpressionAttributeValues: marshall(
+          { ":ga": goalAnalysis, ":updatedAt": now },
+          { removeUndefinedValues: true },
+        ),
+        ConditionExpression: "attribute_exists(PK)",
+      }),
+    );
+  }
+
+  /**
+   * サブタスクのステータスを更新する。
+   * goalAnalysis.subtasks 配列内の対象サブタスクを更新する。
+   */
+  async updateSubtaskStatus(
+    userId: string,
+    taskId: string,
+    subtaskId: string,
+    status: string,
+  ): Promise<void> {
+    const task = await this.findById(userId, taskId);
+    if (!task) throw new Error(`Task ${taskId} not found`);
+
+    const goalAnalysis = (task as Task & { goalAnalysis?: GoalAnalysis }).goalAnalysis;
+    if (!goalAnalysis) throw new Error(`Task ${taskId} has no goal analysis`);
+
+    const updatedSubtasks = goalAnalysis.subtasks.map((st) =>
+      st.id === subtaskId ? { ...st, status } : st,
+    );
+    const updatedGoalAnalysis: GoalAnalysis = {
+      ...goalAnalysis,
+      subtasks: updatedSubtasks,
+    };
+
+    await this.updateGoalAnalysis(userId, taskId, updatedGoalAnalysis);
   }
 
   /** Used internally by TransactWriteItems in TaskCandidateRepository.approve() */
