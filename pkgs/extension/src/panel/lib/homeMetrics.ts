@@ -9,7 +9,12 @@
  */
 
 import type { CalendarStatus, Proposal } from "./types";
-import { TOTAL_WORK_MINUTES, remainingWorkMinutes } from "./workHours";
+import {
+  TOTAL_WORK_MINUTES,
+  remainingWorkMinutes,
+  WORK_START_HOUR,
+  WORK_END_HOUR,
+} from "./workHours";
 
 export type SignalLevel = "low" | "mid" | "high";
 
@@ -128,9 +133,14 @@ export function computeHomeMetrics(input: HomeMetricsInput): HomeMetrics {
   );
 
   // --- 今日の余白: 残稼働時間から未処理タスク見込みを引いた自由時間 ---
-  const remaining = remainingWorkMinutes(now);
+  // 終業後・始業前（深夜含む）は翌日/今日の全稼働時間を基準にする
+  const h = now.getHours();
+  const isAfterWork = h >= WORK_END_HOUR;
+  const isBeforeWork = h < WORK_START_HOUR;
+  const effectiveRemaining =
+    isAfterWork || isBeforeWork ? TOTAL_WORK_MINUTES : remainingWorkMinutes(now);
   const taskLoad = pendingTaskCount * 45;
-  const saboruMinutesToday = Math.max(0, remaining - taskLoad);
+  const saboruMinutesToday = Math.max(0, effectiveRemaining - taskLoad);
 
   const predictedEndTime = predictEndTime(now, pendingTaskCount);
 
