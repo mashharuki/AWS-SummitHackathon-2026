@@ -16,10 +16,92 @@ import {
   AlertTriangle,
   CalendarDays,
   Clock,
+  ExternalLink,
   FileWarning,
   Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+
+interface FreeSuggestion {
+  label: string;
+  description: string;
+  url: string;
+  service: string;
+}
+
+function getSuggestions(freeMinutes: number): FreeSuggestion[] {
+  if (freeMinutes >= 60) {
+    return [
+      {
+        label: "Prime Video で映画",
+        description: "1本まるごと観られる時間があります",
+        url: "https://www.amazon.co.jp/gp/video/storefront",
+        service: "Amazon Prime Video",
+      },
+      {
+        label: "Kindle で読書",
+        description: "集中して本を読むのに最適な時間です",
+        url: "https://read.amazon.co.jp",
+        service: "Kindle",
+      },
+      {
+        label: "趣味リサーチ",
+        description: "気になることをじっくり調べましょう",
+        url: "https://www.amazon.co.jp",
+        service: "Amazon EC",
+      },
+    ];
+  }
+  if (freeMinutes >= 30) {
+    return [
+      {
+        label: "Audible で短編",
+        description: "30分以内で聴けるポッドキャストや朗読があります",
+        url: "https://www.audible.co.jp",
+        service: "Amazon Audible",
+      },
+      {
+        label: "Prime Video でドラマ1話",
+        description: "短編コンテンツをチェックしましょう",
+        url: "https://www.amazon.co.jp/gp/video/storefront",
+        service: "Amazon Prime Video",
+      },
+    ];
+  }
+  if (freeMinutes >= 15) {
+    return [
+      {
+        label: "Prime Reading でマンガ1話",
+        description: "15分でサクッと読めます",
+        url: "https://www.amazon.co.jp/kindle-dbs/fd/prime-reading",
+        service: "Amazon Prime Reading",
+      },
+      {
+        label: "Amazon Music で音楽",
+        description: "好きな音楽を流してリフレッシュ",
+        url: "https://music.amazon.co.jp",
+        service: "Amazon Music",
+      },
+    ];
+  }
+  if (freeMinutes >= 5) {
+    return [
+      {
+        label: "Amazon Music でひと息",
+        description: "5分だけ音楽を聴いてリセット",
+        url: "https://music.amazon.co.jp",
+        service: "Amazon Music",
+      },
+      {
+        label: "深呼吸 & ストレッチ",
+        description: "5分のマインドフルネスで集中力を回復",
+        url: "https://www.amazon.co.jp/gp/video/storefront?filterId=OFFER_BINDING_TYPE%3AFREE",
+        service: "Prime Video (無料)",
+      },
+    ];
+  }
+  return [];
+}
 
 export function HomeTab() {
   const { jwt, candidates, tasks, representativeProposal } = useSaborou();
@@ -171,6 +253,37 @@ export function HomeTab() {
           />
         </div>
       </div>
+
+      {/* 余白の使い方提案 */}
+      {metrics.saboruMinutesToday >= 5 && (
+        <div>
+          <SectionLabel>
+            余白 {formatDuration(metrics.saboruMinutesToday)} の使い方
+          </SectionLabel>
+          <div className="flex flex-col gap-2 mt-1">
+            {getSuggestions(metrics.saboruMinutesToday).map((s) => (
+              <a
+                key={s.url}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] hover:bg-[#f3f4f6] transition-colors"
+              >
+                <div>
+                  <p className="text-sm font-bold text-[#1f2937]">{s.label}</p>
+                  <p className="text-[10px] text-[#9ca3af] mt-0.5">
+                    {s.description}
+                  </p>
+                  <p className="text-[9px] text-[#f97316] font-bold mt-0.5">
+                    {s.service}
+                  </p>
+                </div>
+                <ExternalLink size={13} className="text-[#9ca3af] flex-shrink-0 ml-2" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* このまま行くと予測 */}
       <Card accent="#ef4444">
