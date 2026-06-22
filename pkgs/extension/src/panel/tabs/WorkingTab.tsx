@@ -108,10 +108,7 @@ export function WorkingTab() {
       () => setStepStates(["done", "done", "active"]),
       5000,
     );
-    const t3 = setTimeout(
-      () => setStepStates(["done", "done", "done"]),
-      9000,
-    );
+    const t3 = setTimeout(() => setStepStates(["done", "done", "done"]), 9000);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -121,7 +118,10 @@ export function WorkingTab() {
 
   if (tasksLoading) {
     return (
-      <div className="flex items-center justify-center py-16" data-testid="working-tab-loading">
+      <div
+        className="flex items-center justify-center py-16"
+        data-testid="working-tab-loading"
+      >
         <div className="w-6 h-6 rounded-full border-2 border-[#f97316] border-t-transparent animate-spin" />
       </div>
     );

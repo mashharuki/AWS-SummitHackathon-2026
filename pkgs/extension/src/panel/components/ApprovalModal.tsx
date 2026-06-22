@@ -29,7 +29,8 @@ type TaskType = "travel" | "slides" | "general";
 function detectTaskTypes(candidate: TaskCandidate): TaskType[] {
   const text = `${candidate.title} ${candidate.description}`.toLowerCase();
   const types: TaskType[] = [];
-  if (/旅程|出張|旅行|新幹線|ホテル|宿泊|交通|航空/.test(text)) types.push("travel");
+  if (/旅程|出張|旅行|新幹線|ホテル|宿泊|交通|航空/.test(text))
+    types.push("travel");
   if (/スライド|資料|プレゼン|presentation|slide|docs/.test(text))
     types.push("slides");
   if (types.length === 0) types.push("general");

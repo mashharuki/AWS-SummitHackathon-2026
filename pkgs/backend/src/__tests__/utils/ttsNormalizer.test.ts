@@ -46,9 +46,7 @@ describe("normalizeForTts", () => {
   });
 
   it("normalizes dates and times", () => {
-    expect(normalizeForTts("2026-06-21 13:30")).toBe(
-      "2026年6月21日 13時30分",
-    );
+    expect(normalizeForTts("2026-06-21 13:30")).toBe("2026年6月21日 13時30分");
   });
 
   it("shortens URLs instead of leaving long readout text", () => {

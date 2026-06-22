@@ -144,7 +144,9 @@ export function computeHomeMetrics(input: HomeMetricsInput): HomeMetrics {
   const isAfterWork = h >= WORK_END_HOUR;
   const isBeforeWork = h < WORK_START_HOUR;
   const effectiveRemaining =
-    isAfterWork || isBeforeWork ? TOTAL_WORK_MINUTES : remainingWorkMinutes(now);
+    isAfterWork || isBeforeWork
+      ? TOTAL_WORK_MINUTES
+      : remainingWorkMinutes(now);
   const taskLoad = pendingTaskCount * 45;
   const saboruMinutesToday =
     scheduleSaboruMinutes != null

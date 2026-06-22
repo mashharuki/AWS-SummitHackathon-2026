@@ -30,7 +30,9 @@ export class BedrockClientAdapter implements IBedrockClient {
   async converse(input: ConverseCommandInput): Promise<ConverseCommandOutput> {
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      console.log(`[BedrockClientAdapter] abort fired after ${BEDROCK_TIMEOUT_MS}ms model=${input.modelId}`);
+      console.log(
+        `[BedrockClientAdapter] abort fired after ${BEDROCK_TIMEOUT_MS}ms model=${input.modelId}`,
+      );
       controller.abort();
     }, BEDROCK_TIMEOUT_MS);
     console.log(`[BedrockClientAdapter] converse start model=${input.modelId}`);
@@ -38,10 +40,14 @@ export class BedrockClientAdapter implements IBedrockClient {
       const result = await this.client.send(new ConverseCommand(input), {
         abortSignal: controller.signal,
       });
-      console.log(`[BedrockClientAdapter] converse success model=${input.modelId}`);
+      console.log(
+        `[BedrockClientAdapter] converse success model=${input.modelId}`,
+      );
       return result;
     } catch (err) {
-      console.log(`[BedrockClientAdapter] converse error model=${input.modelId} name=${(err as Error)?.name} msg=${(err as Error)?.message?.slice(0, 120)}`);
+      console.log(
+        `[BedrockClientAdapter] converse error model=${input.modelId} name=${(err as Error)?.name} msg=${(err as Error)?.message?.slice(0, 120)}`,
+      );
       throw err;
     } finally {
       clearTimeout(timer);

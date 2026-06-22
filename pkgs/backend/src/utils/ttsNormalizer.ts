@@ -216,7 +216,6 @@ function numberToJapanese(value: number): string {
 
   const hundreds = Math.floor(value / 100);
   const rest = value % 100;
-  const hundredPrefix =
-    hundreds === 1 ? "ひゃく" : `${digit[hundreds]}ひゃく`;
+  const hundredPrefix = hundreds === 1 ? "ひゃく" : `${digit[hundreds]}ひゃく`;
   return `${hundredPrefix}${rest ? numberToJapanese(rest) : ""}`;
 }

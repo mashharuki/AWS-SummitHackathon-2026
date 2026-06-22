@@ -318,14 +318,20 @@ export function createSlackRoute(
     }),
     async (c) => {
       const userId = c.get("userId");
-      const { taskId, replyText, channelId: rawChannelId, threadTs } = c.req.valid("json");
+      const {
+        taskId,
+        replyText,
+        channelId: rawChannelId,
+        threadTs,
+      } = c.req.valid("json");
 
       // channelId が省略または無効な場合、taskId からタスクの slackChannelId を解決する
       let channelId = rawChannelId;
       if (!channelId || !/^[A-Z0-9][A-Z0-9_-]*$/.test(channelId)) {
         if (taskId) {
           const task = await taskRepository.findById(userId, taskId);
-          channelId = (task as { slackChannelId?: string } | null)?.slackChannelId;
+          channelId = (task as { slackChannelId?: string } | null)
+            ?.slackChannelId;
         }
         if (!channelId) {
           // taskId なし or タスクにも channelId がない場合は最近のタスクから探す
@@ -335,7 +341,16 @@ export function createSlackRoute(
             .find(Boolean);
         }
         if (!channelId) {
-          return c.json({ error: { code: "MISSING_CHANNEL", message: "channelId が特定できませんでした。channelId を指定してください。" } }, 400);
+          return c.json(
+            {
+              error: {
+                code: "MISSING_CHANNEL",
+                message:
+                  "channelId が特定できませんでした。channelId を指定してください。",
+              },
+            },
+            400,
+          );
         }
       }
 

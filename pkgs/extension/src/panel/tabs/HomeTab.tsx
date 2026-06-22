@@ -24,8 +24,13 @@ import {
 import { useEffect, useState } from "react";
 
 export function HomeTab() {
-  const { jwt, candidates, tasks, representativeProposal, scheduleSaboruMinutes } =
-    useSaborou();
+  const {
+    jwt,
+    candidates,
+    tasks,
+    representativeProposal,
+    scheduleSaboruMinutes,
+  } = useSaborou();
   const [calendar, setCalendar] = useState<CalendarStatus>({ cached: false });
   const [metrics, setMetrics] = useState<HomeMetrics | null>(null);
 
@@ -53,7 +58,13 @@ export function HomeTab() {
         scheduleSaboruMinutes,
       }),
     );
-  }, [calendar, representativeProposal, candidates.length, tasks.length, scheduleSaboruMinutes]);
+  }, [
+    calendar,
+    representativeProposal,
+    candidates.length,
+    tasks.length,
+    scheduleSaboruMinutes,
+  ]);
 
   if (!metrics) {
     return (
@@ -200,7 +211,10 @@ export function HomeTab() {
                     {s.service}
                   </p>
                 </div>
-                <ExternalLink size={13} className="text-[#9ca3af] flex-shrink-0 ml-2" />
+                <ExternalLink
+                  size={13}
+                  className="text-[#9ca3af] flex-shrink-0 ml-2"
+                />
               </a>
             ))}
           </div>

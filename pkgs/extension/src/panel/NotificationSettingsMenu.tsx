@@ -10,7 +10,14 @@ import {
   getConnections,
   getSlackOAuthUrl,
 } from "@/panel/lib/agentClient";
-import { Bell, BellOff, ExternalLink, Link, Settings, Unlink } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  ExternalLink,
+  Link,
+  Settings,
+  Unlink,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 type SettingKey = keyof NotificationSettings;
@@ -129,7 +136,9 @@ export function NotificationSettingsMenu({ jwt }: { jwt: string | null }) {
 
           {/* Slack連携セクション */}
           <div className="mt-3 border-t border-[#f3f4f6] pt-3">
-            <p className="text-[10px] font-bold text-[#9ca3af] mb-2">Slack連携</p>
+            <p className="text-[10px] font-bold text-[#9ca3af] mb-2">
+              Slack連携
+            </p>
             {slackConnected === null ? (
               <p className="text-[11px] text-[#9ca3af]">確認中...</p>
             ) : slackConnected ? (
