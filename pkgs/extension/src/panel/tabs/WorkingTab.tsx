@@ -69,7 +69,7 @@ function getStepDefs(
 // ---------------------------------------------------------------------------
 
 export function WorkingTab() {
-  const { jwt, tasks } = useSaborou();
+  const { jwt, tasks, tasksLoading, refreshTasks } = useSaborou();
   const [schedule, setSchedule] = useState<SaboriSchedule | null>(null);
   const [stepStates, setStepStates] = useState<StepState[]>([
     "active",
@@ -79,6 +79,11 @@ export function WorkingTab() {
 
   const activeTask = tasks[0] ?? null;
   const stepDefs = activeTask ? getStepDefs(activeTask.title) : [];
+
+  // タブがマウントされたときに最新タスクを取得する
+  useEffect(() => {
+    void refreshTasks();
+  }, [refreshTasks]);
 
   useEffect(() => {
     if (!jwt || !activeTask) return;
@@ -112,7 +117,15 @@ export function WorkingTab() {
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [activeTask?.taskId]);
+  }, [activeTask]);
+
+  if (tasksLoading) {
+    return (
+      <div className="flex items-center justify-center py-16" data-testid="working-tab-loading">
+        <div className="w-6 h-6 rounded-full border-2 border-[#f97316] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3" data-testid="working-tab">
