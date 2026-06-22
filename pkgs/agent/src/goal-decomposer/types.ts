@@ -27,10 +27,10 @@ export type SubTaskType = z.infer<typeof SubTaskTypeSchema>;
  * "decision" は人間の意思決定が必要な工程
  */
 export const SubTaskSchema = z.object({
-  id: z.string().min(1).max(40),
+  id: z.string().min(1).max(60),
   taskId: z.string().min(1).max(128),
-  title: z.string().min(1).max(80),
-  description: z.string().max(300),
+  title: z.string().min(1).max(120),
+  description: z.string().max(600),
   estimatedMinutes: z.number().int().min(5).max(480),
   saborouType: SubTaskTypeSchema,
   status: SubTaskStatusSchema,
@@ -39,32 +39,32 @@ export const SubTaskSchema = z.object({
 export type SubTask = z.infer<typeof SubTaskSchema>;
 
 export const GoalAnalysisSchema = z.object({
-  goalSummary: z.string().min(1).max(200),
-  deliverable: z.string().min(1).max(200),
-  subtasks: z.array(SubTaskSchema).min(1).max(8),
+  goalSummary: z.string().min(1).max(300),
+  deliverable: z.string().min(1).max(300),
+  subtasks: z.array(SubTaskSchema).min(1).max(12),
   totalEstimatedMinutes: z.number().int().min(0),
   freeTimeMinutes: z.number().int().min(0),
-  freeTimeSuggestion: z.string().min(1).max(300),
+  freeTimeSuggestion: z.string().min(1).max(500),
   generatedAt: z.string().datetime(),
 });
 export type GoalAnalysis = z.infer<typeof GoalAnalysisSchema>;
 
-/** Bedrockが返すWBS分解の生JSONスキーマ */
+/** Bedrockが返すWBS分解の生JSONスキーマ（上限はサニタイズ後に検証する） */
 export const WbsDecomposeOutputSchema = z.object({
-  goalSummary: z.string().min(1).max(200),
-  deliverable: z.string().min(1).max(200),
+  goalSummary: z.string().min(1).max(300),
+  deliverable: z.string().min(1).max(300),
   subtasks: z
     .array(
       z.object({
-        id: z.string().min(1).max(40),
-        title: z.string().min(1).max(80),
-        description: z.string().max(300),
+        id: z.string().min(1).max(60),
+        title: z.string().min(1).max(120),
+        description: z.string().max(600),
         estimatedMinutes: z.number().int().min(5).max(480),
         saborouType: SubTaskTypeSchema,
       }),
     )
     .min(1)
-    .max(8),
-  freeTimeSuggestion: z.string().min(1).max(300),
+    .max(12),
+  freeTimeSuggestion: z.string().min(1).max(500),
 });
 export type WbsDecomposeOutput = z.infer<typeof WbsDecomposeOutputSchema>;

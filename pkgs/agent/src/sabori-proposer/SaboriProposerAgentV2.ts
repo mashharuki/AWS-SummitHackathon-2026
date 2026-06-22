@@ -88,8 +88,8 @@ export class SaboriProposerAgentV2 {
         toolChoice: { tool: { name: REPLY_DRAFT_TOOL_NAME } },
       },
       inferenceConfig: {
-        maxTokens: 1024,
-        temperature: 0.3,
+        maxTokens: 512,
+        temperature: 0.7,
       },
     });
 
@@ -153,8 +153,8 @@ export class SaboriProposerAgentV2 {
         toolChoice: { tool: { name: DECLINE_DRAFT_TOOL_NAME } },
       },
       inferenceConfig: {
-        maxTokens: 1024,
-        temperature: 0.3,
+        maxTokens: 512,
+        temperature: 0.7,
       },
     });
 

@@ -72,7 +72,10 @@ export class GoalDecomposerAgent {
       throw new Error("Bedrock did not return expected tool use block");
     }
 
-    const parsed = WbsDecomposeOutputSchema.safeParse(toolUse.input);
+    // Bedrock出力を事前サニタイズ: 上限超えの文字列を切り捨ててからZod検証にかける
+    const sanitized = this.sanitizeRawOutput(toolUse.input);
+
+    const parsed = WbsDecomposeOutputSchema.safeParse(sanitized);
     if (!parsed.success) {
       logError({
         action: "goal_decomposer_validation_error",
@@ -120,6 +123,39 @@ export class GoalDecomposerAgent {
     });
 
     return goalAnalysis;
+  }
+
+  /**
+   * Bedrock 出力の文字列フィールドを切り捨ててスキーマ違反を防ぐ。
+   * subtasks が 12 件を超える場合は先頭 12 件に絞る。
+   */
+  private sanitizeRawOutput(raw: unknown): unknown {
+    if (!raw || typeof raw !== "object") return raw;
+    const obj = raw as Record<string, unknown>;
+
+    const trunc = (s: unknown, max: number): string =>
+      typeof s === "string" ? s.slice(0, max) : String(s ?? "").slice(0, max);
+
+    const subtasks = Array.isArray(obj.subtasks)
+      ? (obj.subtasks as unknown[]).slice(0, 12).map((st) => {
+          if (!st || typeof st !== "object") return st;
+          const s = st as Record<string, unknown>;
+          return {
+            ...s,
+            id: trunc(s.id, 60),
+            title: trunc(s.title, 120),
+            description: trunc(s.description, 600),
+          };
+        })
+      : obj.subtasks;
+
+    return {
+      ...obj,
+      goalSummary: trunc(obj.goalSummary, 300),
+      deliverable: trunc(obj.deliverable, 300),
+      freeTimeSuggestion: trunc(obj.freeTimeSuggestion, 500),
+      subtasks,
+    };
   }
 
   private buildUserMessage(input: GoalDecomposerInput): string {

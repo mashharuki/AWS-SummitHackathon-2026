@@ -33,9 +33,9 @@ export const WBS_DECOMPOSE_TOOL: Tool = {
           },
           subtasks: {
             type: "array",
-            description: "WBS分解されたサブタスクの配列（1〜8件、時系列順）",
+            description: "WBS分解されたサブタスクの配列（3〜6件推奨、最大12件、時系列順）",
             minItems: 1,
-            maxItems: 8,
+            maxItems: 12,
             items: {
               type: "object",
               properties: {
@@ -45,11 +45,11 @@ export const WBS_DECOMPOSE_TOOL: Tool = {
                 },
                 title: {
                   type: "string",
-                  description: "サブタスク名（最大80文字、行動動詞で始める。例: Slack依頼内容を整理する）",
+                  description: "サブタスク名（最大120文字、行動動詞で始める。例: 旅程候補を調査する）",
                 },
                 description: {
                   type: "string",
-                  description: "サブタスクの詳細説明（最大300文字）",
+                  description: "サブタスクの詳細説明（最大600文字）",
                 },
                 estimatedMinutes: {
                   type: "integer",
