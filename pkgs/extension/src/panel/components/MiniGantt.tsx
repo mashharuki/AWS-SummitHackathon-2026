@@ -12,6 +12,7 @@ import type {
   BandType,
   SaboriSchedule,
   ScheduleBlock,
+  SubTask,
 } from "@/panel/lib/types";
 import {
   WORK_END_HOUR,
@@ -94,9 +95,89 @@ function demoBlocks(): ScheduleBlock[] {
   ];
 }
 
-export function MiniGantt({ schedule }: { schedule: SaboriSchedule | null }) {
-  const blocks =
-    schedule && schedule.blocks.length > 0 ? schedule.blocks : demoBlocks();
+/** PM WBSサブタスクをScheduleBlock配列に変換する */
+function subtasksToBlocks(subtasks: SubTask[]): ScheduleBlock[] {
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const workStartMin = WORK_START_HOUR * 60;
+  const workEndMin = WORK_END_HOUR * 60;
+
+  // 勤務時間外（業後・未明）は9:00始まりで配置し、表示範囲内に収める
+  const startMin =
+    nowMin >= workStartMin && nowMin < workEndMin ? nowMin : workStartMin + 60;
+  let currentMin = startMin;
+
+  return subtasks
+    .filter((st) => st.status !== "skipped")
+    .map((st) => {
+      // 稼働終了を超えた場合は勤務開始に折り返す
+      if (currentMin >= workEndMin) currentMin = workStartMin + 60;
+
+      const startAt = new Date();
+      startAt.setHours(Math.floor(currentMin / 60), currentMin % 60, 0, 0);
+      const endMin = Math.min(currentMin + st.estimatedMinutes, workEndMin);
+      currentMin += st.estimatedMinutes;
+      const endAt = new Date();
+      endAt.setHours(Math.floor(endMin / 60), endMin % 60, 0, 0);
+
+      const bandType: BandType =
+        st.saborouType === "decision"
+          ? "decision"
+          : st.saborouType === "saboru" || st.status === "done"
+            ? "saboru"
+            : "work";
+
+      return {
+        stepId: st.id,
+        stepLabel: st.title,
+        bandType,
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        durationMinutes: st.estimatedMinutes,
+      };
+    });
+}
+
+/** activeTaskから仮ブロックを生成する（decompose失敗・未実施時のフォールバック） */
+function taskFallbackBlocks(taskTitle: string): ScheduleBlock[] {
+  const at = (h: number, m: number) => {
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d.toISOString();
+  };
+  const label = taskTitle.slice(0, 20);
+  return [
+    { stepId: "t1", stepLabel: label, bandType: "work", startAt: at(9, 0), endAt: at(11, 0), durationMinutes: 120 },
+    { stepId: "t2", stepLabel: "確認・調整", bandType: "decision", startAt: at(13, 0), endAt: at(14, 0), durationMinutes: 60 },
+    { stepId: "t3", stepLabel: "さぼろう", bandType: "saboru", startAt: at(15, 0), endAt: at(17, 0), durationMinutes: 120 },
+  ];
+}
+
+export function MiniGantt({
+  schedule,
+  subtasks,
+  activeTaskTitle,
+}: {
+  schedule: SaboriSchedule | null;
+  subtasks?: SubTask[];
+  activeTaskTitle?: string;
+}) {
+  const blocks = (() => {
+    if (subtasks && subtasks.length > 0) return subtasksToBlocks(subtasks);
+    if (schedule && schedule.blocks.length > 0) return schedule.blocks;
+    if (activeTaskTitle) return taskFallbackBlocks(activeTaskTitle);
+    return [];
+  })();
+
+  // データなし状態（タスクなし）
+  if (blocks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-5 gap-1" data-testid="mini-gantt-empty">
+        <p className="text-xs text-[#9ca3af]">今日はまだスケジュールがありません</p>
+        <p className="text-[10px] text-[#d1d5db]">依頼整理でタスクを承認すると表示されます</p>
+      </div>
+    );
+  }
 
   // 時間目盛（8,10,12,14,16 と 17）
   const ticks = [8, 10, 12, 14, 16, 17];

@@ -19,7 +19,7 @@ import { Coffee, ExternalLink, FileText, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function SlackTab() {
-  const { jwt, tasks, representativeProposal, scheduleSaboruMinutes, chatMessages } =
+  const { jwt, tasks, representativeProposal, scheduleSaboruMinutes, chatMessages, goalAnalysis } =
     useSaborou();
   const [proposal, setProposal] = useState<Proposal | null>(
     representativeProposal,
@@ -40,9 +40,7 @@ export function SlackTab() {
   }, [jwt, activeTask, proposal]);
 
   const reasons = proposal?.reasoning ?? [];
-  const chatMessage =
-    proposal?.chatMessage ??
-    "議事録はもう確認済みで、文章修正と返信案作成も完了しています。次の固定予定は16:15のデモ確認MTGなので、今から休んでも後続タスクには影響しません。";
+  const chatMessage = proposal?.chatMessage ?? null;
 
   return (
     <div className="flex flex-col h-full" data-testid="slack-tab">
@@ -54,20 +52,22 @@ export function SlackTab() {
           </div>
         ) : (
           <>
-            {/* SABOROU の一言 */}
-            <div className="flex gap-2">
-              <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
-                サ
+            {/* SABOROU の一言（proposal がある場合のみ表示） */}
+            {chatMessage && (
+              <div className="flex gap-2">
+                <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+                  サ
+                </div>
+                <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
+                  <p className="text-[10px] font-bold text-[#9ca3af] mb-1">
+                    SABOROU チャット
+                  </p>
+                  <p className="text-sm text-[#1f2937] leading-relaxed">
+                    {chatMessage}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
-                <p className="text-[10px] font-bold text-[#9ca3af] mb-1">
-                  SABOROU チャット
-                </p>
-                <p className="text-sm text-[#1f2937] leading-relaxed">
-                  {chatMessage}
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* サボれる理由（reasoning） */}
             {reasons.length > 0 && (
@@ -89,7 +89,8 @@ export function SlackTab() {
               </Card>
             )}
 
-            {!activeTask &&
+            {/* 空状態: proposal もチャット履歴もない場合 */}
+            {!chatMessage &&
               reasons.length === 0 &&
               chatMessages.length === 0 && (
                 <EmptyState
@@ -163,10 +164,11 @@ export function SlackTab() {
         />
       )}
 
-      {/* 使い道提案ポップアップ（モック） */}
+      {/* 使い道提案ポップアップ */}
       {showLeisure && (
         <LeisureSuggestion
-          freeMinutes={scheduleSaboruMinutes ?? 60}
+          freeMinutes={goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? 60}
+          aiSuggestion={goalAnalysis?.freeTimeSuggestion}
           onClose={() => setShowLeisure(false)}
         />
       )}
@@ -174,26 +176,14 @@ export function SlackTab() {
   );
 }
 
-/** 余白の使い道提案（Amazon Prime / 散歩 など。モック） */
-function LeisureSuggestion({ onClose }: { onClose: () => void }) {
-  const suggestions = [
-    {
-      icon: Film,
-      title: "Amazon Prime の続きを見る",
-      sub: "先週見ていたアニメの続き、残り 15 分で1話終わります。",
-      cta: "Amazon Prime を開く",
-      color: "#00A8E0",
-    },
-    {
-      icon: Footprints,
-      title: "10 分だけ散歩する",
-      sub: "天気は晴れ。少し歩くと午後の集中力が戻ります。",
-      cta: "あとで",
-      color: "#10b981",
-    },
-  ];
+/** 余白の使い道提案（AI提案 + freeSuggestionsフォールバック） */
+function LeisureSuggestion({
+  freeMinutes,
+  aiSuggestion,
+  onClose,
 }: {
   freeMinutes: number;
+  aiSuggestion?: string;
   onClose: () => void;
 }) {
   const suggestions = getSuggestions(freeMinutes);
@@ -222,6 +212,13 @@ function LeisureSuggestion({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <div className="flex flex-col gap-2">
+          {/* AIによるパーソナライズ提案（Slack文脈から推測） */}
+          {aiSuggestion && (
+            <div className="p-3 rounded-xl bg-[#f97316]/20 border border-[#f97316]/40">
+              <p className="text-[9px] font-bold text-[#f97316] mb-1">AIからのおすすめ</p>
+              <p className="text-sm text-white leading-relaxed">{aiSuggestion}</p>
+            </div>
+          )}
           {suggestions.map((s) => (
             <a
               key={s.url}

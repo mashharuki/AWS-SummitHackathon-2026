@@ -14,6 +14,7 @@
 
 import { zValidator } from "@hono/zod-validator";
 import type {
+  GoalDecomposerAgent,
   SaboriProposerAgentV2,
   SchedulePlannerAgent,
 } from "@saboru/agent";
@@ -40,6 +41,8 @@ export function createTasksRoute(
    * v1 後方互換のため任意とし、未指定時は /report が 503 を返す。
    */
   saboriProposerAgentV2?: SaboriProposerAgentV2,
+  /** PM WBS分解エージェント。POST /:id/decompose で使用する。 */
+  goalDecomposerAgent?: GoalDecomposerAgent,
 ): Hono<AppEnv> {
   const tasks = new Hono<AppEnv>();
 
@@ -436,6 +439,143 @@ export function createTasksRoute(
       return c.json(updated);
     },
   );
+
+  /**
+   * POST /tasks/:taskId/decompose — PM WBS分解を実行する
+   *
+   * PMBOK 8th Edition WBS手法でタスクをサブタスクに分解し、
+   * GoalAnalysisをDynamoDBに保存して返す。
+   * slackContext クエリパラメータでSlack文脈を渡せる（任意）。
+   *
+   * Errors:
+   * - 404 NOT_FOUND: タスクが存在しない / 所有者でない
+   * - 503 DECOMPOSE_FAILED: Bedrock呼び出し失敗 / エージェント未注入
+   */
+  tasks.post("/:taskId/decompose", async (c) => {
+    const userId = c.get("userId");
+    const taskId = c.req.param("taskId");
+
+    const task = await taskRepository.findById(userId, taskId);
+    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+
+    if (!goalDecomposerAgent) {
+      return c.json(
+        {
+          error: {
+            code: "DECOMPOSE_FAILED",
+            message: "PM分解機能が利用できません",
+          },
+        },
+        503,
+      );
+    }
+
+    const body = await c.req.json().catch(() => ({}));
+    const slackContext = typeof body.slackContext === "string"
+      ? (body.slackContext as string)
+      : undefined;
+
+    try {
+      const goalAnalysis = await goalDecomposerAgent.decompose({
+        taskId: task.taskId,
+        title: task.title,
+        description: task.description,
+        deadline: task.deadline,
+        slackContext,
+      });
+
+      await taskRepository.updateGoalAnalysis(userId, taskId, goalAnalysis);
+
+      return c.json({ taskId, goalAnalysis });
+    } catch (err) {
+      console.log(
+        JSON.stringify({
+          level: "ERROR",
+          action: "goal_decompose_failed",
+          taskId,
+          error: String(err),
+        }),
+      );
+      return c.json(
+        {
+          error: {
+            code: "DECOMPOSE_FAILED",
+            message: "PM分解に失敗しました",
+          },
+        },
+        503,
+      );
+    }
+  });
+
+  /**
+   * GET /tasks/:taskId/decompose — GoalAnalysisを取得する
+   *
+   * 既存のGoalAnalysis（WBS分解結果）をDynamoDBから返す。
+   * まだ分解されていない場合は404を返す。
+   */
+  tasks.get("/:taskId/decompose", async (c) => {
+    const userId = c.get("userId");
+    const taskId = c.req.param("taskId");
+
+    const task = await taskRepository.findById(userId, taskId);
+    if (!task) throw new NotFoundError(`Task ${taskId} not found`);
+
+    const goalAnalysis = (task as typeof task & { goalAnalysis?: unknown }).goalAnalysis;
+    if (!goalAnalysis) {
+      return c.json(
+        {
+          error: {
+            code: "NOT_FOUND",
+            message: "このタスクはまだPM分解されていません",
+          },
+        },
+        404,
+      );
+    }
+
+    return c.json({ taskId, goalAnalysis });
+  });
+
+  /**
+   * PATCH /tasks/:taskId/subtasks/:subtaskId — サブタスクのステータスを更新する
+   *
+   * body: { status: "approved" | "executing" | "done" | "skipped" }
+   *
+   * Errors:
+   * - 404 NOT_FOUND: タスクまたはサブタスクが存在しない
+   */
+  tasks.patch("/:taskId/subtasks/:subtaskId", async (c) => {
+    const userId = c.get("userId");
+    const taskId = c.req.param("taskId");
+    const subtaskId = c.req.param("subtaskId");
+
+    const body = await c.req.json();
+    const { status } = body as { status: string };
+
+    const validStatuses = ["pending", "approved", "executing", "done", "skipped"];
+    if (!validStatuses.includes(status)) {
+      return c.json(
+        {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: `status は ${validStatuses.join(" / ")} のいずれかです`,
+          },
+        },
+        400,
+      );
+    }
+
+    try {
+      await taskRepository.updateSubtaskStatus(userId, taskId, subtaskId, status);
+      return c.json({ taskId, subtaskId, status });
+    } catch (err) {
+      if (String(err).includes("not found")) {
+        throw new NotFoundError(String(err));
+      }
+      throw err;
+    }
+  });
 
   return tasks;
 }

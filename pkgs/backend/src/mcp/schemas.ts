@@ -100,6 +100,17 @@ export const mcpToolInputSchemas = {
   saborou_find_slack_channel: z
     .object({ name: z.string().min(1).max(80) })
     .strict(),
+  saborou_decompose_task: z
+    .object({
+      taskId: idSchema,
+      slackContext: z.string().trim().max(1000).optional(),
+    })
+    .strict(),
+  saborou_suggest_free_time: z
+    .object({
+      taskId: idSchema,
+    })
+    .strict(),
 } satisfies Record<McpToolName, z.ZodTypeAny>;
 
 export const mcpToolOutputSchemas = {

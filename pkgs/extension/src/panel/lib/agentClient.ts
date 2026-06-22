@@ -27,10 +27,12 @@ export {
 
 import type {
   CalendarStatus,
+  GoalAnalysis,
   ProgressReport,
   Proposal,
   SaboriSchedule,
   ScheduleStep,
+  SubTaskStatus,
   TaskCandidate,
   TaskSummary,
 } from "./types";
@@ -390,4 +392,71 @@ export async function delegateTask(
     method: "POST",
     body: JSON.stringify({ taskId, channelId, approved: true, ...options }),
   });
+}
+
+// ---------------------------------------------------------------------------
+// PM WBS分解 API (PM機能)
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /api/tasks/:taskId/decompose
+ * PMBOK WBS手法でタスクをサブタスクに分解する。
+ * slackContextを渡すとユーザーの嗜好に合わせた余白提案が生成される。
+ */
+export async function decomposeTask(
+  taskId: string,
+  jwt: string,
+  options?: { slackContext?: string },
+): Promise<GoalAnalysis> {
+  const res = await apiFetch<{ taskId: string; goalAnalysis: GoalAnalysis }>(
+    `/api/tasks/${encodeURIComponent(taskId)}/decompose`,
+    jwt,
+    {
+      method: "POST",
+      body: JSON.stringify(options ?? {}),
+    },
+  );
+  return res.goalAnalysis;
+}
+
+/**
+ * GET /api/tasks/:taskId/decompose
+ * 既存のGoalAnalysis（WBS分解結果）を取得する。
+ * まだ分解されていない場合はnullを返す。
+ */
+export async function getGoalAnalysis(
+  taskId: string,
+  jwt: string,
+): Promise<GoalAnalysis | null> {
+  try {
+    const res = await apiFetch<{ taskId: string; goalAnalysis: GoalAnalysis }>(
+      `/api/tasks/${encodeURIComponent(taskId)}/decompose`,
+      jwt,
+      { method: "GET" },
+    );
+    return res.goalAnalysis;
+  } catch (err) {
+    console.warn("[agentClient] getGoalAnalysis failed:", err);
+    return null;
+  }
+}
+
+/**
+ * PATCH /api/tasks/:taskId/subtasks/:subtaskId
+ * サブタスクのステータスを更新する。
+ */
+export async function updateSubtaskStatus(
+  taskId: string,
+  subtaskId: string,
+  status: SubTaskStatus,
+  jwt: string,
+): Promise<void> {
+  await apiFetch<{ taskId: string; subtaskId: string; status: string }>(
+    `/api/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
+    jwt,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    },
+  );
 }
