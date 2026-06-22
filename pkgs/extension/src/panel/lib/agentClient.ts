@@ -322,6 +322,44 @@ export async function getSchedule(
   }
 }
 
+/** GET /api/connections — サービス接続一覧（slack / google など） */
+export async function getConnections(
+  jwt: string,
+): Promise<{ service: string; status: string }[]> {
+  try {
+    const res = await apiFetch<{
+      connections: { service: string; status: string }[];
+    }>("/api/connections", jwt, { method: "GET" });
+    return res.connections ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/** DELETE /api/connections/:service — サービス接続を解除する */
+export async function disconnectService(
+  service: string,
+  jwt: string,
+): Promise<void> {
+  const baseUrl = getApiUrl();
+  const res = await fetch(
+    `${baseUrl}/api/connections/${encodeURIComponent(service)}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${jwt}` } },
+  );
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`[agentClient] ${res.status} ${res.statusText}: ${text}`);
+  }
+}
+
+/** GET /api/auth/slack — Slack OAuth 認可 URL を取得する */
+export async function getSlackOAuthUrl(jwt: string): Promise<string> {
+  const res = await apiFetch<{ url: string }>("/auth/slack", jwt, {
+    method: "GET",
+  });
+  return res.url;
+}
+
 /** POST /api/tasks/:id/report — 進捗報告文（動いてるフリ）を生成する */
 export async function getProgressReport(
   taskId: string,
