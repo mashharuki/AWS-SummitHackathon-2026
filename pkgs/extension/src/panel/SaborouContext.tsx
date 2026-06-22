@@ -83,6 +83,13 @@ interface SaborouContextValue {
 
 const SaborouContext = createContext<SaborouContextValue | null>(null);
 
+/** 1日前より古い候補を除外する（ISO8601 detectedAt ベース） */
+function isWithinOneDay(detectedAt?: string): boolean {
+  if (!detectedAt) return true; // detectedAt なし（APIから来た古い形式）は表示する
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  return new Date(detectedAt).getTime() >= oneDayAgo;
+}
+
 /** content 検知の Slack メッセージを TaskCandidate 形に変換する */
 function slackMessageToCandidate(msg: NewSlackMessagePayload): TaskCandidate {
   return {
@@ -94,6 +101,7 @@ function slackMessageToCandidate(msg: NewSlackMessagePayload): TaskCandidate {
     sourceType: "slack",
     slackChannelId: msg.channelId,
     threadTs: msg.threadTs || undefined,
+    detectedAt: new Date().toISOString(),
   };
 }
 
@@ -166,7 +174,11 @@ export function SaborouProvider({
     setCandidatesLoading(true);
     try {
       const list = await getCandidates(jwt);
-      setApiCandidates(list);
+      // detectedAt が未付与のものはフロント受取時刻を付与
+      const now = new Date().toISOString();
+      setApiCandidates(
+        list.map((c) => (c.detectedAt ? c : { ...c, detectedAt: now })),
+      );
     } catch (err) {
       console.warn("[SABOROU] refreshCandidates failed:", err);
     } finally {
@@ -207,7 +219,9 @@ export function SaborouProvider({
 
   const candidates = useMemo(() => {
     const merged = mergeCandidates(apiCandidates, liveMessages);
-    return merged.filter((c) => !removedIds.has(c.candidateId));
+    return merged.filter(
+      (c) => !removedIds.has(c.candidateId) && isWithinOneDay(c.detectedAt),
+    );
   }, [apiCandidates, liveMessages, removedIds]);
 
   const sendSlackViaDom = useCallback((text: string): Promise<SendResult> => {
