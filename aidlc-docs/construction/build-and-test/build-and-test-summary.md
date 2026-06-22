@@ -388,3 +388,29 @@ CDK synth: **Errors=0** / `McpToolsBaseUrl` 出力確認済み
 
 - `pnpm --filter backend build` は既存の `../agent/dist/index.mjs` duplicate key warning を出すが、ビルドは成功。
 - 新規AWSリソース、IAM権限、外部依存、secret handlingは追加していない。
+
+---
+
+## marp-slide-stylesheet-enhancement Build and Test Summary（2026-06-21）
+
+### 対象
+
+- `pkgs/backend/src/marp/MarpSlideService.ts`
+- `pkgs/backend/src/__tests__/marp/MarpSlideService.test.ts`
+- `pkgs/backend/src/__tests__/routes/slack.test.ts`
+
+### 実行結果
+
+| コマンド | 結果 |
+|---------|------|
+| `pnpm --filter backend exec vitest run src/__tests__/marp/MarpSlideService.test.ts` | PASS: 1 test file / 3 tests |
+| `pnpm --filter backend exec vitest run src/__tests__/routes/slack.test.ts` | PASS: 1 test file / 22 tests |
+| `pnpm --filter backend test` | PASS: 49 test files / 483 tests |
+| `pnpm --filter backend typecheck` | PASS |
+| `pnpm --filter backend build` | PASS |
+
+### 注意事項
+
+- `pnpm --filter backend build` は既存の `../agent/dist/index.mjs` duplicate key warning を出すが、ビルドは成功。
+- 新規AWSリソース、IAM権限、外部依存、secret handlingは追加していない。
+- `pnpm --filter backend test -- src/__tests__/marp/MarpSlideService.test.ts` は対象ファイルに絞れず全backendテストが走ったため、以後は `pnpm --filter backend exec vitest run ...` で対象テストを実行した。

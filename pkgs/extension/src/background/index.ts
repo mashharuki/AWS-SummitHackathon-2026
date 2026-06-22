@@ -116,8 +116,31 @@ export async function forwardSlackReply(
       if (res?.ok) return { ok: true };
       if (res?.error) lastError = res.error;
     } catch (err) {
-      // content script 未注入のタブ等。次の候補へ。
-      lastError = err instanceof Error ? err.message : String(err);
+      const isConnectionError =
+        err instanceof Error &&
+        err.message.includes("Could not establish connection");
+
+      if (isConnectionError) {
+        // コンテンツスクリプトが孤児化している場合は再注入して 1 回リトライ
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["content.js"],
+          });
+          await new Promise<void>((r) => setTimeout(r, 200));
+          const retry = (await chrome.tabs.sendMessage(tab.id, {
+            type: "SEND_SLACK_REPLY",
+            text,
+          })) as SendSlackReplyResponse | undefined;
+          if (retry?.ok) return { ok: true };
+          if (retry?.error) lastError = retry.error;
+        } catch {
+          lastError =
+            "Slack タブを更新してください（拡張機能の再読み込み後は Slack ページの更新が必要です）";
+        }
+      } else {
+        lastError = err instanceof Error ? err.message : String(err);
+      }
     }
   }
 

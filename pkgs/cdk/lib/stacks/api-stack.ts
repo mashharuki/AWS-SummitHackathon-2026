@@ -228,6 +228,16 @@ export class SaborouApiStack extends cdk.Stack {
           props.data.buckets.travelItineraries.bucketName,
         TRAVEL_ITINERARY_PUBLIC_BASE_URL:
           props.data.travelItineraryPublicBaseUrl,
+        // --- Claude 委譲メンション用 Slack メンバー ID ---
+        // cdk deploy 時に --context slackClaudeUserId=U08XXXXXXXXX で渡す
+        // 未指定時は @Claude プレーンテキストにフォールバック
+        ...(this.node.tryGetContext("slackClaudeUserId")
+          ? {
+              SLACK_CLAUDE_USER_ID: this.node.tryGetContext(
+                "slackClaudeUserId",
+              ) as string,
+            }
+          : {}),
       },
     });
 

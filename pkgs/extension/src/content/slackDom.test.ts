@@ -57,9 +57,11 @@ function buildMessageContainer({
   textEl.textContent = text;
 
   // @mention 要素を追加（実機は data-stringify-mention に user ID を持つ）
+  // data-stringify-type="mention" と .c-mrkdwn__mention クラスの両方を付与する
   for (const uid of mentionUids) {
     const mention = document.createElement("span");
     mention.setAttribute("data-stringify-type", "mention");
+    mention.classList.add("c-mrkdwn__mention");
     mention.setAttribute("data-stringify-mention", uid);
     mention.setAttribute("data-user-id", uid);
     mention.textContent = `@${uid}`;

@@ -29,6 +29,7 @@
     "sidePanel",
     "storage",
     "activeTab",
+    "scripting",
     "identity",
     "notifications"
   ],

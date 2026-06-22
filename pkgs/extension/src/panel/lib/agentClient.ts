@@ -371,3 +371,23 @@ export async function getProgressReport(
     { method: "POST", body: JSON.stringify({}) },
   );
 }
+
+export interface DelegateTaskResult {
+  ok: boolean;
+  taskId: string;
+  channelId: string;
+  ts: string;
+}
+
+/** POST /api/slack/delegations — タスクをAIに代行依頼する（approved=true必須） */
+export async function delegateTask(
+  taskId: string,
+  channelId: string,
+  jwt: string,
+  options?: { instruction?: string },
+): Promise<DelegateTaskResult> {
+  return apiFetch<DelegateTaskResult>("/api/slack/delegations", jwt, {
+    method: "POST",
+    body: JSON.stringify({ taskId, channelId, approved: true, ...options }),
+  });
+}

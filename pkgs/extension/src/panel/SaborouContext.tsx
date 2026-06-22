@@ -242,19 +242,25 @@ export function SaborouProvider({
           if (res?.ok) {
             resolve({ ok: true });
           } else {
+            const raw =
+              res?.error ??
+              "Slack タブが見つかりませんでした。app.slack.com を開いてください。";
             resolve({
               ok: false,
-              error:
-                res?.error ??
-                "Slack タブが見つかりませんでした。隣のブラウザで app.slack.com を開いてください。",
+              error: raw.includes("Could not establish connection")
+                ? "Slack タブを更新してください（拡張機能の再読み込み後は Slack ページの更新が必要です）"
+                : raw,
             });
           }
         })
         .catch((err: unknown) => {
+          const msg =
+            err instanceof Error ? err.message : "DOM 送信に失敗しました";
           resolve({
             ok: false,
-            error:
-              err instanceof Error ? err.message : "DOM 送信に失敗しました",
+            error: msg.includes("Could not establish connection")
+              ? "Slack タブを更新してください（拡張機能の再読み込み後は Slack ページの更新が必要です）"
+              : msg,
           });
         });
     });

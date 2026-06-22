@@ -53,8 +53,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  /* Side Panel は幅 400px 固定で Chrome が管理する */
-  width: 400px;
+  width: 100%;
   min-height: 100vh;
   background: var(--color-saboru-cream);
   font-family: var(--font-sans);

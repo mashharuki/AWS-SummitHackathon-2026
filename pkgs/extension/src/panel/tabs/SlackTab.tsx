@@ -174,10 +174,24 @@ export function SlackTab() {
   );
 }
 
-/** 余白の使い道提案（余白時間に応じてAmazonサービスを提案） */
-function LeisureSuggestion({
-  freeMinutes,
-  onClose,
+/** 余白の使い道提案（Amazon Prime / 散歩 など。モック） */
+function LeisureSuggestion({ onClose }: { onClose: () => void }) {
+  const suggestions = [
+    {
+      icon: Film,
+      title: "Amazon Prime の続きを見る",
+      sub: "先週見ていたアニメの続き、残り 15 分で1話終わります。",
+      cta: "Amazon Prime を開く",
+      color: "#00A8E0",
+    },
+    {
+      icon: Footprints,
+      title: "10 分だけ散歩する",
+      sub: "天気は晴れ。少し歩くと午後の集中力が戻ります。",
+      cta: "あとで",
+      color: "#10b981",
+    },
+  ];
 }: {
   freeMinutes: number;
   onClose: () => void;
