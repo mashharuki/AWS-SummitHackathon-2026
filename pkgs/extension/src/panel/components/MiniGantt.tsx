@@ -166,8 +166,18 @@ export function MiniGantt({
     if (subtasks && subtasks.length > 0) return subtasksToBlocks(subtasks);
     if (schedule && schedule.blocks.length > 0) return schedule.blocks;
     if (activeTaskTitle) return taskFallbackBlocks(activeTaskTitle);
-    return demoBlocks();
+    return [];
   })();
+
+  // データなし状態（タスクなし）
+  if (blocks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-5 gap-1" data-testid="mini-gantt-empty">
+        <p className="text-xs text-[#9ca3af]">今日はまだスケジュールがありません</p>
+        <p className="text-[10px] text-[#d1d5db]">依頼整理でタスクを承認すると表示されます</p>
+      </div>
+    );
+  }
 
   // 時間目盛（8,10,12,14,16 と 17）
   const ticks = [8, 10, 12, 14, 16, 17];

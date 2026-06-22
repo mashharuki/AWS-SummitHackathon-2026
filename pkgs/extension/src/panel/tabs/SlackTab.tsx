@@ -40,9 +40,7 @@ export function SlackTab() {
   }, [jwt, activeTask, proposal]);
 
   const reasons = proposal?.reasoning ?? [];
-  const chatMessage =
-    proposal?.chatMessage ??
-    "議事録はもう確認済みで、文章修正と返信案作成も完了しています。次の固定予定は16:15のデモ確認MTGなので、今から休んでも後続タスクには影響しません。";
+  const chatMessage = proposal?.chatMessage ?? null;
 
   return (
     <div className="flex flex-col h-full" data-testid="slack-tab">
@@ -54,20 +52,22 @@ export function SlackTab() {
           </div>
         ) : (
           <>
-            {/* SABOROU の一言 */}
-            <div className="flex gap-2">
-              <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
-                サ
+            {/* SABOROU の一言（proposal がある場合のみ表示） */}
+            {chatMessage && (
+              <div className="flex gap-2">
+                <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+                  サ
+                </div>
+                <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
+                  <p className="text-[10px] font-bold text-[#9ca3af] mb-1">
+                    SABOROU チャット
+                  </p>
+                  <p className="text-sm text-[#1f2937] leading-relaxed">
+                    {chatMessage}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
-                <p className="text-[10px] font-bold text-[#9ca3af] mb-1">
-                  SABOROU チャット
-                </p>
-                <p className="text-sm text-[#1f2937] leading-relaxed">
-                  {chatMessage}
-                </p>
-              </div>
-            </div>
+            )}
 
             {/* サボれる理由（reasoning） */}
             {reasons.length > 0 && (
@@ -89,7 +89,8 @@ export function SlackTab() {
               </Card>
             )}
 
-            {!activeTask &&
+            {/* 空状態: proposal もチャット履歴もない場合 */}
+            {!chatMessage &&
               reasons.length === 0 &&
               chatMessages.length === 0 && (
                 <EmptyState
