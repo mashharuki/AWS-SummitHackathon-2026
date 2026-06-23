@@ -164,6 +164,44 @@ describe("App (4タブ Side Panel)", () => {
     expect(screen.getByText("段階復帰")).toBeInTheDocument();
   });
 
+  it("余白タブではデモ用チャットとAI提案を併記する", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t1",
+        title: "AWS re:Invent ラスベガスで回るセッションと展示ブースを計画する",
+        status: "approved",
+        deadline: "2026-06-24T10:30:00.000Z",
+      },
+    ]);
+    vi.mocked(agentClient.getProposal).mockResolvedValue({
+      taskId: "t1",
+      verdict: "can_saboru",
+      summaryText: "AIが判断した余白提案",
+      reasoning: ["タスクは完了済みで、次の予定まで余白があります"],
+      chatMessage: "AIが生成した本来の余白メッセージです。",
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId("tab-slack"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("demo-chat-message")).toHaveTextContent(
+        "よく頑張ったよ、ゆーたろ",
+      ),
+    );
+    expect(screen.getByTestId("demo-chat-message")).toHaveTextContent(
+      "残り40分",
+    );
+    expect(screen.getByTestId("ai-chat-message")).toHaveTextContent(
+      "AIが生成した本来の余白メッセージです。",
+    );
+  });
+
   it("切り替え相談には段階的な復帰チャットを返す", async () => {
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     const user = userEvent.setup();

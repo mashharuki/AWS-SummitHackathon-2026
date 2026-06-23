@@ -11,7 +11,7 @@
 import { cn } from "@/lib/utils";
 import { useSaborou } from "@/panel/SaborouContext";
 import { ProgressReportSheet } from "@/panel/components/ProgressReportSheet";
-import { Badge, Button, Card, EmptyState } from "@/panel/components/ui";
+import { Badge, Button, Card } from "@/panel/components/ui";
 import { getProposal } from "@/panel/lib/agentClient";
 import { getSuggestions } from "@/panel/lib/freeSuggestions";
 import type { Proposal } from "@/panel/lib/types";
@@ -25,6 +25,9 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+
+const DEMO_MARGIN_CHAT_MESSAGE =
+  "よく頑張ったよ、ゆーたろ。ラスベガスの計画書タスク、予定どおり18時50分に終われたね。次のタスクは19時30分だから、残り40分。ここは全力で楽しもう。19時20分くらいから、またリマインドするね。";
 
 export function SlackTab() {
   const { jwt, tasks, representativeProposal, scheduleSaboruMinutes, chatMessages, goalAnalysis } =
@@ -48,9 +51,9 @@ export function SlackTab() {
   }, [jwt, activeTask, proposal]);
 
   const reasons = proposal?.reasoning ?? [];
-  const chatMessage =
-    proposal?.chatMessage ??
-    "よし、ここまでよう頑張った。議事録確認と返信案はもう整ってるし、次の固定予定までは少し余白がある。あとの見張りは俺がやっとくから、今は肩の力抜こっか。";
+  const aiChatMessage = proposal?.chatMessage ?? null;
+  const showAiSupplement =
+    Boolean(aiChatMessage) && aiChatMessage !== DEMO_MARGIN_CHAT_MESSAGE;
   const freeMinutes =
     goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? 30;
 
@@ -66,21 +69,30 @@ export function SlackTab() {
           <>
             <TransitionRhythmCard freeMinutes={freeMinutes} />
 
-            {/* SABOROU の一言（proposal がある場合のみ表示） */}
-            {chatMessage && (
-              <div className="flex gap-2">
-                <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
-                  サ
-                </div>
-                <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
-                  <p className="text-[10px] font-bold text-[#9ca3af] mb-1">
-                    SABOROU チャット
-                  </p>
-                  <p className="text-sm text-[#1f2937] leading-relaxed">
-                    {chatMessage}
-                  </p>
-                </div>
+            {/* 固定文面と AI proposal を併記する */}
+            <div className="flex gap-2" data-testid="demo-chat-message">
+              <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+                サ
               </div>
+              <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
+                <p className="mb-1 text-[10px] font-bold text-saboru-ink-muted">
+                  SABOROU チャット
+                </p>
+                <p className="text-sm text-saboru-ink leading-relaxed">
+                  {DEMO_MARGIN_CHAT_MESSAGE}
+                </p>
+              </div>
+            </div>
+
+            {showAiSupplement && (
+              <Card accent="#94a3b8" data-testid="ai-chat-message">
+                <p className="text-[10px] font-bold text-[#64748b] mb-1">
+                  AIの補足
+                </p>
+                <p className="text-xs text-saboru-ink leading-relaxed">
+                  {aiChatMessage}
+                </p>
+              </Card>
             )}
 
             {/* サボれる理由（reasoning） */}
@@ -102,17 +114,6 @@ export function SlackTab() {
                 </ul>
               </Card>
             )}
-
-            {/* 空状態: proposal もチャット履歴もない場合 */}
-            {!chatMessage &&
-              reasons.length === 0 &&
-              chatMessages.length === 0 && (
-                <EmptyState
-                  icon={<Coffee size={32} />}
-                  title="まだ余白の提案はありません"
-                  hint="下のチャットで質問するか、タスクを承認するとサボれる理由を提示します"
-                />
-              )}
 
             {/* ユーザーとのチャット履歴（下部の共通チャットバーから投稿される） */}
             {chatMessages.map((m) =>

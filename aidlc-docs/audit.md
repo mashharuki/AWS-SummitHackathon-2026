@@ -3189,3 +3189,19 @@ MCP tool:
 **Context**: Frontend implementation of visible margin-to-task transition, excluding Amazon/browser access blocking.
 
 ---
+
+## Code and Pitch Update - Demo Margin Chat Priority
+**Timestamp**: 2026-06-23T15:14:17Z
+**User Input**: "次に、ちょっと強引なやり方をやっていきたいです。余白のタブがあると思うんですが、ここの中身を全部刷新していきたいと思っています。\n\nまず、一旦ロジックの部分は壊さずに、デモとデミセルのやつを完成させたいです。現状のロジック、つまりは、ちゃんとAIが出力してきたやつも本来であれば残るんですが、デモ用の文章が優先順位高く表示されるようにしたいです。\n\n極力ロジックを壊さずに、デモ用の決まった文章の出力を見せられるようにしたいので、お願いします。シチュエーションとして、まず前提をサボロいわゆる456、昨日で言うと、ピッチの資料を言うと456に当たるのかなみたいなで、これ02の方を追加してほしいんだけど、02.4の冒頭にタスクが終わったことに対して褒めてくれて、次のタスクが何時までだから余白がどれくらいあるよねみたいなのを一番最初に送ってくれてますっていうのが、02.0.2のスライドにも、02.4の次、ここが一番悪魔的な機能ですと前ぐらいに入れてほしいです。\n\nまた、その文章っていうのも実際のテキストとしても反映してほしいです。いわゆる余白の画面を開いたら、一番最初にサボローチャットみたいなところに入ってるやつに、「よく頑張ったよユタロウ」とか言って、通り19時50分に割れたねみたいな、「残り400時間30分だから全力で楽しもう」とか、「次のタスクが19時半ぐらいだから、19時20分ぐらいからまたリマインドするね」とか言ってくれるみたいな感じかな。"
+**AI Response**: "Completed a tightly scoped frontend and pitch update to prioritize a deterministic demo message in the margin tab while preserving existing AI proposal output as supplemental content. Updated `SlackTab.tsx` to show the fixed demo chat first, keep AI proposal chat as `AIの補足`, and retain reasoning. Updated `SaborouContext.tsx` so completed-margin chat prompts return the same demo phrase. Added `App.test.tsx` coverage and updated `docs/pitch/pitch02.md` before the悪魔的機能 section. Verified extension panel tests and typecheck."
+**Context**: Completed implementation of demo-priority margin chat text and pitch script alignment.
+
+---
+
+## Code Update - Las Vegas Task Demo Message
+**Timestamp**: 2026-06-23T15:21:00Z
+**User Input**: "@pkgs/extension/src/panel/tabs/SlackTab.tsx:30-31 なんかラスベガスの計画書のタスクであるのがわかるような一文にして。追加ぐらいでいいです。よく頑張ったよ、ゆーたろ。ラスベルガスの計画書タスク、予定通り18時50分に終わったね、みたいな。"
+**AI Response**: "Updated the fixed demo margin chat message in `pkgs/extension/src/panel/tabs/SlackTab.tsx` to explicitly mention the Las Vegas planning document task while preserving the existing next-task and reminder guidance."
+**Context**: Minimal frontend copy update for demo clarity.
+
+---

@@ -148,6 +148,9 @@ function buildSaborouChatReply(
   proposal: Proposal | null,
 ): string {
   const normalized = text.toLowerCase();
+  const asksForCompletedMargin =
+    (text.includes("終わ") || text.includes("完了") || text.includes("終え")) &&
+    (text.includes("余白") || text.includes("休") || text.includes("サボ"));
   const asksForTransition =
     text.includes("切り替") ||
     text.includes("戻") ||
@@ -155,6 +158,10 @@ function buildSaborouChatReply(
     text.includes("19時") ||
     normalized.includes("task") ||
     normalized.includes("back");
+
+  if (asksForCompletedMargin) {
+    return   "よく頑張ったよ、ゆーたろ。ラスベガスの計画書タスク、予定どおり18時50分に終われたね。次のタスクは19時30分だから、残り40分。ここは全力で楽しもう。19時20分くらいから、またリマインドするね。";
+  }
 
   if (asksForTransition) {
     return "いいね、休むだけで終わらせないやつな。まず余白はちゃんと守る。10分前に資料だけ開いて、5分前に最初の15分でやることを3つに絞る。開始時刻になったら、俺が「ここから15分だけ」って背中押すから大丈夫。";
