@@ -3,7 +3,7 @@
  *
  * - サボローチャット: proposal の chatMessage / reasoning を「サボれる理由」として提示
  * - 動いてるフリ: ProgressReportSheet（report API → DOM 送信）
- * - 使い道提案: Netflix / 散歩 などをモック提示
+ * - 使い道提案: Amazon サービスへの余白の使い道を提示
  *
  * モック(11.33.51 / 11.34.01 / 11.34.10)準拠。
  */
@@ -40,7 +40,9 @@ export function SlackTab() {
   }, [jwt, activeTask, proposal]);
 
   const reasons = proposal?.reasoning ?? [];
-  const chatMessage = proposal?.chatMessage ?? null;
+  const chatMessage =
+    proposal?.chatMessage ??
+    "よし、ここまでよう頑張った。議事録確認と返信案はもう整ってるし、次の固定予定までは少し余白がある。あとの見張りは俺がやっとくから、今は肩の力抜こっか。";
 
   return (
     <div className="flex flex-col h-full" data-testid="slack-tab">

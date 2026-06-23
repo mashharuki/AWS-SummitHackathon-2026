@@ -343,7 +343,7 @@ describe("PersonaRenderer", () => {
       await r.render({ ...CAN_SABORU_INPUT, personaId: "nonexistent" });
 
       const systemText = bedrock.lastInput?.system?.[0]?.text ?? "";
-      expect(systemText).toContain("おっとり");
+      expect(systemText).toContain("少し年上の同僚");
       expect(bedrock.lastInput?.inferenceConfig?.temperature).toBe(0.45);
     });
 

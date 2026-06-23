@@ -124,7 +124,15 @@ export function ApprovalModal({
     setError(null);
     try {
       const result = await judgeTask(
-        { message: candidate.description, senderName: candidate.requester },
+        {
+          message: [
+            "次の依頼を受ける返信文を作ってください。",
+            "Bias for Action 型として、まず着手する姿勢と、守れる範囲の見通しを短く伝えてください。",
+            "余計な約束を増やさず、必要なら「確認できる範囲から先に戻す」方向にしてください。",
+            `依頼内容: ${candidate.description}`,
+          ].join("\n"),
+          senderName: candidate.requester,
+        },
         jwt,
       );
       setReplyDraft(result.replyDraft);

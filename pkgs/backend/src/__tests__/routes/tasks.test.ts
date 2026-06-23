@@ -719,6 +719,8 @@ describe("POST /tasks/:id/report (U-V2-07)", () => {
     // taskStatus にタスク名が含まれる
     const arg = draftReply.mock.calls[0][0];
     expect(arg.taskStatus).toContain("テストタスク");
+    expect(arg.contextHint).toContain("過去のユーザー本人のSlack発言");
+    expect(arg.contextHint).toContain("あたかも本人が言っているような");
   });
 
   it("returns 404 when the task is not found / not owned", async () => {

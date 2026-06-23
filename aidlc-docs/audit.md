@@ -3094,4 +3094,66 @@ MCP tool:
 **AI Response**: "Implemented Marp slide stylesheet enhancement: added a self-contained saborou-premium theme, strengthened Bedrock generation instructions, increased Marp generation token budget, updated fallback fixture deck with title/section/cards/highlight/metrics/ending patterns, improved the rendered HTML preview shell, exported buildFullHtmlDocument for focused tests, added MarpSlideService tests, fixed an existing Slack route test repository stub, updated AI-DLC code-generation/build-test summaries and state. Verified targeted Marp tests, targeted Slack tests, backend 483 tests, backend typecheck, and backend build all pass. Backend build still emits existing duplicate-key warnings from ../agent/dist/index.mjs."
 **Context**: Construction Code Generation and Build and Test completion for marp-slide-stylesheet-enhancement
 
+## Documentation Update - Saborou Senpai Voice Guide
+**Timestamp**: 2026-06-23T03:28:11Z
+**User Input**: "上記のような内容のプロダクトを作っていきたいです。このようなプロダクトを作るには、AIのUIやUXが必須であり、AIの発言の仕方をチューニングしたいです。プロジェクトの中でAIの人格をかたどっている部分があり、そこを修正する流れになると考えています。そのため、AIが発する用語や提案の仕方を上記のような人格に合わせて修正するためのMDファイルの作成をお願いします。"
+**AI Response**: "Created `docs/ai-persona/saborou-senpai-voice-guide.md` as a persona and voice design guide for aligning SABOROU AI output with the 'メロメロにさせてくる先輩・サボロー' product direction. Reviewed existing pitch content and current persona implementation targets, including `personaRenderTool.ts`, `PersonaRenderer.ts`, `replyDraftTool.ts`, and `declineDraftTool.ts`. Verified no linter diagnostics for the new Markdown file."
+**Context**: Documentation-only AI persona voice guide creation for future prompt/persona tuning.
+
+---
+
+## Code Update - Saborou Senpai Voice Tone
+**Timestamp**: 2026-06-23T04:49:31Z
+**User Input**: "OKではUI UXの変更は一旦いいんでサボロの音声のトーンのそれぞれの機能に盛り込んでほしいまた実装されてない部分例えば大体一旦今の現状だった456のみの修正だけでいいですちょっと123に関してはUIが伴ってないからそれは気をつけてほしいですまたあの2?あ、2456かな2の縦になってくれるっていう部分は全然盛り込めるから入れちゃってくれると嬉しいです 例えばその縦になってくるいわゆるそのお断りとくる時の文章のトーン文章送信実際送信するトーンの修正を行ってほしいっていう感じかな 2に関してはでも456は修正をしてくれると嬉しいです"
+**AI Response**: "Updated implemented prompt and copy surfaces only, avoiding UI/UX structural changes. Adjusted `personaRenderTool.ts` and `PersonaRenderer.ts` for senpai voice in voice/chat output, `replyDraftTool.ts` and `declineDraftTool.ts` for outward Slack message tone, `/tasks/:id/report` context for working-pretend progress reports, extension decline/approval prompt context, Amazon free-time suggestion copy, and fallback SABOROU chat messages. Verified targeted agent tests, targeted backend route tests after agent build, agent typecheck, and extension typecheck. Backend package typecheck could not run because `tsc` was not available in the backend package environment."
+**Context**: Scoped implementation for SABOROU functions 2, 4, 5, and 6 tone changes without UI/UX redesign.
+
+---
+
+## Documentation Update - Saborou Voice Guide Implementation Status
+**Timestamp**: 2026-06-23T04:55:25Z
+**User Input**: "@docs/ai-persona/saborou-senpai-voice-guide.md このファイルには部分的な追加しか行っておらず、上記のような追加に限っているため、残りの部分は後日、25日以降に行う予定であることが分かるような追記を加えてくれると嬉しいです。\n\nどこまで実施済みで、どこをまだ実施していないのかが明確に分かるような記述もお願いするとありがたいです。"
+**AI Response**: "Updated `docs/ai-persona/saborou-senpai-voice-guide.md` with an Implementation Status section, feature-by-feature status table, current scope note, and explicit statement that remaining work is planned for 2026-06-25 or later. Verified no linter diagnostics for the Markdown file."
+**Context**: Documentation update clarifying partial implementation status and future work schedule.
+
+---
+
+## Code Update - Decline Draft Concise Tone
+**Timestamp**: 2026-06-23T05:02:15Z
+**User Input**: "@pkgs/agent/src/sabori-proposer/declineDraftTool.ts 断り口調っていうのは、あくまでもユーザーのいつものメールメッセージのトーンなどを踏まえながら文章を生成してくれているので、長すぎても読む気にならないので、ここはちょっと難しい、ここは入れで難しいんですよ、みたいなことを言ってくれる感じにしてほしいです。あんまり長くならないようにして、読む気にならないから。\n\n最後に1個、絵文字をつけるくらい、ごめんだとか、ごめんなさいアイコンみたいな感じにしてくれると嬉しいです。"
+**AI Response**: "Updated `pkgs/agent/src/sabori-proposer/declineDraftTool.ts` so decline drafts follow the user's usual email/Slack tone, stay concise around 180 characters, phrase difficult refusals softly, and end with exactly one apology/thanks emoji. Added a prompt regression test in `pkgs/agent/src/sabori-proposer/__tests__/replyDeclineTools.test.ts`. Verified targeted agent test and linter diagnostics."
+**Context**: Scoped prompt and test update for decline draft tone generation.
+
+---
+
+## Code Update - Slack Tone Sampling For Reply Drafts
+**Timestamp**: 2026-06-23T05:14:47Z
+**User Input**: "@pkgs/agent/src/sabori-proposer/replyDraftTool.ts @pkgs/agent/src/sabori-proposer/declineDraftTool.ts こっちの返信文章っていうのは まずこの2つっていうのがその機能いわゆるそのスラックに送る文章になってるっていう理解であってるかなそうなのであればえっと まあできればだけどなんか追加実装とか必要ないんだったらそのスラック今までのチャットの履歴からそのスラックのグループ内で使ってるユーザーがどういうトーンで話してるのかっていうのを学習した上で返信文章を送るっていうのを 心がけてくれると嬉しいです"
+**AI Response**: "Confirmed `replyDraftTool.ts` and `declineDraftTool.ts` define the outward Slack reply/decline draft generation tools. Updated both prompts so provided Slack history or context is treated as a tone sample for the user's usual group-specific writing style, while avoiding over-quoting or leaking unrelated personal details. Added prompt regression coverage and verified `pnpm --filter @saboru/agent exec vitest run src/sabori-proposer/__tests__/replyDeclineTools.test.ts` plus linter diagnostics."
+**Context**: Scoped prompt update for Slack group tone adaptation without adding Slack history retrieval.
+
+---
+
+## Documentation Update - Pitch02 Senpai Persona Notes
+**Timestamp**: 2026-06-23T05:27:14Z
+**User Input**: "@docs/pitch/pitch02.md なんかこの02のところにいわゆるメロつかせてくるっていうかめちゃめちゃ気を使ってくれる先輩ですみたいなっていうのがわかるように追加してほしい追加の仕方っていうのはピッチの原稿として追加するってよりも各スライドのタイトルがあると思うね例えば機能面のところだったら機能1みたいなその上になんかちょっとこれ追加項目ではみたいなのが分かるような形でこういう要素を新しく追加するみたいなっていうのを入れてほしいまだピッチスライドの方、ピッチ原稿の方には全く影響を与えないでいってほしいです多分一番最初のいわゆるその余白を作るだけっていうよりも 今余白ってこれ多分時間だけを作ってくれるって言ってるけどそうなんじゃなくて人間関係だとかいわゆる@docs/ai-persona/saborou-senpai-voice-guide.md 話されている内容を追加してくれると嬉しいです。絶対原稿はいじらないでください。各該当箇所の上に、該当箇所の切れ目の上のところに追加していくようにお願いします。\n\n別になんか、結構端的に書いてくれると嬉しいです。原稿みたいな感じで書かなくていいんで、何をどうするのかみたいなのを書いてくれると嬉しいです。"
+**AI Response**: "Updated `docs/pitch/pitch02.md` by adding concise `追加項目メモ` blocks around relevant slide and feature sections, without changing the existing pitch script text. The notes incorporate the senpai persona guide concepts: time plus emotional/relationship margin, noticing limits, shielding users from awkward declines, user-tone Slack replies, PM-like task shoulder-taking, guilt care, and protected margin. Verified no linter diagnostics. Noted that `docs/pitch/pitch02.md` is currently untracked by git."
+**Context**: Pitch note-only update, preserving spoken script while marking new slide content ideas.
+
+---
+
+## Code Update - Progress Report User Tone Hint
+**Timestamp**: 2026-06-23T05:36:06Z
+**User Input**: "@pkgs/backend/src/routes/tasks.ts:307-308 ここも過去のユーザーの発言などに基づいて、あたかも本人が言ってるように見える文章で送ってもらうものになります。"
+**AI Response**: "Updated the progress report `contextHint` in `pkgs/backend/src/routes/tasks.ts` so generated working-pretend progress reports should use prior user Slack utterances or style samples when available, matching wording, honorific strength, and emoji amount so the report reads like the user wrote it. Added route test expectations in `pkgs/backend/src/__tests__/routes/tasks.test.ts`. Verified `pnpm --filter backend exec vitest run src/__tests__/routes/tasks.test.ts` and linter diagnostics."
+**Context**: Scoped backend prompt-context update for progress report style matching.
+
+---
+
+## Documentation Update - Bias for Action Persona Guide
+**Timestamp**: 2026-06-23T05:58:07Z
+**User Input**: "@docs/ai-persona/saborou-senpai-voice-guide.md 何かここに新たに組み込んでもらいたいのは、「BIAS for Action型」という概念です。この「BIAS for Action」というものが、返信文章やタスク設計に組み込まれる形で実装されることを希望しています。そのためには、「BIAS for Action」というものがそもそも何であるかというリサーチが必要です。その定義を明確にした上で、それに基づいて返信を送る、タスクを設計するといったプロセスを考えなければなりません。この「Vice for Action」というマインドを、Saborouのコア部分に位置づけ、その定義に基づいて進めていくイメージです。\n\n返信を送る際には、「Vice for Action」というワードを入れる必要はありません。ただ、そのマインドに基づいて行動していることが間接的に伝わるようなニュアンスで、タスク設計や返信文章に反映してもらえると嬉しいです。この「バイスファクション」を感じるようなニュアンスで、タスクと返信を構成していただけると助かります。SaborouのMDと該当箇所について、返信をお願いします。"
+**AI Response**: "Researched Amazon's Bias for Action definition and updated `docs/ai-persona/saborou-senpai-voice-guide.md` to place Bias for Action as a SABOROU core operating principle. Added the definition, SABOROU interpretation, reply/decline/task-design guidance, approval-flow wording, evaluation checklist items, and canonical samples. Confirmed existing relevant implementation surfaces are `ApprovalModal.tsx` and `replyDraftTool.ts`. Verified no linter diagnostics for the Markdown file."
+**Context**: Persona guide documentation update defining Bias for Action for replies and task design.
+
 ---

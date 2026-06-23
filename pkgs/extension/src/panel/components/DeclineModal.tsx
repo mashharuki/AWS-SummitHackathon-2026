@@ -39,7 +39,12 @@ export function DeclineModal({
       try {
         const result = await judgeTask(
           {
-            message: `次の依頼を丁重にお断りする返信文を作ってください: ${candidate.description}`,
+            message: [
+              "次の依頼を丁重にお断りする返信文を作ってください。",
+              "ユーザーの余白を守るため、弱さではなく予定・優先度・キャパの事実として伝えてください。",
+              "相手の心証を損なわないよう、感謝、今回受けにくい事情、可能なら代替案を含めてください。",
+              `依頼内容: ${candidate.description}`,
+            ].join("\n"),
             senderName: candidate.requester,
           },
           jwt,

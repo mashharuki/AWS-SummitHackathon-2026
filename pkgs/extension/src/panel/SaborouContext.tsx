@@ -306,8 +306,8 @@ export function SaborouProvider({
       const reply =
         representativeProposal?.chatMessage ??
         (representativeProposal?.reasoning?.[0]
-          ? `${representativeProposal.reasoning[0]} なので、いまは少し休んでも大丈夫だよ。`
-          : "いまの状況だと、その件は急ぎじゃなさそうだよ。少し余白を作っても後続には影響しないはず。");
+          ? `お、理由はちゃんとあるぞ。${representativeProposal.reasoning[0]} だから、今は少し肩の力抜いて大丈夫。罪悪感は俺が持っとく。`
+          : "お、今の状況だとその件は急ぎじゃなさそうだな。少し余白を作っても後続には響かないはず。ここは俺が見とくから、肩の力抜こっか。");
 
       setChatMessages((prev) => [
         ...prev,

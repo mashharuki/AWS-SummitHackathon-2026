@@ -16,19 +16,19 @@ export function getSuggestions(freeMinutes: number): FreeSuggestion[] {
     return [
       {
         label: "Prime Video で映画",
-        description: "1本まるごと観られる時間があります",
+        description: "1本まるごといけるぞ。罪悪感はサボローが持っとく",
         url: "https://www.amazon.co.jp/gp/video/storefront",
         service: "Amazon Prime Video",
       },
       {
         label: "Kindle で読書",
-        description: "集中して本を読むのに最適な時間です",
+        description: "ここは堂々と読書時間にしよう。守った余白だから",
         url: "https://read.amazon.co.jp",
         service: "Kindle",
       },
       {
         label: "趣味リサーチ",
-        description: "気になることをじっくり調べましょう",
+        description: "気になるもの、見に行っちゃえ。今日はそこまで働いた",
         url: "https://www.amazon.co.jp",
         service: "Amazon EC",
       },
@@ -38,13 +38,13 @@ export function getSuggestions(freeMinutes: number): FreeSuggestion[] {
     return [
       {
         label: "Audible で短編",
-        description: "30分以内で聴けるポッドキャストや朗読があります",
+        description: "耳だけ預けて休もっか。手は止めて大丈夫",
         url: "https://www.audible.co.jp",
         service: "Amazon Audible",
       },
       {
         label: "Prime Video でドラマ1話",
-        description: "短編コンテンツをチェックしましょう",
+        description: "1話だけ観ちゃえ観ちゃえ。戻る時間はサボローが見てる",
         url: "https://www.amazon.co.jp/gp/video/storefront",
         service: "Amazon Prime Video",
       },
@@ -54,13 +54,13 @@ export function getSuggestions(freeMinutes: number): FreeSuggestion[] {
     return [
       {
         label: "Prime Reading でマンガ1話",
-        description: "15分でサクッと読めます",
+        description: "15分だけ肩の力抜こっか。マンガ1話ならちょうどいい",
         url: "https://www.amazon.co.jp/kindle-dbs/fd/prime-reading",
         service: "Amazon Prime Reading",
       },
       {
         label: "Amazon Music で音楽",
-        description: "好きな音楽を流してリフレッシュ",
+        description: "好きな曲を流そ。今の余白はちゃんと休んでいいやつ",
         url: "https://music.amazon.co.jp",
         service: "Amazon Music",
       },
@@ -70,13 +70,13 @@ export function getSuggestions(freeMinutes: number): FreeSuggestion[] {
     return [
       {
         label: "Amazon Music でひと息",
-        description: "5分だけ音楽を聴いてリセット",
+        description: "5分だけ目を離そっか。ここはサボローが見張っとく",
         url: "https://music.amazon.co.jp",
         service: "Amazon Music",
       },
       {
         label: "Prime Video (無料) でリフレッシュ",
-        description: "5分のコンテンツで集中力を回復",
+        description: "短いやつで一回リセット。戻る時はちゃんと声かける",
         url: "https://www.amazon.co.jp/gp/video/storefront?filterId=OFFER_BINDING_TYPE%3AFREE",
         service: "Amazon Prime Video",
       },
@@ -85,7 +85,7 @@ export function getSuggestions(freeMinutes: number): FreeSuggestion[] {
   return [
     {
       label: "Amazon Music でひと息",
-      description: "短い時間でも音楽でリフレッシュできます",
+      description: "短くても余白は余白。1曲だけ聴いて肩の力抜こっか",
       url: "https://music.amazon.co.jp",
       service: "Amazon Music",
     },

@@ -36,6 +36,12 @@ describe("reply_draft tool", () => {
     expect(REPLY_DRAFT_SYSTEM_PROMPT.length).toBeGreaterThan(50);
     expect(REPLY_DRAFT_SYSTEM_PROMPT).toContain("ビジネス日本語");
   });
+
+  it("uses Slack history as a user tone sample when available", () => {
+    expect(REPLY_DRAFT_SYSTEM_PROMPT).toContain("過去のSlack会話");
+    expect(REPLY_DRAFT_SYSTEM_PROMPT).toContain("ユーザー本人の普段の文体");
+    expect(REPLY_DRAFT_SYSTEM_PROMPT).toContain("文体だけを参考");
+  });
 });
 
 describe("ReplyDraftSchema — 正常系", () => {
@@ -122,6 +128,15 @@ describe("decline_draft tool", () => {
   it("has a non-empty Japanese system prompt", () => {
     expect(DECLINE_DRAFT_SYSTEM_PROMPT.length).toBeGreaterThan(50);
     expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("断る");
+  });
+
+  it("instructs concise user-like decline drafts with one apology emoji", () => {
+    expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain(
+      "ユーザー本人の普段の文体",
+    );
+    expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("過去のSlack会話");
+    expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("180文字以内");
+    expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("絵文字を1つだけ");
   });
 });
 
