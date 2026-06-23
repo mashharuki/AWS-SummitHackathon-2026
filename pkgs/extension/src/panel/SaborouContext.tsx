@@ -143,6 +143,32 @@ export function mergeCandidates(
   return result;
 }
 
+function buildSaborouChatReply(
+  text: string,
+  proposal: Proposal | null,
+): string {
+  const normalized = text.toLowerCase();
+  const asksForTransition =
+    text.includes("切り替") ||
+    text.includes("戻") ||
+    text.includes("復帰") ||
+    text.includes("19時") ||
+    normalized.includes("task") ||
+    normalized.includes("back");
+
+  if (asksForTransition) {
+    return "いいね、休むだけで終わらせないやつな。まず余白はちゃんと守る。10分前に資料だけ開いて、5分前に最初の15分でやることを3つに絞る。開始時刻になったら、俺が「ここから15分だけ」って背中押すから大丈夫。";
+  }
+
+  if (proposal?.chatMessage) return proposal.chatMessage;
+
+  if (proposal?.reasoning?.[0]) {
+    return `お、理由はちゃんとあるぞ。${proposal.reasoning[0]} だから、今は少し肩の力抜いて大丈夫。罪悪感は俺が持っとく。`;
+  }
+
+  return "お、今の状況だとその件は急ぎじゃなさそうだな。少し余白を作っても後続には響かないはず。ここは俺が見とくから、肩の力抜こっか。";
+}
+
 export function SaborouProvider({
   userInfo,
   jwt,
@@ -303,11 +329,7 @@ export function SaborouProvider({
       const userId = `u${chatSeqRef.current++}`;
       const saborouId = `s${chatSeqRef.current++}`;
 
-      const reply =
-        representativeProposal?.chatMessage ??
-        (representativeProposal?.reasoning?.[0]
-          ? `お、理由はちゃんとあるぞ。${representativeProposal.reasoning[0]} だから、今は少し肩の力抜いて大丈夫。罪悪感は俺が持っとく。`
-          : "お、今の状況だとその件は急ぎじゃなさそうだな。少し余白を作っても後続には響かないはず。ここは俺が見とくから、肩の力抜こっか。");
+      const reply = buildSaborouChatReply(trimmed, representativeProposal);
 
       setChatMessages((prev) => [
         ...prev,

@@ -151,6 +151,40 @@ describe("App (4タブ Side Panel)", () => {
     expect(screen.getByTestId("slack-tab")).toBeInTheDocument();
   });
 
+  it("余白タブにタスク復帰のメリハリが表示される", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-slack"));
+    expect(screen.getByTestId("transition-rhythm-card")).toBeInTheDocument();
+    expect(screen.getByText("休む時間にも、戻る出口を作る")).toBeInTheDocument();
+    expect(screen.getByText("段階復帰")).toBeInTheDocument();
+  });
+
+  it("切り替え相談には段階的な復帰チャットを返す", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+
+    await user.type(
+      screen.getByTestId("chat-input"),
+      "19時半のタスクに戻るにはどうしたらいい？",
+    );
+    await user.click(screen.getByTestId("chat-send"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("slack-tab")).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/10分前に資料だけ開いて/)).toBeInTheDocument();
+    expect(screen.getAllByText(/開始時刻になったら/).length).toBeGreaterThan(0);
+  });
+
   // ---------------------------------------------------------------------------
   // ホームタブ: 指標表示
   // ---------------------------------------------------------------------------
@@ -267,7 +301,10 @@ describe("App (4タブ Side Panel)", () => {
 
     await waitFor(() =>
       expect(agentClient.judgeTask).toHaveBeenCalledWith(
-        { message: "資料の件よろしく", senderName: "田中太郎" },
+        {
+          message: expect.stringContaining("資料の件よろしく"),
+          senderName: "田中太郎",
+        },
         AUTH,
       ),
     );

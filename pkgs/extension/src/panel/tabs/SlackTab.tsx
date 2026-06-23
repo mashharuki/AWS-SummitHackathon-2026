@@ -11,11 +11,19 @@
 import { cn } from "@/lib/utils";
 import { useSaborou } from "@/panel/SaborouContext";
 import { ProgressReportSheet } from "@/panel/components/ProgressReportSheet";
-import { Button, Card, EmptyState } from "@/panel/components/ui";
+import { Badge, Button, Card, EmptyState } from "@/panel/components/ui";
 import { getProposal } from "@/panel/lib/agentClient";
 import { getSuggestions } from "@/panel/lib/freeSuggestions";
 import type { Proposal } from "@/panel/lib/types";
-import { Coffee, ExternalLink, FileText, Loader2, X } from "lucide-react";
+import {
+  CheckCircle2,
+  Coffee,
+  ExternalLink,
+  FileText,
+  Loader2,
+  TimerReset,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function SlackTab() {
@@ -43,6 +51,8 @@ export function SlackTab() {
   const chatMessage =
     proposal?.chatMessage ??
     "よし、ここまでよう頑張った。議事録確認と返信案はもう整ってるし、次の固定予定までは少し余白がある。あとの見張りは俺がやっとくから、今は肩の力抜こっか。";
+  const freeMinutes =
+    goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? 30;
 
   return (
     <div className="flex flex-col h-full" data-testid="slack-tab">
@@ -54,6 +64,8 @@ export function SlackTab() {
           </div>
         ) : (
           <>
+            <TransitionRhythmCard freeMinutes={freeMinutes} />
+
             {/* SABOROU の一言（proposal がある場合のみ表示） */}
             {chatMessage && (
               <div className="flex gap-2">
@@ -169,12 +181,115 @@ export function SlackTab() {
       {/* 使い道提案ポップアップ */}
       {showLeisure && (
         <LeisureSuggestion
-          freeMinutes={goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? 60}
+          freeMinutes={freeMinutes}
           aiSuggestion={goalAnalysis?.freeTimeSuggestion}
           onClose={() => setShowLeisure(false)}
         />
       )}
     </div>
+  );
+}
+
+function TransitionRhythmCard({ freeMinutes }: { freeMinutes: number }) {
+  const safeFreeMinutes = Math.max(5, Math.round(freeMinutes));
+  const windDownMinutes = Math.min(
+    10,
+    Math.max(3, Math.floor(safeFreeMinutes / 3)),
+  );
+  const focusMinutes = 15;
+  const leisureMinutes = Math.max(0, safeFreeMinutes - windDownMinutes);
+
+  const steps = [
+    {
+      label: "余白",
+      minutes: leisureMinutes,
+      title: "ちゃんと休む",
+      body: "罪悪感はサボローが預かる時間。",
+      active: true,
+    },
+    {
+      label: "着地",
+      minutes: windDownMinutes,
+      title: "戻る準備",
+      body: "資料を開く、Slackを見るだけでOK。",
+      active: true,
+    },
+    {
+      label: "再開",
+      minutes: focusMinutes,
+      title: "最初の15分",
+      body: "やることを3つに絞って着手。",
+      active: false,
+    },
+  ];
+
+  return (
+    <Card
+      accent="#f97316"
+      className="relative overflow-hidden bg-linear-to-br from-[#fff7ed] via-white to-verdict-can-bg"
+      data-testid="transition-rhythm-card"
+    >
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-verdict-can/10" />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <TimerReset size={15} className="text-saboru-orange" />
+              <p className="text-[10px] font-black tracking-wide text-[#9a3412]">
+                余白とタスクのメリハリ
+              </p>
+            </div>
+            <p className="mt-1 text-sm font-black text-saboru-ink">
+              休む時間にも、戻る出口を作る
+            </p>
+          </div>
+          <Badge tone="green">段階復帰</Badge>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-1.5">
+          {steps.map((step, idx) => (
+            <div
+              key={step.label}
+              className={cn(
+                "relative rounded-xl border p-2",
+                step.active
+                  ? "border-saboru-heavy bg-white shadow-[0_2px_0_#2b1e16]"
+                  : "border-[#d1d5db] bg-[#f9fafb]",
+              )}
+            >
+              {idx > 0 && (
+                <span className="absolute -left-2 top-1/2 h-0.5 w-2 bg-saboru-heavy" />
+              )}
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[9px] font-black text-saboru-ink-soft">
+                  {step.label}
+                </span>
+                {step.active && (
+                  <CheckCircle2 size={11} className="text-verdict-can" />
+                )}
+              </div>
+              <p className="mt-1 text-[11px] font-black text-saboru-ink">
+                {step.title}
+              </p>
+              <p className="mt-0.5 text-[9px] font-bold text-saboru-orange">
+                {step.minutes}分
+              </p>
+              <p className="mt-1 text-[9px] leading-snug text-saboru-ink-soft">
+                {step.body}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-3 rounded-xl bg-saboru-ink px-3 py-2 text-white">
+          <p className="text-[10px] font-bold text-white/60">サボローの声かけ</p>
+          <p className="mt-0.5 text-xs font-bold leading-relaxed">
+            10分前に資料だけ開こっか。5分前に最初の一手を絞る。
+            開始時刻になったら、ここから15分だけ本気出すぞ。
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 }
 
