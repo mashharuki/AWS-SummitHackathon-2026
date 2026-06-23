@@ -151,20 +151,7 @@ describe("App (4タブ Side Panel)", () => {
     expect(screen.getByTestId("slack-tab")).toBeInTheDocument();
   });
 
-  it("余白タブにタスク復帰のメリハリが表示される", async () => {
-    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
-    const user = userEvent.setup();
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
-    );
-    await user.click(screen.getByTestId("tab-slack"));
-    expect(screen.getByTestId("transition-rhythm-card")).toBeInTheDocument();
-    expect(screen.getByText("休む時間にも、戻る出口を作る")).toBeInTheDocument();
-    expect(screen.getByText("段階復帰")).toBeInTheDocument();
-  });
-
-  it("余白タブではデモ用チャットとAI提案を併記する", async () => {
+  it("余白タブではAI提案があってもデモ用チャットだけを表示する", async () => {
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
       {
@@ -194,12 +181,18 @@ describe("App (4タブ Side Panel)", () => {
         "よく頑張ったよ、ゆーたろ",
       ),
     );
+    expect(screen.getByTestId("next-task-status")).toHaveTextContent(
+      "19:30から",
+    );
+    expect(screen.getByTestId("next-task-status")).toHaveTextContent("残り");
+    expect(screen.getByTestId("next-task-status")).toHaveTextContent("40分");
     expect(screen.getByTestId("demo-chat-message")).toHaveTextContent(
       "残り40分",
     );
-    expect(screen.getByTestId("ai-chat-message")).toHaveTextContent(
-      "AIが生成した本来の余白メッセージです。",
-    );
+    expect(screen.queryByTestId("ai-chat-message")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("AIが生成した本来の余白メッセージです。"),
+    ).not.toBeInTheDocument();
   });
 
   it("切り替え相談には段階的な復帰チャットを返す", async () => {

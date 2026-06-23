@@ -1,155 +1,94 @@
 /**
- * SlackTab — ④⑤⑥ 余白（サボれる理由 / 動いてるフリ / 使い道提案）
+ * SlackTab — ④⑤⑥ 余白（サボローチャット / 動いてるフリ / 使い道提案）
  *
- * - サボローチャット: proposal の chatMessage / reasoning を「サボれる理由」として提示
+ * - サボローチャット: デモ用の固定文面を提示
  * - 動いてるフリ: ProgressReportSheet（report API → DOM 送信）
  * - 使い道提案: Amazon サービスへの余白の使い道を提示
  *
  * モック(11.33.51 / 11.34.01 / 11.34.10)準拠。
  */
 
-import { cn } from "@/lib/utils";
 import { useSaborou } from "@/panel/SaborouContext";
 import { ProgressReportSheet } from "@/panel/components/ProgressReportSheet";
-import { Badge, Button, Card } from "@/panel/components/ui";
-import { getProposal } from "@/panel/lib/agentClient";
+import { Button } from "@/panel/components/ui";
 import { getSuggestions } from "@/panel/lib/freeSuggestions";
-import type { Proposal } from "@/panel/lib/types";
-import {
-  CheckCircle2,
-  Coffee,
-  ExternalLink,
-  FileText,
-  Loader2,
-  TimerReset,
-  X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { Clock, Coffee, ExternalLink, FileText, X } from "lucide-react";
+import { useState } from "react";
+
+const DEMO_COMPLETED_TASK_TITLE = "ラスベガスの計画書タスク";
+const DEMO_NEXT_TASK_TITLE = "AIエージェント改善定例会";
+const DEMO_NEXT_TASK_START_LABEL = "19:30";
+const DEMO_NEXT_TASK_REMINDER_LABEL = "19:20";
+const DEMO_FREE_MINUTES = 40;
 
 const DEMO_MARGIN_CHAT_MESSAGE =
-  "よく頑張ったよ、ゆーたろ。ラスベガスの計画書タスク、予定どおり18時50分に終われたね。次のタスクは19時30分だから、残り40分。ここは全力で楽しもう。19時20分くらいから、またリマインドするね。";
+  `よく頑張ったよ、ゆーたろ!${DEMO_COMPLETED_TASK_TITLE}、終了！ここは全力でサボろう。${DEMO_NEXT_TASK_REMINDER_LABEL}くらいから、またリマインドするね。`;
 
 export function SlackTab() {
-  const { jwt, tasks, representativeProposal, scheduleSaboruMinutes, chatMessages, goalAnalysis } =
+  const { tasks, scheduleSaboruMinutes, chatMessages, goalAnalysis } =
     useSaborou();
-  const [proposal, setProposal] = useState<Proposal | null>(
-    representativeProposal,
-  );
-  const [loading, setLoading] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showLeisure, setShowLeisure] = useState(false);
 
   const activeTask = tasks[0] ?? null;
 
-  // 代表 proposal が無ければ先頭タスクの proposal を取得
-  useEffect(() => {
-    if (proposal || !jwt || !activeTask) return;
-    setLoading(true);
-    void getProposal(activeTask.taskId, jwt)
-      .then((p) => setProposal(p))
-      .finally(() => setLoading(false));
-  }, [jwt, activeTask, proposal]);
-
-  const reasons = proposal?.reasoning ?? [];
-  const aiChatMessage = proposal?.chatMessage ?? null;
-  const showAiSupplement =
-    Boolean(aiChatMessage) && aiChatMessage !== DEMO_MARGIN_CHAT_MESSAGE;
   const freeMinutes =
-    goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? 30;
+    goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? DEMO_FREE_MINUTES;
 
   return (
     <div className="flex flex-col h-full" data-testid="slack-tab">
-      {/* チャットエリア（サボれる理由） */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 size={20} className="text-[#f97316] animate-spin" />
-          </div>
-        ) : (
-          <>
-            <TransitionRhythmCard freeMinutes={freeMinutes} />
+      <NextTaskStatusCard
+        taskTitle={DEMO_NEXT_TASK_TITLE}
+        startLabel={DEMO_NEXT_TASK_START_LABEL}
+        freeMinutes={DEMO_FREE_MINUTES}
+      />
 
-            {/* 固定文面と AI proposal を併記する */}
-            <div className="flex gap-2" data-testid="demo-chat-message">
+      {/* チャットエリア */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-3">
+        <div className="flex gap-2" data-testid="demo-chat-message">
+          <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+            サ
+          </div>
+          <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
+            <p className="text-xs text-saboru-ink leading-relaxed">
+              {DEMO_MARGIN_CHAT_MESSAGE}
+            </p>
+          </div>
+        </div>
+
+        {/* ユーザーとのチャット履歴（下部の共通チャットバーから投稿される） */}
+        {chatMessages.map((m) =>
+          m.role === "user" ? (
+            <div
+              key={m.id}
+              className="flex justify-end"
+              data-testid="chat-user"
+            >
+              <div className="max-w-[80%] p-2.5 rounded-xl rounded-tr-sm bg-saboru-orange text-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
+                <p className="text-sm leading-relaxed">{m.text}</p>
+              </div>
+            </div>
+          ) : (
+            <div
+              key={m.id}
+              className="flex gap-2"
+              data-testid="chat-saborou"
+            >
               <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
                 サ
               </div>
               <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
-                <p className="mb-1 text-[10px] font-bold text-saboru-ink-muted">
-                  SABOROU チャット
-                </p>
                 <p className="text-sm text-saboru-ink leading-relaxed">
-                  {DEMO_MARGIN_CHAT_MESSAGE}
+                  {m.text}
                 </p>
               </div>
             </div>
-
-            {showAiSupplement && (
-              <Card accent="#94a3b8" data-testid="ai-chat-message">
-                <p className="text-[10px] font-bold text-[#64748b] mb-1">
-                  AIの補足
-                </p>
-                <p className="text-xs text-saboru-ink leading-relaxed">
-                  {aiChatMessage}
-                </p>
-              </Card>
-            )}
-
-            {/* サボれる理由（reasoning） */}
-            {reasons.length > 0 && (
-              <Card accent="#10b981">
-                <p className="text-[10px] font-bold text-[#059669] mb-1.5">
-                  サボれる根拠
-                </p>
-                <ul className="flex flex-col gap-1">
-                  {reasons.map((r) => (
-                    <li
-                      key={r}
-                      className="flex items-start gap-1.5 text-xs text-[#1f2937]"
-                    >
-                      <span className="text-[#10b981] mt-0.5">✓</span>
-                      <span className="leading-relaxed">{r}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            )}
-
-            {/* ユーザーとのチャット履歴（下部の共通チャットバーから投稿される） */}
-            {chatMessages.map((m) =>
-              m.role === "user" ? (
-                <div
-                  key={m.id}
-                  className="flex justify-end"
-                  data-testid="chat-user"
-                >
-                  <div className="max-w-[80%] p-2.5 rounded-xl rounded-tr-sm bg-[#f97316] text-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
-                    <p className="text-sm leading-relaxed">{m.text}</p>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  key={m.id}
-                  className="flex gap-2"
-                  data-testid="chat-saborou"
-                >
-                  <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-[#f97316] border-2 border-[#2b1e16] shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
-                    サ
-                  </div>
-                  <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-[#2b1e16] shadow-[0_3px_0_#2b1e16]">
-                    <p className="text-sm text-[#1f2937] leading-relaxed">
-                      {m.text}
-                    </p>
-                  </div>
-                </div>
-              ),
-            )}
-          </>
+          ),
         )}
       </div>
 
       {/* 下部アクション */}
-      <div className="px-3 py-2.5 border-t-2 border-[#f3f4f6] bg-[#fffaf5] flex flex-col gap-2">
+      <div className="px-3 py-2.5 border-t-2 border-saboru-line bg-saboru-cream flex flex-col gap-2">
         <Button
           variant="outline"
           className="w-full"
@@ -191,106 +130,55 @@ export function SlackTab() {
   );
 }
 
-function TransitionRhythmCard({ freeMinutes }: { freeMinutes: number }) {
-  const safeFreeMinutes = Math.max(5, Math.round(freeMinutes));
-  const windDownMinutes = Math.min(
-    10,
-    Math.max(3, Math.floor(safeFreeMinutes / 3)),
-  );
-  const focusMinutes = 15;
-  const leisureMinutes = Math.max(0, safeFreeMinutes - windDownMinutes);
-
-  const steps = [
-    {
-      label: "余白",
-      minutes: leisureMinutes,
-      title: "ちゃんと休む",
-      body: "罪悪感はサボローが預かる時間。",
-      active: true,
-    },
-    {
-      label: "着地",
-      minutes: windDownMinutes,
-      title: "戻る準備",
-      body: "資料を開く、Slackを見るだけでOK。",
-      active: true,
-    },
-    {
-      label: "再開",
-      minutes: focusMinutes,
-      title: "最初の15分",
-      body: "やることを3つに絞って着手。",
-      active: false,
-    },
-  ];
-
+/** サボローチャットを開いた瞬間に、次の復帰タイミングを一目で見せるカード */
+function NextTaskStatusCard({
+  taskTitle,
+  startLabel,
+  freeMinutes,
+}: {
+  taskTitle: string;
+  startLabel: string;
+  freeMinutes: number;
+}) {
   return (
-    <Card
-      accent="#f97316"
-      className="relative overflow-hidden bg-linear-to-br from-[#fff7ed] via-white to-verdict-can-bg"
-      data-testid="transition-rhythm-card"
+    <div
+      className="px-3 pt-3 pb-2 bg-saboru-cream"
+      data-testid="next-task-status"
+      role="status"
+      aria-live="polite"
     >
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-verdict-can/10" />
-      <div className="relative">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-1.5">
-              <TimerReset size={15} className="text-saboru-orange" />
-              <p className="text-[10px] font-black tracking-wide text-[#9a3412]">
-                余白とタスクのメリハリ
-              </p>
-            </div>
-            <p className="mt-1 text-sm font-black text-saboru-ink">
-              休む時間にも、戻る出口を作る
+      <div className="relative overflow-hidden rounded-2xl border-2 border-saboru-heavy bg-white shadow-hard-sm">
+        <div className="absolute inset-y-0 right-0 w-24 bg-saboru-orange/15" />
+        <div className="relative p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-black tracking-[0.12em] text-saboru-ink-muted">
+              NEXT TASK
             </p>
+            <div className="flex items-center gap-1 rounded-full bg-saboru-orange px-2 py-1 text-[10px] font-black text-white shadow-[0_2px_0_#2b1e16]">
+              <Clock size={11} />
+              {startLabel}から
+            </div>
           </div>
-          <Badge tone="green">段階復帰</Badge>
-        </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-1.5">
-          {steps.map((step, idx) => (
-            <div
-              key={step.label}
-              className={cn(
-                "relative rounded-xl border p-2",
-                step.active
-                  ? "border-saboru-heavy bg-white shadow-[0_2px_0_#2b1e16]"
-                  : "border-[#d1d5db] bg-[#f9fafb]",
-              )}
-            >
-              {idx > 0 && (
-                <span className="absolute -left-2 top-1/2 h-0.5 w-2 bg-saboru-heavy" />
-              )}
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[9px] font-black text-saboru-ink-soft">
-                  {step.label}
-                </span>
-                {step.active && (
-                  <CheckCircle2 size={11} className="text-verdict-can" />
-                )}
-              </div>
-              <p className="mt-1 text-[11px] font-black text-saboru-ink">
-                {step.title}
-              </p>
-              <p className="mt-0.5 text-[9px] font-bold text-saboru-orange">
-                {step.minutes}分
-              </p>
-              <p className="mt-1 text-[9px] leading-snug text-saboru-ink-soft">
-                {step.body}
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-saboru-ink">
+                {taskTitle}
               </p>
             </div>
-          ))}
-        </div>
-
-        <div className="mt-3 rounded-xl bg-saboru-ink px-3 py-2 text-white">
-          <p className="text-[10px] font-bold text-white/60">サボローの声かけ</p>
-          <p className="mt-0.5 text-xs font-bold leading-relaxed">
-            10分前に資料だけ開こっか。5分前に最初の一手を絞る。
-            開始時刻になったら、ここから15分だけ本気出すぞ。
-          </p>
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] font-black text-saboru-ink-muted">
+                残り
+              </p>
+              <p className="leading-none text-3xl font-black text-saboru-orange">
+                {freeMinutes}
+                <span className="ml-0.5 text-sm text-saboru-ink">分</span>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -317,7 +205,7 @@ function LeisureSuggestion({
         onClick={onClose}
         className="absolute inset-0 bg-black/40"
       />
-      <div className="relative w-full bg-[#1f2937] rounded-t-2xl border-t-2 border-x-2 border-[#2b1e16] p-4 animate-[slideUp_0.18s_ease-out]">
+      <div className="relative w-full bg-saboru-ink rounded-t-2xl border-t-2 border-x-2 border-saboru-heavy p-4 animate-[slideUp_0.18s_ease-out]">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-bold text-white">生まれた余白の使い道</p>
           <button
@@ -332,8 +220,8 @@ function LeisureSuggestion({
         <div className="flex flex-col gap-2">
           {/* AIによるパーソナライズ提案（Slack文脈から推測） */}
           {aiSuggestion && (
-            <div className="p-3 rounded-xl bg-[#f97316]/20 border border-[#f97316]/40">
-              <p className="text-[9px] font-bold text-[#f97316] mb-1">AIからのおすすめ</p>
+            <div className="p-3 rounded-xl bg-saboru-orange/20 border border-saboru-orange/40">
+              <p className="text-[9px] font-bold text-saboru-orange mb-1">AIからのおすすめ</p>
               <p className="text-sm text-white leading-relaxed">{aiSuggestion}</p>
             </div>
           )}
@@ -350,13 +238,13 @@ function LeisureSuggestion({
                 <p className="text-[11px] text-white/60 mt-0.5">
                   {s.description}
                 </p>
-                <p className="text-[9px] text-[#f97316] font-bold mt-0.5">
+                <p className="text-[9px] text-saboru-orange font-bold mt-0.5">
                   {s.service}
                 </p>
               </div>
               <ExternalLink
                 size={13}
-                className="text-white/30 flex-shrink-0 ml-2"
+                className="text-white/30 shrink-0 ml-2"
               />
             </a>
           ))}
