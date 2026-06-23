@@ -1,6 +1,4 @@
 # AI-DLC 監査ログ
-
----
 ## CDK Nag Fix - Travel Itinerary CloudFront CFR4
 **Timestamp**: 2026-06-21T02:10:12Z
 **User Input**: "[Error at /SaborouData-dev/TravelItineraryDistribution/Resource] AwsSolutions-CFR4: The CloudFront distribution allows for SSLv3 or TLSv1 for HTTPS viewer connections. Vulnerabilities have been and continue to be discovered in the deprecated SSL and TLS protocols. Help protect viewer connections by specifying a viewer certificate that enforces a minimum of TLSv1.1 or TLSv1.2 in the security policy. Distributions that use the default CloudFront viewer certificate or use 'vip' for the 'SslSupportMethod' are non-compliant with this rule, as the minimum security policy is set to TLSv1 regardless of the specified 'MinimumProtocolVersion'."
@@ -3288,5 +3286,55 @@ Thank you. "
 **User Input**: "SABOROU チャットという文字もいらないかもしれません。"
 **AI Response**: "Removed the `SABOROU チャット` label from the fixed demo chat bubble in `pkgs/extension/src/panel/tabs/SlackTab.tsx`, leaving the message body as the first visible text. Confirmed no linter diagnostics."
 **Context**: Minimal frontend label removal for the margin chat bubble.
+
+---
+
+## Code Update - Chat Progress Report Action
+**Timestamp**: 2026-06-23T16:21:13Z
+**User Input**: "自然な進捗報告を作成っていうボタンを消してください。この流れっていうのは、ユーザーがチャットで「やっとサボれる」みたいなことを送ると、チケットみたいなものが出てきて、働く振り機能みたいなものがチケットの上側に表示されます。さっきやったタスクのステップに沿って「定期的に進捗報告しよっか？サボろうか？」っていうのをこのチャット画面で言い、その下に「定期的に進捗報告代行みたいな」っていう文字が書かれています。
+
+その下に「サボる」みたいなボタンを書きます。SABOROUって押すと、今の「自然な進捗報告を作成」みたいな感じで、下にモーダルが表示されて「これでタスク送っていいですか？」みたいなものを出すようにしてもらえると嬉しいです。"
+**AI Response**: "Removed the fixed bottom `自然な進捗報告を作成` button from `SlackTab`, added a chat-triggered `定期的に進捗報告代行` action card with a `SABOROU` button for saboru-related user messages, reused `ProgressReportSheet` from that button, and changed the sheet title to `これでタスク送っていいですか？`. Added an App test for the chat action flow and updated a stale demo-chat expectation."
+**Context**: Minimal frontend implementation for moving the progress-report entry point from a bottom action button into the SABOROU chat flow.
+
+---
+
+## Code Update - Separate Chat Ticket
+**Timestamp**: 2026-06-23T16:32:29Z
+**User Input**: "なんかチケットを分けてほしいです。チャットとチケットを分けて出力するようにしてください。"
+**AI Response**: "Separated the progress-report action ticket from the SABOROU chat bubble in `pkgs/extension/src/panel/tabs/SlackTab.tsx`, so the chat text and `定期的に進捗報告代行` ticket render as distinct blocks. Updated `pkgs/extension/src/panel/App.test.tsx` to assert the ticket is separate from the chat bubble, then verified tests, typecheck, and linter diagnostics."
+**Context**: Minimal frontend adjustment to split the chat response and action ticket presentation.
+
+---
+
+## Code Update - Las Vegas Target Task Copy
+**Timestamp**: 2026-06-23T16:38:21Z
+**User Input**: "対象タスクといったところをピッチ資料を見ながら、ラスベガス用だというのがわかるように修正して、"
+**AI Response**: "Updated `ProgressReportSheet` so the target task display falls back to the pitch demo task `AWS re:Invent ラスベガスで回るセッションと展示ブース計画`, making the progress-report modal clearly Las Vegas-oriented even when the runtime task title is generic. Updated `App.test.tsx` to assert the Las Vegas task copy appears in the modal and verified extension tests and typecheck."
+**Context**: Minimal frontend copy adjustment for the progress-report modal target task.
+
+---
+
+## Code Update - Progress Report Count Badge
+**Timestamp**: 2026-06-23T16:41:05Z
+**User Input**: "このサボりの報告っていうのが、何分の何かみたいなのが分かるような仕様にしてほしいです。多分タスクこれで送っていいですかの横に、5分の1みたいな感じにしてくれると嬉しいです。"
+**AI Response**: "Added a `current/total` progress badge next to the `これでタスク送っていいですか？` modal title in `ProgressReportSheet`, passed report sequence metadata from `SlackTab`, and advanced the per-task count after successful send. Defaulted tasks without planned steps to a 5-report demo sequence and updated `App.test.tsx` to assert `1/5` appears."
+**Context**: Minimal frontend implementation for visible progress-report sequence count in the SABOROU send-confirmation modal.
+
+---
+
+## Code Update - Demo Progress Report Copy
+**Timestamp**: 2026-06-23T16:45:27Z
+**User Input**: "この進捗報告案を何にするのかっていうのもぜひ教えてくれると嬉しいです。このAWSリイベントがまずどういう出展企業があるのかっていうのをリスト化でまとめてます。みたいな、そういう感じの文章にしてくれると嬉しいです。一旦、これもデモ用というところで決まったメッセージの送信になるようにお願いします。"
+**AI Response**: "Changed `ProgressReportSheet` to use a fixed demo progress-report message instead of calling the report API, describing that AWS re:Invent exhibitors are being listed and organized by priority. Updated `App.test.tsx` to assert the fixed text appears and that `getProgressReport` is not called, then verified extension tests and typecheck."
+**Context**: Minimal frontend update to make the progress-report draft deterministic for the demo flow.
+
+---
+
+## Code Update - Shorten Send Modal Title
+**Timestamp**: 2026-06-23T16:49:05Z
+**User Input**: "これでタスク送っていいですか？を送っていいですかに変更して。"
+**AI Response**: "Updated the progress-report confirmation modal title from `これでタスク送っていいですか？` to `送っていいですか？` in `ProgressReportSheet`, and updated the matching `App.test.tsx` expectation. Extension typecheck passed."
+**Context**: Minimal copy update for the SABOROU progress-report send confirmation modal.
 
 ---

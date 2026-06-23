@@ -12,7 +12,7 @@ import { useSaborou } from "@/panel/SaborouContext";
 import { ProgressReportSheet } from "@/panel/components/ProgressReportSheet";
 import { Button } from "@/panel/components/ui";
 import { getSuggestions } from "@/panel/lib/freeSuggestions";
-import { Clock, Coffee, ExternalLink, FileText, X } from "lucide-react";
+import { Clock, Coffee, ExternalLink, X } from "lucide-react";
 import { useState } from "react";
 
 const DEMO_COMPLETED_TASK_TITLE = "ラスベガスの計画書タスク";
@@ -21,16 +21,24 @@ const DEMO_NEXT_TASK_START_LABEL = "19:30";
 const DEMO_NEXT_TASK_REMINDER_LABEL = "19:20";
 const DEMO_FREE_MINUTES = 40;
 
-const DEMO_MARGIN_CHAT_MESSAGE =
-  `よく頑張ったよ、ゆーたろ!${DEMO_COMPLETED_TASK_TITLE}、終了！ここは全力でサボろう。${DEMO_NEXT_TASK_REMINDER_LABEL}くらいから、またリマインドするね。`;
+const DEMO_MARGIN_CHAT_MESSAGE = `よく頑張ったよ、ゆーたろ!${DEMO_COMPLETED_TASK_TITLE}、終了！ここは全力でサボろう。${DEMO_NEXT_TASK_REMINDER_LABEL}くらいから、またリマインドするね。`;
 
 export function SlackTab() {
   const { tasks, scheduleSaboruMinutes, chatMessages, goalAnalysis } =
     useSaborou();
   const [showReport, setShowReport] = useState(false);
   const [showLeisure, setShowLeisure] = useState(false);
+  const [sentReportCounts, setSentReportCounts] = useState<
+    Record<string, number>
+  >({});
 
   const activeTask = tasks[0] ?? null;
+  const reportTotal = activeTask?.plannedSteps?.length
+    ? activeTask.plannedSteps.length
+    : 5;
+  const reportIndex = activeTask
+    ? Math.min((sentReportCounts[activeTask.taskId] ?? 0) + 1, reportTotal)
+    : 1;
 
   const freeMinutes =
     goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? DEMO_FREE_MINUTES;
@@ -71,17 +79,39 @@ export function SlackTab() {
           ) : (
             <div
               key={m.id}
-              className="flex gap-2"
-              data-testid="chat-saborou"
+              className="flex flex-col gap-2"
+              data-testid="chat-saborou-group"
             >
-              <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
-                サ
+              <div className="flex gap-2" data-testid="chat-saborou">
+                <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+                  サ
+                </div>
+                <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
+                  <p className="text-sm text-saboru-ink leading-relaxed">
+                    {m.text}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
-                <p className="text-sm text-saboru-ink leading-relaxed">
-                  {m.text}
-                </p>
-              </div>
+              {m.action === "progress_report" && (
+                <div
+                  className="ml-9 rounded-2xl border-2 border-saboru-heavy bg-saboru-cream p-3 shadow-[0_3px_0_#2b1e16]"
+                  data-testid="progress-report-ticket"
+                >
+                  <p className="text-[10px] font-black tracking-[0.08em] text-saboru-ink-muted">
+                    定期的に進捗報告代行
+                  </p>
+                  <Button
+                    variant="primary"
+                    className="mt-2 w-full py-1.5 text-xs"
+                    disabled={!activeTask}
+                    onClick={() => setShowReport(true)}
+                    data-testid="chat-saborou-report"
+                  >
+                    <Coffee size={13} />
+                    SABOROU
+                  </Button>
+                </div>
+              )}
             </div>
           ),
         )}
@@ -89,16 +119,6 @@ export function SlackTab() {
 
       {/* 下部アクション */}
       <div className="px-3 py-2.5 border-t-2 border-saboru-line bg-saboru-cream flex flex-col gap-2">
-        <Button
-          variant="outline"
-          className="w-full"
-          disabled={!activeTask}
-          onClick={() => setShowReport(true)}
-          data-testid="open-report"
-        >
-          <FileText size={14} />
-          自然な進捗報告を作成
-        </Button>
         <Button
           variant="primary"
           className="w-full"
@@ -114,7 +134,18 @@ export function SlackTab() {
       {showReport && activeTask && (
         <ProgressReportSheet
           task={activeTask}
+          reportIndex={reportIndex}
+          reportTotal={reportTotal}
           onClose={() => setShowReport(false)}
+          onSent={() =>
+            setSentReportCounts((prev) => ({
+              ...prev,
+              [activeTask.taskId]: Math.min(
+                (prev[activeTask.taskId] ?? 0) + 1,
+                reportTotal,
+              ),
+            }))
+          }
         />
       )}
 
@@ -221,8 +252,12 @@ function LeisureSuggestion({
           {/* AIによるパーソナライズ提案（Slack文脈から推測） */}
           {aiSuggestion && (
             <div className="p-3 rounded-xl bg-saboru-orange/20 border border-saboru-orange/40">
-              <p className="text-[9px] font-bold text-saboru-orange mb-1">AIからのおすすめ</p>
-              <p className="text-sm text-white leading-relaxed">{aiSuggestion}</p>
+              <p className="text-[9px] font-bold text-saboru-orange mb-1">
+                AIからのおすすめ
+              </p>
+              <p className="text-sm text-white leading-relaxed">
+                {aiSuggestion}
+              </p>
             </div>
           )}
           {suggestions.map((s) => (
@@ -242,10 +277,7 @@ function LeisureSuggestion({
                   {s.service}
                 </p>
               </div>
-              <ExternalLink
-                size={13}
-                className="text-white/30 shrink-0 ml-2"
-              />
+              <ExternalLink size={13} className="text-white/30 shrink-0 ml-2" />
             </a>
           ))}
         </div>

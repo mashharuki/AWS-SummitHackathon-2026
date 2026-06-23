@@ -186,9 +186,6 @@ describe("App (4タブ Side Panel)", () => {
     );
     expect(screen.getByTestId("next-task-status")).toHaveTextContent("残り");
     expect(screen.getByTestId("next-task-status")).toHaveTextContent("40分");
-    expect(screen.getByTestId("demo-chat-message")).toHaveTextContent(
-      "残り40分",
-    );
     expect(screen.queryByTestId("ai-chat-message")).not.toBeInTheDocument();
     expect(
       screen.queryByText("AIが生成した本来の余白メッセージです。"),
@@ -214,6 +211,52 @@ describe("App (4タブ Side Panel)", () => {
     );
     expect(screen.getByText(/10分前に資料だけ開いて/)).toBeInTheDocument();
     expect(screen.getAllByText(/開始時刻になったら/).length).toBeGreaterThan(0);
+  });
+
+  it("サボり相談ではチャットと別のチケットから進捗報告モーダルを開く", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t1",
+        title: "今夜のMTGで余白時間の表示方法について話し合い",
+        status: "approved",
+        deadline: "2026-06-24T10:30:00.000Z",
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+
+    await user.type(screen.getByTestId("chat-input"), "やっとサボれる");
+    await user.click(screen.getByTestId("chat-send"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("progress-report-ticket")).toHaveTextContent(
+        "定期的に進捗報告代行",
+      ),
+    );
+    expect(screen.getByTestId("chat-saborou")).not.toHaveTextContent(
+      "定期的に進捗報告代行",
+    );
+    expect(screen.queryByTestId("open-report")).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("chat-saborou-report"));
+
+    await waitFor(() =>
+      expect(screen.getByText("送っていいですか？")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("report-progress")).toHaveTextContent("1/5");
+    expect(
+      screen.getByText(
+        "AWS re:Invent ラスベガスで回るセッションと展示ブース計画",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("report-draft")).toHaveValue(
+      "現在、AWS re:Inventでどのような出展企業があるのかをリスト化して整理しています。気になる企業や展示ブースを優先度ごとに見られるようにまとめているので、進捗があれば随時共有しますね。",
+    );
+    expect(agentClient.getProgressReport).not.toHaveBeenCalled();
   });
 
   // ---------------------------------------------------------------------------

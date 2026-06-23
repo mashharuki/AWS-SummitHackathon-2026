@@ -2,47 +2,53 @@
  * ProgressReportSheet — ⑤動いてるフリ（自然な進捗報告）
  *
  * モック(11.34.01)準拠。タスクが既に終わっていても/手をつけていなくても、
- *「確認・調整中」という自然な仮の進捗報告文を report API で生成し、
+ * re:Invent 調査タスク用の自然な仮の進捗報告文をデモ固定で表示し、
  *「この文章を送る」で DOM 送信（自分のアカウント）。
- *「もっと柔らかく」で文面を再生成（語調ヒントを変えて report 再取得）。
+ *「もっと柔らかく」ではデモ文面に戻す。
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
 import { Button, Modal } from "@/panel/components/ui";
-import { getProgressReport } from "@/panel/lib/agentClient";
 import type { TaskSummary } from "@/panel/lib/types";
 import { CheckCircle, Loader2, Sparkles, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 type Phase = "drafting" | "review" | "sending" | "sent" | "error";
 
+const PITCH_DEMO_TASK_TITLE =
+  "AWS re:Invent ラスベガスで回るセッションと展示ブース計画";
+const PITCH_DEMO_REPORT_TEXT =
+  "現在、AWS re:Inventでどのような出展企業があるのかをリスト化して整理しています。気になる企業や展示ブースを優先度ごとに見られるようにまとめているので、進捗があれば随時共有しますね。";
+
 export function ProgressReportSheet({
   task,
+  reportIndex,
+  reportTotal,
   onClose,
+  onSent,
 }: {
   task: TaskSummary;
+  reportIndex: number;
+  reportTotal: number;
   onClose: () => void;
+  onSent?: () => void;
 }) {
-  const { jwt, sendSlackViaDom, notifyReplyCompleted } = useSaborou();
+  const { sendSlackViaDom, notifyReplyCompleted } = useSaborou();
   const [phase, setPhase] = useState<Phase>("drafting");
   const [reportText, setReportText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const progressLabel = `${reportIndex}/${reportTotal}`;
+  const displayTaskTitle =
+    task.title.includes("ラスベガス") || task.title.includes("re:Invent")
+      ? task.title
+      : PITCH_DEMO_TASK_TITLE;
 
-  const generate = useCallback(async () => {
-    if (!jwt) return;
+  const generate = useCallback(() => {
     setPhase("drafting");
     setError(null);
-    try {
-      const res = await getProgressReport(task.taskId, jwt);
-      setReportText(res.reportText);
-      setPhase("review");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "進捗報告の生成に失敗しました",
-      );
-      setPhase("error");
-    }
-  }, [jwt, task.taskId]);
+    setReportText(PITCH_DEMO_REPORT_TEXT);
+    setPhase("review");
+  }, []);
 
   useEffect(() => {
     void generate();
@@ -54,6 +60,7 @@ export function ProgressReportSheet({
     const res = await sendSlackViaDom(reportText);
     if (res.ok) {
       setPhase("sent");
+      onSent?.();
       notifyReplyCompleted();
       setTimeout(onClose, 1100);
     } else {
@@ -66,7 +73,18 @@ export function ProgressReportSheet({
     <Modal
       open
       onClose={onClose}
-      title="自然な進捗報告を作成"
+      title={
+        <div className="flex items-center gap-2">
+          <span>送っていいですか？</span>
+          <span
+            className="rounded-full border-2 border-saboru-heavy bg-white px-2 py-0.5 text-[10px] font-black text-saboru-orange shadow-[0_2px_0_#2b1e16]"
+            data-testid="report-progress"
+            aria-label={`進捗報告 ${progressLabel}`}
+          >
+            {progressLabel}
+          </span>
+        </div>
+      }
       footer={
         phase === "review" ? (
           <>
@@ -93,7 +111,9 @@ export function ProgressReportSheet({
         <p className="text-[10px] font-bold text-[#9ca3af] mb-0.5">
           対象タスク
         </p>
-        <p className="text-xs text-[#1f2937] line-clamp-2">{task.title}</p>
+        <p className="text-xs text-[#1f2937] line-clamp-2">
+          {displayTaskTitle}
+        </p>
       </div>
 
       {phase === "drafting" && (

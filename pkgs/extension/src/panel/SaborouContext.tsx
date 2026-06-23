@@ -49,6 +49,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "saborou";
   text: string;
+  action?: "progress_report";
 }
 
 interface SaborouContextValue {
@@ -148,6 +149,10 @@ function buildSaborouChatReply(
   proposal: Proposal | null,
 ): string {
   const normalized = text.toLowerCase();
+  const asksToSaboru =
+    text.includes("サボ") ||
+    text.includes("さぼ") ||
+    normalized.includes("saborou");
   const asksForCompletedMargin =
     (text.includes("終わ") || text.includes("完了") || text.includes("終え")) &&
     (text.includes("余白") || text.includes("休") || text.includes("サボ"));
@@ -160,7 +165,11 @@ function buildSaborouChatReply(
     normalized.includes("back");
 
   if (asksForCompletedMargin) {
-    return   "よく頑張ったよ、ゆーたろ。ラスベガスの計画書タスク、予定どおり18時50分に終われたね。次のタスクは19時30分だから、残り40分。ここは全力で楽しもう。19時20分くらいから、またリマインドするね。";
+    return "よく頑張ったよ、ゆーたろ。ラスベガスの計画書タスク、予定どおり18時50分に終われたね。次のタスクは19時30分だから、残り40分。ここは全力で楽しもう。19時20分くらいから、またリマインドするね。";
+  }
+
+  if (asksToSaboru) {
+    return "よし、ここからは俺の出番。頑張ったご褒美！さっきやったタスクのステップに沿って、定期的に進捗報告しよっか？";
   }
 
   if (asksForTransition) {
@@ -337,11 +346,20 @@ export function SaborouProvider({
       const saborouId = `s${chatSeqRef.current++}`;
 
       const reply = buildSaborouChatReply(trimmed, representativeProposal);
+      const shouldOfferProgressReport =
+        trimmed.includes("サボ") ||
+        trimmed.includes("さぼ") ||
+        trimmed.toLowerCase().includes("saborou");
 
       setChatMessages((prev) => [
         ...prev,
         { id: userId, role: "user", text: trimmed },
-        { id: saborouId, role: "saborou", text: reply },
+        {
+          id: saborouId,
+          role: "saborou",
+          text: reply,
+          action: shouldOfferProgressReport ? "progress_report" : undefined,
+        },
       ]);
     },
     [representativeProposal],
