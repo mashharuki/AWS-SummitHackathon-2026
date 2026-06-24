@@ -49,7 +49,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "saborou";
   text: string;
-  action?: "progress_report";
+  action?: "progress_report" | "watch_video";
 }
 
 interface SaborouContextValue {
@@ -88,6 +88,8 @@ interface SaborouContextValue {
   chatMessages: ChatMessage[];
   /** ユーザー発話を投稿する（応答もここで生成して履歴に積む） */
   postChatMessage: (text: string) => void;
+  /** 進捗報告代行の初回発動後に、次のサボり方を提案する */
+  offerVideoContinuation: () => void;
 
   /** PM WBS分解結果（WorkingTabが取得・SlackTabが参照） */
   goalAnalysis: GoalAnalysis | null;
@@ -365,6 +367,19 @@ export function SaborouProvider({
     [representativeProposal],
   );
 
+  const offerVideoContinuation = useCallback(() => {
+    const saborouId = `s${chatSeqRef.current++}`;
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        id: saborouId,
+        role: "saborou",
+        text: "定期的な進捗報告は問題ないね！あとは、余白を味わうだけ。そういえば、この前見てた進撃の巨人の続き、30分だけ観ちゃう？",
+        action: "watch_video",
+      },
+    ]);
+  }, []);
+
   const value = useMemo<SaborouContextValue>(
     () => ({
       userInfo,
@@ -383,6 +398,7 @@ export function SaborouProvider({
       notifyReplyCompleted,
       chatMessages,
       postChatMessage,
+      offerVideoContinuation,
       goalAnalysis,
       setGoalAnalysis,
     }),
@@ -403,6 +419,7 @@ export function SaborouProvider({
       notifyReplyCompleted,
       chatMessages,
       postChatMessage,
+      offerVideoContinuation,
       goalAnalysis,
       setGoalAnalysis,
     ],

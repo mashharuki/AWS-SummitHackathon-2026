@@ -241,6 +241,7 @@ describe("App (4タブ Side Panel)", () => {
       "定期的に進捗報告代行",
     );
     expect(screen.queryByTestId("open-report")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("open-leisure")).not.toBeInTheDocument();
 
     await user.click(screen.getByTestId("chat-saborou-report"));
 
@@ -257,6 +258,58 @@ describe("App (4タブ Side Panel)", () => {
       "現在、AWS re:Inventでどのような出展企業があるのかをリスト化して整理しています。気になる企業や展示ブースを優先度ごとに見られるようにまとめているので、進捗があれば随時共有しますね。",
     );
     expect(agentClient.getProgressReport).not.toHaveBeenCalled();
+    expect(screen.getByTestId("progress-report-sent-ticket")).toHaveTextContent(
+      "進捗報告完了",
+    );
+    expect(screen.getByTestId("progress-report-sent-ticket")).toHaveTextContent(
+      "送信済み",
+    );
+    expect(
+      screen.queryByText(/進捗報告は送っておいたよ/),
+    ).not.toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/定期的な進捗報告は問題ないね/),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("watch-video-ticket")).toHaveTextContent(
+      "アニメの続き",
+    );
+
+    await user.click(screen.getByTestId("modal-close"));
+    await user.click(screen.getByTestId("chat-saborou-watch-video"));
+
+    expect(chrome.tabs.create).toHaveBeenCalledWith({
+      url: "https://www.amazon.co.jp/gp/video/detail/B0B8S2V3V7?qid=1782281464029&pageTypeIdSource=ASIN&ref_=atv_sr_fle_c_Tn74RA_1_1_1&sr=1-1&pageTypeId=B0B8S51G5H",
+    });
+    expect(screen.getByTestId("watch-video-complete-ticket")).toHaveTextContent(
+      "アニメ視聴完了",
+    );
+    expect(screen.getByTestId("watch-video-complete-ticket")).toHaveTextContent(
+      "視聴済み",
+    );
+    expect(screen.getByTestId("next-task-prep-ticket")).toHaveTextContent(
+      "あと10分で次のタスクだね",
+    );
+
+    await user.click(screen.getByTestId("chat-saborou-next-task-summary"));
+
+    expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
+      "AIエージェント改善定例会",
+    );
+    expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
+      "次のタスク概要",
+    );
+    expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
+      "19:30開始",
+    );
+    expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
+      "今日見ること",
+    );
+    expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
+      "AIエージェントの提案品質を確認",
+    );
   });
 
   // ---------------------------------------------------------------------------

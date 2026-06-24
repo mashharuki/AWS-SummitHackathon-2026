@@ -1,9 +1,8 @@
 /**
- * SlackTab — ④⑤⑥ 余白（サボローチャット / 動いてるフリ / 使い道提案）
+ * SlackTab — ④⑤⑥ 余白（サボローチャット / 動いてるフリ）
  *
  * - サボローチャット: デモ用の固定文面を提示
  * - 動いてるフリ: ProgressReportSheet（report API → DOM 送信）
- * - 使い道提案: Amazon サービスへの余白の使い道を提示
  *
  * モック(11.33.51 / 11.34.01 / 11.34.10)準拠。
  */
@@ -11,26 +10,40 @@
 import { useSaborou } from "@/panel/SaborouContext";
 import { ProgressReportSheet } from "@/panel/components/ProgressReportSheet";
 import { Button } from "@/panel/components/ui";
-import { getSuggestions } from "@/panel/lib/freeSuggestions";
-import { Clock, Coffee, ExternalLink, X } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle, Clock, Coffee } from "lucide-react";
+import { useRef, useState } from "react";
 
 const DEMO_COMPLETED_TASK_TITLE = "ラスベガスの計画書タスク";
 const DEMO_NEXT_TASK_TITLE = "AIエージェント改善定例会";
 const DEMO_NEXT_TASK_START_LABEL = "19:30";
 const DEMO_NEXT_TASK_REMINDER_LABEL = "19:20";
 const DEMO_FREE_MINUTES = 40;
+const DEMO_NEXT_TASK_POINTS = [
+  "AIエージェントの提案品質を確認",
+  "サボり導線とチケット表示の違和感を調整",
+  "デモで見せる流れを優先度順に整理",
+];
+const ATTACK_ON_TITAN_PRIME_VIDEO_URL =
+  "https://www.amazon.co.jp/gp/video/detail/B0B8S2V3V7?qid=1782281464029&pageTypeIdSource=ASIN&ref_=atv_sr_fle_c_Tn74RA_1_1_1&sr=1-1&pageTypeId=B0B8S51G5H";
 
 const DEMO_MARGIN_CHAT_MESSAGE = `よく頑張ったよ、ゆーたろ!${DEMO_COMPLETED_TASK_TITLE}、終了！ここは全力でサボろう。${DEMO_NEXT_TASK_REMINDER_LABEL}くらいから、またリマインドするね。`;
 
 export function SlackTab() {
-  const { tasks, scheduleSaboruMinutes, chatMessages, goalAnalysis } =
-    useSaborou();
+  const { tasks, chatMessages, offerVideoContinuation } = useSaborou();
   const [showReport, setShowReport] = useState(false);
-  const [showLeisure, setShowLeisure] = useState(false);
   const [sentReportCounts, setSentReportCounts] = useState<
     Record<string, number>
   >({});
+  const [completedReportMessageId, setCompletedReportMessageId] = useState<
+    string | null
+  >(null);
+  const [completedVideoMessageId, setCompletedVideoMessageId] = useState<
+    string | null
+  >(null);
+  const [expandedNextTaskMessageId, setExpandedNextTaskMessageId] = useState<
+    string | null
+  >(null);
+  const progressReportFollowupsOfferedRef = useRef(false);
 
   const activeTask = tasks[0] ?? null;
   const reportTotal = activeTask?.plannedSteps?.length
@@ -40,8 +53,19 @@ export function SlackTab() {
     ? Math.min((sentReportCounts[activeTask.taskId] ?? 0) + 1, reportTotal)
     : 1;
 
-  const freeMinutes =
-    goalAnalysis?.freeTimeMinutes ?? scheduleSaboruMinutes ?? DEMO_FREE_MINUTES;
+  const handleProgressReportClick = (messageId: string) => {
+    setShowReport(true);
+    setCompletedReportMessageId(messageId);
+    if (!progressReportFollowupsOfferedRef.current) {
+      progressReportFollowupsOfferedRef.current = true;
+      offerVideoContinuation();
+    }
+  };
+
+  const handleWatchVideoClick = (messageId: string) => {
+    chrome.tabs.create({ url: ATTACK_ON_TITAN_PRIME_VIDEO_URL });
+    setCompletedVideoMessageId(messageId);
+  };
 
   return (
     <div className="flex flex-col h-full" data-testid="slack-tab">
@@ -82,16 +106,18 @@ export function SlackTab() {
               className="flex flex-col gap-2"
               data-testid="chat-saborou-group"
             >
-              <div className="flex gap-2" data-testid="chat-saborou">
-                <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
-                  サ
+              {m.text ? (
+                <div className="flex gap-2" data-testid="chat-saborou">
+                  <div className="shrink-0 w-7 h-7 rounded-lg bg-saboru-orange border-2 border-saboru-heavy shadow-[0_2px_0_#2b1e16] flex items-center justify-center text-white font-black text-[10px]">
+                    サ
+                  </div>
+                  <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
+                    <p className="text-sm text-saboru-ink leading-relaxed">
+                      {m.text}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 p-2.5 rounded-xl rounded-tl-sm bg-white border-2 border-saboru-heavy shadow-[0_3px_0_#2b1e16]">
-                  <p className="text-sm text-saboru-ink leading-relaxed">
-                    {m.text}
-                  </p>
-                </div>
-              </div>
+              ) : null}
               {m.action === "progress_report" && (
                 <div
                   className="ml-9 rounded-2xl border-2 border-saboru-heavy bg-saboru-cream p-3 shadow-[0_3px_0_#2b1e16]"
@@ -104,7 +130,7 @@ export function SlackTab() {
                     variant="primary"
                     className="mt-2 w-full py-1.5 text-xs"
                     disabled={!activeTask}
-                    onClick={() => setShowReport(true)}
+                    onClick={() => handleProgressReportClick(m.id)}
                     data-testid="chat-saborou-report"
                   >
                     <Coffee size={13} />
@@ -112,22 +138,127 @@ export function SlackTab() {
                   </Button>
                 </div>
               )}
+              {m.action === "progress_report" &&
+                completedReportMessageId === m.id && (
+                  <div
+                    className="ml-9 rounded-2xl border-2 border-saboru-heavy bg-[#d1fae5] p-3 shadow-[0_3px_0_#2b1e16]"
+                    data-testid="progress-report-sent-ticket"
+                  >
+                    <p className="flex items-center gap-1.5 text-[10px] font-black tracking-[0.08em] text-[#065f46]">
+                      <CheckCircle size={13} />
+                      進捗報告完了
+                    </p>
+                    <p className="mt-1 text-[11px] font-bold text-[#065f46]/80">
+                      送信済み
+                    </p>
+                  </div>
+                )}
+              {m.action === "watch_video" && (
+                <div
+                  className="ml-9 rounded-2xl border-2 border-saboru-heavy bg-saboru-cream p-3 shadow-[0_3px_0_#2b1e16]"
+                  data-testid="watch-video-ticket"
+                >
+                  <p className="text-[10px] font-black tracking-[0.08em] text-saboru-ink-muted">
+                    アニメの続き
+                  </p>
+                  <Button
+                    variant="primary"
+                    className="mt-2 w-full py-1.5 text-xs"
+                    onClick={() => handleWatchVideoClick(m.id)}
+                    data-testid="chat-saborou-watch-video"
+                  >
+                    <Coffee size={13} />
+                    SABOROU
+                  </Button>
+                </div>
+              )}
+              {m.action === "watch_video" &&
+                completedVideoMessageId === m.id && (
+                  <>
+                    <div
+                      className="ml-9 rounded-2xl border-2 border-saboru-heavy bg-[#d1fae5] p-3 shadow-[0_3px_0_#2b1e16]"
+                      data-testid="watch-video-complete-ticket"
+                    >
+                      <p className="flex items-center gap-1.5 text-[10px] font-black tracking-[0.08em] text-[#065f46]">
+                        <CheckCircle size={13} />
+                        アニメ視聴完了
+                      </p>
+                      <p className="mt-1 text-[11px] font-bold text-[#065f46]/80">
+                        視聴済み
+                      </p>
+                    </div>
+
+                    <div
+                      className="ml-9 rounded-2xl border-2 border-saboru-heavy bg-saboru-cream p-3 shadow-[0_3px_0_#2b1e16]"
+                      data-testid="next-task-prep-ticket"
+                    >
+                      <p className="text-[10px] font-black tracking-[0.08em] text-saboru-ink-muted">
+                        次タスク準備
+                      </p>
+                      <p className="mt-1 text-xs font-bold leading-relaxed text-saboru-ink">
+                        あと10分で次のタスクだね。そろそろ準備しよっか。
+                        次のタスク概要だけ確認しとく？
+                      </p>
+                      <Button
+                        variant="primary"
+                        className="mt-2 w-full py-1.5 text-xs"
+                        onClick={() => setExpandedNextTaskMessageId(m.id)}
+                        data-testid="chat-saborou-next-task-summary"
+                      >
+                        <Coffee size={13} />
+                        SABOROU
+                      </Button>
+                    </div>
+
+                    {expandedNextTaskMessageId === m.id && (
+                      <div
+                        className="ml-9 overflow-hidden rounded-2xl border-2 border-saboru-heavy bg-white shadow-[0_3px_0_#2b1e16]"
+                        data-testid="next-task-summary-card"
+                      >
+                        <div className="bg-saboru-orange px-3 py-2 text-white">
+                          <p className="text-[10px] font-black tracking-[0.12em] opacity-80">
+                            次のタスク概要
+                          </p>
+                          <p className="mt-0.5 text-base font-black leading-tight">
+                            {DEMO_NEXT_TASK_TITLE}
+                          </p>
+                        </div>
+                        <div className="p-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            <span className="rounded-full border border-saboru-heavy bg-saboru-cream px-2 py-0.5 text-[10px] font-black text-saboru-ink">
+                              {DEMO_NEXT_TASK_START_LABEL}開始
+                            </span>
+                            <span className="rounded-full border border-saboru-heavy bg-[#d1fae5] px-2 py-0.5 text-[10px] font-black text-[#065f46]">
+                              準備あと10分
+                            </span>
+                          </div>
+                          <div className="mt-3 rounded-xl border border-saboru-line bg-saboru-cream/70 p-2.5">
+                            <p className="text-[10px] font-black tracking-[0.08em] text-saboru-ink-muted">
+                              今日見ること
+                            </p>
+                            <ul className="mt-2 flex flex-col gap-1.5">
+                              {DEMO_NEXT_TASK_POINTS.map((point) => (
+                                <li
+                                  key={point}
+                                  className="flex gap-1.5 text-xs font-bold leading-relaxed text-saboru-ink"
+                                >
+                                  <CheckCircle
+                                    size={12}
+                                    className="mt-0.5 shrink-0 text-saboru-orange"
+                                  />
+                                  <span>{point}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
             </div>
           ),
         )}
-      </div>
-
-      {/* 下部アクション */}
-      <div className="px-3 py-2.5 border-t-2 border-saboru-line bg-saboru-cream flex flex-col gap-2">
-        <Button
-          variant="primary"
-          className="w-full"
-          onClick={() => setShowLeisure(true)}
-          data-testid="open-leisure"
-        >
-          <Coffee size={14} />
-          余白の使い道を提案してもらう
-        </Button>
       </div>
 
       {/* 進捗報告ポップアップ */}
@@ -146,15 +277,6 @@ export function SlackTab() {
               ),
             }))
           }
-        />
-      )}
-
-      {/* 使い道提案ポップアップ */}
-      {showLeisure && (
-        <LeisureSuggestion
-          freeMinutes={freeMinutes}
-          aiSuggestion={goalAnalysis?.freeTimeSuggestion}
-          onClose={() => setShowLeisure(false)}
         />
       )}
     </div>
@@ -207,79 +329,6 @@ function NextTaskStatusCard({
               </p>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** 余白の使い道提案（AI提案 + freeSuggestionsフォールバック） */
-function LeisureSuggestion({
-  freeMinutes,
-  aiSuggestion,
-  onClose,
-}: {
-  freeMinutes: number;
-  aiSuggestion?: string;
-  onClose: () => void;
-}) {
-  const suggestions = getSuggestions(freeMinutes);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end"
-      data-testid="leisure-popup"
-    >
-      <button
-        type="button"
-        aria-label="閉じる"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/40"
-      />
-      <div className="relative w-full bg-saboru-ink rounded-t-2xl border-t-2 border-x-2 border-saboru-heavy p-4 animate-[slideUp_0.18s_ease-out]">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-bold text-white">生まれた余白の使い道</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 text-white/50 hover:text-white"
-            aria-label="閉じる"
-          >
-            <X size={16} />
-          </button>
-        </div>
-        <div className="flex flex-col gap-2">
-          {/* AIによるパーソナライズ提案（Slack文脈から推測） */}
-          {aiSuggestion && (
-            <div className="p-3 rounded-xl bg-saboru-orange/20 border border-saboru-orange/40">
-              <p className="text-[9px] font-bold text-saboru-orange mb-1">
-                AIからのおすすめ
-              </p>
-              <p className="text-sm text-white leading-relaxed">
-                {aiSuggestion}
-              </p>
-            </div>
-          )}
-          {suggestions.map((s) => (
-            <a
-              key={s.url}
-              href={s.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-3 rounded-xl bg-[#111827] border border-white/10 hover:bg-white/5 transition-colors"
-            >
-              <div>
-                <p className="text-sm font-bold text-white">{s.label}</p>
-                <p className="text-[11px] text-white/60 mt-0.5">
-                  {s.description}
-                </p>
-                <p className="text-[9px] text-saboru-orange font-bold mt-0.5">
-                  {s.service}
-                </p>
-              </div>
-              <ExternalLink size={13} className="text-white/30 shrink-0 ml-2" />
-            </a>
-          ))}
         </div>
       </div>
     </div>

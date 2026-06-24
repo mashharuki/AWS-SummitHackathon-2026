@@ -3338,3 +3338,86 @@ Thank you. "
 **Context**: Minimal copy update for the SABOROU progress-report send confirmation modal.
 
 ---
+
+## Code Update - Watch Video Follow-up Ticket
+**Timestamp**: 2026-06-24T06:13:12Z
+**User Input**: "では、１回目の「定期的に進捗報告代行」が初どうしたタイミングで次サボり方の提案を行いたい。「定期的に進捗報告代行」と同じように、「30分時間あるから、この前見てた進撃の巨人を見よう」とチャットで送信して、「定期的に進捗報告代行」と同じように「映画の続きを見る」でボタンはSABOROUとして、https://www.amazon.co.jp/gp/video/detail/B0B8S2V3V7?qid=1782281464029&pageTypeIdSource=ASIN&ref_=atv_sr_fle_c_Tn74RA_1_1_1&sr=1-1&pageTypeId=B0B8S51G5H に遷移させたい。"
+**AI Response**: "Extended the SABOROU chat action model with a `watch_video` follow-up, added a one-time video continuation suggestion after the first progress-report ticket click, rendered a separate `映画の続きを見る` ticket with a `SABOROU` button, opened the provided Prime Video Attack on Titan URL via `chrome.tabs.create`, and updated `App.test.tsx` to cover the flow. Verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend implementation for chaining a Prime Video leisure suggestion after the first progress-report proxy action.
+
+---
+
+## Code Update - Watch Video Follow-up Copy
+**Timestamp**: 2026-06-24T06:29:25Z
+**User Input**: "@pkgs/extension/src/panel/SaborouContext.tsx:377-378 ここの文言はもう少しどうにかして欲しい。
+定期的な進捗報告は問題ないね！
+あとは、余白を、味わうだけ。そういえば、、、見たいな感じにして"
+**AI Response**: "Adjusted the watch-video follow-up copy in `SaborouContext.tsx` to transition from progress-report confidence into enjoying the margin, and updated `App.test.tsx` to assert the new copy. Verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend copy refinement for the Prime Video follow-up chat message.
+
+---
+
+## Code Update - Progress Report Sent Ticket
+**Timestamp**: 2026-06-24T06:34:32Z
+**User Input**: "「定期的に進捗報告代行」のSABOROUを押した時に送信完了しました見たいなチケットを表示させたい。"
+**AI Response**: "Added a `progress_report_sent` chat action and rendered a green `送信完了しました` ticket after the first `定期的に進捗報告代行` SABOROU button click, before the existing Prime Video follow-up. Updated `App.test.tsx` to assert the sent ticket and verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend implementation for a progress-report completion ticket in the SABOROU chat flow.
+
+---
+
+## Code Update - Mechanical Progress Completion Copy
+**Timestamp**: 2026-06-24T06:35:35Z
+**User Input**: "なんかここのチケットはもっと機械的でいいよ。進捗報告完了みたいな"
+**AI Response**: "Changed the progress-report completion ticket copy from conversational `送信完了しました` / `進捗報告代行` to the more mechanical `進捗報告完了` / `送信済み`, and updated `App.test.tsx` expectations. Verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend copy refinement for the progress-report completion status ticket.
+
+---
+
+## Code Update - Watch Anime Ticket Copy
+**Timestamp**: 2026-06-24T06:37:00Z
+**User Input**: "映画の続きを見るではなく、アニメの続きにして"
+**AI Response**: "Changed the watch-video ticket label from `映画の続きを見る` to `アニメの続き`, and updated the matching `App.test.tsx` expectation."
+**Context**: Minimal frontend copy refinement for the SABOROU watch-video follow-up ticket.
+
+---
+
+## Code Update - Ticket Only Progress Completion
+**Timestamp**: 2026-06-24T06:37:52Z
+**User Input**: "@pkgs/extension/src/panel/SaborouContext.tsx:385-397 これ不要では？"
+**AI Response**: "Removed the conversational body from the progress-report completion message by making the action message text empty, updated `SlackTab.tsx` to skip rendering SABOROU chat bubbles when text is empty, and added a test assertion that the old conversational copy is absent while the mechanical completion ticket remains. Verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend cleanup so progress completion is presented as a status ticket only.
+
+---
+
+## Code Update - Remove Progress Completion Context Action
+**Timestamp**: 2026-06-24T06:39:54Z
+**User Input**: "@pkgs/extension/src/panel/SaborouContext.tsx:385-386 これ不要では？"
+**AI Response**: "Removed the `offerProgressReportSent` Context callback and `progress_report_sent` chat action entirely. Moved completion-ticket rendering into `SlackTab.tsx` local state keyed by the clicked progress-report message, keeping the mechanical `進捗報告完了` / `送信済み` ticket without adding a synthetic chat message. Verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend simplification to keep progress completion UI local to the progress-report ticket.
+
+---
+
+## Code Update - Remove Slack Tab Leisure Button
+**Timestamp**: 2026-06-24T06:42:27Z
+**User Input**: "したの方にある、「余白のつかい道を提案してもらう」は不要"
+**AI Response**: "Removed the bottom `余白の使い道を提案してもらう` action from `SlackTab.tsx`, deleted the now-unused leisure suggestion popup and related imports/state, and updated `App.test.tsx` to assert `open-leisure` is absent. Verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend cleanup to remove the redundant bottom leisure suggestion entry point.
+
+---
+
+## Code Update - Anime Completion Next Task Prep
+**Timestamp**: 2026-06-24T06:55:36Z
+**User Input**: "なんか、アニメの視聴も完了みたいにして。「あとアニメお視聴がトリガーで
+あと10分で次のタスクだねそろそろ準備しよっか。次のタスク概要だけ確認しとく？」みたいな感じでチケっと出す感じでいいかな？押すと、縁で囲まれた中に、「AIエージェント改善定例会」の概要みたいな感じで概要を表示させる。"
+**AI Response**: "Extended the anime follow-up flow in `SlackTab.tsx`: clicking the `アニメの続き` SABOROU button opens Prime Video, marks `アニメ視聴完了` / `視聴済み`, shows a `次タスク準備` ticket with the requested 10-minute reminder copy, and reveals a bordered `AIエージェント改善定例会` overview card after pressing SABOROU. Updated `App.test.tsx` to cover the full flow and verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend implementation for anime completion and next-task preparation in the SABOROU chat flow.
+
+---
+
+## Code Update - Next Task Summary Card UI
+**Timestamp**: 2026-06-24T07:09:44Z
+**User Input**: "次のタスク概要の部分もう少し見やすい感じにしてUIwo "
+**AI Response**: "Improved the `次のタスク概要` card in `SlackTab.tsx` with stronger visual hierarchy: orange header, task title, start/prep badges, and a compact `今日見ること` checklist. Updated `App.test.tsx` to assert the new summary card content and verified extension App tests, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend UI refinement for readability of the next-task summary card.
+
+---
