@@ -97,6 +97,10 @@ interface SaborouContextValue {
   goalAnalysis: GoalAnalysis | null;
   /** PM WBS分解結果をセットする（WorkingTabから呼ばれる） */
   setGoalAnalysis: (ga: GoalAnalysis | null) => void;
+
+  /** 最後に代行依頼されたタスクID（WorkingTabが表示対象タスクを決定するために使用） */
+  delegatedTaskId: string | null;
+  setDelegatedTaskId: (id: string | null) => void;
 }
 
 const SaborouContext = createContext<SaborouContextValue | null>(null);
@@ -338,6 +342,7 @@ export function SaborouProvider({
 
   // PM WBS分解結果（WorkingTab ↔ SlackTab 共有）
   const [goalAnalysis, setGoalAnalysis] = useState<GoalAnalysis | null>(null);
+  const [delegatedTaskId, setDelegatedTaskId] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // 余白タブのサボローチャット
@@ -411,6 +416,8 @@ export function SaborouProvider({
       offerVideoContinuation,
       goalAnalysis,
       setGoalAnalysis,
+      delegatedTaskId,
+      setDelegatedTaskId,
     }),
     [
       userInfo,
@@ -434,6 +441,8 @@ export function SaborouProvider({
       offerVideoContinuation,
       goalAnalysis,
       setGoalAnalysis,
+      delegatedTaskId,
+      setDelegatedTaskId,
     ],
   );
 

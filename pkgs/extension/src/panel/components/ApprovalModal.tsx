@@ -110,7 +110,8 @@ export function ApprovalModal({
   onApproved: () => void;
   onDelegationStart?: () => void;
 }) {
-  const { jwt, sendSlackViaDom, notifyReplyCompleted } = useSaborou();
+  const { jwt, sendSlackViaDom, notifyReplyCompleted, setDelegatedTaskId } =
+    useSaborou();
   const [phase, setPhase] = useState<Phase>("choose");
   const [replyDraft, setReplyDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +182,7 @@ export function ApprovalModal({
         // Result is ignored here — WorkingTab will call decomposeTask independently.
         void decomposeTask(taskId, jwt).catch(() => undefined);
         await delegateTask(taskId, channelId, jwt, { instruction });
+        setDelegatedTaskId(taskId);
       }
       setPhase("delegate_done");
       setTimeout(() => {

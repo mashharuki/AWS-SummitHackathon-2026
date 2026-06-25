@@ -80,6 +80,7 @@ export function WorkingTab() {
     refreshTasks,
     goalAnalysis,
     setGoalAnalysis,
+    delegatedTaskId,
   } = useSaborou();
   const [schedule, setSchedule] = useState<SaboriSchedule | null>(null);
   const [decomposing, setDecomposing] = useState(false);
@@ -91,7 +92,10 @@ export function WorkingTab() {
   ]);
   const decomposedTaskIdRef = useRef<string | null>(null);
 
-  const activeTask = tasks[0] ?? null;
+  const activeTask =
+    (delegatedTaskId
+      ? (tasks.find((t) => t.taskId === delegatedTaskId) ?? tasks[0])
+      : tasks[0]) ?? null;
   const stepDefs = activeTask ? getStepDefs(activeTask.title) : [];
 
   useEffect(() => {
