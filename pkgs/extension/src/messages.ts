@@ -28,11 +28,35 @@ export interface SendSlackReplyMessage {
   threadTs?: string;
 }
 
+export interface CheckActiveTaskScreenMessage {
+  type: "CHECK_ACTIVE_TASK_SCREEN";
+  expectedTitle: string;
+}
+
+export interface ScheduleRecoveryCheckMessage {
+  type: "SCHEDULE_RECOVERY_CHECK";
+  startLabel: string;
+  expectedTitle: string;
+  offsetMinutes?: number;
+}
+
+export interface GetPendingRecoveryCheck {
+  type: "GET_PENDING_RECOVERY_CHECK";
+}
+
+export interface RecoveryCheckResultMessage {
+  type: "RECOVERY_CHECK_RESULT";
+  result: CheckActiveTaskScreenResponse & { checkedAt: string };
+}
+
 export type ExtensionRuntimeMessage =
   | NewSlackMessage
   | TaskReplyCompleted
   | GetPendingTask
-  | SendSlackReplyMessage;
+  | SendSlackReplyMessage
+  | CheckActiveTaskScreenMessage
+  | ScheduleRecoveryCheckMessage
+  | GetPendingRecoveryCheck;
 
 export interface PendingTaskResponse {
   task: NewSlackMessagePayload | null;
@@ -41,6 +65,19 @@ export interface PendingTaskResponse {
 export interface SendSlackReplyResponse {
   ok: boolean;
   error?: string;
+}
+
+export interface CheckActiveTaskScreenResponse {
+  ok: boolean;
+  matched: boolean;
+  screenshotCaptured: boolean;
+  title?: string;
+  url?: string;
+  error?: string;
+}
+
+export interface PendingRecoveryCheckResponse {
+  result: (CheckActiveTaskScreenResponse & { checkedAt: string }) | null;
 }
 
 export interface NotificationSettings {

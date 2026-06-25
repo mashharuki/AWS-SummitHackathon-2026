@@ -214,6 +214,13 @@ describe("App (4タブ Side Panel)", () => {
   });
 
   it("サボり相談ではチャットと別のチケットから進捗報告モーダルを開く", async () => {
+    const runtimeMessageListeners: Array<(message: unknown) => void> = [];
+    vi.mocked(chrome.runtime.onMessage.addListener).mockImplementation(
+      (listener) => {
+        runtimeMessageListeners.push(listener as (message: unknown) => void);
+      },
+    );
+
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
       {
@@ -223,6 +230,13 @@ describe("App (4タブ Side Panel)", () => {
         deadline: "2026-06-24T10:30:00.000Z",
       },
     ]);
+    vi.mocked(chrome.runtime.sendMessage).mockImplementation(async (msg) => {
+      const runtimeMessage = msg as { type?: unknown } | null;
+      if (runtimeMessage?.type === "GET_PENDING_RECOVERY_CHECK") {
+        return { result: null };
+      }
+      return undefined;
+    });
     const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
@@ -310,6 +324,42 @@ describe("App (4タブ Side Panel)", () => {
     expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
       "AIエージェントの提案品質を確認",
     );
+    expect(screen.getByTestId("recovery-check-ticket")).toHaveTextContent(
+      "自動画面読み取りチェック",
+    );
+    expect(screen.getByTestId("recovery-check-scheduled")).toBeInTheDocument();
+    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "SCHEDULE_RECOVERY_CHECK",
+        startLabel: "19:30",
+        expectedTitle: "AIエージェント改善定例会",
+      }),
+    );
+
+    for (const listener of runtimeMessageListeners) {
+      listener({
+        type: "RECOVERY_CHECK_RESULT",
+        result: {
+          ok: true,
+          matched: true,
+          screenshotCaptured: true,
+          title: "AIエージェント改善定例会 - agenda",
+          checkedAt: "2026-06-24T12:00:00.000Z",
+        },
+      });
+    }
+
+    await waitFor(() =>
+      expect(screen.getByTestId("recovery-check-success")).toHaveTextContent(
+        "次の仕事やってるの偉いよ",
+      ),
+    );
+    expect(screen.getByTestId("recovery-check-success")).toHaveTextContent(
+      "AIエージェント改善定例会 - agenda",
+    );
+    expect(
+      screen.queryByTestId("chat-saborou-recovery-check"),
+    ).not.toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------

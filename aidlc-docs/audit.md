@@ -3421,3 +3421,19 @@ Thank you. "
 **Context**: Minimal frontend UI refinement for readability of the next-task summary card.
 
 ---
+
+## Code Update - Visual Recovery Check
+**Timestamp**: 2026-06-24T11:53:30Z
+**User Input**: "この余白の画面において例えばタスク余白タスクってなると思うんだけど余白からタスクのタイミングでしっかり画面が切り替えられてるかどうかっていうのをウェブスクレーピングみたいなウェブスクレーピングっていうか画像を読み取ってちゃんと次の仕事やってるの偉いよみたいなっていうのを言ってくれる機能の追加をお願いします"
+**AI Response**: "Added a `CHECK_ACTIVE_TASK_SCREEN` runtime message handled by the background worker with active-tab screenshot capture plus title/URL matching, added a `画面読み取りチェック` ticket after the next-task summary in `SlackTab.tsx`, and renders `次の仕事やってるの偉いよ` when the active tab matches the next task. Updated extension App and background tests, test Chrome API mocks, and verified App test, background test, extension typecheck, formatting, and linter diagnostics."
+**Context**: Minimal frontend/background implementation for checking task recovery from the margin flow using captured active-tab screen evidence.
+
+---
+
+## Code Update - Automatic Recovery Check
+**Timestamp**: 2026-06-24T11:26:30Z
+**User Input**: "「タスク画面に戻れたら、今の画面を読み取って確認するね。」これって本人の同意がないと、写真とかって撮れない感じなのかな。勝手にサボロがタスクプラス5分くらい、例えば19時半からなんだったら19時35分くらいに画面の写真を撮って、その元に確認するっていうのはできないの？今のままだと、ユーザーがもう一回確かめさせてもらうみたいな、自分から言わないと確認できないじゃん。これを自動的にサボロー側が確認するというような仕様にしてくれると嬉しいです。"
+**AI Response**: "Replaced the manual recovery-check button with automatic scheduling via chrome.alarms at task start + 5 minutes (19:30 -> 19:35, with a 15-second demo fallback if the time already passed). Background now captures the active tab in the remembered Saborou window, stores/broadcasts the result, and SlackTab shows scheduled/success/unmatched states without user re-confirmation. Added alarms/tabs permissions, recoveryCheck helpers, tests, and updated pitch02.md."
+**Context**: Automatic proactive recovery verification for the margin-to-task transition demo flow.
+
+---

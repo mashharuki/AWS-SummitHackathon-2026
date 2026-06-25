@@ -29,6 +29,10 @@ const chromeMock = {
   },
   tabs: {
     create: vi.fn(() => Promise.resolve()),
+    query: vi.fn(() => Promise.resolve([])),
+    captureVisibleTab: vi.fn(() =>
+      Promise.resolve("data:image/jpeg;base64,test"),
+    ),
   },
   storage: {
     local: {
@@ -64,6 +68,13 @@ const chromeMock = {
     getLastFocused: vi.fn(() => Promise.resolve({ id: 1 })),
     update: vi.fn(() => Promise.resolve({ id: 1 })),
     create: vi.fn(() => Promise.resolve({ id: 1 })),
+  },
+  alarms: {
+    create: vi.fn(() => Promise.resolve()),
+    clear: vi.fn(() => Promise.resolve(true)),
+    onAlarm: {
+      addListener: vi.fn(),
+    },
   },
 };
 

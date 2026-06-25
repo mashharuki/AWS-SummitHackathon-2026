@@ -1,14 +1,18 @@
 import type { NewSlackMessagePayload } from "@/messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  checkActiveTaskScreen,
   createTaskKey,
   focusSaborouWindow,
   handleNewSlackMessage,
+  handleRecoveryCheckAlarm,
   handleTaskReplyCompleted,
   normalizeNotificationPreview,
   registerSidePanelPort,
+  scheduleRecoveryCheck,
   takePendingTask,
 } from "./index";
+import { RECOVERY_CHECK_ALARM_NAME } from "./recoveryCheck";
 
 const task: NewSlackMessagePayload = {
   text: "  資料を\n今日中に   確認してください  ",
@@ -44,6 +48,10 @@ beforeEach(() => {
     }
   });
   vi.mocked(chrome.notifications.create).mockResolvedValue("notification-id");
+  vi.mocked(chrome.tabs.query).mockResolvedValue([]);
+  vi.mocked(chrome.tabs.captureVisibleTab).mockResolvedValue(
+    "data:image/jpeg;base64,test",
+  );
   vi.mocked(chrome.windows.update).mockResolvedValue({
     id: 7,
   } as chrome.windows.Window);
@@ -140,6 +148,80 @@ describe("background notifications", () => {
       expect.stringMatching(/^task-completed:/),
       expect.objectContaining({
         title: "タスク対応が完了しました",
+      }),
+    );
+  });
+
+  it("アクティブタブの画像取得とタイトルで次タスク画面を確認する", async () => {
+    sessionStore.lastSaborouWindowId = 7;
+    vi.mocked(chrome.tabs.query).mockResolvedValue([
+      {
+        id: 123,
+        windowId: 7,
+        active: true,
+        title: "AIエージェント改善定例会 - docs",
+        url: "https://example.com/tasks/agent-meeting",
+      } as chrome.tabs.Tab,
+    ]);
+
+    await expect(
+      checkActiveTaskScreen("AIエージェント改善定例会"),
+    ).resolves.toEqual({
+      ok: true,
+      matched: true,
+      screenshotCaptured: true,
+      title: "AIエージェント改善定例会 - docs",
+      url: "https://example.com/tasks/agent-meeting",
+    });
+    expect(chrome.tabs.query).toHaveBeenCalledWith({
+      active: true,
+      windowId: 7,
+    });
+    expect(chrome.tabs.captureVisibleTab).toHaveBeenCalledWith(7, {
+      format: "jpeg",
+      quality: 45,
+    });
+  });
+
+  it("次タスク開始+5分の自動復帰チェックをアラームに予約する", async () => {
+    const now = new Date("2026-06-24T10:00:00").getTime();
+    vi.spyOn(Date, "now").mockReturnValue(now);
+
+    await scheduleRecoveryCheck("19:30", "AIエージェント改善定例会");
+
+    expect(chrome.alarms.clear).toHaveBeenCalledWith(RECOVERY_CHECK_ALARM_NAME);
+    expect(chrome.alarms.create).toHaveBeenCalledWith(
+      RECOVERY_CHECK_ALARM_NAME,
+      {
+        when: new Date("2026-06-24T19:35:00").getTime(),
+      },
+    );
+  });
+
+  it("アラーム発火時に結果を pending へ保存する", async () => {
+    sessionStore.recoveryCheckMeta = {
+      expectedTitle: "AIエージェント改善定例会",
+      scheduledFor: Date.now(),
+    };
+    sessionStore.lastSaborouWindowId = 7;
+    vi.mocked(chrome.tabs.query).mockResolvedValue([
+      {
+        id: 123,
+        windowId: 7,
+        active: true,
+        title: "AIエージェント改善定例会",
+        url: "https://example.com/tasks/agent-meeting",
+      } as chrome.tabs.Tab,
+    ]);
+
+    await handleRecoveryCheckAlarm();
+
+    expect(sessionStore.pendingRecoveryCheck).toEqual(
+      expect.objectContaining({
+        ok: true,
+        matched: true,
+        screenshotCaptured: true,
+        title: "AIエージェント改善定例会",
       }),
     );
   });
