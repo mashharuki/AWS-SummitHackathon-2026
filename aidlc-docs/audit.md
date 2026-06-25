@@ -3546,3 +3546,10 @@ Thank you. "
 **Context**: Follow-up Code Generation / Build and Test completion for restoring home visible signals
 
 ---
+## Diagram Generation Request - Final AWS Architecture
+**Timestamp**: 2026-06-23T15:06:57Z
+**User Input**: "[Image #1: 予選会時点のサボロー AWS System Architecture] 修正後のシステム構成図をdrawio形式で作成してもらいたいと考えています。 [Image #1] こちらが予選会時点でのシステム構成図になります。決勝戦に向けてブラッシュアップしてもらいたいです！！"
+**AI Response**: "Loaded AI-DLC common rules, existing state, drawio-skill AWS architecture rules, and current CDK stack context. Created a finals-ready AWS architecture diagram in draw.io format at docs/drawio/saborou-architecture-final.drawio, exported preview PNG at docs/drawio/saborou-architecture-final.png, and exported editable embedded PNG at docs/drawio/saborou-architecture-final.drawio.png. Validated XML with xmllint and repaired the embedded PNG after draw.io export."
+**Context**: Documentation / draw.io architecture diagram generation for AWS Summit Japan 2026 final presentation
+
+---

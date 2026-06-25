@@ -6,7 +6,28 @@
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
 - **現在のステージ**: `marp-slide-stylesheet-enhancement` Code Generation / Build and Test 完了（2026-06-21 JST）。Marp生成スライドに `saborou-premium` 埋め込みテーマ、リッチなfixture deck、プレミアムHTMLプレビューシェル、サービス単体テストを追加。backend 483 tests / backend typecheck / backend build 全パス。
-- **ドキュメントバージョン**: v4.8.0（2026-06-21 Marpスライドスタイル改善 実装完了）
+- **ドキュメントバージョン**: v4.9.0（2026-06-24 決勝向けAWS構成図 draw.io 生成）
+
+---
+
+## 決勝向けAWS構成図ブラッシュアップ（2026-06-24）
+
+### 実施状態
+- [x] Existing context review — 予選会時点の構成図、AI-DLC状態、CDKスタック（Frontend / Cognito / Data / Api / Agent / Webhook / AgentCore）を確認。
+- [x] Diagram design — 決勝で説明しやすいように External clients / Edge identity / API MCP orchestration / Voice MCP gateway / Slack autonomous agents / AI data assets / Observability に再構成。
+- [x] Draw.io generation — 公式AWSアイコンスタイルを使った `.drawio` XML を生成。
+- [x] Validation/export — `xmllint` でXML検証、draw.io CLIで通常PNGと埋め込みPNGを出力、埋め込みPNGを修復。
+
+### 成果物
+- `docs/drawio/saborou-architecture-final.drawio`
+- `docs/drawio/saborou-architecture-final.png`
+- `docs/drawio/saborou-architecture-final.drawio.png`
+
+### 反映した主な決勝向け差分
+- Amazon Bedrock AgentCore Gateway / MCP JSON-RPC / ElevenLabs Voice Agent の音声ファースト導線を明示。
+- Claude Sonnet 4.6 / Haiku 4.5、MCP tool群、Slack返信・@Claude委譲・旅行プラン・Marp生成の役割を明示。
+- Travelpayouts、Google Calendar/Gmail、HTML旅行しおり公開、Marp slides S3出力を追加。
+- CloudWatch / X-Ray / MCP unauthorized/forbidden/tool error監視を観測性レイヤーとして整理。
 
 ---
 
