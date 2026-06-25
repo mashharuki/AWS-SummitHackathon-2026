@@ -270,16 +270,6 @@ export function isTokenValid(expiresAt: number): boolean {
  * - 有効期限内なら id_token を返す
  * - 期限切れなら refresh_token でリフレッシュを試みる
  * - リフレッシュ失敗（例: refresh_token 失効）なら null（再認証が必要）
- *
- * 後続 Unit（U-V2-03 voice-hook）はこの関数を呼び出して JWT を取得し、
- * API Gateway / AgentCore への Authorization ヘッダーに付与する。
- *
- * @example
- *   const token = await getValidToken();
- *   if (!token) { // 再ログイン要求 }
- *   const res = await fetch(API_URL, {
- *     headers: { Authorization: `Bearer ${token}` }
- *   });
  */
 export async function getValidToken(): Promise<string | null> {
   const stored = await loadTokens();
@@ -290,18 +280,32 @@ export async function getValidToken(): Promise<string | null> {
     return stored.idToken;
   }
 
-  // 期限切れ → リフレッシュ試行
-  const refreshed = await refreshTokens(stored.refreshToken);
-  if (!refreshed) {
+  return forceRefreshToken(stored);
+}
+
+/**
+ * isTokenValid チェックをスキップして強制的にトークンをリフレッシュする。
+ * API から 401 が返った場合に呼び出す（stored expiresAt が stale でも対処できる）。
+ */
+export async function forceRefreshToken(
+  stored?: StoredTokens | null,
+): Promise<string | null> {
+  const tokens = stored ?? (await loadTokens());
+  if (!tokens) return null;
+
+  const refreshed = await refreshTokens(tokens.refreshToken);
+  // id_token が返らない場合は stale な idToken を使い続けると 401 になるため
+  // 再ログインを要求する
+  if (!refreshed || !refreshed.idToken) {
     await clearStoredTokens();
     return null;
   }
 
   // リフレッシュ成功 → ストレージを更新
   const updatedTokens: StoredTokens = {
-    idToken: refreshed.idToken || stored.idToken,
+    idToken: refreshed.idToken,
     accessToken: refreshed.accessToken,
-    refreshToken: stored.refreshToken, // refresh_token は再発行されない
+    refreshToken: tokens.refreshToken, // refresh_token は再発行されない
     expiresAt: Date.now() + refreshed.expiresIn * 1000,
   };
   await saveTokens(updatedTokens);

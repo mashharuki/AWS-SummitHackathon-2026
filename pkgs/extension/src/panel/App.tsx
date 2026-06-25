@@ -141,6 +141,27 @@ export function App() {
     };
   }, []);
 
+  // セッション中のトークン期限切れを防ぐため30分ごとに token を再検証・更新する
+  useEffect(() => {
+    if (authLoading || !sessionJwt) return;
+    const INTERVAL = 30 * 60 * 1000;
+    const id = setInterval(async () => {
+      try {
+        const token = await getValidToken();
+        if (!token) {
+          setUserInfo(null);
+          setSessionJwt(null);
+        } else if (token !== sessionJwt) {
+          setUserInfo(parseIdToken(token));
+          setSessionJwt(token);
+        }
+      } catch {
+        // バックグラウンドリフレッシュ失敗は無視（次回インターバルで再試行）
+      }
+    }, INTERVAL);
+    return () => clearInterval(id);
+  }, [authLoading, sessionJwt]);
+
   const handleSignIn = async () => {
     setAuthError(null);
     setAuthLoading(true);

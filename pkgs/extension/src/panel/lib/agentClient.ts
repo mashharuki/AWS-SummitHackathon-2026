@@ -77,14 +77,28 @@ async function apiFetch<T>(
   const baseUrl = getApiUrl();
   const url = `${baseUrl}${path}`;
 
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${jwt}`,
-      ...options.headers,
-    },
+  const buildHeaders = (token: string) => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    ...options.headers,
   });
+
+  let res = await fetch(url, { ...options, headers: buildHeaders(jwt) });
+
+  // 401 on first try: force token refresh regardless of stored expiresAt,
+  // then retry once. This handles the case where the stored expiresAt is
+  // in the future but the actual JWT exp claim has already passed.
+  if (res.status === 401) {
+    try {
+      const { forceRefreshToken } = await import("@/auth/cognitoAuth");
+      const freshToken = await forceRefreshToken();
+      if (freshToken) {
+        res = await fetch(url, { ...options, headers: buildHeaders(freshToken) });
+      }
+    } catch {
+      // refresh failed — fall through to throw the original 401
+    }
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
