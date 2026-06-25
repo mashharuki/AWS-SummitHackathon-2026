@@ -3437,3 +3437,45 @@ Thank you. "
 **Context**: Automatic proactive recovery verification for the margin-to-task transition demo flow.
 
 ---
+
+## Code Update - Inbox Dismiss Trash Icon
+**Timestamp**: 2026-06-25T12:36:05Z
+**User Input**: "# Context from my IDE setup:
+
+## Open tabs:
+- pitch02.md: docs/pitch/pitch02.md
+- auth-callback.test.ts: pkgs/backend/src/__tests__/routes/auth-callback.test.ts
+- schedule.ts: pkgs/backend/src/routes/schedule.ts
+- audit.md: aidlc-docs/audit.md
+- messages.ts: pkgs/extension/src/messages.ts
+
+## My request for Codex:
+依頼セールチケットにある、消去は、ゴミ箱のようなものアイコンでお願いします。"
+**AI Response**: "Started minimal AI-DLC workflow for a small extension UI refinement. Workspace detected as brownfield TypeScript monorepo with existing AI-DLC state. Requirements are clear: replace the Inbox candidate ticket dismiss text with a trash-like icon while preserving dismiss behavior."
+**Context**: Minimal frontend UI refinement for the request/inbox candidate dismiss button.
+
+---
+
+## Code Update Completion - Inbox Dismiss Trash Icon
+**Timestamp**: 2026-06-25T12:37:54Z
+**User Input**: "[No new user input; continuation of current request]"
+**AI Response**: "Changed the Inbox candidate dismiss control from visible `消去互換` text to a lucide `Trash2` icon-only button with `aria-label=\"消去\"` and preserved `data-testid=\"candidate-dismiss\"` / remove behavior. Updated `App.test.tsx` to assert the accessible button name and absence of the old text. Verified extension App tests, extension typecheck, and Biome checks for the touched files."
+**Context**: Completion and verification log for the request/inbox candidate dismiss trash icon refinement.
+
+---
+
+## Code Update - Remove Working Tab Schedule Card
+**Timestamp**: 2026-06-25T12:55:56Z
+**User Input**: "# Files mentioned by the user:\n\n## スクリーンショット 2026-06-25 21.54.27.png: /var/folders/9r/g3h3rgzj1_5cctdbyr_620b00000gn/T/TemporaryItems/NSIRD_screencaptureui_pgU00v/スクリーンショット 2026-06-25 21.54.27.png\n\n## My request for Codex:\n作業タブの画像で与えた部分は全部消しちゃって問題ないです。今日のスケジュールの部分は消しちゃって問題ないです。\n<image name=[Image #1] path=\"/var/folders/9r/g3h3rgzj1_5cctdbyr_620b00000gn/T/TemporaryItems/NSIRD_screencaptureui_pgU00v/スクリーンショット 2026-06-25 21.54.27.png\">"
+**AI Response**: "Started minimal AI-DLC workflow for a small extension UI deletion. Workspace detected as brownfield TypeScript monorepo with existing AI-DLC state. Requirements are clear: remove the `今日のスケジュール` card and chart from the Working tab while preserving the rest of the task execution UI."
+**Context**: Minimal frontend cleanup for Working tab schedule card removal.
+
+---
+
+## Code Update Completion - Remove Working Tab Schedule Card
+**Timestamp**: 2026-06-25T12:58:32Z
+**User Input**: "[No new user input; continuation of current request]"
+**AI Response**: "Removed the Working tab `今日のスケジュール` card, the `MiniGantt` render, and the now-unused schedule fetch/state/imports from `WorkingTab.tsx`. Added an App test assertion that the Working tab no longer renders `今日のスケジュール`. Verified extension App tests, extension typecheck, and Biome checks for the touched files."
+**Context**: Completion and verification log for Working tab schedule card removal.
+
+---

@@ -14,7 +14,7 @@ import { ApprovalModal } from "@/panel/components/ApprovalModal";
 import { DeclineModal } from "@/panel/components/DeclineModal";
 import { Badge, Button, Card, EmptyState } from "@/panel/components/ui";
 import type { TaskCandidate } from "@/panel/lib/types";
-import { Inbox, RefreshCw } from "lucide-react";
+import { Inbox, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 type ModalState =
@@ -77,6 +77,7 @@ export function InboxTab({
             candidate={cand}
             onApprove={() => setModal({ kind: "approve", candidate: cand })}
             onDecline={() => setModal({ kind: "decline", candidate: cand })}
+            onDismiss={() => removeCandidate(cand.candidateId)}
           />
         ))
       )}
@@ -107,10 +108,12 @@ function CandidateCard({
   candidate,
   onApprove,
   onDecline,
+  onDismiss,
 }: {
   candidate: TaskCandidate;
   onApprove: () => void;
   onDecline: () => void;
+  onDismiss: () => void;
 }) {
   const deadlineLabel = candidate.deadline
     ? new Date(candidate.deadline).toLocaleDateString("ja-JP", {
@@ -138,7 +141,7 @@ function CandidateCard({
       <div className="flex gap-2">
         <Button
           variant="primary"
-          className="flex-1 py-1.5"
+          className="flex-1 py-1.5 text-xs"
           onClick={onApprove}
           data-testid="candidate-approve"
         >
@@ -146,11 +149,21 @@ function CandidateCard({
         </Button>
         <Button
           variant="outline"
-          className="flex-1 py-1.5"
+          className="flex-1 py-1.5 text-xs"
           onClick={onDecline}
           data-testid="candidate-decline"
         >
           お断り
+        </Button>
+        <Button
+          variant="ghost"
+          className="shrink-0 h-8 w-8 p-0 text-[#9ca3af] hover:text-[#ef4444]"
+          onClick={onDismiss}
+          aria-label="消去"
+          data-testid="candidate-dismiss"
+          title="消去"
+        >
+          <Trash2 size={15} aria-hidden="true" />
         </Button>
       </div>
     </Card>

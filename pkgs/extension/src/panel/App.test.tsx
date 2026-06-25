@@ -138,6 +138,7 @@ describe("App (4タブ Side Panel)", () => {
     );
     await user.click(screen.getByTestId("tab-working"));
     expect(screen.getByTestId("working-tab")).toBeInTheDocument();
+    expect(screen.queryByText("今日のスケジュール")).not.toBeInTheDocument();
   });
 
   it("余白タブに切り替えられる", async () => {
@@ -412,6 +413,39 @@ describe("App (4タブ Side Panel)", () => {
     );
     expect(screen.getByTestId("candidate-approve")).toBeInTheDocument();
     expect(screen.getByTestId("candidate-decline")).toBeInTheDocument();
+    expect(screen.getByTestId("candidate-dismiss")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "消去" })).toBeInTheDocument();
+    expect(screen.queryByText("消去互換")).not.toBeInTheDocument();
+  });
+
+  it("消去互換で候補カードが一覧から消える", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
+      {
+        candidateId: "c1",
+        title: "資料の確認をお願いします",
+        deadline: null,
+        requester: "田中太郎",
+        description: "資料の確認をお願いします",
+        sourceType: "slack",
+        slackChannelId: "C123",
+        threadTs: "1.1",
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-card")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("candidate-dismiss"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("candidate-card")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("新しい依頼はありません")).toBeInTheDocument();
   });
 
   it("候補の承認ボタンで進め方モーダルが開く", async () => {

@@ -2,33 +2,16 @@
  * WorkingTab — ③タスク代行（作業中）
  *
  * PM機能追加後:
- * 上部: MiniGantt（進行中タスクのスケジュール + サブタスク）
- * 中部: PM分析 / サブタスク承認フロー（GoalAnalysis がある場合）
+ * 上部: PM分析 / サブタスク承認フロー（GoalAnalysis がある場合）
  * 下部: SABOROUがタスク実行中（LIVE）プレビュー（フォールバック）
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
 import { SubtaskCard } from "@/panel/components/SubtaskCard";
-import { MiniGantt } from "@/panel/components/MiniGantt";
-import {
-  Badge,
-  Card,
-  EmptyState,
-  SectionLabel,
-} from "@/panel/components/ui";
-import {
-  decomposeTask,
-  getSchedule,
-  updateSubtaskStatus,
-} from "@/panel/lib/agentClient";
-import type { SaboriSchedule, SubTask } from "@/panel/lib/types";
-import {
-  CheckCircle2,
-  Globe,
-  Loader2,
-  Sparkles,
-  Trophy,
-} from "lucide-react";
+import { Badge, Card, EmptyState, SectionLabel } from "@/panel/components/ui";
+import { decomposeTask, updateSubtaskStatus } from "@/panel/lib/agentClient";
+import type { SubTask } from "@/panel/lib/types";
+import { CheckCircle2, Globe, Loader2, Sparkles, Trophy } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // ---------------------------------------------------------------------------
@@ -47,14 +30,20 @@ function getStepDefs(
   if (isTravel && isSlides) {
     return [
       { title: "旅程の情報を収集", sub: "期日・参加者・経路を読み込み" },
-      { title: "新幹線・ホテルの空き確認", sub: "JR・宿泊施設の空き状況を収集中" },
+      {
+        title: "新幹線・ホテルの空き確認",
+        sub: "JR・宿泊施設の空き状況を収集中",
+      },
       { title: "社内共有スライドを生成", sub: "MCP で成果物を作成" },
     ];
   }
   if (isTravel) {
     return [
       { title: "旅程の情報を収集", sub: "期日・参加者・経路を読み込み" },
-      { title: "新幹線・ホテルの空き確認", sub: "JR・宿泊施設の空き状況を収集中" },
+      {
+        title: "新幹線・ホテルの空き確認",
+        sub: "JR・宿泊施設の空き状況を収集中",
+      },
       { title: "旅程表を作成", sub: "MCP でドキュメントを生成" },
     ];
   }
@@ -77,8 +66,14 @@ function getStepDefs(
 // ---------------------------------------------------------------------------
 
 export function WorkingTab() {
-  const { jwt, tasks, tasksLoading, refreshTasks, goalAnalysis, setGoalAnalysis } = useSaborou();
-  const [schedule, setSchedule] = useState<SaboriSchedule | null>(null);
+  const {
+    jwt,
+    tasks,
+    tasksLoading,
+    refreshTasks,
+    goalAnalysis,
+    setGoalAnalysis,
+  } = useSaborou();
   const [decomposing, setDecomposing] = useState(false);
   const [decomposeError, setDecomposeError] = useState(false);
   const [stepStates, setStepStates] = useState<StepState[]>([
@@ -94,17 +89,6 @@ export function WorkingTab() {
   useEffect(() => {
     void refreshTasks();
   }, [refreshTasks]);
-
-  useEffect(() => {
-    if (!jwt || !activeTask) return;
-    let cancelled = false;
-    void getSchedule(activeTask.taskId, jwt).then((s) => {
-      if (!cancelled) setSchedule(s);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [jwt, activeTask]);
 
   // PM分解: activeTaskが変わったときにGoalAnalysisを取得/生成
   useEffect(() => {
@@ -127,14 +111,20 @@ export function WorkingTab() {
         decomposedTaskIdRef.current = null;
       })
       .finally(() => setDecomposing(false));
-  }, [jwt, activeTask]);
+  }, [jwt, activeTask, setGoalAnalysis]);
 
   // フォールバックアニメーション（GoalAnalysisがない場合）
   useEffect(() => {
     if (!activeTask || goalAnalysis) return;
     setStepStates(["active", "pending", "pending"]);
-    const t1 = setTimeout(() => setStepStates(["done", "active", "pending"]), 2000);
-    const t2 = setTimeout(() => setStepStates(["done", "done", "active"]), 5000);
+    const t1 = setTimeout(
+      () => setStepStates(["done", "active", "pending"]),
+      2000,
+    );
+    const t2 = setTimeout(
+      () => setStepStates(["done", "done", "active"]),
+      5000,
+    );
     const t3 = setTimeout(() => setStepStates(["done", "done", "done"]), 9000);
     return () => {
       clearTimeout(t1);
@@ -157,7 +147,12 @@ export function WorkingTab() {
         };
       });
       try {
-        await updateSubtaskStatus(activeTask.taskId, subtask.id, "approved", jwt);
+        await updateSubtaskStatus(
+          activeTask.taskId,
+          subtask.id,
+          "approved",
+          jwt,
+        );
         // 少し待ってからdoneにする（実行演出）
         setTimeout(() => {
           setGoalAnalysis((prev) => {
@@ -183,7 +178,7 @@ export function WorkingTab() {
         });
       }
     },
-    [jwt, activeTask, goalAnalysis],
+    [jwt, activeTask, goalAnalysis, setGoalAnalysis],
   );
 
   const handleSkipSubtask = useCallback(
@@ -198,11 +193,14 @@ export function WorkingTab() {
           ),
         };
       });
-      await updateSubtaskStatus(activeTask.taskId, subtask.id, "skipped", jwt).catch(
-        () => {},
-      );
+      await updateSubtaskStatus(
+        activeTask.taskId,
+        subtask.id,
+        "skipped",
+        jwt,
+      ).catch(() => {});
     },
-    [jwt, activeTask],
+    [jwt, activeTask, setGoalAnalysis],
   );
 
   const isGoalAchieved =
@@ -211,13 +209,17 @@ export function WorkingTab() {
     ) ?? false;
 
   // アクティブなサブタスク（次に承認が必要なもの）
-  const activeSubtaskIndex = goalAnalysis?.subtasks.findIndex(
-    (st) => st.status === "pending" || st.status === "executing",
-  ) ?? -1;
+  const activeSubtaskIndex =
+    goalAnalysis?.subtasks.findIndex(
+      (st) => st.status === "pending" || st.status === "executing",
+    ) ?? -1;
 
   if (tasksLoading) {
     return (
-      <div className="flex items-center justify-center py-16" data-testid="working-tab-loading">
+      <div
+        className="flex items-center justify-center py-16"
+        data-testid="working-tab-loading"
+      >
         <div className="w-6 h-6 rounded-full border-2 border-[#f97316] border-t-transparent animate-spin" />
       </div>
     );
@@ -225,19 +227,6 @@ export function WorkingTab() {
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3" data-testid="working-tab">
-      {/* ガント */}
-      <Card>
-        <div className="flex items-center justify-between mb-2">
-          <SectionLabel>今日のスケジュール</SectionLabel>
-          <span className="text-[9px] text-[#9ca3af]">8:00 – 17:00</span>
-        </div>
-        <MiniGantt
-          schedule={schedule}
-          subtasks={goalAnalysis?.subtasks}
-          activeTaskTitle={activeTask?.title}
-        />
-      </Card>
-
       {/* PM分析ローディング */}
       {decomposing && activeTask && (
         <Card>
@@ -245,7 +234,9 @@ export function WorkingTab() {
             <Loader2 size={14} className="text-[#f97316] animate-spin" />
             <div>
               <p className="text-xs font-bold text-[#111827]">PM分析中...</p>
-              <p className="text-[10px] text-[#6b7280]">PMBOK WBS手法でゴールを分解しています</p>
+              <p className="text-[10px] text-[#6b7280]">
+                PMBOK WBS手法でゴールを分解しています
+              </p>
             </div>
           </div>
         </Card>
@@ -256,8 +247,12 @@ export function WorkingTab() {
         <Card>
           <div className="flex items-center justify-between py-1">
             <div>
-              <p className="text-xs font-bold text-[#dc2626]">PM分析に失敗しました</p>
-              <p className="text-[10px] text-[#6b7280]">Bedrockへの接続を確認してください</p>
+              <p className="text-xs font-bold text-[#dc2626]">
+                PM分析に失敗しました
+              </p>
+              <p className="text-[10px] text-[#6b7280]">
+                Bedrockへの接続を確認してください
+              </p>
             </div>
             <button
               type="button"
@@ -278,12 +273,20 @@ export function WorkingTab() {
         <Card accent="#10b981" className="bg-[#d1fae5]">
           <div className="flex items-center gap-2 mb-2">
             <Trophy size={18} className="text-[#065f46]" />
-            <span className="font-bold text-sm text-[#065f46]">ゴール達成！</span>
+            <span className="font-bold text-sm text-[#065f46]">
+              ゴール達成！
+            </span>
           </div>
-          <p className="text-xs text-[#065f46] font-medium mb-1">{goalAnalysis.goalSummary}</p>
+          <p className="text-xs text-[#065f46] font-medium mb-1">
+            {goalAnalysis.goalSummary}
+          </p>
           <div className="mt-2 pt-2 border-t border-[#a7f3d0]">
-            <p className="text-[10px] text-[#065f46] font-semibold mb-0.5">今日の余白の過ごし方</p>
-            <p className="text-xs text-[#065f46] leading-relaxed">{goalAnalysis.freeTimeSuggestion}</p>
+            <p className="text-[10px] text-[#065f46] font-semibold mb-0.5">
+              今日の余白の過ごし方
+            </p>
+            <p className="text-xs text-[#065f46] leading-relaxed">
+              {goalAnalysis.freeTimeSuggestion}
+            </p>
             {goalAnalysis.freeTimeMinutes > 0 && (
               <p className="text-[10px] text-[#10b981] mt-1">
                 余白時間: {goalAnalysis.freeTimeMinutes}分
@@ -302,8 +305,12 @@ export function WorkingTab() {
               <SectionLabel>PMがゴールを分解</SectionLabel>
               <Badge tone="orange">WBS</Badge>
             </div>
-            <p className="text-xs text-[#374151] font-medium">{goalAnalysis.goalSummary}</p>
-            <p className="text-[10px] text-[#9ca3af] mt-0.5">成果物: {goalAnalysis.deliverable}</p>
+            <p className="text-xs text-[#374151] font-medium">
+              {goalAnalysis.goalSummary}
+            </p>
+            <p className="text-[10px] text-[#9ca3af] mt-0.5">
+              成果物: {goalAnalysis.deliverable}
+            </p>
           </div>
 
           {/* サブタスクリスト */}
@@ -324,7 +331,11 @@ export function WorkingTab() {
             <div className="flex justify-between text-[9px] text-[#9ca3af] mb-1">
               <span>進捗</span>
               <span>
-                {goalAnalysis.subtasks.filter((st) => st.status === "done" || st.status === "skipped").length}
+                {
+                  goalAnalysis.subtasks.filter(
+                    (st) => st.status === "done" || st.status === "skipped",
+                  ).length
+                }
                 /{goalAnalysis.subtasks.length}
               </span>
             </div>
@@ -363,8 +374,12 @@ export function WorkingTab() {
           <div className="rounded-lg bg-[#111827] border border-white/10 p-2 mb-3">
             <div className="flex items-center gap-1 mb-1.5">
               <Globe size={11} className="text-white/50" />
-              <span className="text-[9px] text-white/50">ブラウザ操作プレビュー</span>
-              <Badge tone="green" className="ml-auto">scraping</Badge>
+              <span className="text-[9px] text-white/50">
+                ブラウザ操作プレビュー
+              </span>
+              <Badge tone="green" className="ml-auto">
+                scraping
+              </Badge>
             </div>
             <div className="relative h-2 rounded bg-white/10 overflow-hidden mb-1">
               <div
@@ -384,7 +399,11 @@ export function WorkingTab() {
             {stepDefs.map((def, idx) => {
               const state = stepStates[idx] ?? "pending";
               const IconEl =
-                state === "done" ? CheckCircle2 : state === "active" ? Loader2 : Sparkles;
+                state === "done"
+                  ? CheckCircle2
+                  : state === "active"
+                    ? Loader2
+                    : Sparkles;
               return (
                 <div key={def.title} className="flex items-start gap-2">
                   <IconEl
@@ -398,7 +417,13 @@ export function WorkingTab() {
                     }
                   />
                   <div>
-                    <p className={state === "pending" ? "text-[11px] font-bold text-white/40" : "text-[11px] font-bold text-white"}>
+                    <p
+                      className={
+                        state === "pending"
+                          ? "text-[11px] font-bold text-white/40"
+                          : "text-[11px] font-bold text-white"
+                      }
+                    >
                       {def.title}
                     </p>
                     <p className="text-[9px] text-white/50">{def.sub}</p>
