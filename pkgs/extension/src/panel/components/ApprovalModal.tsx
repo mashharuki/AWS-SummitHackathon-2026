@@ -185,7 +185,13 @@ export function ApprovalModal({
         onClose();
       }, 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "代行依頼に失敗しました");
+      if (err instanceof Error && err.message.includes("SLACK_NOT_CONNECTED")) {
+        setError(
+          "Slack が未連携です。設定タブから Slack 連携を完了してください。",
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "代行依頼に失敗しました");
+      }
       setPhase("error");
     }
   };

@@ -131,7 +131,17 @@ export class SlackDelegationService {
       );
       // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
       const userToken = await this.getUserToken(input.userId);
-      const token = userToken ?? (await this.getToken(input.userId));
+      let token: string;
+      try {
+        token = userToken ?? (await this.getToken(input.userId));
+      } catch {
+        status = "slack_api_error";
+        throw new AppError(
+          424,
+          "SLACK_NOT_CONNECTED",
+          "Slack が未連携です。先に Slack 連携を完了してください。",
+        );
+      }
       const client = this.createSlackClient(token);
 
       try {
@@ -167,7 +177,8 @@ export class SlackDelegationService {
         status = "task_not_found";
       } else if (
         error instanceof AppError &&
-        error.code === "SLACK_API_ERROR"
+        (error.code === "SLACK_API_ERROR" ||
+          error.code === "SLACK_NOT_CONNECTED")
       ) {
         status = "slack_api_error";
       }
