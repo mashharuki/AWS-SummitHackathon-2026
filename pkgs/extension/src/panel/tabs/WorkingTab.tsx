@@ -125,10 +125,20 @@ export function WorkingTab() {
     setDecomposeError(false);
     setGoalAnalysis(null);
 
-    void decomposeTask(activeTask.taskId, jwt)
-      .then((ga) => setGoalAnalysis(ga))
+    const taskId = activeTask.taskId;
+    const runDecompose = (): Promise<void> =>
+      decomposeTask(taskId, jwt).then((ga) => setGoalAnalysis(ga));
+
+    // Retry once after 3s to handle API Gateway / Bedrock cold-start timeouts.
+    runDecompose()
+      .catch(
+        () =>
+          new Promise<void>((resolve) => setTimeout(resolve, 3000)).then(
+            runDecompose,
+          ),
+      )
       .catch((err) => {
-        console.warn("[WorkingTab] decomposeTask failed:", err);
+        console.warn("[WorkingTab] decomposeTask failed after retry:", err);
         setDecomposeError(true);
         // decomposedTaskIdRef をリセットしてリトライできるようにする
         decomposedTaskIdRef.current = null;

@@ -14,6 +14,7 @@ import { Button, Modal } from "@/panel/components/ui";
 import {
   approveCandidate,
   delegateTask,
+  decomposeTask,
   judgeTask,
 } from "@/panel/lib/agentClient";
 import type { TaskCandidate, TaskSummary } from "@/panel/lib/types";
@@ -176,6 +177,9 @@ export function ApprovalModal({
         }
       }
       if (taskId) {
+        // Fire decompose in parallel to warm up Bedrock before WorkingTab loads.
+        // Result is ignored here — WorkingTab will call decomposeTask independently.
+        void decomposeTask(taskId, jwt).catch(() => undefined);
         await delegateTask(taskId, channelId, jwt, { instruction });
       }
       setPhase("delegate_done");
