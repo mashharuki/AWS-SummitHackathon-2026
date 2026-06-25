@@ -2,15 +2,21 @@
  * WorkingTab — ③タスク代行（作業中）
  *
  * PM機能追加後:
- * 上部: PM分析 / サブタスク承認フロー（GoalAnalysis がある場合）
+ * 上部: MiniGantt（進行中タスクのスケジュール + サブタスク）
+ * 中部: PM分析 / サブタスク承認フロー（GoalAnalysis がある場合）
  * 下部: SABOROUがタスク実行中（LIVE）プレビュー（フォールバック）
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
+import { MiniGantt } from "@/panel/components/MiniGantt";
 import { SubtaskCard } from "@/panel/components/SubtaskCard";
 import { Badge, Card, EmptyState, SectionLabel } from "@/panel/components/ui";
-import { decomposeTask, updateSubtaskStatus } from "@/panel/lib/agentClient";
-import type { SubTask } from "@/panel/lib/types";
+import {
+  decomposeTask,
+  getSchedule,
+  updateSubtaskStatus,
+} from "@/panel/lib/agentClient";
+import type { SaboriSchedule, SubTask } from "@/panel/lib/types";
 import { CheckCircle2, Globe, Loader2, Sparkles, Trophy } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -70,10 +76,12 @@ export function WorkingTab() {
     jwt,
     tasks,
     tasksLoading,
+    tasksError,
     refreshTasks,
     goalAnalysis,
     setGoalAnalysis,
   } = useSaborou();
+  const [schedule, setSchedule] = useState<SaboriSchedule | null>(null);
   const [decomposing, setDecomposing] = useState(false);
   const [decomposeError, setDecomposeError] = useState(false);
   const [stepStates, setStepStates] = useState<StepState[]>([
@@ -89,6 +97,21 @@ export function WorkingTab() {
   useEffect(() => {
     void refreshTasks();
   }, [refreshTasks]);
+
+  // スケジュール取得（ガント用）
+  useEffect(() => {
+    if (!jwt || !activeTask) {
+      setSchedule(null);
+      return;
+    }
+    let cancelled = false;
+    void getSchedule(activeTask.taskId, jwt).then((s) => {
+      if (!cancelled) setSchedule(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [jwt, activeTask]);
 
   // PM分解: activeTaskが変わったときにGoalAnalysisを取得/生成
   useEffect(() => {
@@ -227,6 +250,19 @@ export function WorkingTab() {
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3" data-testid="working-tab">
+      {/* ガント */}
+      <Card>
+        <div className="flex items-center justify-between mb-2">
+          <SectionLabel>今日のスケジュール</SectionLabel>
+          <span className="text-[9px] text-[#9ca3af]">8:00 – 17:00</span>
+        </div>
+        <MiniGantt
+          schedule={schedule}
+          subtasks={goalAnalysis?.subtasks}
+          activeTaskTitle={activeTask?.title}
+        />
+      </Card>
+
       {/* PM分析ローディング */}
       {decomposing && activeTask && (
         <Card>
@@ -437,11 +473,19 @@ export function WorkingTab() {
 
       {/* タスクなし */}
       {!activeTask && !tasksLoading && (
-        <EmptyState
-          icon={<Sparkles size={32} />}
-          title="実行中のタスクはありません"
-          hint="依頼整理で承認すると、ここで SABOROU が代行します"
-        />
+        tasksError ? (
+          <EmptyState
+            icon={<Sparkles size={32} />}
+            title="データの取得に失敗しました"
+            hint="APIに接続できませんでした。再度ログインするか管理者に連絡してください"
+          />
+        ) : (
+          <EmptyState
+            icon={<Sparkles size={32} />}
+            title="実行中のタスクはありません"
+            hint="依頼整理で承認すると、ここで SABOROU が代行します"
+          />
+        )
       )}
     </div>
   );

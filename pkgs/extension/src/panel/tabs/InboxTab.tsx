@@ -30,6 +30,7 @@ export function InboxTab({
   const {
     candidates,
     candidatesLoading,
+    candidatesError,
     refreshCandidates,
     removeCandidate,
     refreshTasks,
@@ -63,6 +64,12 @@ export function InboxTab({
           <div className="flex items-center justify-center py-12">
             <div className="w-6 h-6 rounded-full border-2 border-[#f97316] border-t-transparent animate-spin" />
           </div>
+        ) : candidatesError ? (
+          <EmptyState
+            icon={<Inbox size={36} />}
+            title="データの取得に失敗しました"
+            hint="APIに接続できませんでした。右上の更新ボタンを押してください"
+          />
         ) : (
           <EmptyState
             icon={<Inbox size={36} />}

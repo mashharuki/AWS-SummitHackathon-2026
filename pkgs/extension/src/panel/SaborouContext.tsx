@@ -59,12 +59,14 @@ interface SaborouContextValue {
   /** タスク候補一覧（candidates API + content 検知のマージ済み） */
   candidates: TaskCandidate[];
   candidatesLoading: boolean;
+  candidatesError: boolean;
   refreshCandidates: () => Promise<void>;
   removeCandidate: (candidateId: string) => void;
 
   /** 承認済みタスク一覧 */
   tasks: TaskSummary[];
   tasksLoading: boolean;
+  tasksError: boolean;
   refreshTasks: () => Promise<void>;
 
   /** 直近の代表 proposal（ホームの psychSignals 用） */
@@ -200,8 +202,10 @@ export function SaborouProvider({
 }) {
   const [apiCandidates, setApiCandidates] = useState<TaskCandidate[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidatesError, setCandidatesError] = useState(false);
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+  const [tasksError, setTasksError] = useState(false);
   const [representativeProposal, setRepresentativeProposal] =
     useState<Proposal | null>(null);
   const [scheduleSaboruMinutes, setScheduleSaboruMinutes] = useState<
@@ -232,6 +236,7 @@ export function SaborouProvider({
   const refreshCandidates = useCallback(async () => {
     if (!jwt) return;
     setCandidatesLoading(true);
+    setCandidatesError(false);
     try {
       const list = await getCandidates(jwt);
       // detectedAt が未付与のものはフロント受取時刻を付与
@@ -241,6 +246,7 @@ export function SaborouProvider({
       );
     } catch (err) {
       console.warn("[SABOROU] refreshCandidates failed:", err);
+      setCandidatesError(true);
     } finally {
       setCandidatesLoading(false);
     }
@@ -249,6 +255,7 @@ export function SaborouProvider({
   const refreshTasks = useCallback(async () => {
     if (!jwt) return;
     setTasksLoading(true);
+    setTasksError(false);
     try {
       const list = await getTaskSummaries(jwt);
       setTasks(list);
@@ -264,6 +271,7 @@ export function SaborouProvider({
       }
     } catch (err) {
       console.warn("[SABOROU] refreshTasks failed:", err);
+      setTasksError(true);
     } finally {
       setTasksLoading(false);
     }
@@ -386,10 +394,12 @@ export function SaborouProvider({
       jwt,
       candidates,
       candidatesLoading,
+      candidatesError,
       refreshCandidates,
       removeCandidate,
       tasks,
       tasksLoading,
+      tasksError,
       refreshTasks,
       representativeProposal,
       scheduleSaboruMinutes,
@@ -407,10 +417,12 @@ export function SaborouProvider({
       jwt,
       candidates,
       candidatesLoading,
+      candidatesError,
       refreshCandidates,
       removeCandidate,
       tasks,
       tasksLoading,
+      tasksError,
       refreshTasks,
       representativeProposal,
       scheduleSaboruMinutes,
