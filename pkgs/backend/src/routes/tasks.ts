@@ -471,9 +471,10 @@ export function createTasksRoute(
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const slackContext = typeof body.slackContext === "string"
-      ? (body.slackContext as string)
-      : undefined;
+    const slackContext =
+      typeof body.slackContext === "string"
+        ? (body.slackContext as string)
+        : undefined;
 
     try {
       const goalAnalysis = await goalDecomposerAgent.decompose({
@@ -521,7 +522,8 @@ export function createTasksRoute(
     const task = await taskRepository.findById(userId, taskId);
     if (!task) throw new NotFoundError(`Task ${taskId} not found`);
 
-    const goalAnalysis = (task as typeof task & { goalAnalysis?: unknown }).goalAnalysis;
+    const goalAnalysis = (task as typeof task & { goalAnalysis?: unknown })
+      .goalAnalysis;
     if (!goalAnalysis) {
       return c.json(
         {
@@ -553,7 +555,13 @@ export function createTasksRoute(
     const body = await c.req.json();
     const { status } = body as { status: string };
 
-    const validStatuses = ["pending", "approved", "executing", "done", "skipped"];
+    const validStatuses = [
+      "pending",
+      "approved",
+      "executing",
+      "done",
+      "skipped",
+    ];
     if (!validStatuses.includes(status)) {
       return c.json(
         {
@@ -567,7 +575,12 @@ export function createTasksRoute(
     }
 
     try {
-      await taskRepository.updateSubtaskStatus(userId, taskId, subtaskId, status);
+      await taskRepository.updateSubtaskStatus(
+        userId,
+        taskId,
+        subtaskId,
+        status,
+      );
       return c.json({ taskId, subtaskId, status });
     } catch (err) {
       if (String(err).includes("not found")) {

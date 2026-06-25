@@ -131,9 +131,7 @@ describe("decline_draft tool", () => {
   });
 
   it("instructs concise user-like decline drafts with one apology emoji", () => {
-    expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain(
-      "ユーザー本人の普段の文体",
-    );
+    expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("ユーザー本人の普段の文体");
     expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("過去のSlack会話");
     expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("180文字以内");
     expect(DECLINE_DRAFT_SYSTEM_PROMPT).toContain("絵文字を1つだけ");

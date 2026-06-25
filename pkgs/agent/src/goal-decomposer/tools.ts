@@ -25,7 +25,8 @@ export const WBS_DECOMPOSE_TOOL: Tool = {
         properties: {
           goalSummary: {
             type: "string",
-            description: "このタスクのゴールを1文で表現したもの（例: 会議スライドを完成させること）",
+            description:
+              "このタスクのゴールを1文で表現したもの（例: 会議スライドを完成させること）",
           },
           deliverable: {
             type: "string",
@@ -33,7 +34,8 @@ export const WBS_DECOMPOSE_TOOL: Tool = {
           },
           subtasks: {
             type: "array",
-            description: "WBS分解されたサブタスクの配列（3〜6件推奨、最大12件、時系列順）",
+            description:
+              "WBS分解されたサブタスクの配列（3〜6件推奨、最大12件、時系列順）",
             minItems: 1,
             maxItems: 12,
             items: {
@@ -45,7 +47,8 @@ export const WBS_DECOMPOSE_TOOL: Tool = {
                 },
                 title: {
                   type: "string",
-                  description: "サブタスク名（最大120文字、行動動詞で始める。例: 旅程候補を調査する）",
+                  description:
+                    "サブタスク名（最大120文字、行動動詞で始める。例: 旅程候補を調査する）",
                 },
                 description: {
                   type: "string",
@@ -65,15 +68,27 @@ export const WBS_DECOMPOSE_TOOL: Tool = {
                   ].join(" / "),
                 },
               },
-              required: ["id", "title", "description", "estimatedMinutes", "saborouType"],
+              required: [
+                "id",
+                "title",
+                "description",
+                "estimatedMinutes",
+                "saborouType",
+              ],
             },
           },
           freeTimeSuggestion: {
             type: "string",
-            description: "Slack文脈から推測したユーザーの趣味嗜好に基づく余白時間の最高の使い方（1〜2文）",
+            description:
+              "Slack文脈から推測したユーザーの趣味嗜好に基づく余白時間の最高の使い方（1〜2文）",
           },
         },
-        required: ["goalSummary", "deliverable", "subtasks", "freeTimeSuggestion"],
+        required: [
+          "goalSummary",
+          "deliverable",
+          "subtasks",
+          "freeTimeSuggestion",
+        ],
       },
     },
   },

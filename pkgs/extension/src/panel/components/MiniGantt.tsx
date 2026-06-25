@@ -147,9 +147,30 @@ function taskFallbackBlocks(taskTitle: string): ScheduleBlock[] {
   };
   const label = taskTitle.slice(0, 20);
   return [
-    { stepId: "t1", stepLabel: label, bandType: "work", startAt: at(9, 0), endAt: at(11, 0), durationMinutes: 120 },
-    { stepId: "t2", stepLabel: "確認・調整", bandType: "decision", startAt: at(13, 0), endAt: at(14, 0), durationMinutes: 60 },
-    { stepId: "t3", stepLabel: "さぼろう", bandType: "saboru", startAt: at(15, 0), endAt: at(17, 0), durationMinutes: 120 },
+    {
+      stepId: "t1",
+      stepLabel: label,
+      bandType: "work",
+      startAt: at(9, 0),
+      endAt: at(11, 0),
+      durationMinutes: 120,
+    },
+    {
+      stepId: "t2",
+      stepLabel: "確認・調整",
+      bandType: "decision",
+      startAt: at(13, 0),
+      endAt: at(14, 0),
+      durationMinutes: 60,
+    },
+    {
+      stepId: "t3",
+      stepLabel: "さぼろう",
+      bandType: "saboru",
+      startAt: at(15, 0),
+      endAt: at(17, 0),
+      durationMinutes: 120,
+    },
   ];
 }
 
@@ -172,9 +193,16 @@ export function MiniGantt({
   // データなし状態（タスクなし）
   if (blocks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-5 gap-1" data-testid="mini-gantt-empty">
-        <p className="text-xs text-[#9ca3af]">今日はまだスケジュールがありません</p>
-        <p className="text-[10px] text-[#d1d5db]">依頼整理でタスクを承認すると表示されます</p>
+      <div
+        className="flex flex-col items-center justify-center py-5 gap-1"
+        data-testid="mini-gantt-empty"
+      >
+        <p className="text-xs text-[#9ca3af]">
+          今日はまだスケジュールがありません
+        </p>
+        <p className="text-[10px] text-[#d1d5db]">
+          依頼整理でタスクを承認すると表示されます
+        </p>
       </div>
     );
   }

@@ -120,7 +120,12 @@ export interface ProgressReport {
 export type SubTaskType = "work" | "decision" | "saboru";
 
 /** PM WBS分解のサブタスクステータス */
-export type SubTaskStatus = "pending" | "approved" | "executing" | "done" | "skipped";
+export type SubTaskStatus =
+  | "pending"
+  | "approved"
+  | "executing"
+  | "done"
+  | "skipped";
 
 /** PM WBSで分解された1作業単位 */
 export interface SubTask {

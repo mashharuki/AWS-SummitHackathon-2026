@@ -97,9 +97,7 @@ export {
 
 // ゴール分解エージェント (PM WBS機能)
 export { GoalDecomposerAgent } from "./goal-decomposer/GoalDecomposerAgent.js";
-export type {
-  GoalDecomposerInput,
-} from "./goal-decomposer/GoalDecomposerAgent.js";
+export type { GoalDecomposerInput } from "./goal-decomposer/GoalDecomposerAgent.js";
 export type {
   GoalAnalysis,
   SubTask,

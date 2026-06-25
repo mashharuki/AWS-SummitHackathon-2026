@@ -251,7 +251,8 @@ export class DynamoTaskRepository implements ITransactionalTaskRepository {
     const task = await this.findById(userId, taskId);
     if (!task) throw new Error(`Task ${taskId} not found`);
 
-    const goalAnalysis = (task as Task & { goalAnalysis?: GoalAnalysis }).goalAnalysis;
+    const goalAnalysis = (task as Task & { goalAnalysis?: GoalAnalysis })
+      .goalAnalysis;
     if (!goalAnalysis) throw new Error(`Task ${taskId} has no goal analysis`);
 
     const updatedSubtasks = goalAnalysis.subtasks.map((st) =>

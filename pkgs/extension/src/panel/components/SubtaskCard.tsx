@@ -6,7 +6,14 @@
  */
 
 import type { SubTask, SubTaskStatus } from "@/panel/lib/types";
-import { CheckCircle2, ChevronRight, Loader2, Play, SkipForward, Sparkles } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Loader2,
+  Play,
+  SkipForward,
+  Sparkles,
+} from "lucide-react";
 
 interface SubtaskCardProps {
   subtask: SubTask;
@@ -21,7 +28,10 @@ const TYPE_LABELS: Record<SubTask["saborouType"], string> = {
   saboru: "AI自動",
 };
 
-const TYPE_COLORS: Record<SubTask["saborouType"], { bg: string; text: string; border: string }> = {
+const TYPE_COLORS: Record<
+  SubTask["saborouType"],
+  { bg: string; text: string; border: string }
+> = {
   work: { bg: "#dbeafe", text: "#1d4ed8", border: "#3b82f6" },
   decision: { bg: "#fef3c7", text: "#92400e", border: "#f59e0b" },
   saboru: { bg: "#d1fae5", text: "#065f46", border: "#10b981" },
@@ -40,7 +50,12 @@ function formatMinutes(minutes: number): string {
   return m === 0 ? `${h}時間` : `${h}時間${m}分`;
 }
 
-export function SubtaskCard({ subtask, isActive, onApprove, onSkip }: SubtaskCardProps) {
+export function SubtaskCard({
+  subtask,
+  isActive,
+  onApprove,
+  onSkip,
+}: SubtaskCardProps) {
   const colors = TYPE_COLORS[subtask.saborouType];
   const isDone = subtask.status === "done" || subtask.status === "skipped";
   const isExecuting = subtask.status === "executing";
@@ -71,7 +86,9 @@ export function SubtaskCard({ subtask, isActive, onApprove, onSkip }: SubtaskCar
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
               className="font-semibold text-sm"
-              style={{ color: isDone ? "#9ca3af" : isActive ? "#111827" : "#4b5563" }}
+              style={{
+                color: isDone ? "#9ca3af" : isActive ? "#111827" : "#4b5563",
+              }}
             >
               {subtask.title}
             </span>
@@ -83,10 +100,14 @@ export function SubtaskCard({ subtask, isActive, onApprove, onSkip }: SubtaskCar
                 borderColor: colors.border,
               }}
             >
-              {subtask.saborouType === "saboru" && <Sparkles size={9} className="inline mr-0.5" />}
+              {subtask.saborouType === "saboru" && (
+                <Sparkles size={9} className="inline mr-0.5" />
+              )}
               {TYPE_LABELS[subtask.saborouType]}
             </span>
-            <span className="text-xs text-[#9ca3af]">{formatMinutes(subtask.estimatedMinutes)}</span>
+            <span className="text-xs text-[#9ca3af]">
+              {formatMinutes(subtask.estimatedMinutes)}
+            </span>
           </div>
 
           {/* Description */}

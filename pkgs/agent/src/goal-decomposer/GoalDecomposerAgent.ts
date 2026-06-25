@@ -82,7 +82,9 @@ export class GoalDecomposerAgent {
         taskId: input.taskId,
         error: parsed.error.message,
       });
-      throw new Error(`WBS decomposition validation failed: ${parsed.error.message}`);
+      throw new Error(
+        `WBS decomposition validation failed: ${parsed.error.message}`,
+      );
     }
 
     const raw = parsed.data;
@@ -90,7 +92,10 @@ export class GoalDecomposerAgent {
       (sum, st) => sum + st.estimatedMinutes,
       0,
     );
-    const freeTimeMinutes = Math.max(0, WORK_MINUTES_PER_DAY - totalEstimatedMinutes);
+    const freeTimeMinutes = Math.max(
+      0,
+      WORK_MINUTES_PER_DAY - totalEstimatedMinutes,
+    );
 
     const subtasks: SubTask[] = raw.subtasks.map((st, idx) => ({
       id: st.id,
@@ -166,12 +171,16 @@ export class GoalDecomposerAgent {
     ];
 
     if (input.slackContext) {
-      lines.push(`Slack文脈（ユーザーの最近のメッセージパターン）:\n${input.slackContext}`);
+      lines.push(
+        `Slack文脈（ユーザーの最近のメッセージパターン）:\n${input.slackContext}`,
+      );
     } else {
       lines.push("Slack文脈: 不明（一般的な余白提案を使用してください）");
     }
 
-    lines.push("\n上記タスクをWBSで分解し、wbs_decomposeツールを呼び出してください。");
+    lines.push(
+      "\n上記タスクをWBSで分解し、wbs_decomposeツールを呼び出してください。",
+    );
 
     return lines.join("\n");
   }
