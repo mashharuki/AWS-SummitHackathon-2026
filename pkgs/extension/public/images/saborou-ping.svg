@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 520" role="img" aria-labelledby="title desc">
+  <title id="title">saborou-ping placeholder</title>
+  <desc id="desc">Replace this dummy image with the final Saborou character image.</desc>
+  <rect width="640" height="520" rx="56" fill="#fff7ed"/>
+  <ellipse cx="314" cy="462" rx="168" ry="28" fill="#fed7aa"/>
+  <g transform="translate(86 42)">
+    <path d="M196 92c-34-85 86-112 83 3 75-12 147 26 171 88 39 99-31 208-145 226-120 19-224-51-234-154-6-64 25-126 88-156-63 6-96-17-84-50 14-39 70-39 121 43Z" fill="#fb8500" stroke="#2b1e16" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M137 312c-43 6-79-18-79-55 0-28 22-51 51-55" fill="#fb8500" stroke="#2b1e16" stroke-width="24" stroke-linecap="round"/>
+    <path d="M330 152c63-39 102-9 119 31" fill="none" stroke="#2b1e16" stroke-width="22" stroke-linecap="round"/>
+    <path d="M346 142c26-37 94-26 111 19" fill="#fb8500"/>
+    <circle cx="177" cy="229" r="26" fill="#0f172a"/>
+    <path d="M270 197l45-37" fill="none" stroke="#0f172a" stroke-width="18" stroke-linecap="round"/>
+    <path d="M341 205l38-21" fill="none" stroke="#0f172a" stroke-width="18" stroke-linecap="round"/>
+    <path d="M250 268c58 22 116 8 142-37 15 69-59 113-121 83-23-11-34-25-21-46Z" fill="#7c2d12" stroke="#2b1e16" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M317 276c25 3 47-4 61-18" fill="none" stroke="#fff7ed" stroke-width="14" stroke-linecap="round"/>
+    <path d="M164 319c12-43 50-62 83-49" fill="none" stroke="#2b1e16" stroke-width="18" stroke-linecap="round"/>
+    <path d="M179 309l-29 46" fill="none" stroke="#2b1e16" stroke-width="18" stroke-linecap="round"/>
+    <path d="M314 405c-6 46 48 56 72 13" fill="#fb8500" stroke="#2b1e16" stroke-width="20" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(430 36)">
+    <circle cx="74" cy="74" r="58" fill="#fffaf5" stroke="#2b1e16" stroke-width="12"/>
+    <circle cx="74" cy="74" r="43" fill="none" stroke="#fb8500" stroke-width="7"/>
+    <text x="74" y="68" text-anchor="middle" font-size="28" font-weight="900" font-family="system-ui, sans-serif" fill="#ea580c">余白</text>
+    <text x="74" y="99" text-anchor="middle" font-size="30" font-weight="900" font-family="system-ui, sans-serif" fill="#ea580c">OK!</text>
+  </g>
+</svg>

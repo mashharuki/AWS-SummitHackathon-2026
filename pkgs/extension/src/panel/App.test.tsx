@@ -367,7 +367,7 @@ describe("App (4タブ Side Panel)", () => {
   // ホームタブ: 指標表示
   // ---------------------------------------------------------------------------
 
-  it("ホームタブに余白・認知負荷スコアが表示される", async () => {
+  it("ホームタブに余白・余白必要度・見えるものが表示される", async () => {
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     vi.mocked(agentClient.getCalendarStatus).mockResolvedValue({
       cached: true,
@@ -378,7 +378,23 @@ describe("App (4タブ Side Panel)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("saboru-minutes")).toBeInTheDocument(),
     );
+    expect(screen.getByTestId("home-saborou-stage")).toBeInTheDocument();
+    expect(screen.getByTestId("home-saborou-image")).toHaveAttribute(
+      "src",
+      "/images/saborou-ping.svg",
+    );
+    expect(screen.queryByText("ホーム・依頼整理")).not.toBeInTheDocument();
+    expect(screen.getByText("サボローが作った余白")).toBeInTheDocument();
+    expect(screen.getByText("余白必要度")).toBeInTheDocument();
     expect(screen.getByTestId("cognitive-score")).toBeInTheDocument();
+    expect(screen.getByText("見えるもの")).toBeInTheDocument();
+    expect(screen.getByText("カレンダー密度")).toBeInTheDocument();
+    expect(screen.getByText("即レス圧")).toBeInTheDocument();
+    expect(screen.getByText("連続稼働")).toBeInTheDocument();
+    expect(screen.getByText("文書のトゲ")).toBeInTheDocument();
+    expect(screen.queryByText("今日の余白")).not.toBeInTheDocument();
+    expect(screen.queryByText("認知負荷スコア")).not.toBeInTheDocument();
+    expect(screen.queryByText("このまま行くと")).not.toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------

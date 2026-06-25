@@ -1,26 +1,17 @@
 /**
  * HomeTab — ①現状把握
  *
- * 今日の余白 / 認知負荷スコア / 見えるもの(カレンダー密度・即レス圧・連続稼働・
- * 文書のトゲ) / このまま行くと予測 を表示する。
+ * サボローが作った余白 / 余白必要度 を表示する。
  * 数値は CalendarStatus + Proposal(psychSignals) + workHours から拡張側で算出する。
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
 import { Card, MetricBar, SectionLabel } from "@/panel/components/ui";
 import { getCalendarStatus } from "@/panel/lib/agentClient";
-import { getSuggestions } from "@/panel/lib/freeSuggestions";
 import { type HomeMetrics, computeHomeMetrics } from "@/panel/lib/homeMetrics";
 import type { CalendarStatus } from "@/panel/lib/types";
 import { formatDuration } from "@/panel/lib/workHours";
-import {
-  AlertTriangle,
-  CalendarDays,
-  Clock,
-  ExternalLink,
-  FileWarning,
-  Zap,
-} from "lucide-react";
+import { CalendarDays, Clock, FileWarning, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function HomeTab() {
@@ -82,55 +73,70 @@ export function HomeTab() {
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3" data-testid="home-tab">
-      {/* 今日の余白 */}
+      <div
+        className="relative flex min-h-[226px] items-center justify-center overflow-hidden"
+        data-testid="home-saborou-stage"
+      >
+        <img
+          src="/images/saborou-ping.svg"
+          alt="サボロー"
+          className="saborou-hero-image h-[218px] w-auto max-w-[94%] object-contain"
+          data-testid="home-saborou-image"
+        />
+      </div>
+
+      {/* サボローが作った余白 */}
       <Card>
         <div className="flex items-center justify-between mb-1">
-          <SectionLabel>今日の余白</SectionLabel>
+          <SectionLabel>サボローが作った余白</SectionLabel>
           <span className="text-[10px] text-[#9ca3af]">{today}</span>
         </div>
         <div className="flex items-baseline gap-1">
           <span
-            className="text-3xl font-black text-[#1f2937]"
+            className="text-[34px] font-black text-[#1f2937] leading-none"
             data-testid="saboru-minutes"
           >
             {formatDuration(metrics.saboruMinutesToday)}
           </span>
         </div>
-        <p className="mt-1 text-xs text-[#6b7280] leading-relaxed">
-          {metrics.comment}
-        </p>
       </Card>
 
-      {/* 認知負荷スコア */}
+      {/* 余白必要度 */}
       <Card accent="#f97316">
         <div className="flex items-center justify-between mb-1">
-          <SectionLabel>認知負荷スコア</SectionLabel>
+          <SectionLabel>余白必要度</SectionLabel>
           <span className="text-[10px] font-bold text-[#f97316]">
-            {metrics.cognitiveLoadScore >= 60 ? "休憩推奨" : "良好"}
+            {metrics.cognitiveLoadScore >= 70
+              ? "サボロー出動"
+              : metrics.cognitiveLoadScore >= 50
+                ? "余白ほしい"
+                : "まだ余裕"}
           </span>
         </div>
         <div className="flex items-baseline gap-1 mb-2">
           <span
-            className="text-3xl font-black text-[#1f2937]"
+            className="text-[34px] font-black text-[#1f2937] leading-none"
             data-testid="cognitive-score"
           >
             {metrics.cognitiveLoadScore}
           </span>
           <span className="text-sm text-[#9ca3af] font-bold">/ 100</span>
         </div>
-        <MetricBar
-          value={metrics.cognitiveLoadScore}
-          color={
-            metrics.cognitiveLoadScore >= 70
-              ? "#ef4444"
-              : metrics.cognitiveLoadScore >= 50
-                ? "#f59e0b"
-                : "#10b981"
-          }
-        />
-        <p className="mt-2 text-[11px] text-[#6b7280]">
-          予定密度と即レス圧が高く、余白が削られやすい状態です。
-        </p>
+        <div>
+          <MetricBar
+            value={metrics.cognitiveLoadScore}
+            color={
+              metrics.cognitiveLoadScore >= 70
+                ? "#ef4444"
+                : metrics.cognitiveLoadScore >= 50
+                  ? "#f59e0b"
+                  : "#10b981"
+            }
+          />
+          <p className="mt-2 text-[11px] leading-relaxed text-[#6b7280]">
+            高いほど、サボローが予定をどかして余白を作る合図。
+          </p>
+        </div>
       </Card>
 
       {/* 見えるもの */}
@@ -186,62 +192,6 @@ export function HomeTab() {
           />
         </div>
       </div>
-
-      {/* 余白の使い方提案 */}
-      {metrics.saboruMinutesToday >= 5 && (
-        <div>
-          <SectionLabel>
-            余白 {formatDuration(metrics.saboruMinutesToday)} の使い方
-          </SectionLabel>
-          <div className="flex flex-col gap-2 mt-1">
-            {getSuggestions(metrics.saboruMinutesToday).map((s) => (
-              <a
-                key={s.url}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#f9fafb] border border-[#e5e7eb] hover:bg-[#f3f4f6] transition-colors"
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#1f2937]">{s.label}</p>
-                  <p className="text-[10px] text-[#9ca3af] mt-0.5">
-                    {s.description}
-                  </p>
-                  <p className="text-[9px] text-[#f97316] font-bold mt-0.5">
-                    {s.service}
-                  </p>
-                </div>
-                <ExternalLink
-                  size={13}
-                  className="text-[#9ca3af] flex-shrink-0 ml-2"
-                />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* このまま行くと予測 */}
-      <Card accent="#ef4444">
-        <div className="flex items-start gap-2">
-          <AlertTriangle
-            size={16}
-            className="text-[#ef4444] mt-0.5 flex-shrink-0"
-          />
-          <div>
-            <p className="text-[10px] font-bold text-[#9ca3af] mb-0.5">
-              このまま行くと
-            </p>
-            <p className="text-sm font-bold text-[#ef4444]">
-              {metrics.predictedEndTime} まで作業が伸びる予測
-            </p>
-            <p className="mt-1 text-[11px] text-[#6b7280]">
-              未処理タスク {candidates.length + tasks.length} 件のうち
-              一部が定時を後ろに押し込みます。
-            </p>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }

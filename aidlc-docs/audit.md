@@ -3479,3 +3479,70 @@ Thank you. "
 **Context**: Completion and verification log for Working tab schedule card removal.
 
 ---
+## User Request
+**Timestamp**: 2026-06-25T13:20:09Z
+**User Input**: "# Files mentioned by the user:
+
+## スクリーンショット 2026-06-25 22.18.27.png: /var/folders/9r/g3h3rgzj1_5cctdbyr_620b00000gn/T/TemporaryItems/NSIRD_screencaptureui_beKmAf/スクリーンショット 2026-06-25 22.18.27.png
+
+## My request for Codex:
+ホーム画面のやつも結構変えていきたいです。今日の余白って文言を「サボローが作った余白」というように書き換えて、下の少し詰まり気味みたいなやつはいらないです。認知付加スコアっていうのも文言を変えて、文言の具体はあなたが選んでほしいんですけど、いわゆる余白が必要かどうかっていうのが渡るパラメーターみたいな感じで表してほしいです。
+
+余白20分の使い方って部分と「このままいく」とかってやつは消しちゃってもらって大丈夫です。「見えるもの」っていうのもカレンダー密度、速度、文章の棘みたいなやつも全部消しちゃって大丈夫です。で、なんですけど、「今日の余白」と「認知スコア」この2つだけ残ってる状態だと思うんだけども、今その2つにあるところにサボローのキャラクターを配置して、動いてる風に定規に揺らすだけでいいんで、やってくれると嬉しいです。サボローの画像は定規のようなものです。"
+**AI Response**: "Started adaptive AI-DLC handling for a small brownfield home UI change. Loaded common rules, opt-in prompts, current state, and frontend-design skill; proceeding to inspect and update the Chrome extension HomeTab."
+**Context**: Workspace Detection / Requirements Analysis (minimal) / Code Generation preparation
+
+---
+## Implementation Complete
+**Timestamp**: 2026-06-25T13:24:05Z
+**User Input**: ""
+**AI Response**: "Updated the Chrome extension HomeTab to keep only the two requested home metrics. Renamed 今日の余白 to サボローが作った余白, replaced 認知負荷スコア with 余白必要度, removed the crowded comment, free-time suggestions, prediction card, and visible-signal cards, and added a lightweight animated CSS Saborou mascot inside the remaining metric cards. Updated the focused App test and verified with Biome, extension tests, and extension build."
+**Context**: Code Generation / Build and Test completion for home screen UI simplification
+
+---
+## User Request
+**Timestamp**: 2026-06-25T13:27:38Z
+**User Input**: "サボローが作った余白のチケット、余白必要度のチケットはそれぞれそのままで構いません。この2つのチケットとは全く別の独立した、いわゆるホーム依頼整理の下に、サボローのキャラクターが定規に動くようにしてください。
+
+その下に、サボローが作った余白や余白必要度のようなものが表示されるように修正をお願いします。"
+**AI Response**: "Clarified the requested layout adjustment: keep the two metric tickets, but move the animated Saborou mascot into a separate independent home-stage area above the tickets. Proceeding with a scoped HomeTab update."
+**Context**: Follow-up Code Generation adjustment for home screen layout
+
+---
+## Implementation Complete
+**Timestamp**: 2026-06-25T13:28:44Z
+**User Input**: ""
+**AI Response**: "Moved the animated Saborou mascot out of the two metric tickets and into a separate independent home-stage area above them. Kept the サボローが作った余白 and 余白必要度 tickets as metric-only cards below the mascot stage. Updated the focused home tab test and verified with Biome, extension tests, and extension build."
+**Context**: Follow-up Code Generation / Build and Test completion for home screen layout adjustment
+
+---
+## User Request
+**Timestamp**: 2026-06-25T13:34:15Z
+**User Input**: "いま「ホーム・依頼整理」みたいなのが書いてあるところのチケットは消しちゃって大丈夫です。僕が画像を実際にディレクトリの中に貼るので、どこに貼ってほしいのかっていうのをサボローピングみたいな感じでダミーデータを作ってください。
+
+そしたらそこに僕が後からアップロードするんでお願いします。サボローは結構デカデカとお願いします。"
+**AI Response**: "Started scoped follow-up: remove the visible home-stage ticket copy, create a replaceable dummy Saborou image asset location, and display the Saborou image prominently above the two metric tickets."
+**Context**: Follow-up Code Generation preparation for home screen asset placeholder
+
+---
+## Implementation Complete
+**Timestamp**: 2026-06-25T13:36:10Z
+**User Input**: ""
+**AI Response**: "Removed the visible home-stage ticket copy, replaced the CSS-built mascot with a prominent image-based Saborou hero, and added the replaceable dummy asset at pkgs/extension/public/images/saborou-ping.svg. Updated the home tab test to assert the image placeholder path and verified with Biome, extension tests, and extension build."
+**Context**: Follow-up Code Generation / Build and Test completion for home screen image placeholder
+
+---
+## User Request
+**Timestamp**: 2026-06-25T13:46:12Z
+**User Input**: "ごめん、やっぱりカレンダーの密度具合みたいのっていうところの4つの項目をもう1回ちょっと戻してくれると嬉しいです。"
+**AI Response**: "Started scoped follow-up: restore the four visible-signal items under the two metric tickets while keeping the large Saborou image hero and excluding the previously removed suggestions and prediction card."
+**Context**: Follow-up Code Generation preparation for restoring home visible signals
+
+---
+## Implementation Complete
+**Timestamp**: 2026-06-25T13:47:13Z
+**User Input**: ""
+**AI Response**: "Restored the four home visible-signal items: カレンダー密度, 即レス圧, 連続稼働, and 文書のトゲ below the サボローが作った余白 and 余白必要度 tickets. Kept the large Saborou image hero, and did not restore the removed free-time suggestions or prediction card. Updated the focused home tab test and verified with Biome, extension tests, and extension build."
+**Context**: Follow-up Code Generation / Build and Test completion for restoring home visible signals
+
+---

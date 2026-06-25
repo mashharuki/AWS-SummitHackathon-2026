@@ -109,3 +109,18 @@ body {
     transform: translateX(250%);
   }
 }
+
+@keyframes saborouHeroWobble {
+  0%,
+  100% {
+    transform: rotate(-3deg) translateY(0) scale(1);
+  }
+  50% {
+    transform: rotate(3deg) translateY(-5px) scale(1.02);
+  }
+}
+
+.saborou-hero-image {
+  transform-origin: 50% 88%;
+  animation: saborouHeroWobble 1.55s ease-in-out infinite;
+}
