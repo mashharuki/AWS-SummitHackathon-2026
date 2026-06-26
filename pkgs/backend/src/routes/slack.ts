@@ -356,7 +356,21 @@ export function createSlackRoute(
 
       // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
       const userToken = await getSlackUserToken(userId);
-      const token = userToken ?? (await getSlackToken(userId));
+      let token: string;
+      try {
+        token = userToken ?? (await getSlackToken(userId));
+      } catch {
+        return c.json(
+          {
+            error: {
+              code: "SLACK_NOT_CONNECTED",
+              message:
+                "Slack が未連携です。先に Slack 連携を完了してください。",
+            },
+          },
+          424,
+        );
+      }
       const client = new SlackClient(token);
 
       try {
@@ -393,7 +407,26 @@ export function createSlackRoute(
             502,
           );
         }
-        throw err;
+        // タイムアウト (AbortError) やネットワークエラーも 502 で返す
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.log(
+          JSON.stringify({
+            level: "ERROR",
+            action: "slack_reply_unexpected_error",
+            ...(taskId ? { taskId } : {}),
+            channelId,
+            error: errMsg,
+          }),
+        );
+        return c.json(
+          {
+            error: {
+              code: "SLACK_POST_FAILED",
+              message: `Slack への返信投稿に失敗しました: ${errMsg}`,
+            },
+          },
+          502,
+        );
       }
     },
   );

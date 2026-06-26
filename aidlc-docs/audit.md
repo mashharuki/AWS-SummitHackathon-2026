@@ -1,4 +1,18 @@
 # AI-DLC 監査ログ
+## Working Tab Gantt Removal Request
+**Timestamp**: 2026-06-26T02:07:23Z
+**User Input**: "<image name=[Image #1]>[Image #1] 作業中タブのガントチャートコンポーネントなのですが、不要になったのでこの部分だけ削除してください。"
+**AI Response**: "Started minimal AI-DLC workflow for a focused UI removal. Detected existing brownfield monorepo, loaded common rules and extension opt-in prompts, and identified `pkgs/extension/src/panel/tabs/WorkingTab.tsx` as the direct caller of `MiniGantt`."
+**Context**: Workspace Detection / Requirements Analysis / Code Generation for Working tab Gantt removal
+
+---
+## Working Tab Gantt Removal Completion
+**Timestamp**: 2026-06-26T02:08:31Z
+**User Input**: "N/A - implementation completion update"
+**AI Response**: "Removed the Working tab Gantt card, `MiniGantt` import, `getSchedule` call, and schedule state from `pkgs/extension/src/panel/tabs/WorkingTab.tsx`. Verified `pnpm --filter @saboru/extension typecheck`, `pnpm --filter @saboru/extension test`, and `git diff --check`."
+**Context**: Code Generation / Build and Test for Working tab Gantt removal
+
+---
 ## CDK Nag Fix - Travel Itinerary CloudFront CFR4
 **Timestamp**: 2026-06-21T02:10:12Z
 **User Input**: "[Error at /SaborouData-dev/TravelItineraryDistribution/Resource] AwsSolutions-CFR4: The CloudFront distribution allows for SSLv3 or TLSv1 for HTTPS viewer connections. Vulnerabilities have been and continue to be discovered in the deprecated SSL and TLS protocols. Help protect viewer connections by specifying a viewer certificate that enforces a minimum of TLSv1.1 or TLSv1.2 in the security policy. Distributions that use the default CloudFront viewer certificate or use 'vip' for the 'SslSupportMethod' are non-compliant with this rule, as the minimum security policy is set to TLSv1 regardless of the specified 'MinimumProtocolVersion'."
