@@ -73,6 +73,10 @@ function normalizeJsonValue(value: unknown, key?: string): unknown {
     if (key && shouldSummarizeValueForKey(key)) {
       return summarizeMachineValue(key, value);
     }
+    // URL型キー（url, itineraryUrl 等）はLLMがチャットに貼れるよう原文保持
+    if (key && isUrlKey(key) && /^https?:\/\//i.test(value)) {
+      return value;
+    }
     return normalizeText(value);
   }
 
@@ -99,6 +103,10 @@ function shouldSummarizeValueForKey(key: string): boolean {
     key.endsWith("ID") ||
     key === "threadTs"
   );
+}
+
+function isUrlKey(key: string): boolean {
+  return key === "url" || key.endsWith("Url") || key.endsWith("URL");
 }
 
 function summarizeMachineValue(key: string, value: string): string {
