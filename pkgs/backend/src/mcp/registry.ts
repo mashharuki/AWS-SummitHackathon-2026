@@ -180,7 +180,7 @@ export const MCP_TOOL_REGISTRY = [
     name: "saborou_plan_trip",
     effect: "read",
     description:
-      "旅行条件から航空券・ホテル・アクティビティをまとめた旅行プランを作成します。「旅行プランを立てて」「パリ旅行を組んで」「航空券とホテルと観光をまとめて」などと言われたときに使用してください。destination、departureDate、returnDateが不足している場合は確認質問を返します。Travelpayouts実APIが使えない場合もデモ用候補へ安全にフォールバックします。",
+      "旅行条件から旅行プランを作成し、旅のしおりURLを自動生成してSlackに投稿します。「旅行プランを立てて」「パリ旅行を組んで」「航空券とホテルと観光をまとめて」などと言われたときに使用してください。destination、departureDate、returnDateが不足している場合は確認質問を返します。channelIdは省略可能で、省略した場合はタスク履歴から自動的に取得してSlackに投稿します。",
     http: { method: "POST", path: "/api/travel/plan" },
     schema: { input: "saborou_plan_trip", output: "safe_summary" },
     approval: { required: false },

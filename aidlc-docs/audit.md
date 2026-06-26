@@ -1,4 +1,34 @@
 # AI-DLC 監査ログ
+## Code Update - Delegated Task Sticky Selection
+**Timestamp**: 2026-06-26T03:43:36Z
+**User Input**: "今、もう一つ課題があります。 やっぱり作業中タブに出てくるタスクIDが固定化されてしまっている気がします。ずっと スイス旅行の策定プランが対象になってしまっています"
+**AI Response**: "Started scoped follow-up investigation. The prior delegated task handoff fix keeps delegatedTaskId after the delegated task has synchronized into the server task list, which can cause WorkingTab/freeTimeSession to keep selecting an old delegated task instead of the latest task."
+**Context**: Minimal Requirements Analysis / Code Generation preparation for sticky delegated task selection.
+
+---
+
+## Code Generation / Build and Test
+**Timestamp**: 2026-06-26T04:37:01Z
+**User Input**: "[Image #1] これ、AI自動欄のタスクの実行結果をチャットに綺麗な形で整形して表示するようにしてもらいたいです！！！"
+**AI Response**: "Implemented formatted AI-auto subtask result messages in the extension side panel. Added postSaborouMessage to SaborouContext, posted a structured SABOROU chat message when a saboru subtask completes in WorkingTab, preserved line breaks in SlackTab, added a regression test, updated AI-DLC state and code generation summary, and verified with focused test, typecheck, and build."
+**Context**: Code Generation and Build and Test for ai-auto-result-chat-formatting.
+
+---
+
+## User Request
+**Timestamp**: 2026-06-26T04:33:18Z
+**User Input**: "[Image #1] これ、AI自動欄のタスクの実行結果をチャットに綺麗な形で整形して表示するようにしてもらいたいです！！！"
+**AI Response**: "Started minimal AI-DLC workflow for a brownfield extension UI enhancement. Loaded common rules, welcome message, workspace detection, requirements, workflow planning, and code generation rules. Determined scope as focused extension panel chat formatting."
+**Context**: Workspace Detection / Requirements Analysis minimal / Workflow Planning / Code Generation planning.
+
+---
+## Code Update Completion - Delegated Task Sticky Selection
+**Timestamp**: 2026-06-26T03:46:12Z
+**User Input**: "[No new user input; continuation of current request]"
+**AI Response**: "Updated refreshTasks so the delegated task override is used only while the newly approved task is missing from the server task list. Once the server list includes that delegated task, the temporary delegatedTaskRef is cleared and delegatedTaskId is reset, allowing WorkingTab/freeTimeSession to return to the current latest task order. Added a regression test that starts with a Swiss travel delegated task, syncs it, then verifies the next Working tab mount shows the latest AWS re:Invent task instead of staying fixed to Swiss travel. Verified Biome, extension App tests, extension typecheck, extension build, and git diff whitespace checks."
+**Context**: Code Generation / Build and Test completion for sticky delegated task selection.
+
+---
 ## Working Tab Gantt Removal Request
 **Timestamp**: 2026-06-26T02:07:23Z
 **User Input**: "<image name=[Image #1]>[Image #1] 作業中タブのガントチャートコンポーネントなのですが、不要になったのでこの部分だけ削除してください。"
@@ -3579,5 +3609,68 @@ Thank you. "
 **User Input**: "[Image #1: 予選会時点のサボロー AWS System Architecture] 修正後のシステム構成図をdrawio形式で作成してもらいたいと考えています。 [Image #1] こちらが予選会時点でのシステム構成図になります。決勝戦に向けてブラッシュアップしてもらいたいです！！"
 **AI Response**: "Loaded AI-DLC common rules, existing state, drawio-skill AWS architecture rules, and current CDK stack context. Created a finals-ready AWS architecture diagram in draw.io format at docs/drawio/saborou-architecture-final.drawio, exported preview PNG at docs/drawio/saborou-architecture-final.png, and exported editable embedded PNG at docs/drawio/saborou-architecture-final.drawio.png. Validated XML with xmllint and repaired the embedded PNG after draw.io export."
 **Context**: Documentation / draw.io architecture diagram generation for AWS Summit Japan 2026 final presentation
+
+---
+## User Request
+**Timestamp**: 2026-06-26T03:18:43Z
+**User Input**: "A previous agent produced the plan below to accomplish the user's task. Implement the plan in a fresh context. Treat the plan as the source of user intent, re-read files as needed, and carry the work through implementation and verification.
+
+# 余白タブ動的化計画（既存API合成）
+
+## Summary
+- 余白タブの固定デモ値を廃止し、既存の `tasks` / `decompose` / `report` / recovery check APIを組み合わせて動的表示に置き換える。
+- 拡張は既存方針どおりHono APIを直接呼ぶ。MCP側は同じ既存APIに到達する公開ツールとして扱い、余白提案の整合性をテストで担保する。
+- 新しいバックエンドAPIは追加しない。既存API合成で「次に何を休めるか」「いつ戻るか」「必要なら進捗報告を作る」が自然に出る体験にする。
+
+## Key Changes
+- `SlackTab` のデモ定数を削除し、表示状態を `tasks`、`getGoalAnalysis`、必要時の `decomposeTask`、`getProgressReport` から構成する。
+- 余白セッションの選定ルールは固定する:
+  - 対象タスク: `delegatedTaskId` があればそのタスク、なければ `tasks[0]`。
+  - 余白提案: 既存 `goalAnalysis` を優先し、なければ `GET /api/tasks/:taskId/decompose`、未生成なら `POST /api/tasks/:taskId/decompose`。
+  - 余白分数: `goalAnalysis.freeTimeMinutes` を正とし、なければ `scheduleSaboruMinutes`、それもなければ未確定表示。
+  - 次タスク: 対象タスク以外で未来の `deadline` が最も近いタスク。なければ「次の予定は未検出」と表示。
+- チャット応答は `SaborouContext` の固定文生成をやめ、余白セッション状態から返す:
+  - 「サボる/余白」系入力では `goalAnalysis.freeTimeSuggestion` を返し、進捗報告チケットを出す。
+  - 「戻る/切り替え」系入力では次タスクのタイトルと開始時刻から復帰手順を生成する。
+  - proposal がある場合は `proposal.chatMessage` / `reasoning` を補助文脈として使う。
+- 進捗報告チケットはクリック時に `getProgressReport(taskId, jwt)` を呼び、成功時は生成文を `ProgressReportSheet` に渡す。失敗時だけ既存のローカル文面にフォールバックする。
+- 回復チェック予約は固定タイトル・固定時刻をやめ、次タスクが存在する場合だけ `SCHEDULE_RECOVERY_CHECK` に実タイトルと開始ラベルを渡す。
+
+## Interfaces
+- 新規バックエンドAPIなし。
+- フロント内部型として `FreeTimeSession` を追加する:
+  - `task`, `nextTask`, `goalAnalysis`, `freeMinutes`, `suggestion`, `recoveryCheckLabel`, `loading`, `error`
+- `ChatMessage.action` は既存の `progress_report | watch_video` を維持する。必要な表示文はセッション状態から生成し、アクション種別は増やさない。
+- MCP確認対象:
+  - `saborou_suggest_free_time` は `GET /api/tasks/{taskId}/decompose` と同じ `goalAnalysis` を返すことをJSON-RPCテストで固定する。
+
+## Test Plan
+- Extension UI:
+  - 余白タブが固定の「ラスベガス」「19:30」「40分」を表示しない。
+  - `getGoalAnalysis` 成功時、実タスク名・実余白分数・実提案文を表示する。
+  - `getGoalAnalysis` がnull/404相当なら `decomposeTask` を呼び、その結果で表示する。
+  - 次タスクがある場合、復帰チェック予約に実タイトル・実開始時刻を渡す。
+  - 次タスクがない場合、復帰チェックUIは出さず余白提案だけ表示する。
+  - 進捗報告ボタン押下で `getProgressReport` を呼び、生成文をモーダルに表示する。
+- Agent client:
+  - 既存どおりHono APIを呼び、`/mcp/tools/` へ直接送らないことを維持する。
+- Backend MCP:
+  - `tools/call saborou_suggest_free_time` が内部API経由で実 `goalAnalysis` を返すこと。
+  - 未分解タスクでは既存APIの404/エラーが安全なJSON-RPCエラーになること。
+
+## Assumptions
+- ユーザー選択に従い、今回は「既存API合成」を採用し、新しい余白専用APIは作らない。
+- 拡張からMCPへ直接通信する設計には戻さない。MCPはElevenLabs/AgentCore向け公開経路、拡張はHono API直呼びを継続する。
+- `deadline` は次タスク開始時刻の近似として使う。開始時刻専用フィールドがないため、既存データだけで最も自然な解釈を採る。"
+**AI Response**: "Implemented the approved existing-API composition plan. Added FreeTimeSession state in SaborouContext, replaced SlackTab demo constants with dynamic task/goalAnalysis/next-task state, made progress reports call getProgressReport with local fallback, preserved extension Hono API usage, added MCP JSON-RPC schema/tests for saborou_suggest_free_time, updated REST MCP task-analysis dispatch, and created AI-DLC plan/summary/state updates."
+**Context**: Workspace Detection / Requirements Analysis minimal / Workflow Planning from approved prior plan / Code Generation / Build and Test for Slack free-time dynamicization.
+
+---
+
+## User Request
+**Timestamp**: 2026-06-26T04:50:48Z
+**User Input**: "ありがとうございます！！余白タブに出てくるようになりましたね！でもこれ作業中のタグの方に出してもらいたいです！"
+**AI Response**: "Moved the dynamic free-time session summary from the free-time chat tab to the working tab. Extracted the shared FreeTimeSessionPanel component, rendered it at the top of WorkingTab, removed the always-visible summary from SlackTab while preserving chat actions and recovery checks, updated extension UI tests, and verified with extension tests, typecheck, build, and focused Biome check."
+**Context**: Follow-up Code Generation / Build and Test for working-tab free-time placement.
 
 ---

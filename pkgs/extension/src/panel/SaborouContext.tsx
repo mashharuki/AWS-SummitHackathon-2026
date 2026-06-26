@@ -11,7 +11,9 @@
 
 import type { NewSlackMessagePayload } from "@/messages";
 import {
+  decomposeTask,
   getCandidates,
+  getGoalAnalysis,
   getProposal,
   getSchedule,
   getTaskSummaries,
@@ -52,6 +54,17 @@ export interface ChatMessage {
   action?: "progress_report" | "watch_video";
 }
 
+export interface FreeTimeSession {
+  task: TaskSummary | null;
+  nextTask: TaskSummary | null;
+  goalAnalysis: GoalAnalysis | null;
+  freeMinutes: number | null;
+  suggestion: string;
+  recoveryCheckLabel: string | null;
+  loading: boolean;
+  error: string | null;
+}
+
 interface SaborouContextValue {
   userInfo: UserInfo | null;
   jwt: string | null;
@@ -73,6 +86,8 @@ interface SaborouContextValue {
   representativeProposal: Proposal | null;
   /** スケジュールAPIから取得したsaboriバンドの合計分数（null=未取得） */
   scheduleSaboruMinutes: number | null;
+  /** 余白タブで使う対象タスク・余白提案・復帰先の合成状態 */
+  freeTimeSession: FreeTimeSession;
 
   /** content script 検知の最新 Slack メッセージ（リアルタイム新着） */
   latestSlackMessage: NewSlackMessagePayload | null;
@@ -90,6 +105,8 @@ interface SaborouContextValue {
   chatMessages: ChatMessage[];
   /** ユーザー発話を投稿する（応答もここで生成して履歴に積む） */
   postChatMessage: (text: string) => void;
+  /** システムイベント由来のサボロー発話を投稿する */
+  postSaborouMessage: (text: string) => void;
   /** 進捗報告代行の初回発動後に、次のサボり方を提案する */
   offerVideoContinuation: () => void;
 
@@ -153,9 +170,54 @@ export function mergeCandidates(
   return result;
 }
 
+function getTaskStartLabel(task: TaskSummary | null): string | null {
+  if (!task?.deadline) return null;
+  const date = new Date(task.deadline);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function findNextTask(
+  tasks: TaskSummary[],
+  targetTask: TaskSummary | null,
+): TaskSummary | null {
+  const now = Date.now();
+  return (
+    tasks
+      .filter((task) => task.taskId !== targetTask?.taskId)
+      .map((task) => ({
+        task,
+        deadlineMs: task.deadline
+          ? new Date(task.deadline).getTime()
+          : Number.POSITIVE_INFINITY,
+      }))
+      .filter(
+        ({ deadlineMs }) => Number.isFinite(deadlineMs) && deadlineMs > now,
+      )
+      .sort((a, b) => a.deadlineMs - b.deadlineMs)[0]?.task ?? null
+  );
+}
+
+function buildFreeTimeSuggestion(
+  goalAnalysis: GoalAnalysis | null,
+  proposal: Proposal | null,
+): string {
+  if (goalAnalysis?.freeTimeSuggestion) return goalAnalysis.freeTimeSuggestion;
+  if (proposal?.chatMessage) return proposal.chatMessage;
+  if (proposal?.reasoning?.[0]) {
+    return `今は少し肩の力を抜いて大丈夫。${proposal.reasoning[0]}`;
+  }
+  return "次の予定までの余白を確認しています。急ぎの予定が見つからなければ、短く休んでから戻れるように整えます。";
+}
+
 function buildSaborouChatReply(
   text: string,
   proposal: Proposal | null,
+  freeTimeSession: FreeTimeSession,
 ): string {
   const normalized = text.toLowerCase();
   const asksToSaboru =
@@ -174,15 +236,33 @@ function buildSaborouChatReply(
     normalized.includes("back");
 
   if (asksForCompletedMargin) {
-    return "よく頑張ったよ、ゆーたろ。ラスベガスの計画書タスク、予定どおり18時50分に終われたね。次のタスクは19時30分だから、残り40分。ここは全力で楽しもう。19時20分くらいから、またリマインドするね。";
+    const taskTitle = freeTimeSession.task?.title ?? "いまのタスク";
+    const nextLabel = freeTimeSession.nextTask
+      ? `${freeTimeSession.nextTask.title}${getTaskStartLabel(freeTimeSession.nextTask) ? `（${getTaskStartLabel(freeTimeSession.nextTask)}開始）` : ""}`
+      : "次の予定は未検出";
+    const minutes =
+      freeTimeSession.freeMinutes !== null
+        ? `残り${freeTimeSession.freeMinutes}分。`
+        : "余白時間はまだ確定していないけど、";
+    return `よく頑張ったよ。${taskTitle}、ここまで進めたね。${nextLabel}まで、${minutes}${freeTimeSession.suggestion}`;
   }
 
   if (asksToSaboru) {
-    return "よし、ここからは俺の出番。頑張ったご褒美！さっきやったタスクのステップに沿って、定期的に進捗報告しよっか？";
+    const helper =
+      proposal?.reasoning?.[0] &&
+      !freeTimeSession.suggestion.includes(proposal.reasoning[0])
+        ? ` ${proposal.reasoning[0]}`
+        : "";
+    return `${freeTimeSession.suggestion}${helper} 必要なら、このタスクの進捗報告もこっちで整えるよ。`;
   }
 
   if (asksForTransition) {
-    return "いいね、休むだけで終わらせないやつな。まず余白はちゃんと守る。10分前に資料だけ開いて、5分前に最初の15分でやることを3つに絞る。開始時刻になったら、俺が「ここから15分だけ」って背中押すから大丈夫。";
+    if (!freeTimeSession.nextTask) {
+      return "次の予定はまだ見つかっていないよ。余白を区切って、戻る前に次に開く資料だけ決めておこう。";
+    }
+    const startLabel = getTaskStartLabel(freeTimeSession.nextTask);
+    const startText = startLabel ? `${startLabel}開始` : "開始時刻未設定";
+    return `${freeTimeSession.nextTask.title}に戻る準備だね。${startText}だから、10分前に関連資料を開いて、5分前に最初の15分でやることを3つに絞ろう。開始したら最初の一手だけ一緒に切る。`;
   }
 
   if (proposal?.chatMessage) return proposal.chatMessage;
@@ -265,10 +345,17 @@ export function SaborouProvider({
     try {
       const list = await getTaskSummaries(jwt);
       const delegatedTask = delegatedTaskRef.current;
+      const delegatedTaskSynced = delegatedTask
+        ? list.some((t) => t.taskId === delegatedTask.taskId)
+        : false;
+      if (delegatedTaskSynced && delegatedTask) {
+        delegatedTaskRef.current = null;
+        setDelegatedTaskId((current) =>
+          current === delegatedTask.taskId ? null : current,
+        );
+      }
       const mergedList =
-        delegatedTask && !list.some((t) => t.taskId === delegatedTask.taskId)
-          ? [delegatedTask, ...list]
-          : list;
+        delegatedTask && !delegatedTaskSynced ? [delegatedTask, ...list] : list;
       setTasks(mergedList);
       // 代表 proposal をホーム指標用に1件取得（最初の未完了タスク）
       const target = mergedList[0];
@@ -356,6 +443,106 @@ export function SaborouProvider({
     setDelegatedTaskId(task.taskId);
   }, []);
 
+  const targetTask =
+    (delegatedTaskId
+      ? tasks.find((task) => task.taskId === delegatedTaskId)
+      : tasks[0]) ?? null;
+  const nextTask = useMemo(
+    () => findNextTask(tasks, targetTask),
+    [tasks, targetTask],
+  );
+  const [freeTimeGoalAnalysis, setFreeTimeGoalAnalysis] =
+    useState<GoalAnalysis | null>(null);
+  const [freeTimeLoading, setFreeTimeLoading] = useState(false);
+  const [freeTimeError, setFreeTimeError] = useState<string | null>(null);
+  const freeTimeFetchedTaskIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!jwt || !targetTask) {
+      setFreeTimeGoalAnalysis(null);
+      setFreeTimeLoading(false);
+      setFreeTimeError(null);
+      freeTimeFetchedTaskIdRef.current = null;
+      return;
+    }
+
+    if (goalAnalysis) {
+      setFreeTimeGoalAnalysis(goalAnalysis);
+      setFreeTimeLoading(false);
+      setFreeTimeError(null);
+      freeTimeFetchedTaskIdRef.current = targetTask.taskId;
+      return;
+    }
+
+    if (freeTimeFetchedTaskIdRef.current === targetTask.taskId) return;
+    freeTimeFetchedTaskIdRef.current = targetTask.taskId;
+    let cancelled = false;
+    setFreeTimeLoading(true);
+    setFreeTimeError(null);
+
+    const resolveGoalAnalysis = async () => {
+      const existing = await getGoalAnalysis(targetTask.taskId, jwt);
+      if (existing) return existing;
+      return decomposeTask(targetTask.taskId, jwt);
+    };
+
+    resolveGoalAnalysis()
+      .then((analysis) => {
+        if (cancelled) return;
+        setFreeTimeGoalAnalysis(analysis);
+        setGoalAnalysis(analysis);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        console.warn("[SABOROU] free time session failed:", err);
+        setFreeTimeGoalAnalysis(null);
+        setFreeTimeError("余白提案を取得できませんでした");
+        freeTimeFetchedTaskIdRef.current = null;
+      })
+      .finally(() => {
+        if (!cancelled) setFreeTimeLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jwt, targetTask, goalAnalysis]);
+
+  const freeTimeSession = useMemo<FreeTimeSession>(() => {
+    const sessionGoalAnalysis = goalAnalysis ?? freeTimeGoalAnalysis;
+    const analysisMinutes = sessionGoalAnalysis?.freeTimeMinutes;
+    const freeMinutes =
+      typeof analysisMinutes === "number" && analysisMinutes > 0
+        ? analysisMinutes
+        : scheduleSaboruMinutes && scheduleSaboruMinutes > 0
+          ? scheduleSaboruMinutes
+          : null;
+    const nextStartLabel = getTaskStartLabel(nextTask);
+
+    return {
+      task: targetTask,
+      nextTask,
+      goalAnalysis: sessionGoalAnalysis,
+      freeMinutes,
+      suggestion: buildFreeTimeSuggestion(
+        sessionGoalAnalysis,
+        representativeProposal,
+      ),
+      recoveryCheckLabel: nextStartLabel,
+      loading: freeTimeLoading,
+      error: freeTimeError,
+    };
+  }, [
+    targetTask,
+    nextTask,
+    goalAnalysis,
+    freeTimeGoalAnalysis,
+    scheduleSaboruMinutes,
+    representativeProposal,
+    freeTimeLoading,
+    freeTimeError,
+  ]);
+
   // ---------------------------------------------------------------------------
   // 余白タブのサボローチャット
   // テキストチャット専用バックエンドは未提供のため、応答は代表 proposal の
@@ -372,7 +559,11 @@ export function SaborouProvider({
       const userId = `u${chatSeqRef.current++}`;
       const saborouId = `s${chatSeqRef.current++}`;
 
-      const reply = buildSaborouChatReply(trimmed, representativeProposal);
+      const reply = buildSaborouChatReply(
+        trimmed,
+        representativeProposal,
+        freeTimeSession,
+      );
       const shouldOfferProgressReport =
         trimmed.includes("サボ") ||
         trimmed.includes("さぼ") ||
@@ -389,8 +580,18 @@ export function SaborouProvider({
         },
       ]);
     },
-    [representativeProposal],
+    [representativeProposal, freeTimeSession],
   );
+
+  const postSaborouMessage = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const saborouId = `s${chatSeqRef.current++}`;
+    setChatMessages((prev) => [
+      ...prev,
+      { id: saborouId, role: "saborou", text: trimmed },
+    ]);
+  }, []);
 
   const offerVideoContinuation = useCallback(() => {
     const saborouId = `s${chatSeqRef.current++}`;
@@ -420,11 +621,13 @@ export function SaborouProvider({
       refreshTasks,
       representativeProposal,
       scheduleSaboruMinutes,
+      freeTimeSession,
       latestSlackMessage,
       sendSlackViaDom,
       notifyReplyCompleted,
       chatMessages,
       postChatMessage,
+      postSaborouMessage,
       offerVideoContinuation,
       goalAnalysis,
       setGoalAnalysis,
@@ -446,11 +649,13 @@ export function SaborouProvider({
       refreshTasks,
       representativeProposal,
       scheduleSaboruMinutes,
+      freeTimeSession,
       latestSlackMessage,
       sendSlackViaDom,
       notifyReplyCompleted,
       chatMessages,
       postChatMessage,
+      postSaborouMessage,
       offerVideoContinuation,
       goalAnalysis,
       delegatedTaskId,

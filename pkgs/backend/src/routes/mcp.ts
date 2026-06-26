@@ -1,26 +1,26 @@
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { AppError, UnauthorizedError } from "../errors.js";
+import type { MarpSlideService } from "../marp/MarpSlideService.js";
 import {
+  type WriteAuditEvent,
   auditMcpToolCall,
   buildSafeMcpAuditEvent,
-  type WriteAuditEvent,
 } from "../mcp/audit.js";
 import {
-  resolveMcpIdentity,
   type McpIdentityResolverOptions,
+  resolveMcpIdentity,
 } from "../mcp/identity.js";
 import { precheckMcpInvocation } from "../mcp/precheck.js";
 import type {
   McpAuditStatus,
   McpSource,
-  McpToolDefinition,
   McpToolContext,
+  McpToolDefinition,
   SafeMcpErrorCode,
   SafeMcpErrorResponse,
   SafeMcpSuccessResponse,
 } from "../mcp/types.js";
-import type { MarpSlideService } from "../marp/MarpSlideService.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
 import type { TravelPlanningService } from "../travel/TravelPlanningService.js";
 
@@ -235,6 +235,22 @@ async function dispatchRegistryTool(input: {
     });
   }
 
+  if (
+    input.toolName === "saborou_decompose_task" ||
+    input.toolName === "saborou_suggest_free_time"
+  ) {
+    if (!input.options.caller) {
+      throw new AppError(500, "TOOL_ERROR", "Task analysis is not configured");
+    }
+
+    return callInternalApi(input.options.caller, {
+      tool: input.tool,
+      parsedArgs: input.parsedArgs,
+      authorization: "",
+      userId: input.context.identity.userId,
+    });
+  }
+
   return {
     status: input.tool.approval.required
       ? "validated_for_approved_action"
@@ -259,14 +275,38 @@ async function callInternalApi(
     userId: string;
   },
 ): Promise<Record<string, unknown>> {
-  const response = await caller(input.tool.http.path, {
+  let apiPath = input.tool.http.path;
+  const usedPathKeys = new Set<string>();
+  for (const [key, value] of Object.entries(input.parsedArgs)) {
+    const placeholder = `{${key}}`;
+    if (apiPath.includes(placeholder)) {
+      apiPath = apiPath.replace(placeholder, encodeURIComponent(String(value)));
+      usedPathKeys.add(key);
+    }
+  }
+  const remainingArgs = Object.fromEntries(
+    Object.entries(input.parsedArgs).filter(([key]) => !usedPathKeys.has(key)),
+  );
+  let body: string | undefined;
+  if (input.tool.http.method === "GET") {
+    const qs = new URLSearchParams(
+      Object.entries(remainingArgs)
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => [key, String(value)]),
+    );
+    if (qs.toString()) apiPath += `?${qs.toString()}`;
+  } else {
+    body = JSON.stringify(remainingArgs);
+  }
+
+  const response = await caller(apiPath, {
     method: input.tool.http.method,
     headers: {
       Authorization: input.authorization,
       "Content-Type": "application/json",
       "x-internal-sub": input.userId,
     },
-    body: JSON.stringify(input.parsedArgs),
+    body,
   });
 
   if (!response.ok) {

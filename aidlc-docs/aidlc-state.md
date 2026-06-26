@@ -6,7 +6,77 @@
 - **開始日時**: 2026-05-09T07:00:00Z
 - **v2 スプリント開始**: 2026-06-14T00:00:00Z
 - **現在のステージ**: `marp-slide-stylesheet-enhancement` Code Generation / Build and Test 完了（2026-06-21 JST）。Marp生成スライドに `saborou-premium` 埋め込みテーマ、リッチなfixture deck、プレミアムHTMLプレビューシェル、サービス単体テストを追加。backend 483 tests / backend typecheck / backend build 全パス。
-- **ドキュメントバージョン**: v4.9.0（2026-06-24 決勝向けAWS構成図 draw.io 生成）
+- **ドキュメントバージョン**: v4.10.1（2026-06-26 余白表示の作業中タブ移動）
+
+---
+
+## 余白表示の作業中タブ移動（2026-06-26）
+
+### 実装状態
+- [x] Code Generation — 余白セッションの次タスクカードと提案メッセージを共通コンポーネント化し、作業中タブ上部へ移動。
+- [x] Slack tab adjustment — 余白チャットタブから常時表示の余白サマリを外し、チャット、進捗報告、動画継続、次タスク準備、復帰チェックの操作フローは維持。
+- [x] Build and Test — extension 214 tests、extension typecheck、extension build、focused Biome check が通過。
+
+### 成果物
+- `aidlc-docs/construction/plans/working-tab-free-time-placement-code-generation-plan.md`
+- `aidlc-docs/construction/working-tab-free-time-placement/code/code-generation-summary.md`
+- `pkgs/extension/src/panel/components/FreeTimeSessionPanel.tsx`
+- `pkgs/extension/src/panel/tabs/WorkingTab.tsx`
+- `pkgs/extension/src/panel/tabs/SlackTab.tsx`
+- `pkgs/extension/src/panel/App.test.tsx`
+
+### Security Baseline
+- [x] 新規バックエンドAPI、ストレージ、IAM権限、外部通信、secret handlingなし。
+- [x] 既存のJWT API利用、チャットアクション、復帰チェックruntime message境界を維持。
+
+---
+
+## AI自動タスク結果チャット整形（2026-06-26）
+
+### 実装状態
+- [x] Requirements Analysis — 最小深度で実施。AI自動サブタスク完了時に余白チャットへ整形済み実行結果を表示する要件として整理。
+- [x] Workflow Planning — 単一 extension UI 変更として、User Stories / Application Design / Units Generation / NFR / Infrastructure Design をスキップ。
+- [x] Code Generation — `postSaborouMessage` を追加し、`saboru` サブタスク完了時に完了項目・対象・ゴール・成果物・目安時間・実行内容・次の余白を複数行で投稿。
+- [x] Build and Test — focused extension test、extension typecheck、extension build が通過。
+
+### 成果物
+- `aidlc-docs/inception/requirements/ai-auto-result-chat-formatting-requirements.md`
+- `aidlc-docs/inception/plans/ai-auto-result-chat-formatting-execution-plan.md`
+- `aidlc-docs/construction/plans/ai-auto-result-chat-formatting-code-generation-plan.md`
+- `aidlc-docs/construction/ai-auto-result-chat-formatting/code/code-generation-summary.md`
+- `pkgs/extension/src/panel/SaborouContext.tsx`
+- `pkgs/extension/src/panel/tabs/WorkingTab.tsx`
+- `pkgs/extension/src/panel/tabs/SlackTab.tsx`
+- `pkgs/extension/src/panel/App.test.tsx`
+
+### Security Baseline
+- [x] 新規バックエンドAPI、ストレージ、外部通信、権限、secret handlingなし。
+- [x] 既存のSlack DOM送信、進捗報告、認証境界を変更しない。
+
+---
+
+## 余白タブ動的化（2026-06-26）
+
+### 実装状態
+- [x] Code Generation — 既存API合成で余白タブを動的化。`tasks` / `getGoalAnalysis` / `decomposeTask` / `getProgressReport` / recovery check runtime message を利用し、新規バックエンドAPIは追加しない方針を維持。
+- [x] Backend MCP verification — `saborou_suggest_free_time` が JSON-RPC 経由で `GET /api/tasks/{taskId}/decompose` に到達するテストを追加。未分解タスクは安全な JSON-RPC error になることを確認。
+- [x] Build and Test — extension 212 tests、extension typecheck、extension build、backend focused JSON-RPC 8 tests、focused Biome check が通過。
+
+### 成果物
+- `aidlc-docs/construction/plans/slack-free-time-dynamic-code-generation-plan.md`
+- `aidlc-docs/construction/slack-free-time-dynamic/code/code-generation-summary.md`
+- `pkgs/extension/src/panel/SaborouContext.tsx`
+- `pkgs/extension/src/panel/tabs/SlackTab.tsx`
+- `pkgs/extension/src/panel/components/ProgressReportSheet.tsx`
+- `pkgs/extension/src/panel/App.test.tsx`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/backend/src/routes/mcp.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+
+### Security Baseline
+- [x] 新規バックエンドAPI、ストレージ、IAM権限、secret handlingなし。
+- [x] 拡張は既存Hono JWT API直呼びを維持し、`/mcp/tools/` 直送に戻さない。
+- [x] MCP JSON-RPC は既存 registry / identity resolution / internal caller 経由で、未分解タスクの失敗も安全なエラーに正規化。
 
 ---
 

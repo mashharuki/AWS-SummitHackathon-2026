@@ -55,6 +55,23 @@ function validateDateOrder(
 export const TravelPlanRequestSchema =
   TravelPlanRequestBaseSchema.superRefine(validateDateOrder);
 
+export const TravelPlanWithSlackSchema = TravelPlanRequestBaseSchema.extend({
+  channelId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[A-Z0-9][A-Z0-9_-]*$/)
+    .optional(),
+  threadTs: z
+    .string()
+    .trim()
+    .min(1)
+    .max(32)
+    .regex(/^[0-9]{10,}\.[0-9]{1,}$/)
+    .optional(),
+}).superRefine(validateDateOrder);
+
 export const TravelPlanAndPostToSlackRequestSchema =
   TravelPlanRequestBaseSchema.extend({
     channelId: z
@@ -170,6 +187,7 @@ export const TravelPlanAndPostToSlackResponseSchema = z
   .strict();
 
 export type TravelPlanRequest = z.infer<typeof TravelPlanRequestSchema>;
+export type TravelPlanWithSlackRequest = z.infer<typeof TravelPlanWithSlackSchema>;
 export type TravelPlanResponse = z.infer<typeof TravelPlanResponseSchema>;
 export type TravelPlanAndPostToSlackRequest = z.infer<
   typeof TravelPlanAndPostToSlackRequestSchema

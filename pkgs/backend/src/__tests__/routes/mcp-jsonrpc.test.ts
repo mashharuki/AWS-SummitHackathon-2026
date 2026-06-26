@@ -294,4 +294,110 @@ describe("POST /api/mcp JSON-RPC", () => {
     );
     expect(body.result.content[0].text).not.toContain("valid-token");
   });
+
+  it("invokes saborou_suggest_free_time through the existing decompose GET API", async () => {
+    let captured: { path: string; init: RequestInit } | undefined;
+    const app = new Hono();
+    app.route(
+      "/api/mcp",
+      createMcpJsonRpcRoute({
+        verifier,
+        caller: async (path, init) => {
+          captured = { path, init };
+          return Response.json({
+            taskId: "task-1",
+            goalAnalysis: {
+              goalSummary: "決勝デモを完了させる",
+              deliverable: "通し稽古メモ",
+              subtasks: [],
+              totalEstimatedMinutes: 40,
+              freeTimeMinutes: 20,
+              freeTimeSuggestion: "20分だけ休んで、戻る前に冒頭を確認する。",
+              generatedAt: "2026-06-26T00:00:00.000Z",
+            },
+          });
+        },
+      }),
+    );
+
+    const res = await app.request("/api/mcp", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer valid-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: {
+          name: "saborou_suggest_free_time",
+          arguments: { taskId: "task-1" },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(captured?.path).toBe("/api/tasks/task-1/decompose");
+    expect(captured?.init.method).toBe("GET");
+    expect(captured?.init.body).toBeUndefined();
+    expect(captured?.init.headers).toMatchObject({
+      Authorization: "Bearer valid-token",
+      "Content-Type": "application/json",
+      "x-internal-sub": "user-123",
+    });
+    const body = await res.json();
+    expect(body.result.content[0].text).toContain("freeTimeMinutes");
+    expect(body.result.content[0].text).toContain("20");
+    expect(body.result.content[0].text).toContain("戻る前に冒頭を確認");
+  });
+
+  it("maps undecomposed saborou_suggest_free_time API failures to safe JSON-RPC errors", async () => {
+    const app = new Hono();
+    app.route(
+      "/api/mcp",
+      createMcpJsonRpcRoute({
+        verifier,
+        caller: async () =>
+          Response.json(
+            {
+              error: {
+                code: "NOT_FOUND",
+                message: "このタスクはまだPM分解されていません",
+              },
+            },
+            { status: 404 },
+          ),
+      }),
+    );
+
+    const res = await app.request("/api/mcp", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer valid-token",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 6,
+        method: "tools/call",
+        params: {
+          name: "saborou_suggest_free_time",
+          arguments: { taskId: "task-404" },
+        },
+      }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      jsonrpc: "2.0",
+      id: 6,
+      error: {
+        code: -32603,
+      },
+    });
+    expect(body.error.message).toContain("Tool execution failed");
+    expect(body.error.message).not.toContain("valid-token");
+  });
 });

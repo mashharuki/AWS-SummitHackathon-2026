@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { getMcpToolDefinition, getPublishedMcpTools } from "../mcp/registry.js";
 import {
-  resolveMcpIdentity,
   type McpIdentityResolverOptions,
+  resolveMcpIdentity,
 } from "../mcp/identity.js";
+import { getMcpToolDefinition, getPublishedMcpTools } from "../mcp/registry.js";
 import type { McpToolDefinition } from "../mcp/types.js";
 import type { SlackDelegationService } from "../services/SlackDelegationService.js";
 import { normalizeForTts } from "../utils/ttsNormalizer.js";
@@ -292,6 +292,42 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
         },
         required: ["keyword"],
       };
+    case "saborou_decompose_task":
+      return {
+        type: "object",
+        properties: {
+          taskId: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "PM WBS分解するタスクID。saborou_list_tasks で取得したIDを使用する。",
+          },
+          slackContext: {
+            type: "string",
+            maxLength: 1000,
+            description:
+              "任意のSlack文脈。余白提案をユーザーの状況に合わせるために使う。",
+          },
+        },
+        required: ["taskId"],
+        additionalProperties: false,
+      };
+    case "saborou_suggest_free_time":
+      return {
+        type: "object",
+        properties: {
+          taskId: {
+            type: "string",
+            minLength: 1,
+            maxLength: 120,
+            description:
+              "余白提案を取得するタスクID。既存のWBS分解結果から goalAnalysis を返す。",
+          },
+        },
+        required: ["taskId"],
+        additionalProperties: false,
+      };
     case "saborou_delegate_to_claude":
       return {
         type: "object",
@@ -389,6 +425,19 @@ function jsonSchemaFor(toolName: string): Record<string, unknown> {
             type: "string",
             enum: ["ja", "en"],
             description: "応答言語。省略するとja。",
+          },
+          channelId: {
+            type: "string",
+            minLength: 1,
+            maxLength: 80,
+            description:
+              "旅のしおりURLを投稿するSlackチャンネルID（例: C01234567）。省略した場合はタスク履歴から自動取得してSlackに投稿します。",
+          },
+          threadTs: {
+            type: "string",
+            minLength: 1,
+            maxLength: 32,
+            description: "スレッドに返信する場合のタイムスタンプ。省略可。",
           },
         },
         additionalProperties: false,

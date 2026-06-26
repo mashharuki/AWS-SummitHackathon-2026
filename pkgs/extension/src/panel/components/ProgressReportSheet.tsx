@@ -1,10 +1,8 @@
 /**
  * ProgressReportSheet — ⑤動いてるフリ（自然な進捗報告）
  *
- * モック(11.34.01)準拠。タスクが既に終わっていても/手をつけていなくても、
- * re:Invent 調査タスク用の自然な仮の進捗報告文をデモ固定で表示し、
- *「この文章を送る」で DOM 送信（自分のアカウント）。
- *「もっと柔らかく」ではデモ文面に戻す。
+ * 既存 report API が生成した文面を優先し、取得できないときだけ
+ * ローカルの汎用フォールバック文面を表示する。
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
@@ -24,12 +22,16 @@ export function ProgressReportSheet({
   task,
   reportIndex,
   reportTotal,
+  initialReportText,
+  loading = false,
   onClose,
   onSent,
 }: {
   task: TaskSummary;
   reportIndex: number;
   reportTotal: number;
+  initialReportText?: string | null;
+  loading?: boolean;
   onClose: () => void;
   onSent?: () => void;
 }) {
@@ -38,17 +40,15 @@ export function ProgressReportSheet({
   const [reportText, setReportText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const progressLabel = `${reportIndex}/${reportTotal}`;
-  const displayTaskTitle =
-    task.title.includes("ラスベガス") || task.title.includes("re:Invent")
-      ? task.title
-      : PITCH_DEMO_TASK_TITLE;
+  const displayTaskTitle = task.title || PITCH_DEMO_TASK_TITLE;
 
   const generate = useCallback(() => {
     setPhase("drafting");
     setError(null);
-    setReportText(PITCH_DEMO_REPORT_TEXT);
+    if (loading) return;
+    setReportText(initialReportText || PITCH_DEMO_REPORT_TEXT);
     setPhase("review");
-  }, []);
+  }, [initialReportText, loading]);
 
   useEffect(() => {
     void generate();

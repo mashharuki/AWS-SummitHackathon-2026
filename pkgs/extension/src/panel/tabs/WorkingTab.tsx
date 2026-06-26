@@ -7,6 +7,7 @@
  */
 
 import { useSaborou } from "@/panel/SaborouContext";
+import { FreeTimeSessionPanel } from "@/panel/components/FreeTimeSessionPanel";
 import { SubtaskCard } from "@/panel/components/SubtaskCard";
 import { Badge, Card, EmptyState, SectionLabel } from "@/panel/components/ui";
 import { decomposeTask, updateSubtaskStatus } from "@/panel/lib/agentClient";
@@ -61,6 +62,52 @@ function getStepDefs(
   ];
 }
 
+function formatResultMinutes(minutes: number): string {
+  if (minutes < 60) return `${minutes}分`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}時間` : `${hours}時間${rest}分`;
+}
+
+function buildAiAutoResultMessage({
+  subtask,
+  activeTaskTitle,
+  goalSummary,
+  deliverable,
+  freeTimeSuggestion,
+}: {
+  subtask: SubTask;
+  activeTaskTitle: string;
+  goalSummary: string;
+  deliverable: string;
+  freeTimeSuggestion: string;
+}): string {
+  const lines = [
+    "AI自動タスクの実行結果をまとめたよ。",
+    "",
+    `完了: ${subtask.title}`,
+    `対象: ${activeTaskTitle}`,
+    `ゴール: ${goalSummary}`,
+    `成果物: ${deliverable}`,
+    `目安時間: ${formatResultMinutes(subtask.estimatedMinutes)}`,
+  ];
+
+  if (subtask.description) {
+    lines.push("", `実行内容: ${subtask.description}`);
+  }
+
+  if (freeTimeSuggestion) {
+    lines.push("", `次の余白: ${freeTimeSuggestion}`);
+  } else {
+    lines.push(
+      "",
+      "次の余白: 残りの作業を確認して、無理なく戻れる状態にしておくね。",
+    );
+  }
+
+  return lines.join("\n");
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -75,6 +122,8 @@ export function WorkingTab() {
     goalAnalysis,
     setGoalAnalysis,
     delegatedTaskId,
+    postSaborouMessage,
+    freeTimeSession,
   } = useSaborou();
   const [decomposing, setDecomposing] = useState(false);
   const [decomposeError, setDecomposeError] = useState(false);
@@ -84,6 +133,7 @@ export function WorkingTab() {
     "pending",
   ]);
   const decomposedTaskIdRef = useRef<string | null>(null);
+  const postedResultMessageKeysRef = useRef<Set<string>>(new Set());
 
   const activeTask =
     (delegatedTaskId
@@ -178,6 +228,21 @@ export function WorkingTab() {
               ),
             };
           });
+          if (subtask.saborouType === "saboru") {
+            const messageKey = `${activeTask.taskId}:${subtask.id}`;
+            if (!postedResultMessageKeysRef.current.has(messageKey)) {
+              postedResultMessageKeysRef.current.add(messageKey);
+              postSaborouMessage(
+                buildAiAutoResultMessage({
+                  subtask,
+                  activeTaskTitle: activeTask.title,
+                  goalSummary: goalAnalysis.goalSummary,
+                  deliverable: goalAnalysis.deliverable,
+                  freeTimeSuggestion: goalAnalysis.freeTimeSuggestion,
+                }),
+              );
+            }
+          }
         }, 2000);
       } catch (err) {
         console.warn("[WorkingTab] updateSubtaskStatus failed:", err);
@@ -192,7 +257,7 @@ export function WorkingTab() {
         });
       }
     },
-    [jwt, activeTask, goalAnalysis, setGoalAnalysis],
+    [jwt, activeTask, goalAnalysis, setGoalAnalysis, postSaborouMessage],
   );
 
   const handleSkipSubtask = useCallback(
@@ -241,6 +306,8 @@ export function WorkingTab() {
 
   return (
     <div className="flex flex-col gap-3 px-3 py-3" data-testid="working-tab">
+      <FreeTimeSessionPanel session={freeTimeSession} />
+
       {/* PM分析ローディング */}
       {decomposing && activeTask && (
         <Card>

@@ -31,6 +31,7 @@ vi.mock("@/panel/lib/agentClient", () => ({
   getProposal: vi.fn().mockResolvedValue(null),
   getSchedule: vi.fn().mockResolvedValue(null),
   getProgressReport: vi.fn(),
+  getGoalAnalysis: vi.fn().mockResolvedValue(null),
   fetchPlanSteps: vi.fn().mockResolvedValue([]),
   approveCandidate: vi.fn(),
   delegateTask: vi.fn().mockResolvedValue({
@@ -68,6 +69,12 @@ describe("App (4タブ Side Panel)", () => {
       cached: false,
     });
     vi.mocked(agentClient.getProposal).mockResolvedValue(null);
+    vi.mocked(agentClient.getGoalAnalysis).mockResolvedValue(null);
+    vi.mocked(agentClient.getProgressReport).mockResolvedValue({
+      taskId: "t1",
+      reportText: "APIが生成した進捗報告です。",
+      reasoning: "既存 report API のレスポンス",
+    });
     vi.mocked(agentClient.delegateTask).mockResolvedValue({
       ok: true,
       taskId: "t1",
@@ -181,24 +188,44 @@ describe("App (4タブ Side Panel)", () => {
     );
     await user.click(screen.getByTestId("tab-slack"));
     expect(screen.getByTestId("slack-tab")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("free-time-session-panel"),
+    ).not.toBeInTheDocument();
   });
 
-  it("余白タブではAI提案があってもデモ用チャットだけを表示する", async () => {
+  it("作業中タブは既存GoalAnalysisから実タスク名・余白分数・提案文を表示する", async () => {
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
     vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
       {
         taskId: "t1",
-        title: "AWS re:Invent ラスベガスで回るセッションと展示ブースを計画する",
+        title: "決勝デモの通し稽古を完了する",
         status: "approved",
-        deadline: "2026-06-24T10:30:00.000Z",
+        deadline: "2099-01-01T09:30:00.000Z",
+      },
+      {
+        taskId: "t2",
+        title: "審査員向けQ&Aを確認する",
+        status: "approved",
+        deadline: "2099-01-01T10:30:00.000Z",
       },
     ]);
-    vi.mocked(agentClient.getProposal).mockResolvedValue({
-      taskId: "t1",
-      verdict: "can_saboru",
-      summaryText: "AIが判断した余白提案",
-      reasoning: ["タスクは完了済みで、次の予定まで余白があります"],
-      chatMessage: "AIが生成した本来の余白メッセージです。",
+    vi.mocked(agentClient.getGoalAnalysis).mockResolvedValue({
+      goalSummary: "決勝デモを安定させる",
+      deliverable: "通し稽古メモ",
+      subtasks: [],
+      totalEstimatedMinutes: 45,
+      freeTimeMinutes: 18,
+      freeTimeSuggestion: "18分だけ席を立って、戻る前に冒頭だけ確認しよう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    vi.mocked(agentClient.decomposeTask).mockResolvedValue({
+      goalSummary: "決勝デモを安定させる",
+      deliverable: "通し稽古メモ",
+      subtasks: [],
+      totalEstimatedMinutes: 45,
+      freeTimeMinutes: 18,
+      freeTimeSuggestion: "18分だけ席を立って、戻る前に冒頭だけ確認しよう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
     });
     const user = userEvent.setup();
     render(<App />);
@@ -206,26 +233,150 @@ describe("App (4タブ Side Panel)", () => {
       expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
     );
 
-    await user.click(screen.getByTestId("tab-slack"));
+    await user.click(screen.getByTestId("tab-working"));
 
     await waitFor(() =>
-      expect(screen.getByTestId("demo-chat-message")).toHaveTextContent(
-        "よく頑張ったよ、ゆーたろ",
+      expect(screen.getByTestId("free-time-session-message")).toHaveTextContent(
+        "決勝デモの通し稽古を完了する",
       ),
     );
     expect(screen.getByTestId("next-task-status")).toHaveTextContent(
-      "19:30から",
+      "審査員向けQ&Aを確認する",
     );
-    expect(screen.getByTestId("next-task-status")).toHaveTextContent("残り");
-    expect(screen.getByTestId("next-task-status")).toHaveTextContent("40分");
-    expect(screen.queryByTestId("ai-chat-message")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("AIが生成した本来の余白メッセージです。"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("next-task-status")).toHaveTextContent("18分");
+    expect(screen.getByTestId("free-time-session-message")).toHaveTextContent(
+      "18分だけ席を立って",
+    );
   });
 
-  it("切り替え相談には段階的な復帰チャットを返す", async () => {
+  it("既存GoalAnalysisがない場合はdecomposeTaskで余白提案を生成する", async () => {
     vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t1",
+        title: "提案スライドを磨く",
+        status: "approved",
+        deadline: "2099-01-01T09:30:00.000Z",
+      },
+    ]);
+    vi.mocked(agentClient.getGoalAnalysis).mockResolvedValue(null);
+    vi.mocked(agentClient.decomposeTask).mockResolvedValue({
+      goalSummary: "提案スライドを完成させる",
+      deliverable: "最終スライド",
+      subtasks: [],
+      totalEstimatedMinutes: 30,
+      freeTimeMinutes: 12,
+      freeTimeSuggestion: "12分だけ首を休めてから、表紙を見直そう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId("tab-working"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("free-time-session-message")).toHaveTextContent(
+        "12分だけ首を休めて",
+      ),
+    );
+    expect(agentClient.getGoalAnalysis).toHaveBeenCalledWith("t1", AUTH);
+    expect(agentClient.decomposeTask).toHaveBeenCalledWith("t1", AUTH);
+  });
+
+  it("AI自動サブタスク完了後に実行結果を余白チャットへ整形表示する", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t1",
+        title: "スイス1週間旅行プランを完成させる",
+        status: "approved",
+        deadline: "2099-01-01T09:30:00.000Z",
+      },
+    ]);
+    vi.mocked(agentClient.decomposeTask).mockResolvedValue({
+      goalSummary: "スイスへの1週間の旅行プランを完成させること",
+      deliverable: "旅程・宿泊・交通・予算をまとめたドキュメント",
+      subtasks: [
+        {
+          id: "st-ai-1",
+          taskId: "t1",
+          title: "1週間分の詳細旅程ドキュメントを作成する",
+          description:
+            "Day1からDay7の移動時間、観光スポット、食事候補、予算内訳をまとめる",
+          estimatedMinutes: 60,
+          saborouType: "saboru",
+          status: "pending",
+          order: 0,
+        },
+      ],
+      totalEstimatedMinutes: 60,
+      freeTimeMinutes: 20,
+      freeTimeSuggestion: "20分だけ休んで、戻る前に予約候補だけ確認しよう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId("tab-working"));
+    await waitFor(() =>
+      expect(
+        screen.getByText("1週間分の詳細旅程ドキュメントを作成する"),
+      ).toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole("button", { name: /代行させる/ }));
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 2200));
+    });
+    await user.click(screen.getByTestId("tab-slack"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+        "AI自動タスクの実行結果をまとめたよ",
+      ),
+    );
+    expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+      "完了: 1週間分の詳細旅程ドキュメントを作成する",
+    );
+    expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+      "ゴール: スイスへの1週間の旅行プランを完成させること",
+    );
+    expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+      "成果物: 旅程・宿泊・交通・予算をまとめたドキュメント",
+    );
+    expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+      "目安時間: 1時間",
+    );
+    expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+      "実行内容: Day1からDay7の移動時間、観光スポット、食事候補、予算内訳をまとめる",
+    );
+    expect(screen.getByTestId("slack-tab")).toHaveTextContent(
+      "次の余白: 20分だけ休んで、戻る前に予約候補だけ確認しよう。",
+    );
+  });
+
+  it("切り替え相談には実際の次タスクを使って復帰チャットを返す", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t1",
+        title: "デモ台本を読み切る",
+        status: "approved",
+        deadline: "2099-01-01T09:30:00.000Z",
+      },
+      {
+        taskId: "t2",
+        title: "スポンサー面談の準備",
+        status: "approved",
+        deadline: "2099-01-01T10:30:00.000Z",
+      },
+    ]);
     const user = userEvent.setup();
     render(<App />);
     await waitFor(() =>
@@ -241,8 +392,11 @@ describe("App (4タブ Side Panel)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("slack-tab")).toBeInTheDocument(),
     );
-    expect(screen.getByText(/10分前に資料だけ開いて/)).toBeInTheDocument();
-    expect(screen.getAllByText(/開始時刻になったら/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/スポンサー面談の準備に戻る準備/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/10分前に関連資料を開いて/)).toBeInTheDocument();
+    expect(screen.getAllByText(/開始したら/).length).toBeGreaterThan(0);
   });
 
   it("サボり相談ではチャットと別のチケットから進捗報告モーダルを開く", async () => {
@@ -257,11 +411,46 @@ describe("App (4タブ Side Panel)", () => {
     vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
       {
         taskId: "t1",
-        title: "今夜のMTGで余白時間の表示方法について話し合い",
+        title: "今夜のMTGで余白時間の表示方法を整理する",
         status: "approved",
-        deadline: "2026-06-24T10:30:00.000Z",
+        deadline: "2099-01-01T09:30:00.000Z",
+      },
+      {
+        taskId: "t2",
+        title: "AIエージェント品質レビュー",
+        status: "approved",
+        deadline: "2099-01-01T10:30:00.000Z",
+        plannedSteps: [
+          {
+            stepId: "step-1",
+            stepLabel: "提案品質の観点を確認",
+            durationMinutes: 10,
+            bandType: "work",
+          },
+          {
+            stepId: "step-2",
+            stepLabel: "デモで見せる順番を整理",
+            durationMinutes: 10,
+            bandType: "work",
+          },
+        ],
       },
     ]);
+    vi.mocked(agentClient.getGoalAnalysis).mockResolvedValue({
+      goalSummary: "余白表示の方針を固める",
+      deliverable: "MTG整理メモ",
+      subtasks: [],
+      totalEstimatedMinutes: 20,
+      freeTimeMinutes: 25,
+      freeTimeSuggestion: "25分だけ休んで、戻る前にメモを一行だけ見よう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    vi.mocked(agentClient.getProgressReport).mockResolvedValue({
+      taskId: "t1",
+      reportText:
+        "現在、余白時間の表示方針を整理しています。主要な案は比較できる状態になっており、次のMTGで判断しやすい形にまとめています。",
+      reasoning: "既存 report API で生成",
+    });
     vi.mocked(chrome.runtime.sendMessage).mockImplementation(async (msg) => {
       const runtimeMessage = msg as { type?: unknown } | null;
       if (runtimeMessage?.type === "GET_PENDING_RECOVERY_CHECK") {
@@ -296,14 +485,12 @@ describe("App (4タブ Side Panel)", () => {
     );
     expect(screen.getByTestId("report-progress")).toHaveTextContent("1/5");
     expect(
-      screen.getByText(
-        "AWS re:Invent ラスベガスで回るセッションと展示ブース計画",
-      ),
+      screen.getByText("今夜のMTGで余白時間の表示方法を整理する"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("report-draft")).toHaveValue(
-      "現在、AWS re:Inventでどのような出展企業があるのかをリスト化して整理しています。気になる企業や展示ブースを優先度ごとに見られるようにまとめているので、進捗があれば随時共有しますね。",
+      "現在、余白時間の表示方針を整理しています。主要な案は比較できる状態になっており、次のMTGで判断しやすい形にまとめています。",
     );
-    expect(agentClient.getProgressReport).not.toHaveBeenCalled();
+    expect(agentClient.getProgressReport).toHaveBeenCalledWith("t1", AUTH);
     expect(screen.getByTestId("progress-report-sent-ticket")).toHaveTextContent(
       "進捗報告完了",
     );
@@ -336,25 +523,25 @@ describe("App (4タブ Side Panel)", () => {
       "視聴済み",
     );
     expect(screen.getByTestId("next-task-prep-ticket")).toHaveTextContent(
-      "あと10分で次のタスクだね",
+      "次のタスクは",
     );
 
     await user.click(screen.getByTestId("chat-saborou-next-task-summary"));
 
     expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
-      "AIエージェント改善定例会",
+      "AIエージェント品質レビュー",
     );
     expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
       "次のタスク概要",
     );
     expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
-      "19:30開始",
+      "開始",
     );
     expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
       "今日見ること",
     );
     expect(screen.getByTestId("next-task-summary-card")).toHaveTextContent(
-      "AIエージェントの提案品質を確認",
+      "提案品質の観点を確認",
     );
     expect(screen.getByTestId("recovery-check-ticket")).toHaveTextContent(
       "自動画面読み取りチェック",
@@ -363,8 +550,7 @@ describe("App (4タブ Side Panel)", () => {
     expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "SCHEDULE_RECOVERY_CHECK",
-        startLabel: "19:30",
-        expectedTitle: "AIエージェント改善定例会",
+        expectedTitle: "AIエージェント品質レビュー",
       }),
     );
 
@@ -375,7 +561,7 @@ describe("App (4タブ Side Panel)", () => {
           ok: true,
           matched: true,
           screenshotCaptured: true,
-          title: "AIエージェント改善定例会 - agenda",
+          title: "AIエージェント品質レビュー - agenda",
           checkedAt: "2026-06-24T12:00:00.000Z",
         },
       });
@@ -387,11 +573,64 @@ describe("App (4タブ Side Panel)", () => {
       ),
     );
     expect(screen.getByTestId("recovery-check-success")).toHaveTextContent(
-      "AIエージェント改善定例会 - agenda",
+      "AIエージェント品質レビュー - agenda",
     );
     expect(
       screen.queryByTestId("chat-saborou-recovery-check"),
     ).not.toBeInTheDocument();
+  });
+
+  it("次タスクがない場合は復帰チェックUIを出さず余白提案だけを表示する", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t1",
+        title: "単独タスクの整理",
+        status: "approved",
+        deadline: "2099-01-01T09:30:00.000Z",
+      },
+    ]);
+    vi.mocked(agentClient.getGoalAnalysis).mockResolvedValue({
+      goalSummary: "単独タスクを片付ける",
+      deliverable: "整理メモ",
+      subtasks: [],
+      totalEstimatedMinutes: 15,
+      freeTimeMinutes: 10,
+      freeTimeSuggestion: "10分だけ目を休めよう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    vi.mocked(agentClient.decomposeTask).mockResolvedValue({
+      goalSummary: "単独タスクを片付ける",
+      deliverable: "整理メモ",
+      subtasks: [],
+      totalEstimatedMinutes: 15,
+      freeTimeMinutes: 10,
+      freeTimeSuggestion: "10分だけ目を休めよう。",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId("tab-working"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("free-time-session-message")).toHaveTextContent(
+        "10分だけ目を休めよう",
+      ),
+    );
+    expect(screen.getByTestId("next-task-status")).toHaveTextContent(
+      "次の予定は未検出",
+    );
+    expect(
+      screen.queryByTestId("recovery-check-ticket"),
+    ).not.toBeInTheDocument();
+    expect(chrome.runtime.sendMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "SCHEDULE_RECOVERY_CHECK" }),
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -750,6 +989,144 @@ describe("App (4タブ Side Panel)", () => {
       },
     );
     expect(screen.queryByText(/古いタスク/)).not.toBeInTheDocument();
+  });
+
+  it("同期済みの古い代行タスクIDを固定せず次回は最新タスクを表示する", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
+      {
+        candidateId: "c-swiss",
+        title: "スイス旅行の策定プラン",
+        deadline: null,
+        requester: "PM",
+        description: "スイス旅行の策定プランを作る",
+        sourceType: "slack",
+        slackChannelId: "C123",
+        threadTs: "1717900000.333333",
+      },
+    ]);
+    vi.mocked(agentClient.getTaskSummaries)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          taskId: "t-swiss",
+          title: "スイス旅行の策定プラン",
+          status: "approved",
+          deadline: null,
+        },
+      ])
+      .mockResolvedValue([
+        {
+          taskId: "t-latest",
+          title: "最新タスク: AWS re:Invent 参加計画",
+          status: "approved",
+          deadline: null,
+        },
+        {
+          taskId: "t-swiss",
+          title: "スイス旅行の策定プラン",
+          status: "approved",
+          deadline: null,
+        },
+      ]);
+    vi.mocked(agentClient.approveCandidate).mockResolvedValue({
+      taskId: "t-swiss",
+      title: "スイス旅行の策定プラン",
+      status: "approved",
+      deadline: null,
+      description: "スイス旅行の策定プランを作る",
+      slackChannelId: "C123",
+    });
+    vi.mocked(agentClient.delegateTask).mockResolvedValue({
+      ok: true,
+      taskId: "t-swiss",
+      channelId: "C123",
+      ts: "1717900000.444444",
+    });
+    vi.mocked(agentClient.decomposeTask).mockImplementation(
+      async (taskId: string) => ({
+        goalSummary:
+          taskId === "t-latest"
+            ? "AWS re:Invent の参加計画を進める"
+            : "スイス旅行の策定プランを進める",
+        deliverable: "成果物",
+        subtasks: [
+          {
+            id: `${taskId}-st-1`,
+            taskId,
+            title: "情報を整理する",
+            description: "必要な情報を確認する",
+            estimatedMinutes: 15,
+            saborouType: "work",
+            status: "pending",
+            order: 1,
+          },
+        ],
+        totalEstimatedMinutes: 15,
+        freeTimeMinutes: 0,
+        freeTimeSuggestion: "",
+        generatedAt: "2026-06-26T00:00:00.000Z",
+      }),
+    );
+    vi.mocked(agentClient.judgeTask).mockResolvedValue({
+      replyDraft: "承知しました。まず確認します。",
+      saboriScore: 0.2,
+      ttsSummary: "承知しました",
+    });
+    vi.mocked(chrome.runtime.sendMessage).mockImplementation(
+      async (msg: unknown) => {
+        if (
+          typeof msg === "object" &&
+          msg !== null &&
+          "type" in msg &&
+          msg.type === "SEND_SLACK_REPLY"
+        ) {
+          return { ok: true };
+        }
+        return undefined;
+      },
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-approve")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("candidate-approve"));
+    const biasButton = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent?.includes("Bias for Action"));
+    await user.click(biasButton as HTMLElement);
+    await waitFor(() =>
+      expect(screen.getByTestId("approval-send")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("approval-send"));
+    await waitFor(() =>
+      expect(screen.getByTestId("delegate-travel")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("delegate-travel"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("スイス旅行の策定プランを進める"),
+      ).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId("tab-home"));
+    await user.click(screen.getByTestId("tab-working"));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("AWS re:Invent の参加計画を進める"),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByText("スイス旅行の策定プランを進める"),
+    ).not.toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------

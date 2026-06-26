@@ -178,7 +178,7 @@ export class SchedulePlannerAgent {
         toolChoice: { tool: { name: PLAN_SCHEDULE_TOOL_NAME } },
       },
       inferenceConfig: {
-        maxTokens: 1024,
+        maxTokens: 2048,
         temperature: 0,
       },
     });
@@ -210,6 +210,7 @@ export class SchedulePlannerAgent {
       logError({
         action: "schedule_plan_invalid_output",
         issues: parsed.error.issues,
+        rawInput: JSON.stringify(toolUseBlock.toolUse.input).slice(0, 800),
         refId: input.refId,
       });
       throw new Error("plan_schedule output failed schema validation");
@@ -230,8 +231,12 @@ function wrapStepsIfNeeded(rawInput: unknown): unknown {
   }
   if (!rawInput || typeof rawInput !== "object") return rawInput;
   const obj = rawInput as Record<string, unknown>;
-  // steps が無いが他のキーに配列がある場合（例: step, items, tasks）
   if (!Array.isArray(obj.steps)) {
+    // steps がオブジェクト（dict形式）の場合: Object.values で配列に変換
+    if (obj.steps && typeof obj.steps === "object") {
+      return { ...obj, steps: Object.values(obj.steps as Record<string, unknown>) };
+    }
+    // steps が無いが他のキーに配列がある場合（例: step, items, tasks）
     const candidate = Object.values(obj).find(Array.isArray);
     if (candidate) return { ...obj, steps: candidate };
   }

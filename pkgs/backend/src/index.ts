@@ -268,11 +268,15 @@ export function createApp() {
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
   app.route(
     "/api/travel",
-    createTravelRoute({
-      plan: (input) => travelPlanningService.plan(input),
-      planAndPostToSlack: (input) =>
-        travelPlanSlackPostService.planAndPostToSlack(input),
-    }),
+    createTravelRoute(
+      {
+        plan: (input) => travelPlanningService.plan(input),
+        planAndPostToSlack: (input) =>
+          travelPlanSlackPostService.planAndPostToSlack(input),
+      },
+      travelItineraryPublisher,
+      taskRepository,
+    ),
   );
   app.route(
     "/api/marp",
