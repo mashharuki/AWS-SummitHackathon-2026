@@ -191,7 +191,25 @@ export function createScheduleRoute(
       calendarUsed,
       now: windowStartAt,
     };
-    const result = await schedulePlannerAgent.plan(input);
+    let result: Awaited<ReturnType<typeof schedulePlannerAgent.plan>>;
+    try {
+      result = await schedulePlannerAgent.plan(input);
+    } catch (err) {
+      logError({
+        action: "schedule_plan_failed",
+        taskId,
+        error: String(err),
+      });
+      return c.json(
+        {
+          error: {
+            code: "SCHEDULE_GENERATION_FAILED",
+            message: "スケジュール生成に失敗しました。しばらくしてから再試行してください。",
+          },
+        },
+        503,
+      );
+    }
 
     logInfo({
       action: "schedule_generated",

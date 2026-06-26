@@ -65,7 +65,8 @@ export const REPLY_DRAFT_TOOL: Tool = {
 export const ReplyDraftSchema = z.object({
   replyText: z.string().min(1).max(400),
   tone: z.enum(["formal", "polite", "casual"]).optional(),
-  reasoning: z.array(z.string()).min(1).max(10),
+  // モデルが省略することがあるため optional とし、スキーマ検証失敗を防ぐ
+  reasoning: z.array(z.string()).min(1).max(10).optional(),
 });
 
 export type ReplyDraft = z.infer<typeof ReplyDraftSchema>;

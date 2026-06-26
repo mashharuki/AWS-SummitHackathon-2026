@@ -13,8 +13,8 @@ import { useSaborou } from "@/panel/SaborouContext";
 import { Button, Modal } from "@/panel/components/ui";
 import {
   approveCandidate,
-  delegateTask,
   decomposeTask,
+  delegateTask,
   judgeTask,
 } from "@/panel/lib/agentClient";
 import type { TaskCandidate, TaskSummary } from "@/panel/lib/types";
@@ -110,7 +110,7 @@ export function ApprovalModal({
   onApproved: () => void;
   onDelegationStart?: () => void;
 }) {
-  const { jwt, sendSlackViaDom, notifyReplyCompleted, setDelegatedTaskId } =
+  const { jwt, sendSlackViaDom, notifyReplyCompleted, registerDelegatedTask } =
     useSaborou();
   const [phase, setPhase] = useState<Phase>("choose");
   const [replyDraft, setReplyDraft] = useState("");
@@ -172,6 +172,7 @@ export function ApprovalModal({
           // live: 候補はバックエンド未登録のため失敗することがあるが無視して続行
           const task = await approveCandidate(candidate.candidateId, jwt);
           setApprovedTask(task);
+          registerDelegatedTask(task);
           taskId = task.taskId;
         } catch {
           // noop — アニメーションは続行する
@@ -182,7 +183,6 @@ export function ApprovalModal({
         // Result is ignored here — WorkingTab will call decomposeTask independently.
         void decomposeTask(taskId, jwt).catch(() => undefined);
         await delegateTask(taskId, channelId, jwt, { instruction });
-        setDelegatedTaskId(taskId);
       }
       setPhase("delegate_done");
       setTimeout(() => {

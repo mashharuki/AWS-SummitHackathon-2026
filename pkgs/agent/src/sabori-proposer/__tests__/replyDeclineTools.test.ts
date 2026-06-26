@@ -22,14 +22,14 @@ describe("reply_draft tool", () => {
     expect(REPLY_DRAFT_TOOL.toolSpec?.name).toBe(REPLY_DRAFT_TOOL_NAME);
   });
 
-  it("declares replyText and reasoning as required", () => {
+  it("declares replyText as required (reasoning is optional for model robustness)", () => {
     const required = (
       REPLY_DRAFT_TOOL.toolSpec?.inputSchema?.json as {
         required?: string[];
       }
     ).required;
     expect(required).toContain("replyText");
-    expect(required).toContain("reasoning");
+    // reasoning は Zod スキーマでは optional（モデルが省略することがある）
   });
 
   it("has a non-empty Japanese system prompt", () => {
@@ -73,12 +73,13 @@ describe("ReplyDraftSchema — 異常系", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects missing reasoning", () => {
+  it("accepts missing reasoning (optional for model robustness)", () => {
+    // モデルが reasoning を省略することがあるため optional にした
     const result = ReplyDraftSchema.safeParse({ replyText: "ok" });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it("rejects empty reasoning array", () => {
+  it("rejects empty reasoning array when reasoning is provided", () => {
     const result = ReplyDraftSchema.safeParse({
       replyText: "ok",
       reasoning: [],

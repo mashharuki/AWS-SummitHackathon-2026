@@ -87,7 +87,7 @@ export function WorkingTab() {
 
   const activeTask =
     (delegatedTaskId
-      ? (tasks.find((t) => t.taskId === delegatedTaskId) ?? tasks[0])
+      ? tasks.find((t) => t.taskId === delegatedTaskId)
       : tasks[0]) ?? null;
   const stepDefs = activeTask ? getStepDefs(activeTask.title) : [];
 
@@ -113,11 +113,10 @@ export function WorkingTab() {
 
     // Retry once after 3s to handle API Gateway / Bedrock cold-start timeouts.
     runDecompose()
-      .catch(
-        () =>
-          new Promise<void>((resolve) => setTimeout(resolve, 3000)).then(
-            runDecompose,
-          ),
+      .catch(() =>
+        new Promise<void>((resolve) => setTimeout(resolve, 3000)).then(
+          runDecompose,
+        ),
       )
       .catch((err) => {
         console.warn("[WorkingTab] decomposeTask failed after retry:", err);
@@ -451,8 +450,9 @@ export function WorkingTab() {
       )}
 
       {/* タスクなし */}
-      {!activeTask && !tasksLoading && (
-        tasksError ? (
+      {!activeTask &&
+        !tasksLoading &&
+        (tasksError ? (
           <EmptyState
             icon={<Sparkles size={32} />}
             title="データの取得に失敗しました"
@@ -464,8 +464,7 @@ export function WorkingTab() {
             title="実行中のタスクはありません"
             hint="依頼整理で承認すると、ここで SABOROU が代行します"
           />
-        )
-      )}
+        ))}
     </div>
   );
 }

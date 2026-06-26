@@ -101,6 +101,7 @@ interface SaborouContextValue {
   /** 最後に代行依頼されたタスクID（WorkingTabが表示対象タスクを決定するために使用） */
   delegatedTaskId: string | null;
   setDelegatedTaskId: (id: string | null) => void;
+  registerDelegatedTask: (task: TaskSummary) => void;
 }
 
 const SaborouContext = createContext<SaborouContextValue | null>(null);
@@ -208,6 +209,7 @@ export function SaborouProvider({
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState(false);
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
+  const delegatedTaskRef = useRef<TaskSummary | null>(null);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState(false);
   const [representativeProposal, setRepresentativeProposal] =
@@ -262,9 +264,14 @@ export function SaborouProvider({
     setTasksError(false);
     try {
       const list = await getTaskSummaries(jwt);
-      setTasks(list);
+      const delegatedTask = delegatedTaskRef.current;
+      const mergedList =
+        delegatedTask && !list.some((t) => t.taskId === delegatedTask.taskId)
+          ? [delegatedTask, ...list]
+          : list;
+      setTasks(mergedList);
       // 代表 proposal をホーム指標用に1件取得（最初の未完了タスク）
-      const target = list[0];
+      const target = mergedList[0];
       if (target) {
         const [p, s] = await Promise.all([
           getProposal(target.taskId, jwt),
@@ -343,6 +350,11 @@ export function SaborouProvider({
   // PM WBS分解結果（WorkingTab ↔ SlackTab 共有）
   const [goalAnalysis, setGoalAnalysis] = useState<GoalAnalysis | null>(null);
   const [delegatedTaskId, setDelegatedTaskId] = useState<string | null>(null);
+  const registerDelegatedTask = useCallback((task: TaskSummary) => {
+    delegatedTaskRef.current = task;
+    setTasks((prev) => [task, ...prev.filter((t) => t.taskId !== task.taskId)]);
+    setDelegatedTaskId(task.taskId);
+  }, []);
 
   // ---------------------------------------------------------------------------
   // 余白タブのサボローチャット
@@ -418,6 +430,7 @@ export function SaborouProvider({
       setGoalAnalysis,
       delegatedTaskId,
       setDelegatedTaskId,
+      registerDelegatedTask,
     }),
     [
       userInfo,
@@ -440,9 +453,8 @@ export function SaborouProvider({
       postChatMessage,
       offerVideoContinuation,
       goalAnalysis,
-      setGoalAnalysis,
       delegatedTaskId,
-      setDelegatedTaskId,
+      registerDelegatedTask,
     ],
   );
 

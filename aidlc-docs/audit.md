@@ -6,6 +6,20 @@
 **Context**: Workspace Detection / Requirements Analysis / Code Generation for Working tab Gantt removal
 
 ---
+## Code Update - Delegated Task ID Handoff
+**Timestamp**: 2026-06-26T02:51:27Z
+**User Input**: "[Image #1] のように最新のタスクの代行を依頼したはずなのに作業中タブで表示されるタスクの内容が一致していません。おそらくタスク候補→ タスク作成 → タスク代行 の各MCPツール化で正しいタスクIDが連携されていないからだと思います。このタスクIDの渡し方についてAI Agentの設定も含めて見直していただけませんか？よろしくお願いします！"
+**AI Response**: "Started scoped brownfield bug investigation. Standard rule-detail directories were not present; using existing minimal AI-DLC project practice. Investigating task candidate approval, task creation, delegation, MCP/Agent client handoff, and Working tab active task selection."
+**Context**: Minimal Requirements Analysis / Code Generation preparation for delegated task ID handoff bug.
+
+---
+## Code Update Completion - Delegated Task ID Handoff
+**Timestamp**: 2026-06-26T02:55:36Z
+**User Input**: "[No new user input; continuation of current request]"
+**AI Response**: "Fixed the delegated task handoff bug by registering the approved TaskSummary in SaborouContext immediately when approveCandidate returns, preserving that delegated task across refreshTasks races, and preventing WorkingTab from falling back to tasks[0] when delegatedTaskId is set but not found. Added a regression test that approves a new candidate while an older task exists and verifies the Working tab renders the newly delegated task. Verified Biome, extension App tests, extension typecheck, extension build, and git diff whitespace checks."
+**Context**: Code Generation / Build and Test completion for delegated task ID handoff bug.
+
+---
 ## Working Tab Gantt Removal Completion
 **Timestamp**: 2026-06-26T02:08:31Z
 **User Input**: "N/A - implementation completion update"

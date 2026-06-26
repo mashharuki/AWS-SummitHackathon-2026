@@ -33,6 +33,22 @@ vi.mock("@/panel/lib/agentClient", () => ({
   getProgressReport: vi.fn(),
   fetchPlanSteps: vi.fn().mockResolvedValue([]),
   approveCandidate: vi.fn(),
+  delegateTask: vi.fn().mockResolvedValue({
+    ok: true,
+    taskId: "t1",
+    channelId: "C123",
+    ts: "1717900000.222222",
+  }),
+  decomposeTask: vi.fn().mockResolvedValue({
+    goalSummary: "資料確認タスクを完了させる",
+    deliverable: "確認結果",
+    subtasks: [],
+    totalEstimatedMinutes: 15,
+    freeTimeMinutes: 0,
+    freeTimeSuggestion: "",
+    generatedAt: "2026-06-26T00:00:00.000Z",
+  }),
+  updateSubtaskStatus: vi.fn().mockResolvedValue(undefined),
   rejectCandidate: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -52,6 +68,21 @@ describe("App (4タブ Side Panel)", () => {
       cached: false,
     });
     vi.mocked(agentClient.getProposal).mockResolvedValue(null);
+    vi.mocked(agentClient.delegateTask).mockResolvedValue({
+      ok: true,
+      taskId: "t1",
+      channelId: "C123",
+      ts: "1717900000.222222",
+    });
+    vi.mocked(agentClient.decomposeTask).mockResolvedValue({
+      goalSummary: "資料確認タスクを完了させる",
+      deliverable: "確認結果",
+      subtasks: [],
+      totalEstimatedMinutes: 15,
+      freeTimeMinutes: 0,
+      freeTimeSuggestion: "",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -599,6 +630,126 @@ describe("App (4タブ Side Panel)", () => {
         text: "承りました。",
       }),
     );
+  });
+
+  it("候補承認から代行した最新タスクIDを作業中タブへ引き継ぐ", async () => {
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(AUTH);
+    vi.mocked(agentClient.getCandidates).mockResolvedValue([
+      {
+        candidateId: "c-new",
+        title: "AWS re:Invent 公式サイトからセッション・展示情報を収集する",
+        deadline: null,
+        requester: "PM",
+        description:
+          "AWS re:Invent ラスベガスで参加するセッションと展示ブースの最適な計画を作る",
+        sourceType: "slack",
+        slackChannelId: "C123",
+        threadTs: "1717900000.111111",
+      },
+    ]);
+    vi.mocked(agentClient.getTaskSummaries).mockResolvedValue([
+      {
+        taskId: "t-old",
+        title: "古いタスク: フランス旅行プランを作る",
+        status: "approved",
+        deadline: null,
+      },
+    ]);
+    vi.mocked(agentClient.approveCandidate).mockResolvedValue({
+      taskId: "t-new",
+      title: "AWS re:Invent 公式サイトからセッション・展示情報を収集する",
+      status: "approved",
+      deadline: null,
+      description:
+        "AWS re:Invent ラスベガスで参加するセッションと展示ブースの最適な計画を作る",
+      slackChannelId: "C123",
+    });
+    vi.mocked(agentClient.delegateTask).mockResolvedValue({
+      ok: true,
+      taskId: "t-new",
+      channelId: "C123",
+      ts: "1717900000.222222",
+    });
+    vi.mocked(agentClient.decomposeTask).mockResolvedValue({
+      goalSummary: "AWS re:Invent の参加計画を完成させる",
+      deliverable: "セッションリストと展示ブース巡回計画",
+      subtasks: [
+        {
+          id: "st-1",
+          taskId: "t-new",
+          title: "公式サイトから情報を収集する",
+          description: "セッションカタログと展示ホール情報を確認する",
+          estimatedMinutes: 15,
+          saborouType: "work",
+          status: "pending",
+          order: 1,
+        },
+      ],
+      totalEstimatedMinutes: 15,
+      freeTimeMinutes: 0,
+      freeTimeSuggestion: "",
+      generatedAt: "2026-06-26T00:00:00.000Z",
+    });
+    vi.mocked(agentClient.judgeTask).mockResolvedValue({
+      replyDraft: "承知しました。まず公式情報を確認します。",
+      saboriScore: 0.2,
+      ttsSummary: "承知しました",
+    });
+    vi.mocked(chrome.runtime.sendMessage).mockImplementation(
+      async (msg: unknown) => {
+        if (
+          typeof msg === "object" &&
+          msg !== null &&
+          "type" in msg &&
+          msg.type === "SEND_SLACK_REPLY"
+        ) {
+          return { ok: true };
+        }
+        return undefined;
+      },
+    );
+
+    const user = userEvent.setup();
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.getByTestId("tab-bar")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("tab-inbox"));
+    await waitFor(() =>
+      expect(screen.getByTestId("candidate-approve")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("candidate-approve"));
+    const biasButton = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent?.includes("Bias for Action"));
+    await user.click(biasButton as HTMLElement);
+    await waitFor(() =>
+      expect(screen.getByTestId("approval-send")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("approval-send"));
+    await waitFor(() =>
+      expect(screen.getByTestId("delegate-general")).toBeInTheDocument(),
+    );
+    await user.click(screen.getByTestId("delegate-general"));
+
+    await waitFor(
+      () => expect(screen.getByTestId("working-tab")).toBeInTheDocument(),
+      { timeout: 2500 },
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText("AWS re:Invent の参加計画を完成させる"),
+      ).toBeInTheDocument(),
+    );
+    expect(agentClient.delegateTask).toHaveBeenCalledWith(
+      "t-new",
+      "C123",
+      AUTH,
+      {
+        instruction: "タスクをAIが代行する",
+      },
+    );
+    expect(screen.queryByText(/古いタスク/)).not.toBeInTheDocument();
   });
 
   // ---------------------------------------------------------------------------

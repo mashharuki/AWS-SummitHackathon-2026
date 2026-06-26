@@ -212,13 +212,14 @@ export class TaskExtractorAgent {
         : null;
 
     // [6] 自分宛フィルタ（Slack のみ）:
-    // 送信者が分かっていて、宛先 user ID が送信者と異なる場合は
-    // 「自分が他人に投げた依頼」なので自分のタスク一覧には取り込まない。
-    // 宛先が解決できない（素の名前のみ）場合は、誤って弾かないよう取り込む側に倒す。
+    // assignee が明示されていて、かつ送信者自身の Slack ID と一致しない場合は
+    // 「他人への依頼」なので自分のタスク一覧には取り込まない。
+    // <@Uxxx> 形式で解決できた場合だけでなく、素の名前（解決不能）の場合も除外する。
+    // assignee が空文字 = 「自分宛 or 宛先なし」なので取り込む。
     if (
       sourceType === SOURCE_TYPE.SLACK &&
       senderSlackUserId &&
-      assigneeSlackId &&
+      extracted.assignee.length > 0 &&
       assigneeSlackId !== senderSlackUserId
     ) {
       logInfo({
