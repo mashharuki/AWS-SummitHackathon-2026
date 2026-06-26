@@ -93,7 +93,10 @@ async function apiFetch<T>(
       const { forceRefreshToken } = await import("@/auth/cognitoAuth");
       const freshToken = await forceRefreshToken();
       if (freshToken) {
-        res = await fetch(url, { ...options, headers: buildHeaders(freshToken) });
+        res = await fetch(url, {
+          ...options,
+          headers: buildHeaders(freshToken),
+        });
       }
     } catch {
       // refresh failed — fall through to throw the original 401
@@ -272,6 +275,21 @@ export async function approveCandidate(
   );
 }
 
+/**
+ * POST /api/tasks — タスクを直接作成する（status=approved で永続化）。
+ * content script が DOM 検知した live 候補は candidates テーブルに無く
+ * approveCandidate が 404 になるため、その内容からタスクを実体化するのに使う。
+ */
+export async function createTask(
+  input: { title: string; deadline?: string | null; description?: string },
+  jwt: string,
+): Promise<TaskSummary> {
+  return apiFetch<TaskSummary>("/api/tasks", jwt, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 /** DELETE /api/tasks/candidates/:id — 候補を却下する */
 export async function rejectCandidate(
   candidateId: string,
@@ -374,6 +392,34 @@ export async function getSlackOAuthUrl(jwt: string): Promise<string> {
     method: "GET",
   });
   return res.url;
+}
+
+/** 余白タブのサボロー対話 1 往復の入力 */
+export interface ChatTurnInput {
+  /** 直近の会話履歴（古い順、最後はユーザー発話） */
+  messages: { role: "user" | "saborou"; text: string }[];
+  /** 対象タスクID（任意） */
+  taskId?: string;
+  /** タスク・スケジュール等の文脈（拡張側で組み立て済み・任意） */
+  context?: string;
+}
+
+/** サボロー対話の応答 */
+export interface ChatTurnResult {
+  reply: string;
+  action?: "progress_report" | "watch_video" | "next_task_prep" | "none";
+  tone?: "warm" | "playful" | "calm";
+}
+
+/** POST /api/chat — 余白タブのサボローと1往復対話する */
+export async function postChat(
+  input: ChatTurnInput,
+  jwt: string,
+): Promise<ChatTurnResult> {
+  return apiFetch<ChatTurnResult>("/api/chat", jwt, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 /** POST /api/tasks/:id/report — 進捗報告文（動いてるフリ）を生成する */

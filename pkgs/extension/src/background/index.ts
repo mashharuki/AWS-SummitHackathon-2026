@@ -1,3 +1,11 @@
+import { getValidToken } from "@/auth/cognitoAuth";
+import {
+  RECOVERY_CHECK_ALARM_NAME,
+  RECOVERY_CHECK_OFFSET_MINUTES,
+  computeRecoveryCheckWhen,
+  storePendingRecoveryCheck,
+  takePendingRecoveryCheck,
+} from "@/background/recoveryCheck";
 import type {
   CheckActiveTaskScreenResponse,
   ExtensionRuntimeMessage,
@@ -10,13 +18,7 @@ import type {
 } from "@/messages";
 import { SIDE_PANEL_PORT_NAME } from "@/messages";
 import { loadNotificationSettings } from "@/notifications/settings";
-import {
-  RECOVERY_CHECK_ALARM_NAME,
-  RECOVERY_CHECK_OFFSET_MINUTES,
-  computeRecoveryCheckWhen,
-  storePendingRecoveryCheck,
-  takePendingRecoveryCheck,
-} from "@/background/recoveryCheck";
+import { getApiUrl } from "@/panel/lib/agentClient";
 
 const PENDING_TASK_KEY = "pendingSlackTask";
 const NOTIFIED_TASK_KEYS = "notifiedTaskKeys";
@@ -190,6 +192,53 @@ async function resolveSaborouWindowId(): Promise<number | undefined> {
   }
 }
 
+/** タイトル / URL の文字列一致による判定（Vision フォールバック） */
+function titleMatch(
+  expectedTitle: string,
+  title: string,
+  url: string,
+): boolean {
+  const normalizedExpected = expectedTitle.trim().toLowerCase();
+  if (normalizedExpected.length === 0) return false;
+  const haystack = `${title}\n${url}`.toLowerCase();
+  return haystack.includes(normalizedExpected);
+}
+
+/**
+ * Vision API（POST /api/vision/analyze-screen）でスクリーンショットを判定する。
+ * 認証・ネットワーク・503 失敗時は null を返し、呼び出し側でタイトル一致へフォールバックする。
+ */
+async function analyzeScreenWithVision(
+  imageDataUrl: string,
+  expectedTitle: string,
+  pageHint: string,
+): Promise<boolean | null> {
+  try {
+    const token = await getValidToken();
+    if (!token) return null;
+
+    const imageBase64 = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
+    const res = await fetch(`${getApiUrl()}/api/vision/analyze-screen`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        imageBase64,
+        format: "jpeg",
+        expectedTitle,
+        pageHint,
+      }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { matched?: boolean };
+    return typeof json.matched === "boolean" ? json.matched : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function checkActiveTaskScreen(
   expectedTitle: string,
 ): Promise<CheckActiveTaskScreenResponse> {
@@ -215,25 +264,34 @@ export async function checkActiveTaskScreen(
       };
     }
 
-    let screenshotCaptured = false;
+    let imageDataUrl: string | null = null;
     try {
-      const imageDataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+      const captured = await chrome.tabs.captureVisibleTab(windowId, {
         format: "jpeg",
         quality: 45,
       });
-      screenshotCaptured = imageDataUrl.startsWith("data:image/");
+      if (captured.startsWith("data:image/")) imageDataUrl = captured;
     } catch {
-      screenshotCaptured = false;
+      imageDataUrl = null;
     }
+    const screenshotCaptured = imageDataUrl !== null;
 
     const title = tab.title ?? "";
     const url = tab.url ?? "";
-    const normalizedExpected = expectedTitle.trim().toLowerCase();
-    const haystack = `${title}\n${url}`.toLowerCase();
-    const matched =
-      screenshotCaptured &&
-      normalizedExpected.length > 0 &&
-      haystack.includes(normalizedExpected);
+
+    // 2段判定: スクショが撮れていれば Vision を優先し、失敗したらタイトル一致へフォールバック
+    let matched: boolean;
+    if (screenshotCaptured && imageDataUrl) {
+      const visionMatched = await analyzeScreenWithVision(
+        imageDataUrl,
+        expectedTitle,
+        `${title}\n${url}`,
+      );
+      matched = visionMatched ?? titleMatch(expectedTitle, title, url);
+    } else {
+      // スクショ無しでは Vision を呼べないため、従来どおり matched=false 相当
+      matched = false;
+    }
 
     return {
       ok: true,

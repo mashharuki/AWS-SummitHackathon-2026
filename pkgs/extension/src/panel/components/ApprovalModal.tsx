@@ -13,6 +13,7 @@ import { useSaborou } from "@/panel/SaborouContext";
 import { Button, Modal } from "@/panel/components/ui";
 import {
   approveCandidate,
+  createTask,
   decomposeTask,
   delegateTask,
   judgeTask,
@@ -169,13 +170,30 @@ export function ApprovalModal({
       let taskId = approvedTask?.taskId;
       if (!taskId) {
         try {
-          // live: 候補はバックエンド未登録のため失敗することがあるが無視して続行
+          // 通常の候補は approve でタスク化する
           const task = await approveCandidate(candidate.candidateId, jwt);
           setApprovedTask(task);
           registerDelegatedTask(task);
           taskId = task.taskId;
         } catch {
-          // noop — アニメーションは続行する
+          // content script が DOM 検知した live 候補は candidates テーブルに無く
+          // approve が 404 になる。その場合は候補の内容から直接タスクを作成して
+          // DB に永続化する（これをしないと進捗報告・スケジュール等が動かない）。
+          try {
+            const task = await createTask(
+              {
+                title: candidate.title,
+                deadline: candidate.deadline ?? undefined,
+                description: candidate.description,
+              },
+              jwt,
+            );
+            setApprovedTask(task);
+            registerDelegatedTask(task);
+            taskId = task.taskId;
+          } catch (createErr) {
+            console.warn("[SABOROU] createTask fallback failed:", createErr);
+          }
         }
       }
       if (taskId) {

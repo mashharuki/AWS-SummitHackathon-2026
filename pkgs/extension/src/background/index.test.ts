@@ -1,3 +1,4 @@
+import * as cognitoAuth from "@/auth/cognitoAuth";
 import type { NewSlackMessagePayload } from "@/messages";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -14,6 +15,12 @@ import {
 } from "./index";
 import { RECOVERY_CHECK_ALARM_NAME } from "./recoveryCheck";
 
+// getValidToken をモックして Vision API 経路を制御する
+vi.mock("@/auth/cognitoAuth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/auth/cognitoAuth")>();
+  return { ...actual, getValidToken: vi.fn().mockResolvedValue(null) };
+});
+
 const task: NewSlackMessagePayload = {
   text: "  資料を\n今日中に   確認してください  ",
   sender: "山田花子",
@@ -29,6 +36,9 @@ beforeEach(() => {
     delete sessionStore[key];
   }
   vi.clearAllMocks();
+
+  // 既定では未認証（Vision を呼ばずタイトル一致にフォールバック）
+  vi.mocked(cognitoAuth.getValidToken).mockResolvedValue(null);
 
   vi.mocked(chrome.storage.local.get).mockResolvedValue({});
   vi.mocked(chrome.storage.session.get).mockImplementation(async (keys) => {
@@ -181,6 +191,62 @@ describe("background notifications", () => {
       format: "jpeg",
       quality: 45,
     });
+  });
+
+  it("認証ありなら Vision API の判定結果を優先する", async () => {
+    sessionStore.lastSaborouWindowId = 7;
+    vi.mocked(chrome.tabs.query).mockResolvedValue([
+      {
+        id: 123,
+        windowId: 7,
+        active: true,
+        // タイトルは一致しないが、Vision が matched=true を返す
+        title: "無題のドキュメント",
+        url: "https://example.com/x",
+      } as chrome.tabs.Tab,
+    ]);
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("jwt-token");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ matched: true, confidence: 0.9 }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await checkActiveTaskScreen("AIエージェント改善定例会");
+    expect(result.matched).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/vision/analyze-screen"),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer jwt-token",
+        }),
+      }),
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it("Vision API が失敗したらタイトル一致へフォールバックする", async () => {
+    sessionStore.lastSaborouWindowId = 7;
+    vi.mocked(chrome.tabs.query).mockResolvedValue([
+      {
+        id: 123,
+        windowId: 7,
+        active: true,
+        title: "AIエージェント改善定例会 - docs",
+        url: "https://example.com/x",
+      } as chrome.tabs.Tab,
+    ]);
+    vi.mocked(cognitoAuth.getValidToken).mockResolvedValue("jwt-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }),
+    );
+
+    // Vision は 503 相当 → タイトル一致で matched=true
+    const result = await checkActiveTaskScreen("AIエージェント改善定例会");
+    expect(result.matched).toBe(true);
+    vi.unstubAllGlobals();
   });
 
   it("次タスク開始+5分の自動復帰チェックをアラームに予約する", async () => {

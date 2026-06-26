@@ -17,6 +17,7 @@ import {
   getProposal,
   getSchedule,
   getTaskSummaries,
+  postChat,
 } from "@/panel/lib/agentClient";
 import type {
   GoalAnalysis,
@@ -551,36 +552,104 @@ export function SaborouProvider({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const chatSeqRef = useRef(0);
 
+  // チャット応答に渡すタスク文脈を freeTimeSession から組み立てる。
+  // これがないとサボローは「今のタスク状況が見えない」と答えてしまう。
+  const buildChatContext = useCallback((): {
+    taskId?: string;
+    context?: string;
+  } => {
+    const target = freeTimeSession.task;
+    if (!target) return {};
+    const lines: string[] = [`進行中タスク: ${target.title}`];
+    if (target.deadline) lines.push(`締切: ${target.deadline}`);
+    if (freeTimeSession.nextTask) {
+      lines.push(`次の予定: ${freeTimeSession.nextTask.title}`);
+    }
+    if (freeTimeSession.freeMinutes !== null) {
+      lines.push(`今の余白の目安: 約${freeTimeSession.freeMinutes}分`);
+    }
+    if (representativeProposal?.verdict) {
+      lines.push(`サボり判定: ${representativeProposal.verdict}`);
+    }
+    if (representativeProposal?.reasoning?.length) {
+      lines.push(`判定理由: ${representativeProposal.reasoning.join(" / ")}`);
+    }
+    if (freeTimeSession.goalAnalysis?.goalSummary) {
+      lines.push(`タスクのゴール: ${freeTimeSession.goalAnalysis.goalSummary}`);
+    }
+    return { taskId: target.taskId, context: lines.join("\n") };
+  }, [freeTimeSession, representativeProposal]);
+
+  // API 失敗時のフォールバック（キーワード分岐）を ChatMessage として返す
+  const buildFallbackChat = useCallback(
+    (text: string): ChatMessage => {
+      const reply = buildSaborouChatReply(
+        text,
+        representativeProposal,
+        freeTimeSession,
+      );
+      const shouldOfferProgressReport =
+        text.includes("サボ") ||
+        text.includes("さぼ") ||
+        text.toLowerCase().includes("saborou");
+      return {
+        id: `s${chatSeqRef.current++}`,
+        role: "saborou",
+        text: reply,
+        action: shouldOfferProgressReport ? "progress_report" : undefined,
+      };
+    },
+    [representativeProposal, freeTimeSession],
+  );
+
   const postChatMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
 
-      const userId = `u${chatSeqRef.current++}`;
-      const saborouId = `s${chatSeqRef.current++}`;
+      const userMsg: ChatMessage = {
+        id: `u${chatSeqRef.current++}`,
+        role: "user",
+        text: trimmed,
+      };
 
-      const reply = buildSaborouChatReply(
-        trimmed,
-        representativeProposal,
-        freeTimeSession,
-      );
-      const shouldOfferProgressReport =
-        trimmed.includes("サボ") ||
-        trimmed.includes("さぼ") ||
-        trimmed.toLowerCase().includes("saborou");
+      // ユーザー発話を即時表示し、サボローの応答は /api/chat（Bedrock）で生成する。
+      setChatMessages((prev) => {
+        const next = [...prev, userMsg];
+        const history = next
+          .filter((m) => m.text)
+          .slice(-12)
+          .map((m) => ({ role: m.role, text: m.text }));
 
-      setChatMessages((prev) => [
-        ...prev,
-        { id: userId, role: "user", text: trimmed },
-        {
-          id: saborouId,
-          role: "saborou",
-          text: reply,
-          action: shouldOfferProgressReport ? "progress_report" : undefined,
-        },
-      ]);
+        if (jwt) {
+          const { taskId, context } = buildChatContext();
+          void postChat({ messages: history, taskId, context }, jwt)
+            .then((res) => {
+              setChatMessages((cur) => [
+                ...cur,
+                {
+                  id: `s${chatSeqRef.current++}`,
+                  role: "saborou",
+                  text: res.reply,
+                  action:
+                    res.action && res.action !== "next_task_prep"
+                      ? (res.action as ChatMessage["action"])
+                      : undefined,
+                },
+              ]);
+            })
+            .catch((err: unknown) => {
+              console.warn("[SABOROU] postChat failed, fallback:", err);
+              setChatMessages((cur) => [...cur, buildFallbackChat(trimmed)]);
+            });
+        } else {
+          setChatMessages((cur) => [...cur, buildFallbackChat(trimmed)]);
+        }
+
+        return next;
+      });
     },
-    [representativeProposal, freeTimeSession],
+    [jwt, buildChatContext, buildFallbackChat],
   );
 
   const postSaborouMessage = useCallback((text: string) => {

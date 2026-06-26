@@ -50,6 +50,14 @@ vi.mock("@/panel/lib/agentClient", () => ({
     generatedAt: "2026-06-26T00:00:00.000Z",
   }),
   updateSubtaskStatus: vi.fn().mockResolvedValue(undefined),
+  // 既定では postChat を失敗させ、チャットはキーワード分岐フォールバックを使う。
+  // （実 API 応答を検証するテストは個別に mockResolvedValue で上書きする）
+  postChat: vi.fn().mockRejectedValue(new Error("chat unavailable in test")),
+  createTask: vi.fn().mockResolvedValue({
+    taskId: "created-1",
+    title: "作成タスク",
+    status: "approved",
+  }),
   rejectCandidate: vi.fn().mockResolvedValue(undefined),
 }));
 

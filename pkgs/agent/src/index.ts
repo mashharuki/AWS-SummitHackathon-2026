@@ -111,6 +111,31 @@ export {
   SubTaskTypeSchema,
 } from "./goal-decomposer/types.js";
 
+// 画面スクリーンショット判定エージェント（余白タブ復帰チェック）
+export { ScreenAnalysisAgent } from "./screen-analysis/ScreenAnalysisAgent.js";
+export type { ScreenAnalysisInput } from "./screen-analysis/ScreenAnalysisAgent.js";
+export type { ScreenMatchOutput } from "./screen-analysis/screenAnalysisTool.js";
+export {
+  SCREEN_MATCH_SYSTEM_PROMPT,
+  SCREEN_MATCH_TOOL,
+  SCREEN_MATCH_TOOL_NAME,
+  ScreenMatchSchema,
+} from "./screen-analysis/screenAnalysisTool.js";
+
+// 余白タブ チャット対話エージェント
+export { SaborouChatAgent } from "./saborou-chat/SaborouChatAgent.js";
+export type {
+  SaborouChatInput,
+  SaborouChatMessage,
+} from "./saborou-chat/SaborouChatAgent.js";
+export type { SaborouChatOutput } from "./saborou-chat/saborouChatTool.js";
+export {
+  SABOROU_CHAT_SYSTEM_PROMPT,
+  SABOROU_CHAT_TOOL,
+  SABOROU_CHAT_TOOL_NAME,
+  SaborouChatSchema,
+} from "./saborou-chat/saborouChatTool.js";
+
 // ユーティリティ
 export type { SlackEventPayload, SlackMessage } from "./types/events.js";
 export { log, logError, logInfo, logWarn } from "./utils/logger.js";

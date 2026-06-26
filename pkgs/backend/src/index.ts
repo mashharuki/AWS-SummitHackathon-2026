@@ -41,6 +41,8 @@ import {
   PersonaRenderer,
   SaboriProposerAgent,
   SaboriProposerAgentV2,
+  SaborouChatAgent,
+  ScreenAnalysisAgent,
   SchedulePlannerAgent,
   TaskExtractorAgent,
 } from "@saboru/agent";
@@ -62,7 +64,9 @@ import { createConnectionsRoute } from "./routes/connections.js";
 import { createGoogleAuthRoute } from "./routes/google-auth.js";
 import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
+import { createChatRoute } from "./routes/chat.js";
 import { createHonneRoute } from "./routes/honne.js";
+import { createVisionRoute } from "./routes/vision.js";
 import { createMarpRoute } from "./routes/marp.js";
 import { createMcpJsonRpcRoute } from "./routes/mcp-jsonrpc.js";
 import { createMcpRoute } from "./routes/mcp.js";
@@ -142,6 +146,12 @@ const saboriProposerAgentV2 = new SaboriProposerAgentV2(bedrockClient);
 
 // Initialize GoalDecomposerAgent (PM WBS分解で使用)
 const goalDecomposerAgent = new GoalDecomposerAgent(bedrockClient);
+
+// Initialize SaborouChatAgent (余白タブのサボロー対話で使用)
+const saborouChatAgent = new SaborouChatAgent(bedrockClient);
+
+// Initialize ScreenAnalysisAgent (余白タブの画面判定 / 復帰チェックで使用)
+const screenAnalysisAgent = new ScreenAnalysisAgent(bedrockClient);
 const travelpayoutsClient = env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN
   ? new TravelpayoutsClient({
       credentialsSecretArn: env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN,
@@ -254,6 +264,13 @@ export function createApp() {
     "/api/tasks",
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
+  // 余白タブのサボロー対話（POST /api/chat）
+  app.route(
+    "/api/chat",
+    createChatRoute(saborouChatAgent, honneRepository, userRepository),
+  );
+  // 余白タブの画面判定（POST /api/vision/analyze-screen）
+  app.route("/api/vision", createVisionRoute(screenAnalysisAgent));
   // Schedule (3バンドガント) も /api/tasks プレフィックスに相乗り（U-G04）
   app.route(
     "/api/tasks",
