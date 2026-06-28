@@ -210,6 +210,9 @@ export class DynamoTaskCandidateRepository implements ITaskCandidateRepository {
       ...(candidate.assignee ? { assignee: candidate.assignee } : {}),
       description: overrides?.description ?? candidate.description,
       sourceType: candidate.sourceType,
+      ...(candidate.slackChannelId
+        ? { slackChannelId: candidate.slackChannelId }
+        : {}),
       ...(plannedSteps ? { plannedSteps } : {}),
       approvedAt: now,
       updatedAt: now,

@@ -30,6 +30,11 @@
         "--metadata",
         "AWS_REGION=ap-northeast-1"
       ]
+    },
+    "codegraph": {
+      "type": "stdio",
+      "command": "codegraph",
+      "args": ["serve", "--mcp"]
     }
   }
 }

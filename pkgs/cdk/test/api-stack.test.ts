@@ -58,10 +58,24 @@ describe("SaborouApiStack", () => {
     });
   });
 
-  test("Log group has 14-day retention", () => {
+  test("Lambda and API access log groups have 90-day retention", () => {
     template.hasResourceProperties("AWS::Logs::LogGroup", {
       LogGroupName: Match.stringLikeRegexp("saborou-api"),
-      RetentionInDays: 14,
+      RetentionInDays: 90,
+    });
+    template.hasResourceProperties("AWS::Logs::LogGroup", {
+      LogGroupName: Match.stringLikeRegexp("apigateway/saborou-api"),
+      RetentionInDays: 90,
+    });
+  });
+
+  test("HTTP API default stage has access logging enabled", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Stage", {
+      StageName: "$default",
+      AccessLogSettings: Match.objectLike({
+        DestinationArn: Match.anyValue(),
+        Format: Match.stringLikeRegexp("requestId"),
+      }),
     });
   });
 
@@ -73,6 +87,70 @@ describe("SaborouApiStack", () => {
         }),
       },
     });
+  });
+
+  test("Lambda function has TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN environment variable", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
+  test("Lambda function has travel itinerary publishing environment variables", () => {
+    template.hasResourceProperties("AWS::Lambda::Function", {
+      Environment: {
+        Variables: Match.objectLike({
+          TRAVEL_ITINERARY_BUCKET_NAME: Match.anyValue(),
+          TRAVEL_ITINERARY_PUBLIC_BASE_URL: Match.anyValue(),
+        }),
+      },
+    });
+  });
+
+  test("HonoFn can only put generated travel itinerary objects", () => {
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const allStatements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((p) => p.Properties.PolicyDocument.Statement ?? []);
+    const itineraryStatement = allStatements.find((stmt) => {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      return JSON.stringify(s.Resource).includes("travel-itineraries/*");
+    }) as { Action: unknown; Resource: unknown } | undefined;
+
+    expect(itineraryStatement).toBeDefined();
+    expect(itineraryStatement?.Action).toEqual("s3:PutObject");
+    expect(JSON.stringify(itineraryStatement?.Resource)).toContain(
+      "/travel-itineraries/*",
+    );
+  });
+
+  test("HonoFn can read only the Travelpayouts credentials secret resource", () => {
+    const policies = template.findResources("AWS::IAM::Policy");
+    type PolicyDoc = {
+      Properties: { PolicyDocument: { Statement: unknown[] } };
+    };
+    const allStatements = Object.values(
+      policies as Record<string, PolicyDoc>,
+    ).flatMap((p) => p.Properties.PolicyDocument.Statement ?? []);
+    const travelpayoutsStatements = allStatements.filter((stmt) => {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const resourceStr = JSON.stringify(s.Resource);
+      return resourceStr.includes("TravelpayoutsCredentialsSecret");
+    });
+
+    expect(travelpayoutsStatements.length).toBeGreaterThan(0);
+    for (const stmt of travelpayoutsStatements) {
+      const s = stmt as { Action: unknown; Resource: unknown };
+      const actions = Array.isArray(s.Action) ? s.Action : [s.Action];
+      expect(actions).toContain("secretsmanager:GetSecretValue");
+      expect(JSON.stringify(s.Resource)).not.toContain("*");
+    }
   });
 
   test("HonoFn has IAM policy for saborou/google-token/* (secretsmanager:GetSecretValue)", () => {
@@ -106,6 +184,37 @@ describe("SaborouApiStack", () => {
     });
   });
 
+  test("main proxy route remains protected by JWT authorizer", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: Match.stringLikeRegexp("\\{proxy\\+\\}"),
+      AuthorizationType: "JWT",
+      AuthorizerId: Match.anyValue(),
+    });
+  });
+
+  test("MCP adapter route is explicit and relies on Lambda-side JWT verification", () => {
+    template.hasResourceProperties("AWS::ApiGatewayV2::Route", {
+      RouteKey: "POST /api/mcp/tools/{toolName}",
+      AuthorizationType: "NONE",
+    });
+  });
+
+  test("MCP audit metric filters and alarms are created", () => {
+    template.resourceCountIs("AWS::Logs::MetricFilter", 3);
+    template.hasResourceProperties("AWS::Logs::MetricFilter", {
+      FilterPattern:
+        '{ $.action = "mcp_tool_call" && $.status = "unauthorized" }',
+      MetricTransformations: Match.arrayWith([
+        Match.objectLike({
+          MetricNamespace: "Saborou/Mcp",
+          MetricName: "Unauthorized",
+          MetricValue: "1",
+        }),
+      ]),
+    });
+    template.resourceCountIs("AWS::CloudWatch::Alarm", 3);
+  });
+
   test("Lambda function has DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE environment variable (U-07b)", () => {
     template.hasResourceProperties("AWS::Lambda::Function", {
       Environment: {
@@ -114,5 +223,25 @@ describe("SaborouApiStack", () => {
         }),
       },
     });
+  });
+
+  test("MCP CfnOutputs distinguish JSON-RPC endpoint from REST tool boundary", () => {
+    const jsonRpcOutputs = template.findOutputs("McpJsonRpcUrl");
+    expect(Object.keys(jsonRpcOutputs)).toHaveLength(1);
+    const jsonRpcOutput = jsonRpcOutputs["McpJsonRpcUrl"];
+    const jsonRpcValueStr = JSON.stringify(jsonRpcOutput.Value);
+    expect(jsonRpcValueStr).toContain("/api/mcp");
+    expect(jsonRpcValueStr).not.toContain("/api/mcp/tools");
+    expect(jsonRpcOutput.Export?.Name).toContain("SaborouMcpJsonRpcUrl");
+
+    // REST adapter base for AgentCore OpenAPI target. This is not the direct
+    // Streamable HTTP JSON-RPC registration URL.
+    const outputs = template.findOutputs("McpToolsBaseUrl");
+    expect(Object.keys(outputs)).toHaveLength(1);
+    const output = outputs["McpToolsBaseUrl"];
+    const valueStr = JSON.stringify(output.Value);
+    expect(valueStr).toContain("/api/mcp/tools");
+    expect(valueStr).not.toEqual(jsonRpcValueStr);
+    expect(output.Export?.Name).toContain("SaborouMcpToolsBaseUrl");
   });
 });

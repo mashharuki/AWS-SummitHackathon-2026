@@ -19,7 +19,12 @@ import {
   PutEventsCommand,
 } from "@aws-sdk/client-eventbridge";
 import { zValidator } from "@hono/zod-validator";
-import { SlackClient, getSlackToken } from "@saboru/agent";
+import {
+  SlackApiError,
+  SlackClient,
+  getSlackToken,
+  getSlackUserToken,
+} from "@saboru/agent";
 import { Hono } from "hono";
 import { z } from "zod";
 import { env } from "../config/env.js";
@@ -27,6 +32,7 @@ import { NotFoundError } from "../errors.js";
 import { authMiddleware } from "../middleware/auth.js";
 import type { DynamoProposalRepository } from "../repositories/DynamoProposalRepository.js";
 import type { DynamoTaskRepository } from "../repositories/DynamoTaskRepository.js";
+import { SlackDelegationService } from "../services/SlackDelegationService.js";
 import type { AppEnv } from "../types.js";
 
 const SyncMessagesSchema = z.object({
@@ -42,6 +48,48 @@ const NotifyTaskSchema = z.object({
   channelId: z.string().min(1),
   /** スレッド返信にする場合の親メッセージ ts */
   threadTs: z.string().optional(),
+});
+
+/**
+ * POST /api/slack/reply のリクエストスキーマ (API-V2-01 / U-V2-06)
+ *
+ * replyText は拡張側で SaboriProposerAgentV2 により生成され、ユーザーが
+ * 音声/ボタンで承認済みの文面。このエンドポイントは Bedrock 生成を行わず、
+ * 受け取った文面をそのまま Slack へ投稿する（送信は不可逆なので承認後のみ呼ぶ）。
+ */
+const SlackReplySchema = z.object({
+  /** 返信が紐づくタスク ID（任意。channelId の自動解決にも使用） */
+  taskId: z.string().min(1).optional(),
+  /** ユーザー承認済みの返信文（このまま Slack に投稿される） */
+  replyText: z.string().min(1).max(4000),
+  /** 投稿先の Slack チャンネル / DM の ID（省略時はタスクの slackChannelId を使用） */
+  channelId: z.string().min(1).optional(),
+  /** スレッド返信にする場合の親メッセージ ts */
+  threadTs: z.string().optional(),
+});
+
+const SlackClaudeDelegationSchema = z.object({
+  taskId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Za-z0-9:_./-]+$/),
+  channelId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(80)
+    .regex(/^[A-Z0-9][A-Z0-9_-]*$/),
+  threadTs: z
+    .string()
+    .trim()
+    .min(1)
+    .max(32)
+    .regex(/^[0-9]{10,}\.[0-9]{1,}$/)
+    .optional(),
+  instruction: z.string().trim().min(1).max(2000).optional(),
+  approved: z.boolean().optional().default(false),
 });
 
 /** verdict をサボロー口調の一言メッセージにする */
@@ -68,15 +116,30 @@ export function createSlackRoute(
   const slack = new Hono<AppEnv>();
   slack.use("*", authMiddleware);
 
-  /** GET /api/slack/channels — Bot が参加しているチャンネル一覧（UI のドロップダウン用） */
+  /** GET /api/slack/channels — Bot が参加しているチャンネル一覧（UI のドロップダウン用）
+   *  ?name=xxx を指定すると名前で部分一致フィルタ（大文字小文字・スペース無視）
+   */
   slack.get("/channels", async (c) => {
     const userId = c.get("userId");
+    const nameQuery = c.req.query("name");
     const botToken = await getSlackToken(userId);
     const client = new SlackClient(botToken);
     const channels = await client.conversationsList();
-    return c.json({
-      channels: channels.map((ch) => ({ id: ch.id, name: ch.name })),
-    });
+    const mapped = channels.map((ch) => ({ id: ch.id, name: ch.name ?? "" }));
+
+    if (nameQuery) {
+      const needle = nameQuery.toLowerCase().replace(/\s+/g, "");
+      const matched = mapped.filter((ch) =>
+        ch.name.toLowerCase().replace(/\s+/g, "").includes(needle),
+      );
+      return c.json({
+        channels: matched,
+        query: nameQuery,
+        total: matched.length,
+      });
+    }
+
+    return c.json({ channels: mapped });
   });
 
   /** POST /api/slack/sync-messages — Slack 履歴を遡及取得してタスク化キューへ投入 */
@@ -187,6 +250,184 @@ export function createSlackRoute(
       });
 
       return c.json({ posted: true, ts: result.ts, verdict });
+    },
+  );
+
+  /** POST /api/slack/delegations — 承認済みタスクを Slack 上の @Claude に委譲する */
+  slack.post(
+    "/delegations",
+    zValidator("json", SlackClaudeDelegationSchema, (result, c) => {
+      if (!result.success) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid request body",
+              details: result.error.flatten(),
+            },
+          },
+          400,
+        );
+      }
+    }),
+    async (c) => {
+      const userId = c.get("userId");
+      const body = c.req.valid("json");
+      const service = new SlackDelegationService(taskRepository);
+
+      const result = await service.delegateToClaude({
+        userId,
+        taskId: body.taskId,
+        channelId: body.channelId,
+        ...(body.threadTs ? { threadTs: body.threadTs } : {}),
+        ...(body.instruction ? { instruction: body.instruction } : {}),
+        approved: body.approved,
+        requestId: c.req.header("x-request-id") ?? crypto.randomUUID(),
+      });
+
+      return c.json(result);
+    },
+  );
+
+  /**
+   * POST /api/slack/reply — 承認済みの返信文を Slack に投稿する (API-V2-01 / U-V2-06)
+   *
+   * operationId: sendSlackReply（AgentCore Gateway MCP ツール `saborou_send_slack_reply`）。
+   * UC-01「Slack 検知 → 音声承認 → 自動送信」の最終ステップ。返信文は拡張側で
+   * 生成・承認済みのものを受け取り、ここでは Bedrock 生成を行わず投稿に専念する。
+   *
+   * Errors:
+   * - 400 VALIDATION_ERROR: replyText / channelId 欠落など
+   * - 502 SLACK_API_ERROR: Slack API が ok:false / HTTP エラーを返した場合
+   */
+  slack.post(
+    "/reply",
+    zValidator("json", SlackReplySchema, (result, c) => {
+      if (!result.success) {
+        return c.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Invalid request body",
+              details: result.error.flatten(),
+            },
+          },
+          400,
+        );
+      }
+    }),
+    async (c) => {
+      const userId = c.get("userId");
+      const {
+        taskId,
+        replyText,
+        channelId: rawChannelId,
+        threadTs,
+      } = c.req.valid("json");
+
+      // channelId が省略または無効な場合、taskId からタスクの slackChannelId を解決する
+      let channelId = rawChannelId;
+      if (!channelId || !/^[A-Z0-9][A-Z0-9_-]*$/.test(channelId)) {
+        if (taskId) {
+          const task = await taskRepository.findById(userId, taskId);
+          channelId = (task as { slackChannelId?: string } | null)
+            ?.slackChannelId;
+        }
+        if (!channelId) {
+          // taskId なし or タスクにも channelId がない場合は最近のタスクから探す
+          const tasks = await taskRepository.findApprovedByUserId(userId);
+          channelId = tasks
+            .map((t) => (t as { slackChannelId?: string }).slackChannelId)
+            .find(Boolean);
+        }
+        if (!channelId) {
+          return c.json(
+            {
+              error: {
+                code: "MISSING_CHANNEL",
+                message:
+                  "channelId が特定できませんでした。channelId を指定してください。",
+              },
+            },
+            400,
+          );
+        }
+      }
+
+      // User Token (xoxp-) を優先して使用。未設定の場合は Bot Token にフォールバック。
+      const userToken = await getSlackUserToken(userId);
+      let token: string;
+      try {
+        token = userToken ?? (await getSlackToken(userId));
+      } catch {
+        return c.json(
+          {
+            error: {
+              code: "SLACK_NOT_CONNECTED",
+              message:
+                "Slack が未連携です。先に Slack 連携を完了してください。",
+            },
+          },
+          424,
+        );
+      }
+      const client = new SlackClient(token);
+
+      try {
+        const result = await client.postMessage({
+          channel: channelId,
+          text: replyText,
+          ...(threadTs ? { thread_ts: threadTs } : {}),
+        });
+        return c.json({
+          ok: true,
+          ts: result.ts,
+          ...(taskId ? { taskId } : {}),
+        });
+      } catch (err) {
+        // Slack API 失敗（invalid_auth / channel_not_found / HTTP エラー等）は
+        // notify-task と異なり 502 で明示する。拡張側は文面を保持したまま再試行できる。
+        if (err instanceof SlackApiError) {
+          console.log(
+            JSON.stringify({
+              level: "ERROR",
+              action: "slack_reply_failed",
+              ...(taskId ? { taskId } : {}),
+              channelId,
+              error: err.message,
+            }),
+          );
+          return c.json(
+            {
+              error: {
+                code: "SLACK_API_ERROR",
+                message: `Slack への返信投稿に失敗しました: ${err.message}`,
+              },
+            },
+            502,
+          );
+        }
+        // タイムアウト (AbortError) やネットワークエラーも 502 で返す
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.log(
+          JSON.stringify({
+            level: "ERROR",
+            action: "slack_reply_unexpected_error",
+            ...(taskId ? { taskId } : {}),
+            channelId,
+            error: errMsg,
+          }),
+        );
+        return c.json(
+          {
+            error: {
+              code: "SLACK_POST_FAILED",
+              message: `Slack への返信投稿に失敗しました: ${errMsg}`,
+            },
+          },
+          502,
+        );
+      }
     },
   );
 

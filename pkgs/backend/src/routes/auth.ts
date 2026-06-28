@@ -68,7 +68,10 @@ export function createAuthRoute(
     //  コールバック時の token 交換は Secrets Manager の client_id/secret を使う。）
     const slackClientId = process.env.SLACK_CLIENT_ID ?? "";
 
-    const redirectUri = `${c.req.url.replace("/auth/slack", "/auth/slack/callback")}`;
+    // SLACK_REDIRECT_URI を優先し、未設定時はリクエスト URL から生成する
+    const redirectUri =
+      process.env.SLACK_REDIRECT_URI ??
+      c.req.url.replace("/auth/slack", "/auth/slack/callback");
 
     // state パラメータに userId + HMAC-SHA256 署名をエンコードして CSRF 対策
     const oauthStateSecret = env.OAUTH_STATE_SECRET;
@@ -77,6 +80,7 @@ export function createAuthRoute(
     const params = new URLSearchParams({
       client_id: slackClientId,
       scope: SLACK_OAUTH_SCOPES,
+      user_scope: "chat:write",
       redirect_uri: redirectUri,
       state,
     });
@@ -161,7 +165,7 @@ export function createAuthRoute(
       ok: boolean;
       access_token?: string;
       team?: { id: string; name: string };
-      authed_user?: { id: string };
+      authed_user?: { id: string; access_token?: string };
       error?: string;
     };
 
@@ -205,6 +209,31 @@ export function createAuthRoute(
       }
     }
 
+    // Store user token in Secrets Manager (xoxp- token for posting as the user)
+    if (tokenData.authed_user?.access_token) {
+      const userSecretName = `saborou/slack-user-token/${userId}`;
+      try {
+        await smClient.send(
+          new CreateSecretCommand({
+            Name: userSecretName,
+            SecretString: tokenData.authed_user.access_token,
+            Description: `Slack user token for Saborou user ${userId}`,
+          }),
+        );
+      } catch (err) {
+        if ((err as { name?: string }).name === "ResourceExistsException") {
+          await smClient.send(
+            new UpdateSecretCommand({
+              SecretId: userSecretName,
+              SecretString: tokenData.authed_user.access_token,
+            }),
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
+
     // Slack identity（ワークスペース・ユーザー）を取得して紐付けに使う
     const slackTeamId = tokenData.team?.id;
     const slackUserId = tokenData.authed_user?.id;
@@ -236,10 +265,37 @@ export function createAuthRoute(
       }
     }
 
-    // Redirect to frontend with success
-    return c.redirect(
-      `${process.env.FRONTEND_URL ?? "http://localhost:5173"}/settings?slack=connected`,
-    );
+    // 拡張機能経由の場合はリダイレクト不要。このタブを閉じる成功ページを返す。
+    // FRONTEND_URL が設定されている場合はフロントへリダイレクト（後方互換）。
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (frontendUrl && !frontendUrl.includes("localhost")) {
+      return c.redirect(`${frontendUrl}/settings?slack=connected`);
+    }
+    return c.html(`<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slack連携完了 - SABOROU</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #fffaf5; }
+    .card { text-align: center; padding: 2rem; background: white; border-radius: 1rem; border: 2px solid #2b1e16; box-shadow: 0 4px 0 #2b1e16; max-width: 320px; }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.25rem; font-weight: 900; color: #1f2937; margin: 0 0 0.5rem; }
+    p { font-size: 0.875rem; color: #6b7280; margin: 0 0 1.5rem; }
+    button { background: #f97316; color: white; border: none; border-radius: 0.5rem; padding: 0.75rem 2rem; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+    button:hover { background: #ea6c0a; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✅</div>
+    <h1>Slack連携が完了しました</h1>
+    <p>SABOROUとSlackが接続されました。このタブを閉じて拡張機能に戻ってください。</p>
+    <button onclick="window.close()">このタブを閉じる</button>
+  </div>
+</body>
+</html>`);
   });
 
   return auth;

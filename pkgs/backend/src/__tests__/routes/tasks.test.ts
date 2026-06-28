@@ -5,7 +5,10 @@
  * テスト範囲: 一覧・作成・取得・更新・削除・候補承認/却下。
  */
 
-import type { SchedulePlannerAgent } from "@saboru/agent";
+import type {
+  SaboriProposerAgentV2,
+  SchedulePlannerAgent,
+} from "@saboru/agent";
 import type { Task, TaskCandidate } from "@saboru/shared";
 import { Hono } from "hono";
 import { describe, expect, it, vi } from "vitest";
@@ -22,6 +25,7 @@ function buildTestApp(
   taskRepo: Partial<DynamoTaskRepository>,
   candidateRepo: Partial<DynamoTaskCandidateRepository>,
   plannerAgent: Partial<SchedulePlannerAgent> = {},
+  proposerV2?: Partial<SaboriProposerAgentV2>,
 ) {
   const app = new Hono<AppEnv>();
 
@@ -41,6 +45,7 @@ function buildTestApp(
       taskRepo as DynamoTaskRepository,
       candidateRepo as DynamoTaskCandidateRepository,
       plannerAgent as SchedulePlannerAgent,
+      proposerV2 as SaboriProposerAgentV2 | undefined,
     ),
   );
   app.onError(errorHandler);
@@ -690,5 +695,66 @@ describe("PATCH /tasks/:taskId/planned-steps", () => {
       "01ABC",
       stepsWithoutAnchorAt,
     );
+  });
+});
+
+describe("POST /tasks/:id/report (U-V2-07)", () => {
+  it("generates a progress report text and returns it", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const draftReply = vi.fn().mockResolvedValue({
+      replyText: "現在確認・調整中です。引き続き対応いたします。",
+      tone: "polite",
+      reasoning: ["締切が設定されているため進捗を共有"],
+    });
+    const app = buildTestApp(taskRepo, {}, {}, { draftReply });
+
+    const res = await app.request("/tasks/01ABC/report", { method: "POST" });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.taskId).toBe("01ABC");
+    expect(body.reportText).toContain("確認・調整中");
+    expect(body.tone).toBe("polite");
+    expect(draftReply).toHaveBeenCalledOnce();
+    // taskStatus にタスク名が含まれる
+    const arg = draftReply.mock.calls[0][0];
+    expect(arg.taskStatus).toContain("テストタスク");
+    expect(arg.contextHint).toContain("過去のユーザー本人のSlack発言");
+    expect(arg.contextHint).toContain("あたかも本人が言っているような");
+  });
+
+  it("returns 404 when the task is not found / not owned", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(null) };
+    const draftReply = vi.fn();
+    const app = buildTestApp(taskRepo, {}, {}, { draftReply });
+
+    const res = await app.request("/tasks/missing/report", { method: "POST" });
+
+    expect(res.status).toBe(404);
+    expect(draftReply).not.toHaveBeenCalled();
+  });
+
+  it("returns 503 when the V2 agent is not wired in", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    // proposerV2 を渡さない（v1 後方互換: /report は 503）
+    const app = buildTestApp(taskRepo, {});
+
+    const res = await app.request("/tasks/01ABC/report", { method: "POST" });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe("REPORT_GENERATION_FAILED");
+  });
+
+  it("returns 503 when report generation fails (Bedrock error)", async () => {
+    const taskRepo = { findById: vi.fn().mockResolvedValue(sampleTask) };
+    const draftReply = vi.fn().mockRejectedValue(new Error("bedrock timeout"));
+    const app = buildTestApp(taskRepo, {}, {}, { draftReply });
+
+    const res = await app.request("/tasks/01ABC/report", { method: "POST" });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error.code).toBe("REPORT_GENERATION_FAILED");
   });
 });

@@ -181,3 +181,177 @@ curl -N -H "Authorization: Bearer <token>" \
 | CDK スタック間 | cdk synth | Errors=0 |
 | Slack → DynamoDB | 手動（実環境） | 要 AWS 環境 |
 | SSE ストリーミング | 手動（実環境） | 要 AWS 環境 |
+
+---
+
+---
+
+# v3 統合テスト手順（MCP Serverization — 2026-06-18）
+
+## v3 統合ポイントの全体像
+
+```
+ElevenLabs Agent
+    │ (streamable_http または SSE)
+    ▼
+[AgentCore Gateway] ──IAM Auth──► [MCP Adapter /api/mcp/tools/{toolName}]
+                                           │
+                          ┌────────────────┼─────────────────┐
+                          ▼                ▼                 ▼
+                   [Identity Resolver] [Tool Registry]  [Precheck]
+                          │                │                 │
+                          └────────────────┴─────────────────┘
+                                           │
+                              Cognito JWT 認証維持 ◄── [既存 Hono JWT routes]
+                                           │
+                                           ▼
+                              [既存バックエンドルート]
+                                    │           │
+                              [DynamoDB]   [Slack API]
+                                                │
+                                       (@Claude 委譲の場合)
+                                                ▼
+                                      [Slack #task-channel]
+                                         Claude @mention
+```
+
+---
+
+## v3 Unit 間統合テスト
+
+### v3-1. U-V3-01 ↔ U-V3-02: MCP アダプタ ↔ ツールレジストリ統合
+
+**検証内容**: `/api/mcp/tools/{toolName}` が allowlist 外ツール呼び出しを拒否すること
+
+```bash
+# backend の MCP 関連テストを実行
+pnpm --filter backend test -- --testPathPattern="mcp|registry"
+```
+
+合格基準: MCP テスト全パス（precheck が allowlist 外で 403 を返す）
+
+---
+
+### v3-2. U-V3-01 ↔ U-V3-03: MCP アダプタ ↔ Slack 委譲統合
+
+**検証内容**: `saborou_delegate_to_claude` が approval metadata なしで Slack 投稿しないこと
+
+```bash
+pnpm --filter backend test -- --testPathPattern="slackDelegation"
+```
+
+合格基準: approval なし呼び出しが 400/403 を返すこと
+
+---
+
+### v3-3. U-V3-04 ↔ U-V3-01: ElevenLabs フォールバック ↔ MCP アダプタ統合
+
+**検証内容**: mcpFallback.ts が適切な FallbackMode を検出し、直接 Hono API を呼び出すこと
+
+```bash
+pnpm --filter extension test -- --testPathPattern="mcpFallback|agentClient"
+```
+
+合格基準: mcpFallback テスト 15件 + agentClient テスト 6件 全パス
+
+---
+
+### v3-4. CDK スタック間統合（v3 追加リソース）
+
+```bash
+cd pkgs/cdk && npx cdk synth
+bash scripts/verify-cdk-synth.sh
+```
+
+確認項目:
+- `McpToolsBaseUrl` CfnOutput が API スタック出力に存在すること
+- `McpCallsMetricFilter` と `McpUnauthorizedAlarm` が API スタックに存在すること
+- AgentCore Gateway ターゲット設定が agent スタックに存在すること
+
+---
+
+### v3-5. AgentCore Gateway 統合（実環境 — 手動）
+
+前提: CDK デプロイ完了、AgentCore Gateway ARN 取得済み
+
+```bash
+# AgentCore Gateway の状態確認
+bash scripts/verify-agentcore.sh
+```
+
+期待される出力:
+```
+[PASS] AgentCore Gateway: ACTIVE
+[PASS] GatewayTarget: ACTIVE
+[INFO] McpToolsBaseUrl: https://xxxx.execute-api.ap-northeast-1.amazonaws.com/prod
+```
+
+---
+
+### v3-6. MCP 認証フロー統合（実環境 — 手動）
+
+前提: Cognito ユーザープール・クライアント ID 設定済み
+
+```bash
+bash scripts/verify-mcp-auth.sh
+```
+
+期待される動作:
+1. IAM 認証のみのリクエスト → 401 拒否（userId 解決不可）
+2. Cognito JWT 付きリクエスト → 200 成功
+3. allowlist 外ツール名 → 403 拒否
+
+---
+
+### v3-7. ElevenLabs MCP 統合（実環境 — 手動）
+
+前提: ElevenLabs Dashboard でエージェントに MCP サーバー登録済み（ELEVENLABS_MCP_SETUP.md 参照）
+
+検証シナリオ:
+1. ElevenLabs 音声エージェントに「今日のタスクを教えて」と話しかける
+2. エージェントが AgentCore → MCP Adapter 経由で `saborou_get_tasks` を呼び出す
+3. タスク一覧が音声で返却される
+
+証拠: `evidence/elevenlabs-mcp/` にスクリーンショットまたはログを保存
+
+---
+
+### v3-8. Slack @Claude 委譲統合（実環境 — 手動）
+
+前提: Slack Bot Token が Secrets Manager に登録済み、テストチャンネルが存在する
+
+検証シナリオ:
+1. MCP 経由または UI で `saborou_delegate_to_claude` を approval metadata 付きで呼び出す
+2. Slack テストチャンネルに @claude メンション付きタスク委譲メッセージが投稿される
+3. メッセージにタスクタイトル・背景・期待成果物・制約が含まれること
+
+証拠: `evidence/slack-delegation/` にスクリーンショットを保存
+
+---
+
+### v3-9. CloudWatch ログ・アラーム統合（実環境 — 手動）
+
+```bash
+bash scripts/verify-cloudwatch.sh
+```
+
+確認項目:
+- API Gateway アクセスログに MCP 呼び出しのエントリが存在すること
+- `McpCallsMetricFilter` が呼び出し件数をカウントしていること
+- 404 テストリクエストに対して `McpUnauthorizedAlarm` が ALARM 状態になること（閾値設定確認）
+
+---
+
+## v3 統合テスト合格基準まとめ
+
+| 統合ポイント | テスト方法 | 合格基準 |
+|------------|---------|--------|
+| MCP アダプタ ↔ ツールレジストリ | 自動（vitest） | backend 437テスト全パス |
+| MCP アダプタ ↔ Slack 委譲 | 自動（vitest） | slackDelegation テスト全パス |
+| ElevenLabs フォールバック ↔ MCP | 自動（vitest） | extension 187テスト全パス |
+| CDK v3 スタック間 | cdk synth / verify-cdk-synth.sh | Errors=0 + 全出力値存在 |
+| AgentCore Gateway 疎通 | 手動（verify-agentcore.sh） | ACTIVE status 確認 |
+| MCP 認証フロー | 手動（verify-mcp-auth.sh） | 認証なし拒否 + 認証あり成功 |
+| ElevenLabs 音声 MCP 呼び出し | 手動（ELEVENLABS_MCP_SETUP.md） | タスク取得成功 + 証拠保存 |
+| Slack @Claude 委譲 | 手動（DEMO_RUNBOOK.md） | 委譲メッセージ投稿 + 証拠保存 |
+| CloudWatch ログ・アラーム | 手動（verify-cloudwatch.sh） | ログ存在 + アラーム設定確認 |

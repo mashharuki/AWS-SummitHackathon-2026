@@ -7,19 +7,19 @@
    Base
    ========================================= */
 section {
-  --accent:      #3b82f6;
+  --accent: #3b82f6;
   --accent-warm: #f59e0b;
-  --dark:        #0f172a;
-  --dark-2:      #1e293b;
-  --muted:       #64748b;
-  --border:      #e2e8f0;
-  --bg-subtle:   #f8fafc;
+  --dark: #0f172a;
+  --dark-2: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --bg-subtle: #f8fafc;
 
   width: 1280px;
   height: 720px;
   box-sizing: border-box;
-  font-family: 'Hiragino Sans', 'BIZ UDGothic', 'Yu Gothic Medium',
-               'Noto Sans JP', 'Segoe UI', -apple-system, sans-serif;
+  font-family: "Hiragino Sans", "BIZ UDGothic", "Yu Gothic Medium",
+    "Noto Sans JP", "Segoe UI", -apple-system, sans-serif;
   background: #ffffff;
   color: #1e293b;
   padding: 48px 72px 58px;
@@ -32,9 +32,11 @@ section {
 
 /* Gradient top bar on all slides */
 section::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 4px;
   background: linear-gradient(90deg, var(--accent), var(--accent-warm));
 }
@@ -77,23 +79,44 @@ h3 {
   margin: 14px 0 8px;
 }
 
-p { margin: 8px 0; }
+p {
+  margin: 8px 0;
+}
 
 /* Lists */
-ul, ol { margin: 8px 0; padding-left: 1.4em; }
-li { margin: 5px 0; }
-ul > li::marker { color: var(--accent); font-size: 1.1em; }
-ol > li::marker { color: var(--accent); font-weight: 700; }
+ul,
+ol {
+  margin: 8px 0;
+  padding-left: 1.4em;
+}
+li {
+  margin: 5px 0;
+}
+ul > li::marker {
+  color: var(--accent);
+  font-size: 1.1em;
+}
+ol > li::marker {
+  color: var(--accent);
+  font-weight: 700;
+}
 
 /* Emphasis — use to draw attention to key terms */
-strong { color: var(--accent); font-weight: 700; }
-em     { color: var(--accent-warm); font-style: normal; font-weight: 600; }
+strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+em {
+  color: var(--accent-warm);
+  font-style: normal;
+  font-weight: 600;
+}
 
 /* =========================================
    Code
    ========================================= */
 code {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Source Code Pro', monospace;
+  font-family: "JetBrains Mono", "Fira Code", "Source Code Pro", monospace;
   background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -142,7 +165,9 @@ td {
   border-bottom: 1px solid var(--border);
 }
 
-tr:nth-child(even) td { background: var(--bg-subtle); }
+tr:nth-child(even) td {
+  background: var(--bg-subtle);
+}
 
 /* =========================================
    Blockquote
@@ -175,7 +200,9 @@ section.title {
   padding-bottom: 64px;
 }
 
-section.title::before { height: 6px; }
+section.title::before {
+  height: 6px;
+}
 
 section.title h1 {
   color: white;
@@ -187,7 +214,7 @@ section.title h1 {
 }
 
 section.title h2 {
-  color: rgba(255,255,255,0.65);
+  color: rgba(255, 255, 255, 0.65);
   font-size: 1.0em;
   font-weight: 400;
   border-bottom: none;
@@ -195,7 +222,7 @@ section.title h2 {
 }
 
 section.title p {
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.8em;
   margin-top: 28px;
 }
@@ -208,18 +235,18 @@ section.section {
 }
 
 section.section::before {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 section.section h2 {
   color: white;
   font-size: 2.0em;
-  border-bottom: 2px solid rgba(255,255,255,0.4);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
   padding-bottom: 12px;
 }
 
 section.section p {
-  color: rgba(255,255,255,0.8);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 0.9em;
 }
 
@@ -247,7 +274,9 @@ section.dark {
   color: #e2e8f0;
 }
 
-section.dark h1 { color: white; }
+section.dark h1 {
+  color: white;
+}
 
 section.dark h2 {
   color: white;
@@ -260,9 +289,15 @@ section.dark code {
   color: #94a3b8;
 }
 
-section.dark td { border-color: #334155; }
-section.dark tr:nth-child(even) td { background: #1e293b; }
-section.dark blockquote { background: #1e293b; }
+section.dark td {
+  border-color: #334155;
+}
+section.dark tr:nth-child(even) td {
+  background: #1e293b;
+}
+section.dark blockquote {
+  background: #1e293b;
+}
 
 /* --- ending: Thank you / closing slide --- */
 section.ending {
@@ -273,7 +308,9 @@ section.ending {
   text-align: center;
 }
 
-section.ending::before { height: 6px; }
+section.ending::before {
+  height: 6px;
+}
 
 section.ending h1 {
   color: white;
@@ -283,14 +320,14 @@ section.ending h1 {
 }
 
 section.ending h2 {
-  color: rgba(255,255,255,0.65);
+  color: rgba(255, 255, 255, 0.65);
   border-bottom: none;
   font-weight: 400;
   font-size: 1.0em;
 }
 
 section.ending p {
-  color: rgba(255,255,255,0.5);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.82em;
   margin-top: 20px;
 }
@@ -308,10 +345,19 @@ section.ending p {
   align-items: start;
 }
 
-.columns.col-3    { grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
-.columns.col-6-4  { grid-template-columns: 3fr 2fr; }
-.columns.col-4-6  { grid-template-columns: 2fr 3fr; }
-.columns.middle   { align-items: center; }
+.columns.col-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+.columns.col-6-4 {
+  grid-template-columns: 3fr 2fr;
+}
+.columns.col-4-6 {
+  grid-template-columns: 2fr 3fr;
+}
+.columns.middle {
+  align-items: center;
+}
 
 /* Card */
 .card {
@@ -322,15 +368,31 @@ section.ending p {
   margin: 6px 0;
 }
 
-.card.accent  { border-left: 4px solid var(--accent);      background: rgba(59,130,246,0.04); }
-.card.warn    { border-left: 4px solid var(--accent-warm); background: rgba(245,158,11,0.04); }
-.card.success { border-left: 4px solid #22c55e;            background: rgba(34,197,94,0.04); }
-.card.danger  { border-left: 4px solid #ef4444;            background: rgba(239,68,68,0.04); }
+.card.accent {
+  border-left: 4px solid var(--accent);
+  background: rgba(59, 130, 246, 0.04);
+}
+.card.warn {
+  border-left: 4px solid var(--accent-warm);
+  background: rgba(245, 158, 11, 0.04);
+}
+.card.success {
+  border-left: 4px solid #22c55e;
+  background: rgba(34, 197, 94, 0.04);
+}
+.card.danger {
+  border-left: 4px solid #ef4444;
+  background: rgba(239, 68, 68, 0.04);
+}
 
 /* Highlight box — key messages */
 .highlight {
-  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(245,158,11,0.08));
-  border: 1px solid rgba(59,130,246,0.2);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.08),
+    rgba(245, 158, 11, 0.08)
+  );
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 10px;
   padding: 14px 22px;
   font-size: 1.05em;
@@ -349,7 +411,9 @@ section.ending p {
   letter-spacing: -0.03em;
 }
 
-.number.warm { color: var(--accent-warm); }
+.number.warm {
+  color: var(--accent-warm);
+}
 
 /* Tag / badge */
 .tag {
@@ -365,10 +429,20 @@ section.ending p {
   margin: 0 3px;
 }
 
-.tag.warm    { background: var(--accent-warm); }
-.tag.success { background: #22c55e; }
-.tag.danger  { background: #ef4444; }
-.tag.outline { background: none; border: 1.5px solid var(--accent); color: var(--accent); }
+.tag.warm {
+  background: var(--accent-warm);
+}
+.tag.success {
+  background: #22c55e;
+}
+.tag.danger {
+  background: #ef4444;
+}
+.tag.outline {
+  background: none;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+}
 
 /* Icon row — emoji + label */
 .icons {
@@ -379,9 +453,20 @@ section.ending p {
   margin: 16px 0;
 }
 
-.icon-item { text-align: center; flex: 1; }
-.icon-item .icon  { font-size: 2.2em; display: block; margin-bottom: 6px; }
-.icon-item .label { font-size: 0.75em; font-weight: 600; color: var(--muted); }
+.icon-item {
+  text-align: center;
+  flex: 1;
+}
+.icon-item .icon {
+  font-size: 2.2em;
+  display: block;
+  margin-bottom: 6px;
+}
+.icon-item .label {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--muted);
+}
 
 /* Progress bar */
 .progress {
@@ -399,7 +484,9 @@ section.ending p {
 }
 
 /* Step list — numbered steps with visual treatment */
-.steps { counter-reset: step; }
+.steps {
+  counter-reset: step;
+}
 .step {
   display: flex;
   align-items: flex-start;

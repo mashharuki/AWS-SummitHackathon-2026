@@ -52,10 +52,20 @@ describe("SaborouWebhookStack", () => {
   });
 
   test("EventBridge Scheduler is created for background refresh", () => {
-    template.resourceCountIs("AWS::Scheduler::Schedule", 1);
+    // 背景リフレッシュ（rate(1 hour) / ENABLED）+ 進捗報告（17:00 JST / DISABLED）
+    template.resourceCountIs("AWS::Scheduler::Schedule", 2);
     template.hasResourceProperties("AWS::Scheduler::Schedule", {
       ScheduleExpression: "rate(1 hour)",
       State: "ENABLED",
+    });
+  });
+
+  test("EventBridge Scheduler is defined for the 17:00 JST progress report (U-V2-07)", () => {
+    // MVP: 手動 endpoint を主軸とするため DISABLED で定義のみ。
+    // cron(0 8 * * ? *) = UTC 08:00 = 17:00 JST。
+    template.hasResourceProperties("AWS::Scheduler::Schedule", {
+      ScheduleExpression: "cron(0 8 * * ? *)",
+      State: "DISABLED",
     });
   });
 

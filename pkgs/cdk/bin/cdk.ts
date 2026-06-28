@@ -8,6 +8,7 @@ import {
   CUSTOM_DOMAIN,
 } from "../lib/stacks/acm-us-east-1-stack";
 import { SaborouAgentStack } from "../lib/stacks/agent-stack";
+import { SaborouAgentCoreStack } from "../lib/stacks/agentcore-stack";
 import { SaborouApiStack } from "../lib/stacks/api-stack";
 import { SaborouCognitoStack } from "../lib/stacks/cognito-stack";
 import { SaborouConfigDeployStack } from "../lib/stacks/config-deploy-stack";
@@ -22,6 +23,12 @@ const environment = app.node.tryGetContext("environment") ?? "dev";
 // デフォルト false のため既存挙動は維持される。
 const useCustomDomain =
   (app.node.tryGetContext("customDomain") as string | undefined) === "true";
+
+// -c enableAgentCore=false で AgentCore Gateway スタックを無効化する。
+// デフォルト true（明示的に "false" のときのみ無効）。AgentCore がリージョン未対応でも
+// 他スタックは独立してデプロイできるよう、デモ堅牢性のためのフラグ。
+const enableAgentCore =
+  (app.node.tryGetContext("enableAgentCore") as string | undefined) !== "false";
 
 const env = {
   account: process.env.CDK_DEFAULT_ACCOUNT,
@@ -161,6 +168,18 @@ new SaborouWebhookStack(app, `SaborouWebhook-${environment}`, {
   api: apiStack.exports,
   agents: agentStack.exports,
 });
+
+// AgentCore Gateway — Hono API を MCP サーバーとして公開（U-V2-04）。
+// enableAgentCore=false で無効化可能（リージョン未対応時のデモ堅牢性）。
+// 他スタックと独立してデプロイできるよう Cognito / Api の出力値のみを受け取る。
+if (enableAgentCore) {
+  new SaborouAgentCoreStack(app, `SaborouAgentCore-${environment}`, {
+    env,
+    cognitoUserPoolId: cognitoStack.exports.userPool.userPoolId,
+    cognitoClientId: cognitoStack.exports.userPoolClient.userPoolClientId,
+    httpApiId: apiStack.exports.httpApiId,
+  });
+}
 
 // Step 4: ConfigDeployStack — FrontendStack・CognitoStack・ApiStack のすべてが
 // 確定した後に env-config.json を S3 へ書き込む。循環依存を回避するため分離。

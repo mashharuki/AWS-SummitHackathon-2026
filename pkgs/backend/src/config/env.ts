@@ -74,4 +74,19 @@ export const env = {
   get DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE(): string {
     return requireEnv("DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE");
   },
+  // --- Travelpayouts / Aviasales ---
+  get TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN(): string | undefined {
+    return optionalEnv("TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN");
+  },
+  // --- Marp Slides S3 bucket ---
+  get MARP_SLIDES_BUCKET_NAME(): string | undefined {
+    return optionalEnv("MARP_SLIDES_BUCKET_NAME");
+  },
+  // --- Travel itinerary HTML publishing ---
+  get TRAVEL_ITINERARY_BUCKET_NAME(): string | undefined {
+    return optionalEnv("TRAVEL_ITINERARY_BUCKET_NAME");
+  },
+  get TRAVEL_ITINERARY_PUBLIC_BASE_URL(): string | undefined {
+    return optionalEnv("TRAVEL_ITINERARY_PUBLIC_BASE_URL");
+  },
 } as const;

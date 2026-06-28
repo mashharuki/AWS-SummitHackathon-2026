@@ -4,12 +4,12 @@
  * Copy this template to lib/bot.test.ts and customize
  * for your specific bot implementation.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from "vitest";
 // Import mock factories from test setup
 // import { createMockThread, createMockMessage } from './__tests__/setup';
 
 // Mock dependencies
-vi.mock('ai', () => ({
+vi.mock("ai", () => ({
   tool: vi.fn((config) => config),
   generateText: vi.fn(),
   streamText: vi.fn(),
@@ -25,7 +25,7 @@ function createMockThread(overrides = {}) {
       get: vi.fn().mockResolvedValue(null),
       set: vi.fn().mockResolvedValue(undefined),
     },
-    channelId: 'C12345678',
+    channelId: "C12345678",
     threadTs: undefined,
     ...overrides,
   };
@@ -33,22 +33,22 @@ function createMockThread(overrides = {}) {
 
 function createMockMessage(overrides = {}) {
   return {
-    text: 'test message',
-    userId: 'U12345678',
-    ts: '1234567890.123456',
+    text: "test message",
+    userId: "U12345678",
+    ts: "1234567890.123456",
     ...overrides,
   };
 }
 
-describe('bot.onNewMention handler', () => {
+describe("bot.onNewMention handler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('mention handling', () => {
-    it('should subscribe to thread and respond', async () => {
+  describe("mention handling", () => {
+    it("should subscribe to thread and respond", async () => {
       const thread = createMockThread();
-      const message = createMockMessage({ text: 'hello' });
+      const message = createMockMessage({ text: "hello" });
 
       // TODO: Import and call your mention handler
       // await handleMention(thread, message);
@@ -58,9 +58,9 @@ describe('bot.onNewMention handler', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should start typing indicator for long operations', async () => {
+    it("should start typing indicator for long operations", async () => {
       const thread = createMockThread();
-      const message = createMockMessage({ text: 'analyze this data' });
+      const message = createMockMessage({ text: "analyze this data" });
 
       // TODO: Adapt to your implementation
       // await handleMention(thread, message);
@@ -68,9 +68,9 @@ describe('bot.onNewMention handler', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle errors gracefully', async () => {
+    it("should handle errors gracefully", async () => {
       const thread = createMockThread();
-      const message = createMockMessage({ text: 'trigger error' });
+      const message = createMockMessage({ text: "trigger error" });
 
       // TODO: Test error handling
       // await handleMention(thread, message);
@@ -81,10 +81,10 @@ describe('bot.onNewMention handler', () => {
     });
   });
 
-  describe('subscribed message handling', () => {
-    it('should handle follow-up messages', async () => {
-      const thread = createMockThread({ threadTs: '123.400' });
-      const message = createMockMessage({ text: 'continue' });
+  describe("subscribed message handling", () => {
+    it("should handle follow-up messages", async () => {
+      const thread = createMockThread({ threadTs: "123.400" });
+      const message = createMockMessage({ text: "continue" });
 
       // TODO: Import and call your subscribed message handler
       // await handleSubscribedMessage(thread, message);
@@ -93,14 +93,14 @@ describe('bot.onNewMention handler', () => {
     });
   });
 
-  describe('thread state', () => {
-    it('should read and write thread state', async () => {
+  describe("thread state", () => {
+    it("should read and write thread state", async () => {
       const thread = createMockThread();
       thread.state.get.mockResolvedValue([
-        { role: 'user', content: 'previous message' },
+        { role: "user", content: "previous message" },
       ]);
 
-      const message = createMockMessage({ text: 'new message' });
+      const message = createMockMessage({ text: "new message" });
 
       // TODO: Test state handling
       // await handleSubscribedMessage(thread, message);
@@ -109,11 +109,11 @@ describe('bot.onNewMention handler', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle missing state gracefully', async () => {
+    it("should handle missing state gracefully", async () => {
       const thread = createMockThread();
       thread.state.get.mockResolvedValue(null);
 
-      const message = createMockMessage({ text: 'first message' });
+      const message = createMockMessage({ text: "first message" });
 
       // TODO: Test with no existing state
       // await handleSubscribedMessage(thread, message);
@@ -122,12 +122,12 @@ describe('bot.onNewMention handler', () => {
     });
   });
 
-  describe('slash command handling', () => {
-    it('should process slash command', async () => {
+  describe("slash command handling", () => {
+    it("should process slash command", async () => {
       const event = {
-        text: 'test input',
-        userId: 'U12345678',
-        channelId: 'C12345678',
+        text: "test input",
+        userId: "U12345678",
+        channelId: "C12345678",
         thread: createMockThread(),
         openModal: vi.fn(),
       };

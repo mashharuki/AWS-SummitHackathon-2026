@@ -25,6 +25,7 @@
  * PATCH  /tasks/:id                      — インライン編集
  * DELETE /tasks/:id                      — 論理削除
  * GET    /tasks/:taskId/proposal         — サボり提案 (SSE / 同期)
+ * POST   /api/proposals/judge            — 返信文ドラフト生成 (Chrome 拡張向け)
  * GET    /tasks/:taskId/schedule         — スケジュール (3バンドガント) 生成
  * POST   /tasks/:taskId/honne            — 本音記録
  * GET    /connections                    — サービス接続
@@ -36,8 +37,12 @@ import { serve } from "@hono/node-server";
 import { swaggerUI } from "@hono/swagger-ui";
 import {
   BedrockClientAdapter,
+  GoalDecomposerAgent,
   PersonaRenderer,
   SaboriProposerAgent,
+  SaboriProposerAgentV2,
+  SaborouChatAgent,
+  ScreenAnalysisAgent,
   SchedulePlannerAgent,
   TaskExtractorAgent,
 } from "@saboru/agent";
@@ -59,13 +64,27 @@ import { createConnectionsRoute } from "./routes/connections.js";
 import { createGoogleAuthRoute } from "./routes/google-auth.js";
 import { createGoogleRoute } from "./routes/google.js";
 import { healthRoute } from "./routes/health.js";
+import { createChatRoute } from "./routes/chat.js";
 import { createHonneRoute } from "./routes/honne.js";
+import { createVisionRoute } from "./routes/vision.js";
+import { createMarpRoute } from "./routes/marp.js";
+import { createMcpJsonRpcRoute } from "./routes/mcp-jsonrpc.js";
+import { createMcpRoute } from "./routes/mcp.js";
 import { createProposalsRoute } from "./routes/proposals.js";
 import { createScheduleRoute } from "./routes/schedule.js";
 import { createSlackRoute } from "./routes/slack.js";
 import { createTasksRoute } from "./routes/tasks.js";
+import { createTravelRoute } from "./routes/travel.js";
 import { createUsersRoute } from "./routes/users.js";
 import { GoogleTokenService } from "./services/GoogleTokenService.js";
+import { SlackDelegationService } from "./services/SlackDelegationService.js";
+import { S3Client } from "@aws-sdk/client-s3";
+import { MarpSlideService } from "./marp/MarpSlideService.js";
+import { MarpSlideSlackPostService } from "./marp/MarpSlideSlackPostService.js";
+import { TravelItineraryPublisher } from "./travel/TravelItineraryPublisher.js";
+import { TravelPlanSlackPostService } from "./travel/TravelPlanSlackPostService.js";
+import { TravelPlanningService } from "./travel/TravelPlanningService.js";
+import { TravelpayoutsClient } from "./travel/TravelpayoutsClient.js";
 
 // DynamoDB クライアントを初期化 (全リポジトリで共有)
 const dynamoClient = new DynamoDBClient({
@@ -102,6 +121,7 @@ const googleCalendarCacheRepository = new DynamoGoogleCalendarCacheRepository(
   dynamoClient,
   env.DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE,
 );
+const slackDelegationService = new SlackDelegationService(taskRepository);
 
 // Initialize SaboriProposerAgent (U-03b dependency)
 const bedrockClient = new BedrockClientAdapter();
@@ -120,6 +140,51 @@ const taskExtractorAgent = new TaskExtractorAgent(
 
 // Initialize SchedulePlannerAgent (3バンドガント生成で使用 / U-G04)
 const schedulePlannerAgent = new SchedulePlannerAgent(bedrockClient);
+
+// Initialize SaboriProposerAgentV2 (進捗報告文生成で使用 / U-V2-07)
+const saboriProposerAgentV2 = new SaboriProposerAgentV2(bedrockClient);
+
+// Initialize GoalDecomposerAgent (PM WBS分解で使用)
+const goalDecomposerAgent = new GoalDecomposerAgent(bedrockClient);
+
+// Initialize SaborouChatAgent (余白タブのサボロー対話で使用)
+const saborouChatAgent = new SaborouChatAgent(bedrockClient);
+
+// Initialize ScreenAnalysisAgent (余白タブの画面判定 / 復帰チェックで使用)
+const screenAnalysisAgent = new ScreenAnalysisAgent(bedrockClient);
+const travelpayoutsClient = env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN
+  ? new TravelpayoutsClient({
+      credentialsSecretArn: env.TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN,
+    })
+  : undefined;
+const travelPlanningService = new TravelPlanningService({
+  travelpayoutsClient,
+  bedrockClient,
+});
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION ?? "ap-northeast-1",
+});
+const travelItineraryPublisher =
+  env.TRAVEL_ITINERARY_BUCKET_NAME && env.TRAVEL_ITINERARY_PUBLIC_BASE_URL
+    ? new TravelItineraryPublisher({
+        s3BucketName: env.TRAVEL_ITINERARY_BUCKET_NAME,
+        publicBaseUrl: env.TRAVEL_ITINERARY_PUBLIC_BASE_URL,
+        s3Client,
+      })
+    : undefined;
+const travelPlanSlackPostService = new TravelPlanSlackPostService(
+  travelPlanningService,
+  { itineraryPublisher: travelItineraryPublisher },
+);
+const marpSlideService = new MarpSlideService({
+  bedrockClient,
+  s3BucketName: env.MARP_SLIDES_BUCKET_NAME,
+  s3Client,
+});
+const marpSlideSlackPostService = new MarpSlideSlackPostService(
+  marpSlideService,
+  { taskRepository },
+);
 
 /**
  * Google アクセストークン取得のデフォルト実装（U-G04 schedule ルート用）。
@@ -162,7 +227,13 @@ export function createApp() {
   app.route("/api/auth", createGoogleAuthRoute(connectionRepository));
   app.route(
     "/api/tasks",
-    createTasksRoute(taskRepository, candidateRepository, schedulePlannerAgent),
+    createTasksRoute(
+      taskRepository,
+      candidateRepository,
+      schedulePlannerAgent,
+      saboriProposerAgentV2,
+      goalDecomposerAgent,
+    ),
   );
   // Proposal and honne share the /api/tasks prefix for :taskId param
   app.route(
@@ -173,12 +244,33 @@ export function createApp() {
       saboriProposerAgent,
       userRepository,
       googleCalendarCacheRepository,
+      saboriProposerAgentV2,
+    ),
+  );
+  // Chrome 拡張（agentClient.judgeTask）が呼ぶ POST /api/proposals/judge を提供する。
+  // 同一ルートを /api/proposals にもマウントし、/judge ハンドラーを公開する。
+  app.route(
+    "/api/proposals",
+    createProposalsRoute(
+      taskRepository,
+      proposalRepository,
+      saboriProposerAgent,
+      userRepository,
+      googleCalendarCacheRepository,
+      saboriProposerAgentV2,
     ),
   );
   app.route(
     "/api/tasks",
     createHonneRoute(taskRepository, honneRepository, proposalRepository),
   );
+  // 余白タブのサボロー対話（POST /api/chat）
+  app.route(
+    "/api/chat",
+    createChatRoute(saborouChatAgent, honneRepository, userRepository),
+  );
+  // 余白タブの画面判定（POST /api/vision/analyze-screen）
+  app.route("/api/vision", createVisionRoute(screenAnalysisAgent));
   // Schedule (3バンドガント) も /api/tasks プレフィックスに相乗り（U-G04）
   app.route(
     "/api/tasks",
@@ -191,6 +283,51 @@ export function createApp() {
   );
   app.route("/api/connections", createConnectionsRoute(connectionRepository));
   app.route("/api/slack", createSlackRoute(taskRepository, proposalRepository));
+  app.route(
+    "/api/travel",
+    createTravelRoute(
+      {
+        plan: (input) => travelPlanningService.plan(input),
+        planAndPostToSlack: (input) =>
+          travelPlanSlackPostService.planAndPostToSlack(input),
+      },
+      travelItineraryPublisher,
+      taskRepository,
+    ),
+  );
+  app.route(
+    "/api/marp",
+    createMarpRoute({
+      createSlides: (input) => marpSlideService.createSlides(input),
+      createSlidesAndPostToSlack: (input) =>
+        marpSlideSlackPostService.createSlidesAndPostToSlack(input),
+    }),
+  );
+  const internalCaller = async (
+    path: string,
+    init: RequestInit,
+  ): Promise<Response> =>
+    app.fetch(new Request(`http://internal${path}`, init));
+  // MCP REST adapter: POST /api/mcp/tools/:toolName (Chrome 拡張・AgentCore 向け)
+  app.route(
+    "/api/mcp",
+    createMcpRoute({
+      delegationService: slackDelegationService,
+      travelPlanningService,
+      marpSlideService,
+      caller: internalCaller,
+    }),
+  );
+
+  // MCP JSON-RPC 2.0 (streamable_http): POST /api/mcp  (ElevenLabs 向け)
+  // internalCaller は app を遅延参照するクロージャ — app 初期化後に呼ばれるため安全
+  app.route(
+    "/api/mcp",
+    createMcpJsonRpcRoute({
+      caller: internalCaller,
+      delegationService: slackDelegationService,
+    }),
+  );
   // Google Calendar/Gmail 取り込みルート（U-07b）
   app.route(
     "/api/google",

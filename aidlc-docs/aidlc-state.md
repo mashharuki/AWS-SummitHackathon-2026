@@ -2,10 +2,446 @@
 
 ## プロジェクト情報
 - **プロジェクト名**: サボロー（AWS Summit Japan 2026 ハッカソン）
-- **プロジェクトタイプ**: Greenfield（新規）
+- **プロジェクトタイプ**: Brownfield（v2 スプリント: 2026-06-14 開始）
 - **開始日時**: 2026-05-09T07:00:00Z
-- **現在のステージ**: UPDATE-PLAN 作成完了（2026-05-26T08:00:00Z）。タスク承認前確認・編集モーダル（ガント精度向上）計画書作成済み。ユーザー確認待ち。実装未着手。
-- **ドキュメントバージョン**: v2.4.0（2026-05-26 承認モーダル update-plan 追記）
+- **v2 スプリント開始**: 2026-06-14T00:00:00Z
+- **現在のステージ**: `marp-slide-stylesheet-enhancement` Code Generation / Build and Test 完了（2026-06-21 JST）。Marp生成スライドに `saborou-premium` 埋め込みテーマ、リッチなfixture deck、プレミアムHTMLプレビューシェル、サービス単体テストを追加。backend 483 tests / backend typecheck / backend build 全パス。
+- **ドキュメントバージョン**: v4.10.1（2026-06-26 余白表示の作業中タブ移動）
+
+---
+
+## 余白表示の作業中タブ移動（2026-06-26）
+
+### 実装状態
+- [x] Code Generation — 余白セッションの次タスクカードと提案メッセージを共通コンポーネント化し、作業中タブ上部へ移動。
+- [x] Slack tab adjustment — 余白チャットタブから常時表示の余白サマリを外し、チャット、進捗報告、動画継続、次タスク準備、復帰チェックの操作フローは維持。
+- [x] Build and Test — extension 214 tests、extension typecheck、extension build、focused Biome check が通過。
+
+### 成果物
+- `aidlc-docs/construction/plans/working-tab-free-time-placement-code-generation-plan.md`
+- `aidlc-docs/construction/working-tab-free-time-placement/code/code-generation-summary.md`
+- `pkgs/extension/src/panel/components/FreeTimeSessionPanel.tsx`
+- `pkgs/extension/src/panel/tabs/WorkingTab.tsx`
+- `pkgs/extension/src/panel/tabs/SlackTab.tsx`
+- `pkgs/extension/src/panel/App.test.tsx`
+
+### Security Baseline
+- [x] 新規バックエンドAPI、ストレージ、IAM権限、外部通信、secret handlingなし。
+- [x] 既存のJWT API利用、チャットアクション、復帰チェックruntime message境界を維持。
+
+---
+
+## AI自動タスク結果チャット整形（2026-06-26）
+
+### 実装状態
+- [x] Requirements Analysis — 最小深度で実施。AI自動サブタスク完了時に余白チャットへ整形済み実行結果を表示する要件として整理。
+- [x] Workflow Planning — 単一 extension UI 変更として、User Stories / Application Design / Units Generation / NFR / Infrastructure Design をスキップ。
+- [x] Code Generation — `postSaborouMessage` を追加し、`saboru` サブタスク完了時に完了項目・対象・ゴール・成果物・目安時間・実行内容・次の余白を複数行で投稿。
+- [x] Build and Test — focused extension test、extension typecheck、extension build が通過。
+
+### 成果物
+- `aidlc-docs/inception/requirements/ai-auto-result-chat-formatting-requirements.md`
+- `aidlc-docs/inception/plans/ai-auto-result-chat-formatting-execution-plan.md`
+- `aidlc-docs/construction/plans/ai-auto-result-chat-formatting-code-generation-plan.md`
+- `aidlc-docs/construction/ai-auto-result-chat-formatting/code/code-generation-summary.md`
+- `pkgs/extension/src/panel/SaborouContext.tsx`
+- `pkgs/extension/src/panel/tabs/WorkingTab.tsx`
+- `pkgs/extension/src/panel/tabs/SlackTab.tsx`
+- `pkgs/extension/src/panel/App.test.tsx`
+
+### Security Baseline
+- [x] 新規バックエンドAPI、ストレージ、外部通信、権限、secret handlingなし。
+- [x] 既存のSlack DOM送信、進捗報告、認証境界を変更しない。
+
+---
+
+## 余白タブ動的化（2026-06-26）
+
+### 実装状態
+- [x] Code Generation — 既存API合成で余白タブを動的化。`tasks` / `getGoalAnalysis` / `decomposeTask` / `getProgressReport` / recovery check runtime message を利用し、新規バックエンドAPIは追加しない方針を維持。
+- [x] Backend MCP verification — `saborou_suggest_free_time` が JSON-RPC 経由で `GET /api/tasks/{taskId}/decompose` に到達するテストを追加。未分解タスクは安全な JSON-RPC error になることを確認。
+- [x] Build and Test — extension 212 tests、extension typecheck、extension build、backend focused JSON-RPC 8 tests、focused Biome check が通過。
+
+### 成果物
+- `aidlc-docs/construction/plans/slack-free-time-dynamic-code-generation-plan.md`
+- `aidlc-docs/construction/slack-free-time-dynamic/code/code-generation-summary.md`
+- `pkgs/extension/src/panel/SaborouContext.tsx`
+- `pkgs/extension/src/panel/tabs/SlackTab.tsx`
+- `pkgs/extension/src/panel/components/ProgressReportSheet.tsx`
+- `pkgs/extension/src/panel/App.test.tsx`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/backend/src/routes/mcp.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+
+### Security Baseline
+- [x] 新規バックエンドAPI、ストレージ、IAM権限、secret handlingなし。
+- [x] 拡張は既存Hono JWT API直呼びを維持し、`/mcp/tools/` 直送に戻さない。
+- [x] MCP JSON-RPC は既存 registry / identity resolution / internal caller 経由で、未分解タスクの失敗も安全なエラーに正規化。
+
+---
+
+## 決勝向けAWS構成図ブラッシュアップ（2026-06-24）
+
+### 実施状態
+- [x] Existing context review — 予選会時点の構成図、AI-DLC状態、CDKスタック（Frontend / Cognito / Data / Api / Agent / Webhook / AgentCore）を確認。
+- [x] Diagram design — 決勝で説明しやすいように External clients / Edge identity / API MCP orchestration / Voice MCP gateway / Slack autonomous agents / AI data assets / Observability に再構成。
+- [x] Draw.io generation — 公式AWSアイコンスタイルを使った `.drawio` XML を生成。
+- [x] Validation/export — `xmllint` でXML検証、draw.io CLIで通常PNGと埋め込みPNGを出力、埋め込みPNGを修復。
+
+### 成果物
+- `docs/drawio/saborou-architecture-final.drawio`
+- `docs/drawio/saborou-architecture-final.png`
+- `docs/drawio/saborou-architecture-final.drawio.png`
+
+### 反映した主な決勝向け差分
+- Amazon Bedrock AgentCore Gateway / MCP JSON-RPC / ElevenLabs Voice Agent の音声ファースト導線を明示。
+- Claude Sonnet 4.6 / Haiku 4.5、MCP tool群、Slack返信・@Claude委譲・旅行プラン・Marp生成の役割を明示。
+- Travelpayouts、Google Calendar/Gmail、HTML旅行しおり公開、Marp slides S3出力を追加。
+- CloudWatch / X-Ray / MCP unauthorized/forbidden/tool error監視を観測性レイヤーとして整理。
+
+---
+
+## Marpスライドスタイル改善（2026-06-21）
+
+### 計画状態
+- [x] Workspace Detection — Brownfield TypeScript monorepo、既存AI-DLC状態あり。
+- [x] Requirements Analysis — 最小深度で実施。API契約・S3公開・Slack投稿・認証境界を変更しない視覚改善として整理。
+- [x] Workflow Planning — 単一コンポーネント変更として、Application Design / Units Generation / Functional Design / NFR / Infrastructure Design をスキップし、Code Generation / Build and Test を実行対象に設定。
+- [x] Code Generation — `MarpSlideService` の生成プロンプト、埋め込みCSS、fixture deck、HTML preview wrapper、テストを更新。
+- [x] Build and Test — backend 483 tests、backend typecheck、backend build 全パス。
+
+### 成果物
+- `aidlc-docs/inception/requirements/marp-slide-stylesheet-enhancement-requirements.md`
+- `aidlc-docs/inception/plans/marp-slide-stylesheet-enhancement-execution-plan.md`
+- `aidlc-docs/construction/plans/marp-slide-stylesheet-enhancement-code-generation-plan.md`
+- `aidlc-docs/construction/marp-slide-stylesheet-enhancement/code/code-generation-summary.md`
+- `aidlc-docs/construction/build-and-test/build-and-test-summary.md`
+- `pkgs/backend/src/marp/MarpSlideService.ts`
+- `pkgs/backend/src/__tests__/marp/MarpSlideService.test.ts`
+- `pkgs/backend/src/__tests__/routes/slack.test.ts`
+
+### Security Baseline
+- [x] 新規ストレージ、ネットワーク公開面、IAM権限、secret handlingなし。
+- [x] 既存API認証・認可・Slack投稿approval境界を維持する計画。
+- [x] 新規依存関係なし。
+
+---
+
+## ttsNormalizer 発話正規化強化（2026-06-21）
+
+### 実装状態
+- [x] Normalization pipeline — `normalizeForTts` を公開関数名のまま、JSON文字列と通常発話文の両方に対応。JSON入力ではキー名を保持し、文字列値だけを正規化。
+- [x] Technical terms — 既存 `AWS` / `API` / `URL` に加えて、`S3`、`CloudFront`、`CloudWatch`、`DynamoDB`、`Lambda`、`Bedrock`、`AgentCore`、`ElevenLabs`、`Slack`、`Chrome`、`TypeScript`、`GitHub`、`Hono`、`Vitest`、`Biome`、`AWS Summit Japan 2026`、`Summit`、`Hackathon`、`SABOROU` を追加。
+- [x] Dynamic fragments — `YYYY-MM-DD`、`HH:mm`、個/件/人/分/時間の確定助数詞、URL、ID-like値、Slack `threadTs`、優先度/ステータス表記を発話向けに整形。
+- [x] JSON key safety — `taskId`、`channelId`、`threadTs` などのキー名を変換しないテストを追加。
+- [x] Proposal integration — `pkgs/backend/src/routes/proposals.ts` の `ttsSummary` 生成で、返信文を正規化してから100文字前後へ丸める。
+- [x] Tests — backend 480 tests、backend typecheck、backend build 全パス。
+
+### 成果物
+- `pkgs/backend/src/utils/ttsNormalizer.ts`
+- `pkgs/backend/src/routes/proposals.ts`
+- `pkgs/backend/src/__tests__/utils/ttsNormalizer.test.ts`
+- `pkgs/backend/src/__tests__/routes/proposals.test.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+- `aidlc-docs/inception/requirements/tts-normalizer-enhancement-requirements.md`
+- `aidlc-docs/inception/plans/tts-normalizer-enhancement-execution-plan.md`
+- `aidlc-docs/construction/plans/tts-normalizer-enhancement-code-generation-plan.md`
+- `aidlc-docs/construction/tts-normalizer-enhancement/code/code-generation-summary.md`
+
+### Security Baseline
+- [x] 新規ストレージ、ネットワーク公開面、IAM権限、secret handlingなし。
+- [x] 既存API認証・認可境界を維持。
+- [x] URL/ID簡略化は発話用出力のみで、ログや永続化を追加しない。
+
+---
+
+## 旅行プランHTMLしおり公開URL＋Slack投稿機能（2026-06-21）
+
+### 実装状態
+- [x] HTML itinerary renderer — 旅行プランをスタイル付きHTMLの旅のしおりへ整形。HTML escape、HTTP(S)リンクsanitize、credential-like marker redactを実施。
+- [x] S3 publisher — `travel-itineraries/YYYY/MM/DD/<uuid>.html` に `text/html; charset=utf-8` としてアップロードし、CloudFront公開URLを返す。
+- [x] Slack posting service — 旅行プラン本文ではなく、HTMLしおりURLをSlackへ投稿。User Token優先、Bot Token fallback、`threadTs`対応を維持。
+- [x] Clarification safety — 入力不足時はS3アップロードもSlack投稿も行わない。
+- [x] Infrastructure — 非公開S3 bucket、CloudFront OAC、CloudFront access logging、response security headers、90日lifecycle、Lambda env、`s3:PutObject` prefix最小権限を追加。
+- [x] MCP/OpenAPI metadata — `saborou_plan_trip_and_post_to_slack` の説明をHTMLしおり公開URL投稿へ更新。
+- [x] Tests — backend 471 tests、CDK 97 tests、backend typecheck、backend build、CDK build 全パス。
+
+### 成果物
+- `pkgs/backend/src/travel/travelItineraryHtml.ts`
+- `pkgs/backend/src/travel/TravelItineraryPublisher.ts`
+- `pkgs/backend/src/travel/TravelPlanSlackPostService.ts`
+- `pkgs/backend/src/travel/schemas.ts`
+- `pkgs/backend/src/config/env.ts`
+- `pkgs/backend/src/index.ts`
+- `pkgs/backend/src/mcp/registry.ts`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/cdk/lib/stacks/data-stack.ts`
+- `pkgs/cdk/lib/stacks/api-stack.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/inception/plans/travel-itinerary-html-s3-slack-plan.md`
+- `aidlc-docs/construction/travel-itinerary-html-s3-slack/code/code-generation-summary.md`
+
+### 残作業
+- [ ] CDK deploy後にCloudFront URLでHTMLしおりが表示されることを確認
+- [ ] 実Slackチャンネルで `saborou_plan_trip_and_post_to_slack` approval付き実行を確認
+- [ ] CloudFront/S3ログが想定通り出力されることを確認
+
+---
+
+## 旅行プランMarkdown整形＋Slack投稿機能（2026-06-20）
+
+### 実装状態
+- [x] Backend route — `POST /api/travel/plan-and-post-to-slack` を追加。`approved !== true` は403で拒否し、clarification時はSlack投稿しない。
+- [x] Slack mrkdwn formatter — タイトル、概要、フライト、ホテル、日別アクティビティ、前提/注意点を整形。Slack特殊文字をエスケープし、credential-like markerをredactし、4000文字に制限。
+- [x] Slack posting service — Slack User Token優先、Bot Token fallback、`threadTs`対応、Slack API失敗時は安全な `502 SLACK_API_ERROR`。
+- [x] MCP exposure — `saborou_plan_trip_and_post_to_slack` を side-effect / approval required / implemented として registry、schema、REST adapter、JSON-RPC、OpenAPI に追加。
+- [x] Tests — backend 464 tests、CDK 93 tests、backend typecheck、backend build、CDK build 全パス。
+
+### 成果物
+- `pkgs/backend/src/travel/TravelPlanSlackPostService.ts`
+- `pkgs/backend/src/travel/slackMarkdown.ts`
+- `pkgs/backend/src/routes/travel.ts`
+- `pkgs/backend/src/mcp/registry.ts`
+- `pkgs/backend/src/mcp/schemas.ts`
+- `pkgs/backend/src/routes/mcp.ts`
+- `pkgs/backend/src/routes/mcp-jsonrpc.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/construction/travel-plan-slack-post/code/code-generation-summary.md`
+
+### 残作業
+- [ ] デプロイ環境でSlack User Token優先投稿をE2E確認
+- [ ] AgentCore Gateway経由で `saborou_plan_trip_and_post_to_slack` のapproval付き実行を確認
+
+---
+
+## Travelpayouts旅行プラン代行機能（2026-06-20）
+
+### 実装状態
+- [x] Backend route — `POST /api/travel/plan` を追加。認証済みユーザー向けに旅行条件からプランを返す。
+- [x] Travel planning domain — `TravelPlanningService` / `TravelpayoutsClient` / fixture provider / strict Zod schemas を追加。
+- [x] MCP exposure — `saborou_plan_trip` を registry / schema / JSON-RPC tools/list / REST MCP adapter / AgentCore OpenAPI schema に追加。
+- [x] CDK secret wiring — `/saborou/travelpayouts/credentials-${environment}` secret、API Lambda env、read権限を追加。
+- [x] Schema drift fix — 既存 published tool `saborou_find_task` の OpenAPI operation を追加。
+- [x] Tests — backend 451 tests、CDK 93 tests、typecheck/build 全パス。
+
+### 成果物
+- `pkgs/backend/src/routes/travel.ts`
+- `pkgs/backend/src/travel/`
+- `pkgs/backend/src/__tests__/travel/TravelPlanningService.test.ts`
+- `pkgs/backend/src/__tests__/routes/travel.test.ts`
+- `pkgs/backend/src/__tests__/routes/mcp-jsonrpc.test.ts`
+- `pkgs/cdk/schemas/saborou-openapi.yaml`
+- `aidlc-docs/construction/travelpayouts-trip-planner/code/code-generation-summary.md`
+
+### 残作業
+- [ ] 実AWS環境でTravelpayouts secret JSONを設定: `apiToken`, `marker`, `trs`
+- [ ] デプロイ後に既存MCP auth verification scriptを実行
+
+---
+
+## v3 追加開発状態（2026-06-16〜）
+
+### INCEPTION フェーズ（v3: SABOROU MCP Serverization）
+- [x] Workspace Detection — 完了（2026-06-16）。Brownfield 判定。既存v2成果物と実装を確認。
+- [x] Requirements Analysis — 見直し完了（2026-06-16）。AgentCore Gateway本命、既存API全体のMCPツール化、`@Claude` タスク実行依頼フロー、実AWS/AgentCore/ElevenLabs検証を定義。Serena MCP併用の実コード照合でGAP-V3-01〜08を追加。SECURITY-02/08はApplication Designで解消必須のBlocking Gap。ユーザー承認待ち。
+- [x] User Stories — 完了（2026-06-16）。3ペルソナ、9ユーザーストーリー、INVEST確認、要件/ギャップトレーサビリティを作成。ユーザー承認待ち。
+- [x] Workflow Planning — 完了（2026-06-16）。高リスクの複数パッケージ変更として、Application Design / Units Generation / Functional Design / NFR Requirements / NFR Design / Infrastructure Design / Code Generation / Build and Testを実施対象に設定。ユーザー承認済み。
+- [x] Application Design — 修正完了（2026-06-16）。AgentCore Gateway を入口にしつつ、既存 Hono JWT API を弱めない MCP Tool Adapter / Identity Resolver / allowlist Tool Registry / `@Claude` Slack Delegation を設計。ElevenLabs Dashboard登録制約に合わせ、MCP本線を `streamable_http` 第一候補、`sse` fallbackに修正。SECURITY-02/08 の設計上の解消方針を確定。ユーザー承認済み。
+- [x] Units Generation — 完了（2026-06-16）。U-V3-01〜05の5 Unit、依存関係、実装順序、US/FR/GAP/NFRトレーサビリティを作成。ユーザー承認済み。
+
+### CONSTRUCTION フェーズ（v3）
+
+#### U-V3-01: mcp-transport-auth-adapter
+- [x] Functional Design — 完了（2026-06-16）。MCP invocation / caller identity / tool context / authorization decision / audit event / safe error shape、既存JWTルート維持、IAMのみでuserId認可しないルール、監査ログ非機密化ルールを定義。ユーザー承認済み。
+- [x] Lean Formal Verification — 完了（2026-06-17 JST）。`McpTransportAuthAdapter.lean` で IAM-only拒否、identity未解決時precheck拒否、cross-user access拒否、side-effect approval必須、audit secret/args非依存を `sorry` なしで証明。`lean` 検証成功。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Security Baseline全15ルールを評価し、U-V3-01向けに認証/認可、監査ログ、fail-closed、可用性、テスト、Lean証明維持要件を定義。ユーザー承認済み。
+- [x] NFR Design — 完了（2026-06-17 JST）。Verified Identity Gate、Fail-Closed Adapter Pipeline、Safe Audit Event Envelope、Route Preservation Boundary、Schema-First Adapter Input、Least-Privilege Gateway Hop、Safe Error Mapper、Lean Evidence Lock、Adapter Latency Budgetを定義。ユーザー承認済み。
+- [x] Infrastructure Design — 完了（2026-06-17 JST）。既存JWT route preservation、MCP adapter route boundary、application-level Cognito JWT verification、API Gateway access logs、90日ログ保持、CloudWatch metric filters/alarms、AgentCore Gateway role scoping、CDK assertionsを設計。ユーザー承認済み。
+- [x] Code Generation — 完了（2026-06-17 JST）。MCP domain types / Cognito JWT identity resolver / safe audit logger / fail-closed precheck / `/api/mcp/tools/{toolName}` route / CDK access logs・90日保持・MCP alarms・AgentCore IAM scope / tests / code summaryを生成。Backend 412 tests + typecheck、CDK 84 tests + build、Lean検証が通過。ユーザー承認済み。
+
+#### U-V3-02: mcp-tool-registry-schema
+- [x] Functional Design — 完了（2026-06-17 JST）。MCP tool allowlist、side-effect分類、approval requirements、excluded routes、schema drift report、runtime invocation model、schema publication model、`saborou_judge_sabori`意味整理を定義。ユーザー承認済み。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Allowlist-only publication、schema-first validation、output data minimization、side-effect approval enforcement、schema drift prevention、registry performance、demo availability、test coverage、maintainabilityを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
+- [x] NFR Design — 完了（2026-06-17 JST）。Registry As Policy Boundary、Schema-First Tool Invocation、Approval Metadata Gate、Safe Voice Output Envelope、Drift Detector Build Gate、Static Registry Warm-Path、Explicit Exclusion List、Legacy OperationId Migration、Reserved Tool Contractを定義。ユーザー承認済み。
+- [x] Infrastructure Design — 完了（2026-06-17 JST）。既存AgentCore Stack constructsを維持し、schema artifact、S3 schema deployment、GatewayTarget、registry/schema tests、drift validation gates、`/api/mcp/tools/{toolName}` publication boundaryを設計。ユーザー承認済み。
+- [x] Code Generation — 完了（2026-06-17 JST）。Registry/schema/precheck/route/OpenAPI drift gate/code summaryを生成。Backend 425 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。ユーザー承認済み。
+
+#### U-V3-03: slack-claude-delegation
+- [x] Functional Design — 完了（2026-06-17 JST）。`saborou_delegate_to_claude` contract、approval gating、task ownership、delegation message、safe Slack error handling、audit boundariesを定義。ユーザー承認済み。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Slack side effect、secret handling、safe logging、authorization、safe error handling、performance、reliability、testability要件とtech stack decisionsを定義。ユーザー承認済み。
+- [x] NFR Design — 完了（2026-06-17 JST）。Approval-first guard、context-derived identity、schema-first input、deterministic message builder、secret-safe Slack boundary、safe error mapper、safe audit envelope、registry reserved-to-implemented transitionを定義。ユーザー承認済み。
+- [x] Infrastructure Design — スキップ（2026-06-17 JST）。新規AWSリソース、IAM、env、Secrets Manager secret、queue/cache/table/API Gateway construct、network componentが不要なため。再オープン条件をdecision artifactに記録。
+- [x] Code Generation — 完了（2026-06-17 JST）。SlackDelegationService、`POST /api/slack/delegations`、`saborou_delegate_to_claude` schema/registry/dispatch/OpenAPI/tests/code summaryを生成。Backend 437 tests + typecheck、CDK 89 tests + build、targeted security checksが通過。ユーザー承認済み。
+
+#### U-V3-04: elevenlabs-registration-fallback
+- [x] Functional Design — 完了（2026-06-17 JST）。ElevenLabs Dashboard remote MCP registrationをprimary pathとして定義し、`streamable_http` first、`sse` verification-only fallback、browser `clientTools` fallback/UI support、direct Hono fallback、pseudo `/mcp/tools/...` neutralization、secret-safe setup stateを設計。ユーザー承認済み。
+- [x] NFR Requirements — 完了（2026-06-17 JST）。Secret-safe browser configuration、primary/fallback boundary integrity、authorization preservation、demo availability、latency/user feedback、observability/troubleshooting、maintainability、test coverage、tech stack decisionsを定義。Security Baseline applicable rulesはblocking findingsなし。ユーザー承認済み。
+- [x] NFR Design — 完了・承認待ち（2026-06-17 JST）。Remote MCP primary registration、conditional SSE fallback gate、explicit fallback mode boundary、secret-safe config view、server-side authorization preservation、bounded failure and retry policy、safe diagnostic taxonomy、registry-backed setup artifact、verification handoff contractを定義。Security Baseline applicable rulesはblocking findingsなし。
+- [x] Infrastructure Design — 完了・承認済み（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加、SSEブリッジ延期決定、ElevenLabs Dashboard streamable_http登録設定、フォールバックアーキテクチャ設計を実施。新規AWSリソース・IAM・ネットワーク変更なし。ユーザーBで承認済み。
+- [x] Code Generation — 完了・承認済み（2026-06-17 JST）。McpToolsBaseUrl CfnOutput追加（api-stack.ts）、CDKテスト追加（+1）、mcpFallback.ts新規作成（FallbackMode5値/SafeDiagnosticCode6コード/SafeConfigView/getMcpFallbackMode/getSafeConfigView）、agentClient.ts疑似AgentCoreパス除去・Hono API常時呼び出し統一・mcpFallback再エクスポート、agentClient.test.ts更新（+6テスト）、mcpFallback.test.ts新規作成（+15テスト）、ELEVENLABS_MCP_SETUP.md新規作成（シークレット非記載）。Extension 187テスト全パス（旧168）、CDK 90テスト全パス（旧79）。ユーザーBで承認済み。
+
+#### U-V3-05: real-integration-verification
+- [x] Functional Design — スキップ（新規ドメインロジック追加なし。統合検証Unitのため）
+- [x] NFR Requirements — 完了（2026-06-17 JST）。信頼性（R1〜R4）・観測性（O1〜O3）・手動E2E証拠（E1〜E4）・デモ可用性（A1〜A2）・保守性（M1〜M2）の15要件を定義。Security Baseline適用ルール確認・ブロッキングファインディングなし。ユーザー承認済み（B）。
+- [x] NFR Design — 完了・承認済み（2026-06-17 JST）。Verification Evidence Pattern / Safe Script Pattern / Troubleshooting Matrix Pattern / Fallback Runbook Pattern / Demo Reset Script Pattern の5パターンと論理コンポーネント（verification-scripts/evidence-store/demo-reset/troubleshooting-matrix/demo-runbook）を定義。ユーザーBで承認済み。
+- [x] Infrastructure Design — スキップ（2026-06-17 JST）。U-V3-05 は検証スクリプト・ドキュメント群のみで新規 AWS リソース・IAM・CDK変更・ネットワーク変更なし。decision artifact を作成。
+- [x] Code Generation — 完了・承認済み（2026-06-17 JST）。13 ステップ全生成完了。verify-build-test.sh / verify-cdk-synth.sh / verify-agentcore.sh / verify-mcp-auth.sh / verify-cloudwatch.sh / verify-secret-scan.sh / demo-reset.sh（scripts/）/ evidence/README.md + 13サブディレクトリ / TROUBLESHOOTING.md（6サービス×3+シナリオ）/ DEMO_RUNBOOK.md（15分デモ手順書 + 3段フォールバック + Q&A）/ .gitignore 更新 / package.json verify スクリプト追加 / code-generation-summary.md 生成。全スクリプト chmod +x 済み。ユーザーBで承認済み。
+
+#### v3 Build and Test（全 Unit 完了後）
+- [x] Build and Test — 完了（2026-06-18 JST）。v3 全 5 Unit（U-V3-01〜05）対象。成果物: build-instructions.md（v3 セクション追記）/ unit-test-instructions.md（v3 セクション追記）/ integration-test-instructions.md（v3 セクション追記）/ performance-test-instructions.md（v3 セクション追記）/ build-and-test-summary.md（v3 セクション追記）。ユーザー承認済み（B）。
+
+### Extension Configuration（v3）
+| Extension | Enabled | Decided At |
+|---|---|---|
+| Security Baseline | Yes | Requirements Analysis |
+| Property-Based Testing | No | Requirements Analysis |
+
+### v3 成果物ディレクトリ
+- `aidlc-docs/inception/v3/requirements/requirement-verification-questions.md`
+- `aidlc-docs/inception/v3/requirements/requirements.md`
+- `aidlc-docs/inception/v3/plans/user-stories-assessment.md`
+- `aidlc-docs/inception/v3/plans/story-generation-plan.md`
+- `aidlc-docs/inception/v3/plans/execution-plan.md`
+- `aidlc-docs/inception/v3/plans/application-design-plan.md`
+- `aidlc-docs/inception/v3/plans/unit-of-work-plan.md`
+- `aidlc-docs/inception/v3/user-stories/personas.md`
+- `aidlc-docs/inception/v3/user-stories/stories.md`
+- `aidlc-docs/inception/v3/application-design/components.md`
+- `aidlc-docs/inception/v3/application-design/component-methods.md`
+- `aidlc-docs/inception/v3/application-design/services.md`
+- `aidlc-docs/inception/v3/application-design/component-dependency.md`
+- `aidlc-docs/inception/v3/application-design/application-design.md`
+- `aidlc-docs/inception/v3/units/unit-of-work.md`
+- `aidlc-docs/inception/v3/units/unit-of-work-dependency.md`
+- `aidlc-docs/inception/v3/units/unit-of-work-story-map.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/McpTransportAuthAdapter.lean`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/README.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/formal-verification/review.json`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/nfr-design/logical-components.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-infrastructure-design-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/infrastructure-design/infrastructure-design.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/infrastructure-design/deployment-architecture.md`
+- `aidlc-docs/construction/plans/u-v3-01-mcp-transport-auth-adapter-code-generation-plan.md`
+- `aidlc-docs/construction/u-v3-01-mcp-transport-auth-adapter/code/code-generation-summary.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/nfr-design/logical-components.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-infrastructure-design-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/infrastructure-design/infrastructure-design.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/infrastructure-design/deployment-architecture.md`
+- `aidlc-docs/construction/plans/u-v3-02-mcp-tool-registry-schema-code-generation-plan.md`
+- `aidlc-docs/construction/u-v3-02-mcp-tool-registry-schema/code/code-generation-summary.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/nfr-design/logical-components.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/infrastructure-design/infrastructure-design-decision.md`
+- `aidlc-docs/construction/plans/u-v3-03-slack-claude-delegation-code-generation-plan.md`
+- `aidlc-docs/construction/u-v3-03-slack-claude-delegation/code/code-generation-summary.md`
+- `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-functional-design-plan.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/domain-entities.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/business-rules.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/business-logic-model.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/functional-design/frontend-components.md`
+- `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/nfr-design/logical-components.md`
+- `aidlc-docs/construction/plans/u-v3-04-elevenlabs-registration-fallback-infrastructure-design-plan.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/infrastructure-design/infrastructure-design.md`
+- `aidlc-docs/construction/u-v3-04-elevenlabs-registration-fallback/infrastructure-design/deployment-architecture.md`
+- `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-nfr-requirements-plan.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-requirements/nfr-requirements.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-requirements/tech-stack-decisions.md`
+- `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-nfr-design-plan.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-design/nfr-design-patterns.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/nfr-design/logical-components.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/infrastructure-design/infrastructure-design-decision.md`
+- `aidlc-docs/construction/plans/u-v3-05-real-integration-verification-code-generation-plan.md`
+- `aidlc-docs/construction/u-v3-05-real-integration-verification/code/code-generation-summary.md`
+- `scripts/verify-build-test.sh`（NFR-V305-R1 Critical）
+- `scripts/verify-cdk-synth.sh`（NFR-V305-R2 Critical）
+- `scripts/verify-agentcore.sh`（NFR-V305-R3 High）
+- `scripts/verify-mcp-auth.sh`（NFR-V305-E4 Critical）
+- `scripts/verify-cloudwatch.sh`（NFR-V305-O1/O2 High/Critical）
+- `scripts/verify-secret-scan.sh`（NFR-V305-M2 Critical）
+- `scripts/demo-reset.sh`（NFR-V305-A2 High）
+- `evidence/README.md` + 13 サブディレクトリ（証拠ストア）
+- `TROUBLESHOOTING.md`（6サービス×3+シナリオ NFR-V305-M1）
+- `DEMO_RUNBOOK.md`（15分デモ手順書 + 3段フォールバック NFR-V305-R4/A2）
+
+---
+
+## v2 スプリント状態（2026-06-14〜2026-06-26）
+
+### INCEPTION フェーズ（v2）
+- [x] Workspace Detection — 完了（2026-06-14）。Brownfield 判定（v1 全 Unit 完了済み）。
+- [x] Reverse Engineering — 完了（2026-06-14）。v1 流用資産サマリ作成。実コード照合済み。
+- [x] Requirements Analysis — 完了（2026-06-14）。Comprehensive 深度。FR-V2-01〜11 / NFR-V2-P1〜T1 定義。Security Baseline 有効化判断。
+- [x] User Stories — 完了（2026-06-14）。E-V2-01〜05 / US-V2-01〜10 / DS-V2-01（デモストーリー）作成。
+- [x] Workflow Planning — 完了（2026-06-14）。execution-plan.md 作成。9 Unit 分解・タイムライン・カットライン設計。
+- [x] Application Design — 完了（2026-06-14）。全体アーキテクチャ / AgentCore Gateway CDK 設計 / ElevenLabs SDK Hook 設計 / content script 設計 / シーケンス図 作成。
+- [x] Units Generation — 完了（2026-06-14）。U-V2-01〜09 の 9 Unit 定義。依存関係・実装順序・v1 との関係を明記。
+
+### CONSTRUCTION フェーズ（v2）— ✅ 完了（2026-06-15）
+- [x] U-V2-01: extension-scaffold（pkgs/extension 新規）— build/tsc/test10/biome 全通過
+- [x] U-V2-02: content-script（Slack DOM 監視）— slackDom/selectors/index、test144、自動入力二段構え
+- [x] U-V2-03: voice-agent-hook（ElevenLabs SDK）— @11labs/client@0.2.0、useVoiceApproval、MCP/API フォールバック
+- [x] U-V2-04: agentcore-gateway（AgentCore CDK スタック）— L1 CfnGateway/CfnGatewayTarget、synth成功、test9、enableAgentCore フラグ
+- [x] U-V2-05: sabori-proposer-v2（SaboriProposerAgent 拡張）— SaboriProposerAgentV2(新規)、reply_draft/decline_draft、renderForVoice、v1非破壊
+- [x] U-V2-06: slack-reply-endpoint（Hono 新 Route）— POST /api/slack/reply、operationId sendSlackReply
+- [x] U-V2-07: progress-report（EventBridge Scheduler 追加）— POST /api/tasks/:id/report、Schedule(17:00JST/DISABLED)
+- [x] U-V2-08: extension-auth（Cognito PKCE Chrome 拡張対応）— cognitoAuth(PKCE S256/getValidToken/refresh)、test45
+- [x] U-V2-09: integration-and-demo（統合・検証）— 全6パッケージ約1,528テスト全パス、typecheck全0、Chrome拡張dist完全構成(icons含む)、v2-setup-and-demo-guide.md 作成
+- [x] U-V2-10: chrome-notifications（追加 Unit）— タスク検知/返信完了OS通知、Side Panel抑制、保留復元、設定UI、通知クリック復帰。extension 168テスト・typecheck・Biome・build通過
+- [x] Build and Test — 全パッケージ統合検証完了。v1完全非破壊(frontend464テスト維持)
+
+**v2 Construction 成果サマリ**:
+- pkgs/extension（新規）: Manifest V3 / Side Panel / content script / ElevenLabs音声 / Cognito PKCE認証 — 144テスト
+- pkgs/agent: SaboriProposerAgentV2 + reply/decline draft + renderForVoice — 306テスト
+- pkgs/backend: slack/reply + tasks/report エンドポイント — 386テスト
+- pkgs/cdk: AgentCore Gateway(L1) + 進捗報告Schedule — 79テスト
+- 外部依存（ElevenLabs Agent ID / AgentCore実デプロイ）は手順書に集約。キー登録で動作する状態
+- 詳細手順: `aidlc-docs/construction/v2/v2-setup-and-demo-guide.md`
+
+## Extension 設定（v2 で更新）
+- **Security Baseline**: **有効（v2 で変更）** — Chrome 拡張・AgentCore Gateway・ElevenLabs SDK の新規攻撃面増加のため
+- **Property-Based Testing**: 無効（継続）
+
+## v2 成果物ディレクトリ
+- `aidlc-docs/inception/v2/reverse-engineering/v1-asset-summary.md`
+- `aidlc-docs/inception/v2/requirements/requirements.md`
+- `aidlc-docs/inception/v2/user-stories/personas.md`
+- `aidlc-docs/inception/v2/user-stories/user-stories.md`
+- `aidlc-docs/inception/v2/plans/execution-plan.md`
+- `aidlc-docs/inception/v2/application-design/application-design.md`
+- `aidlc-docs/inception/v2/units/unit-of-work.md`
+
+---
 
 ## ワークスペース状態
 - **既存コード**: なし

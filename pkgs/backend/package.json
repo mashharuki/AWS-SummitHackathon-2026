@@ -10,8 +10,8 @@
     "dev": "node --env-file=.env --import tsx ./src/index.ts",
     "build": "run-s build:clean build:api build:webhook",
     "build:clean": "rm -rf dist",
-    "build:api": "esbuild --bundle --outfile=dist/index.js --platform=node --target=node22 --external:@aws-sdk/* src/handler.ts",
-    "build:webhook": "esbuild --bundle --outfile=dist/webhook.js --platform=node --target=node22 --external:@aws-sdk/* src/webhook-handler.ts",
+    "build:api": "esbuild --bundle --outfile=dist/index.js --platform=node --target=node22 \"--external:@aws-sdk/*\" \"--external:@marp-team/*\" src/handler.ts",
+    "build:webhook": "esbuild --bundle --outfile=dist/webhook.js --platform=node --target=node22 \"--external:@aws-sdk/*\" \"--external:@marp-team/*\" src/webhook-handler.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -27,12 +27,16 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-eventbridge": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-secrets-manager": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
     "@aws-sdk/util-dynamodb": "^3.0.0",
+    "@marp-team/marp-core": "^3.4.0",
     "@hono/zod-validator": "^0.4.2",
     "@saboru/agent": "workspace:*",
     "@saboru/shared": "workspace:*",
     "hono": "^4.12.19",
+    "jose": "^6.2.3",
     "zod": "^3.25.0"
   }
 }

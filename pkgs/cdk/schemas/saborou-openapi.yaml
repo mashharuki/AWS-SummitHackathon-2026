@@ -1,0 +1,896 @@
+openapi: 3.1.0
+info:
+  title: SABOROU MCP Tool API
+  version: 3.0.0
+  description: >-
+    SABOROU MCP tool adapter schema for Amazon Bedrock AgentCore Gateway.
+    Published operations invoke the single backend MCP adapter boundary under
+    /api/mcp/tools/* and never expose auth, webhook, health, docs, or internal
+    routes directly.
+servers:
+  - url: https://api.saborou.example.com
+    description: Placeholder server URL rewritten to the real HTTP API endpoint.
+paths:
+  /api/mcp/tools/saborou_list_tasks:
+    post:
+      operationId: saborou_list_tasks
+      x-saborou-mcp-tool: saborou_list_tasks
+      x-saborou-approval-required: false
+      summary: List SABOROU tasks
+      description: List the caller's SABOROU tasks with optional status filter.
+      requestBody:
+        $ref: "#/components/requestBodies/McpListTasksRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_get_task:
+    post:
+      operationId: saborou_get_task
+      x-saborou-mcp-tool: saborou_get_task
+      x-saborou-approval-required: false
+      summary: Get one SABOROU task
+      description: Get one caller-owned SABOROU task by task id.
+      requestBody:
+        $ref: "#/components/requestBodies/McpGetTaskRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_list_candidates:
+    post:
+      operationId: saborou_list_candidates
+      x-saborou-mcp-tool: saborou_list_candidates
+      x-saborou-approval-required: false
+      summary: List task candidates
+      description: List pending Slack-derived task candidates for the caller.
+      requestBody:
+        $ref: "#/components/requestBodies/McpEmptyArgsRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_generate_reply_draft:
+    post:
+      operationId: saborou_generate_reply_draft
+      x-saborou-mcp-tool: saborou_generate_reply_draft
+      x-saborou-approval-required: false
+      summary: Generate a reply draft
+      description: Generate a safe Slack reply draft for a caller-owned task.
+      requestBody:
+        $ref: "#/components/requestBodies/McpGenerateReplyDraftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_judge_sabori:
+    post:
+      operationId: saborou_judge_sabori
+      x-saborou-mcp-tool: saborou_judge_sabori
+      x-saborou-approval-required: false
+      summary: Judge an incoming Slack message
+      description: Judge an incoming Slack message and generate a reply draft.
+      requestBody:
+        $ref: "#/components/requestBodies/McpJudgeSaboriRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_fetch_google_calendar:
+    post:
+      operationId: saborou_fetch_google_calendar
+      x-saborou-mcp-tool: saborou_fetch_google_calendar
+      x-saborou-approval-required: true
+      summary: Import Google Calendar context
+      description: >-
+        Import Google Calendar workload context into SABOROU. Requires explicit
+        user approval because it imports external account data.
+      requestBody:
+        $ref: "#/components/requestBodies/McpApprovedEmptyArgsRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_fetch_gmail:
+    post:
+      operationId: saborou_fetch_gmail
+      x-saborou-mcp-tool: saborou_fetch_gmail
+      x-saborou-approval-required: true
+      summary: Import Gmail task candidates
+      description: >-
+        Import Gmail-derived task candidates into SABOROU. Requires explicit user
+        approval because it imports external account data.
+      requestBody:
+        $ref: "#/components/requestBodies/McpFetchGmailRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_send_slack_reply:
+    post:
+      operationId: saborou_send_slack_reply
+      x-saborou-mcp-tool: saborou_send_slack_reply
+      x-saborou-approval-required: true
+      summary: Send an approved Slack reply
+      description: >-
+        Send an explicitly approved Slack reply on the caller's behalf. Requires
+        explicit approval because it posts externally and cannot be silently
+        undone.
+      requestBody:
+        $ref: "#/components/requestBodies/McpSendSlackReplyRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_schedule_report:
+    post:
+      operationId: saborou_schedule_report
+      x-saborou-mcp-tool: saborou_schedule_report
+      x-saborou-approval-required: true
+      summary: Generate or schedule a progress report
+      description: >-
+        Generate or schedule a progress report draft for a caller-owned task.
+        Requires explicit approval because it creates a task reporting action.
+      requestBody:
+        $ref: "#/components/requestBodies/McpScheduleReportRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_delegate_to_claude:
+    post:
+      operationId: saborou_delegate_to_claude
+      x-saborou-mcp-tool: saborou_delegate_to_claude
+      x-saborou-approval-required: true
+      x-saborou-implementation-status: implemented
+      summary: Delegate a task to Claude in Slack
+      description: >-
+        Delegate an approved SABOROU task to Slack's Claude participant.
+        Requires explicit approval because it posts externally into Slack.
+      requestBody:
+        $ref: "#/components/requestBodies/McpDelegateToClaudeRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_find_task:
+    post:
+      operationId: saborou_find_task
+      x-saborou-mcp-tool: saborou_find_task
+      x-saborou-approval-required: false
+      summary: Find a SABOROU task by keyword
+      description: Find caller-owned SABOROU tasks by a safe keyword.
+      requestBody:
+        $ref: "#/components/requestBodies/McpFindTaskRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_plan_trip:
+    post:
+      operationId: saborou_plan_trip
+      x-saborou-mcp-tool: saborou_plan_trip
+      x-saborou-approval-required: false
+      x-saborou-implementation-status: implemented
+      summary: Plan a trip with Travelpayouts fallback
+      description: >-
+        Create a voice-friendly travel plan with flight, hotel, and activity
+        options. Missing destination or travel dates return a clarification
+        question. Travelpayouts API failures fall back to deterministic fixture
+        options.
+      requestBody:
+        $ref: "#/components/requestBodies/McpPlanTripRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_plan_trip_and_post_to_slack:
+    post:
+      operationId: saborou_plan_trip_and_post_to_slack
+      x-saborou-mcp-tool: saborou_plan_trip_and_post_to_slack
+      x-saborou-approval-required: true
+      x-saborou-implementation-status: implemented
+      summary: Publish a travel itinerary and post its URL to Slack
+      description: >-
+        Create a travel plan, render it as a styled HTML itinerary, publish it
+        behind CloudFront, and post the public URL to the approved Slack channel.
+        The adapter requires explicit approval because the tool publishes a URL
+        and posts externally to Slack.
+      requestBody:
+        $ref: "#/components/requestBodies/McpPlanTripAndPostToSlackRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+        "404":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_create_marp_slides:
+    post:
+      operationId: saborou_create_marp_slides
+      x-saborou-mcp-tool: saborou_create_marp_slides
+      x-saborou-approval-required: false
+      x-saborou-implementation-status: implemented
+      summary: Create Marp slides with Bedrock AI
+      description: >-
+        Generate a Marp-format presentation using Amazon Bedrock, render it to
+        HTML, upload it to S3, and return a 7-day pre-signed URL for preview.
+        No side-effects outside the caller's S3 bucket.
+      requestBody:
+        $ref: "#/components/requestBodies/McpCreateMarpSlidesRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+  /api/mcp/tools/saborou_create_marp_slides_and_post_to_slack:
+    post:
+      operationId: saborou_create_marp_slides_and_post_to_slack
+      x-saborou-mcp-tool: saborou_create_marp_slides_and_post_to_slack
+      x-saborou-approval-required: true
+      x-saborou-implementation-status: implemented
+      summary: Create Marp slides and post the URL to Slack
+      description: >-
+        Generate a Marp presentation, upload it to S3, and post the pre-signed
+        URL to the specified Slack channel. Requires explicit approval because
+        the tool uploads to S3 and posts externally to Slack.
+      requestBody:
+        $ref: "#/components/requestBodies/McpCreateMarpSlidesAndPostToSlackRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/McpToolSuccess"
+        "400":
+          $ref: "#/components/responses/McpToolError"
+        "401":
+          $ref: "#/components/responses/McpToolError"
+        "403":
+          $ref: "#/components/responses/McpToolError"
+components:
+  requestBodies:
+    McpEmptyArgsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpEmptyArgsBody"
+    McpApprovedEmptyArgsRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/McpEmptyArgsBody"
+              - type: object
+                required:
+                  - approved
+    McpListTasksRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - active
+                      - completed
+                      - pending
+              approved:
+                type: boolean
+    McpGetTaskRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpTaskIdBody"
+    McpGenerateReplyDraftRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - taskId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  mode:
+                    type: string
+                    enum:
+                      - sabori_judgment
+                      - reply_draft
+                      - decline_draft
+              approved:
+                type: boolean
+    McpJudgeSaboriRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+                    minLength: 1
+                    maxLength: 4000
+                  senderName:
+                    type: string
+                    maxLength: 120
+              approved:
+                type: boolean
+    McpFetchGmailRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                properties:
+                  maxResults:
+                    type: integer
+                    minimum: 1
+                    maximum: 20
+              approved:
+                type: boolean
+                const: true
+    McpSendSlackReplyRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - replyText
+                  - channelId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  replyText:
+                    type: string
+                    minLength: 1
+                    maxLength: 2000
+                  channelId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  threadTs:
+                    type: string
+                    minLength: 1
+                    maxLength: 32
+              approved:
+                type: boolean
+                const: true
+    McpScheduleReportRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - taskId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  tone:
+                    type: string
+                    enum:
+                      - formal
+                      - polite
+                      - casual
+              approved:
+                type: boolean
+                const: true
+    McpDelegateToClaudeRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - taskId
+                  - channelId
+                properties:
+                  taskId:
+                    $ref: "#/components/schemas/SafeId"
+                  channelId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  threadTs:
+                    type: string
+                    minLength: 1
+                    maxLength: 32
+                  instruction:
+                    type: string
+                    minLength: 1
+                    maxLength: 2000
+              approved:
+                type: boolean
+                const: true
+    McpFindTaskRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - keyword
+                properties:
+                  keyword:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+              approved:
+                type: boolean
+    McpPlanTripRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                properties:
+                  origin:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                    default: Tokyo
+                  destination:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                  departureDate:
+                    type: string
+                    pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+                  returnDate:
+                    type: string
+                    pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+                  travelers:
+                    type: integer
+                    minimum: 1
+                    maximum: 8
+                    default: 1
+                  currency:
+                    type: string
+                    pattern: "^[A-Z]{3}$"
+                    default: JPY
+                  budgetPerPerson:
+                    type: integer
+                    minimum: 0
+                    maximum: 10000000
+                  interests:
+                    type: array
+                    minItems: 1
+                    maxItems: 8
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 40
+                  flightPreference:
+                    type: string
+                    enum:
+                      - cheapest
+                      - fastest
+                      - balanced
+                    default: balanced
+                  hotelPreference:
+                    type: string
+                    enum:
+                      - budget
+                      - standard
+                      - premium
+                    default: standard
+                  language:
+                    type: string
+                    enum:
+                      - ja
+                      - en
+                    default: ja
+              approved:
+                type: boolean
+    McpPlanTripAndPostToSlackRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - channelId
+                properties:
+                  origin:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                    default: Tokyo
+                  destination:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                  departureDate:
+                    type: string
+                    pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+                  returnDate:
+                    type: string
+                    pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+                  travelers:
+                    type: integer
+                    minimum: 1
+                    maximum: 8
+                    default: 1
+                  currency:
+                    type: string
+                    pattern: "^[A-Z]{3}$"
+                    default: JPY
+                  budgetPerPerson:
+                    type: integer
+                    minimum: 0
+                    maximum: 10000000
+                  interests:
+                    type: array
+                    minItems: 1
+                    maxItems: 8
+                    items:
+                      type: string
+                      minLength: 1
+                      maxLength: 40
+                  flightPreference:
+                    type: string
+                    enum:
+                      - cheapest
+                      - fastest
+                      - balanced
+                    default: balanced
+                  hotelPreference:
+                    type: string
+                    enum:
+                      - budget
+                      - standard
+                      - premium
+                    default: standard
+                  language:
+                    type: string
+                    enum:
+                      - ja
+                      - en
+                    default: ja
+                  channelId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  threadTs:
+                    type: string
+                    minLength: 1
+                    maxLength: 32
+                  approved:
+                    type: boolean
+                    const: true
+              approved:
+                type: boolean
+                const: true
+    McpCreateMarpSlidesRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - topic
+                properties:
+                  topic:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  content:
+                    type: string
+                    minLength: 1
+                    maxLength: 4000
+                  audience:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                  slideCount:
+                    type: integer
+                    minimum: 8
+                    maximum: 20
+                    default: 12
+                  language:
+                    type: string
+                    enum:
+                      - ja
+                      - en
+                    default: ja
+                  purpose:
+                    type: string
+                    minLength: 1
+                    maxLength: 400
+              approved:
+                type: boolean
+    McpCreateMarpSlidesAndPostToSlackRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required:
+              - args
+              - approved
+            properties:
+              args:
+                type: object
+                additionalProperties: false
+                required:
+                  - topic
+                  - channelId
+                properties:
+                  topic:
+                    type: string
+                    minLength: 1
+                    maxLength: 200
+                  content:
+                    type: string
+                    minLength: 1
+                    maxLength: 4000
+                  audience:
+                    type: string
+                    minLength: 1
+                    maxLength: 120
+                  slideCount:
+                    type: integer
+                    minimum: 8
+                    maximum: 20
+                    default: 12
+                  language:
+                    type: string
+                    enum:
+                      - ja
+                      - en
+                    default: ja
+                  purpose:
+                    type: string
+                    minLength: 1
+                    maxLength: 400
+                  channelId:
+                    type: string
+                    minLength: 1
+                    maxLength: 80
+                  threadTs:
+                    type: string
+                    minLength: 1
+                    maxLength: 32
+                  approved:
+                    type: boolean
+                    const: true
+              approved:
+                type: boolean
+                const: true
+  responses:
+    McpToolSuccess:
+      description: Safe MCP adapter success envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpToolSuccess"
+    McpToolError:
+      description: Safe MCP adapter error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/McpToolError"
+  schemas:
+    SafeId:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: "^[A-Za-z0-9:_./-]+$"
+    McpEmptyArgsBody:
+      type: object
+      additionalProperties: false
+      properties:
+        args:
+          type: object
+          additionalProperties: false
+        approved:
+          type: boolean
+    McpTaskIdBody:
+      type: object
+      additionalProperties: false
+      required:
+        - args
+      properties:
+        args:
+          type: object
+          additionalProperties: false
+          required:
+            - taskId
+          properties:
+            taskId:
+              $ref: "#/components/schemas/SafeId"
+        approved:
+          type: boolean
+    McpToolSuccess:
+      type: object
+      additionalProperties: false
+      required:
+        - ok
+        - requestId
+        - toolName
+        - result
+      properties:
+        ok:
+          type: boolean
+          const: true
+        requestId:
+          type: string
+        toolName:
+          type: string
+        result:
+          type: object
+    McpToolError:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - TOOL_NOT_ALLOWED
+                - VALIDATION_ERROR
+                - TOOL_ERROR
+            message:
+              type: string
