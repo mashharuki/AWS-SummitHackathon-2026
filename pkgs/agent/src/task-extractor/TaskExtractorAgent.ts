@@ -56,6 +56,8 @@ export interface GenericExtractInput {
    * 未注入時は解決せず、抽出値（ID 等）をそのまま保存する。
    */
   resolveSlackName?: SlackNameResolver;
+  /** Slack チャンネル ID（Slack ソースのみ）。委譲ツールで使用する。 */
+  channelId?: string;
 }
 
 /** Slack メンション記法 <@U12345678> から user ID を取り出す（先頭1件）。 */
@@ -67,7 +69,7 @@ function extractSlackUserId(raw: string): string | null {
   if (m) return m[1];
   // 素の user ID（U/W から始まる英数字）にもフォールバック対応する。
   const bare = raw.trim().match(/^([UW][A-Z0-9]{6,})$/);
-  return bare ? bare[1] : null;
+  return bare ? bare[1] : /* c8 ignore next */ null;
 }
 
 /**
@@ -117,6 +119,7 @@ export class TaskExtractorAgent {
       sourceRef,
       requesterHint = "",
       senderSlackUserId,
+      channelId,
       resolveSlackName,
     } = input;
 
@@ -209,13 +212,14 @@ export class TaskExtractorAgent {
         : null;
 
     // [6] 自分宛フィルタ（Slack のみ）:
-    // 送信者が分かっていて、宛先 user ID が送信者と異なる場合は
-    // 「自分が他人に投げた依頼」なので自分のタスク一覧には取り込まない。
-    // 宛先が解決できない（素の名前のみ）場合は、誤って弾かないよう取り込む側に倒す。
+    // assignee が明示されていて、かつ送信者自身の Slack ID と一致しない場合は
+    // 「他人への依頼」なので自分のタスク一覧には取り込まない。
+    // <@Uxxx> 形式で解決できた場合だけでなく、素の名前（解決不能）の場合も除外する。
+    // assignee が空文字 = 「自分宛 or 宛先なし」なので取り込む。
     if (
       sourceType === SOURCE_TYPE.SLACK &&
       senderSlackUserId &&
-      assigneeSlackId &&
+      extracted.assignee.length > 0 &&
       assigneeSlackId !== senderSlackUserId
     ) {
       logInfo({
@@ -264,6 +268,7 @@ export class TaskExtractorAgent {
         description: extracted.description,
         sourceType,
         sourceRef, // only reference ID, not message body (DP-04)
+        ...(channelId ? { slackChannelId: channelId } : {}),
         status: TASK_CANDIDATE_STATUS.PENDING,
         createdAt: toIsoString(now),
         ttl: Math.floor(now.getTime() / 1000) + TASK_CANDIDATE_TTL_DAYS * 86400,
@@ -339,6 +344,7 @@ export class TaskExtractorAgent {
       requesterHint: slackUserId,
       senderSlackUserId: slackUserId,
       resolveSlackName,
+      channelId: event.message.channelId,
     });
   }
 

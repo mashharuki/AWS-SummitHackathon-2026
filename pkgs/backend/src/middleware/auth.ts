@@ -38,8 +38,12 @@ type LambdaEvent = {
  */
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const lambdaEvent = (c.env as unknown as LambdaEvent | undefined) ?? {};
-  const sub = (lambdaEvent as LambdaEvent).requestContext?.authorizer?.jwt
-    ?.claims?.sub;
+  // Primary: API Gateway JWT authorizer injects sub into requestContext
+  const sub =
+    (lambdaEvent as LambdaEvent).requestContext?.authorizer?.jwt?.claims?.sub ??
+    // Fallback: internal Lambda-to-Lambda call from mcp-jsonrpc (already JWT-verified)
+    // Only honoured when there is no API Gateway authorizer context.
+    c.req.header("x-internal-sub");
 
   if (!sub) {
     throw new UnauthorizedError("Missing userId claim in JWT");

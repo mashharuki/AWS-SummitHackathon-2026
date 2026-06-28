@@ -1,117 +1,107 @@
-# 開発コマンド集（2026-05-23 更新）
+# 開発コマンド集
 
-最終更新: 2026-05-23
+最終更新: 2026-06-15。リポジトリルートからの実行を基本とする。
 
-## pnpm ワークスペース（ルートから実行）
-
-### テスト（全パッケージ一括）
+## セットアップ
 ```bash
-pnpm --filter './pkgs/*' test --passWithNoTests
+pnpm install
+node --version        # .nvmrc は 23
+pnpm --version        # packageManager は 10.33.0
 ```
 
-### フォーマット・Lint
+## ルート
 ```bash
-pnpm biome:format         # Biome でフォーマット（書き込み）
-pnpm biome:format:check   # Biome フォーマットチェックのみ
-pnpm biome:check          # Biome 総合チェック（書き込み）
-pnpm biome check .        # 直接実行
+pnpm biome:format:check
+pnpm biome:check      # 注意: --write を伴うscript
+pnpm shared <script>
+pnpm agent <script>
+pnpm backend <script>
+pnpm frontend <script>
+pnpm cdk <script>
+pnpm --filter @saboru/extension <script>
 ```
 
-### パッケージ別コマンド
+## パッケージ共通の品質確認
 ```bash
-pnpm --filter backend <script>
-pnpm --filter frontend <script>
-pnpm --filter cdk <script>
-pnpm --filter shared <script>
-pnpm --filter agent <script>
+pnpm --filter @saboru/shared typecheck
+pnpm --filter @saboru/shared test
+pnpm --filter @saboru/shared build
+
+pnpm --filter @saboru/agent typecheck
+pnpm --filter @saboru/agent test
+pnpm --filter @saboru/agent build
+
+pnpm --filter backend typecheck
+pnpm --filter backend test
+pnpm --filter backend build
+
+pnpm --filter frontend typecheck
+pnpm --filter frontend test
+pnpm --filter frontend build
+
+pnpm --filter @saboru/extension typecheck
+pnpm --filter @saboru/extension test
+pnpm --filter @saboru/extension build
+
+pnpm --filter cdk build
+pnpm --filter cdk test
+pnpm --filter cdk synth
 ```
 
-## 共有パッケージ (pkgs/shared)
+## ローカル開発
 ```bash
-cd pkgs/shared
-pnpm build        # tsup でESM/CJS/DTS ビルド
-pnpm test         # Vitest（93テスト）
-pnpm dev          # tsup ウォッチモード
+pnpm --filter backend dev
+pnpm --filter frontend dev
+pnpm --filter frontend dev:mock
+pnpm --filter @saboru/extension dev   # distをwatch rebuild
 ```
 
-## エージェント (pkgs/agent)
+## E2E
 ```bash
-cd pkgs/agent
-pnpm build        # tsup でESM/CJS/DTS ビルド
-pnpm test         # Vitest（104テスト）
+pnpm --filter frontend e2e
 ```
 
-## バックエンド (pkgs/backend)
+## Chrome extension
 ```bash
-cd pkgs/backend
-pnpm dev          # ローカル開発サーバー起動
-pnpm build        # esbuild バンドル → dist/index.js + dist/webhook.js
-pnpm test         # Vitest（172テスト）
+cp pkgs/extension/.env.example pkgs/extension/.env.local
+pnpm --filter @saboru/extension build
+# chrome://extensions で pkgs/extension/dist を読み込む
+```
+固定Extension ID: `klnbcafcphlnmbdbjgmpdjfeimenokmj`。
+
+## CDK
+```bash
+pnpm --filter cdk diff
+pnpm --filter cdk synth
+pnpm --filter cdk deploy -- --all
+pnpm --filter cdk cdk -- deploy --all -c enableAgentCore=false
+pnpm --filter cdk cdk -- deploy --all -c customDomain=true
+```
+AgentCoreがリージョン未対応なら `enableAgentCore=false`。
+
+## Floci
+```bash
+pnpm --filter cdk floci:start
+pnpm --filter cdk floci:bootstrap
+pnpm --filter cdk floci:deploy
+pnpm --filter cdk floci:destroy
+pnpm --filter cdk floci:stop
 ```
 
-## フロントエンド (pkgs/frontend)
+## Secret / deploy helper
 ```bash
-cd pkgs/frontend
-pnpm dev          # Vite 開発サーバー起動
-pnpm build        # tsc + Vite ビルド
-pnpm preview      # ビルド成果物プレビュー
-pnpm test         # Vitest（126テスト）
-pnpm e2e          # Playwright E2Eテスト
+pnpm register:secret
+pnpm deploy:all
 ```
 
-## CDK インフラ (pkgs/cdk)
+## 状態確認
 ```bash
-cd pkgs/cdk
-pnpm build        # TypeScript コンパイル
-pnpm test         # Jest（35テスト）
-pnpm cdk synth    # CloudFormation テンプレート生成
-pnpm cdk diff     # 変更差分確認
-pnpm cdk deploy   # AWS デプロイ（要 AWS 認証情報）
-pnpm cdk bootstrap # CDK ブートストラップ（初回のみ）
-
-# Flociローカルテスト用（Docker必要）
-./scripts/floci-bootstrap.sh
-./scripts/floci-deploy.sh
-./scripts/floci-destroy.sh
+git status --short
+git log --oneline --decorate -15
+sed -n '1,120p' aidlc-docs/aidlc-state.md
 ```
 
-## Slack シークレット登録
-```bash
-# Secrets Manager へ Slack 資格情報を登録
-./scripts/register_slack_secret.sh
-```
-
-## 運用確認
-```bash
-# ログ監視（CloudWatch）
-# → aidlc-docs/operations/log-monitoring.md 参照
-
-# Slack App 設定
-# → aidlc-docs/operations/slack-app-setup.md 参照
-
-# CDK 操作ガイド
-# → aidlc-docs/operations/cdk-operations.md 参照
-```
-
-## Git 操作
-```bash
-git status
-git add .
-git commit -m "feat: ..."   # Conventional Commits 形式
-git push origin main
-git pull origin main
-```
-
-## テスト合計（2026-05-23 時点）
-- shared: 93テスト（カバレッジ100%）
-- agent: 104テスト
-- backend: 172テスト
-- cdk: 35テスト
-- frontend: 126テスト + E2E
-- **合計: 約530テスト**
-
-## 注意事項
-- アプリコードは aidlc-docs/ には置かない（pkgs/ 配下のみ）
-- ドキュメントのみ aidlc-docs/ へ
-- **pnpm を使う（npm/yarn 禁止）**
-- Biome を使う（ESLint/Prettier 禁止）
+## 注意
+- agentのtestは既存coverage 100%閾値でexit non-zeroになる場合がある。テスト結果とcoverage結果を分けて確認する。
+- `pnpm biome:check` は書き込みを行う。読み取り専用確認には `pnpm exec biome check .` のオプションを明示的に調整する。
+- v2実機手順は `aidlc-docs/construction/v2/v2-setup-and-demo-guide.md`。

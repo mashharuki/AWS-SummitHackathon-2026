@@ -50,6 +50,8 @@ export interface Task {
    * approved before this feature, which fall back to Bedrock inference.
    */
   plannedSteps?: ScheduleStep[];
+  /** Slack channel ID from which this task originated (Slack tasks only) */
+  slackChannelId?: string;
   /** Approval datetime (ISO 8601) */
   approvedAt: string;
   /** Update datetime (ISO 8601) */

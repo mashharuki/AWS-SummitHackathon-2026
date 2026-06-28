@@ -4,18 +4,18 @@
  * Copy this template to lib/tools/tools.test.ts and customize
  * for your specific tool implementations.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Import your tools
 // import { getChannelMessages, getThreadMessages, joinChannel, searchChannels } from './tools';
 
-describe('Slack Tools', () => {
+describe("Slack Tools", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('getChannelMessages', () => {
-    it('should fetch messages from a channel', async () => {
+  describe("getChannelMessages", () => {
+    it("should fetch messages from a channel", async () => {
       // TODO: Call your actual tool
       // const result = await getChannelMessages.execute({
       //   channel_id: 'C12345678',
@@ -29,12 +29,12 @@ describe('Slack Tools', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle pagination', async () => {
+    it("should handle pagination", async () => {
       // TODO: Test pagination handling
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle empty channel', async () => {
+    it("should handle empty channel", async () => {
       // TODO: Test empty response
       // const result = await getChannelMessages.execute({
       //   channel_id: 'C_EMPTY',
@@ -46,7 +46,7 @@ describe('Slack Tools', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle channel_not_found error', async () => {
+    it("should handle channel_not_found error", async () => {
       // TODO: Test error handling
       // const result = await getChannelMessages.execute({
       //   channel_id: 'C_INVALID',
@@ -58,14 +58,14 @@ describe('Slack Tools', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle not_in_channel error', async () => {
+    it("should handle not_in_channel error", async () => {
       // TODO: Test permission error
       expect(true).toBe(true); // Placeholder
     });
   });
 
-  describe('getThreadMessages', () => {
-    it('should fetch thread replies', async () => {
+  describe("getThreadMessages", () => {
+    it("should fetch thread replies", async () => {
       // TODO: Test thread fetching
       // const result = await getThreadMessages.execute({
       //   channel_id: 'C12345678',
@@ -78,14 +78,14 @@ describe('Slack Tools', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle thread not found', async () => {
+    it("should handle thread not found", async () => {
       // TODO: Test error case
       expect(true).toBe(true); // Placeholder
     });
   });
 
-  describe('joinChannel', () => {
-    it('should join a public channel', async () => {
+  describe("joinChannel", () => {
+    it("should join a public channel", async () => {
       // TODO: Test channel joining
       // const result = await joinChannel.execute({
       //   channel_id: 'C12345678',
@@ -96,19 +96,19 @@ describe('Slack Tools', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle already in channel', async () => {
+    it("should handle already in channel", async () => {
       // TODO: Test already joined case
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle private channel error', async () => {
+    it("should handle private channel error", async () => {
       // TODO: Test private channel error
       expect(true).toBe(true); // Placeholder
     });
   });
 
-  describe('searchChannels', () => {
-    it('should search and filter channels', async () => {
+  describe("searchChannels", () => {
+    it("should search and filter channels", async () => {
       // TODO: Test channel search
       // const result = await searchChannels.execute({
       //   query: 'engineering',
@@ -120,18 +120,18 @@ describe('Slack Tools', () => {
       expect(true).toBe(true); // Placeholder
     });
 
-    it('should handle no results', async () => {
+    it("should handle no results", async () => {
       // TODO: Test no results
       expect(true).toBe(true); // Placeholder
     });
   });
 });
 
-describe('Tool Input Validation', () => {
-  it('should validate channel_id format', () => {
+describe("Tool Input Validation", () => {
+  it("should validate channel_id format", () => {
     // Channel IDs should start with C, G, or D
-    const validIds = ['C12345678', 'G12345678', 'D12345678'];
-    const invalidIds = ['12345678', 'X12345678', ''];
+    const validIds = ["C12345678", "G12345678", "D12345678"];
+    const invalidIds = ["12345678", "X12345678", ""];
 
     validIds.forEach((id) => {
       expect(/^[CGD][A-Z0-9]+$/.test(id)).toBe(true);
@@ -142,10 +142,10 @@ describe('Tool Input Validation', () => {
     });
   });
 
-  it('should validate thread_ts format', () => {
+  it("should validate thread_ts format", () => {
     // Thread timestamps are in format: seconds.microseconds
-    const validTs = ['1234567890.123456', '1000000000.000001'];
-    const invalidTs = ['invalid', '1234567890', ''];
+    const validTs = ["1234567890.123456", "1000000000.000001"];
+    const invalidTs = ["invalid", "1234567890", ""];
 
     validTs.forEach((ts) => {
       expect(/^\d+\.\d+$/.test(ts)).toBe(true);

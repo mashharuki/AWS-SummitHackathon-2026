@@ -44,6 +44,8 @@ export interface TaskCandidate {
    * Raw data (message body) is not stored (privacy design)
    */
   sourceRef: string;
+  /** Slack channel ID from which this candidate originated (Slack candidates only) */
+  slackChannelId?: string;
   /** Candidate lifecycle status */
   status: TaskCandidateStatus;
   /** Creation datetime (ISO 8601) */

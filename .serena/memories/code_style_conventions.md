@@ -1,126 +1,44 @@
-# コードスタイル・規約（2026-05-23 更新）
+# コードスタイル・規約
 
-最終更新: 2026-05-23
+最終更新: 2026-06-15
 
-## 基本方針
-- **TypeScript strict モード**（全パッケージ）
-- **Biome 1.9.4**: フォーマット + Lint（ESLint / Prettier 禁止）
-  - 設定: プロジェクトルートの `biome.json`
-- **pnpm ^10.33.0** モノレポ（npm / yarn 禁止）
-- **Node.js 23** 
+## 基本
+- TypeScript strict を維持し、既存パッケージの設定・パターンに合わせる。
+- ルートの主品質ツールは Biome 1.9.4。double quotes、space indent、organizeImports有効。
+- frontend には現在 ESLint script/dependencies も残っているため、「ESLint禁止」と決めつけず既存scriptを尊重する。
+- package manager は pnpm 10.33.0。workspace依存は `workspace:*`。
+- ファイル名は既存慣例に従う: React componentは PascalCase.tsx、hookは `useXxx.ts`、通常moduleは camelCase.ts、testは `.test.ts(x)`。
 
-## ファイル命名
-- ファイル名: `camelCase.ts` または `PascalCase.tsx`（コンポーネントは PascalCase）
-- テストファイル: `*.test.ts` / `*.spec.ts`
-- 型定義ファイル: `types.ts`（パッケージルートまたは `src/types/`）
+## アーキテクチャ規約
+- アプリコードは `pkgs/`、AI-DLC文書は `aidlc-docs/`。混在させない。
+- shared は型、schema、repository interface、純粋utilityを保持し、AWS実装を持ち込まない。
+- agent の外部LLM依存は `IBedrockClient` 経由で注入し、Tool Use結果はZodで検証する。
+- backend は Hono route factory + repository/service DI を基本とする。routeは `/api/*` にマウントし、外部I/Oをmock可能にする。
+- frontend/extension は React function component + hooks。状態と外部副作用を分離する。
+- CDK はstack props/exportsで依存を明示し、cdk-nagを維持する。AgentCoreはL1 resource使用。
 
-## ディレクトリ構成（パッケージ別）
+## v2 固有規約
+- v1挙動を非破壊で維持する。`SaboriProposerAgentV2` は既存 `SaboriProposerAgent` を置換しない。
+- AgentCore/ElevenLabsに依存しすぎず、Hono API直接呼び出し・クリック承認のフォールバックを保持する。
+- Chrome extensionは Manifest V3 CSP に従い、固定Extension IDとPKCE S256認証を壊さない。
+- Slack content scriptのselectorは `src/content/selectors.ts` に集約する。
+- DOM変更検知はデバウンスと重複防止を維持する。
+- 秘密値をコードやcommit対象 `.env` に追加しない。テンプレートは `.env.example`、ローカル値は `.env.local`。
 
-### pkgs/shared
-```
-src/
-├── types/       # 共有型定義
-├── utils/       # ユーティリティ関数
-└── index.ts     # エントリーポイント
-```
-- tsup でビルド（ESM/CJS/DTS 出力）
+## 型・命名
+- interface/typeは意味に応じて既存スタイルを踏襲。DI interfaceには `I` prefixが既にある (`IBedrockClient`)。
+- React hookは `use` prefix、component/classは PascalCase、定数は UPPER_SNAKE_CASE。
+- string enum相当は既存のconst object + union patternを優先する。
+- exportは各packageの `src/index.ts` など既存public APIから行う。
 
-### pkgs/agent
-```
-src/
-├── agents/      # エージェント実装（task-extractor, sabori-proposer）
-├── types/       # エージェント固有型
-└── index.ts     # エントリーポイント
-```
-- IBedrockClient インタフェース経由でテスト可能
-- tsup でビルド（ESM/CJS/DTS 出力）
+## テスト
+- shared/agent/backend/frontend/extension: Vitest。CDK: Jest。
+- 外部AWS、Slack、Google、ElevenLabs、Chrome API、Bedrockはmock/DIする。
+- 変更対象packageの test + typecheck + buildを最低限実行する。CDK変更は `test` と `synth`。
+- agentの `pnpm test` は既存100% coverage thresholdのため、全テストpassでもexit non-zeroになり得る。テスト失敗とcoverage gateを区別して報告する。
 
-### pkgs/backend
-```
-src/
-├── routes/      # Hono ルート定義
-├── handlers/    # ビジネスロジック
-├── middleware/  # 認証・バリデーション等
-├── services/    # 外部サービス統合
-└── index.ts     # エントリーポイント（API）
-webhook.ts       # Slack Webhook エントリーポイント
-```
-- esbuild でバンドル（dist/index.js + dist/webhook.js）
-
-### pkgs/frontend
-```
-src/
-├── pages/           # ページコンポーネント（ルーティング単位）
-│   ├── AuthCallbackPage.tsx
-│   ├── LoginPage.tsx
-│   ├── ManualPage.tsx
-│   ├── PersonaPage.tsx
-│   ├── RoadmapPage.tsx
-│   ├── SettingsPage.tsx
-│   ├── TaskDetailPage.tsx
-│   └── TaskListPage.tsx
-├── components/      # UI コンポーネント群
-│   ├── character/   # Three.js キャラクター（SaborouCharacter3D, SaborouScene3D）
-│   ├── chat/        # チャット UI
-│   ├── layout/      # レイアウト（Header, Footer 等）
-│   ├── task/        # タスク関連
-│   ├── three/       # Three.js シーン構成
-│   ├── ui/          # shadcn/ui コンポーネント
-│   └── verdict/     # 判定UI
-├── hooks/           # カスタムフック
-├── i18n.ts          # react-i18next 設定・翻訳定義
-├── App.tsx          # ルーティング定義
-├── App.css          # Tailwind v4 @theme スタイル
-└── index.css        # グローバルスタイル
-public/
-├── banner.svg       # ブランドバナー
-├── favicon.svg      # ファビコン
-├── icons.svg        # アイコンスプライト
-└── mockServiceWorker.js  # PWA サービスワーカー
-```
-
-### pkgs/cdk
-```
-lib/
-├── stacks/      # 各 CDK スタック（DataStack, StorageStack 等）
-├── constructs/  # カスタム Construct
-└── index.ts
-bin/
-└── app.ts       # CDK エントリーポイント
-test/            # Jest テスト（35テスト）
-```
-
-## 命名規則（TypeScript）
-- インタフェース: `I` プレフィックスなし（型エイリアス優先）。ただし DI 用は `I` プレフィックス可（例: `IBedrockClient`）
-- Enum: 使用禁止（const オブジェクト + type エクスポートで代替）
-- React コンポーネント: `PascalCase`
-- フック: `use` プレフィックス + `camelCase`
-- 定数: `UPPER_SNAKE_CASE`
-
-## テスト規約
-- フレームワーク: **Vitest**（shared/agent/backend/frontend）/ **Jest**（cdk のみ）
-- テストファイル: コードと同階層の `__tests__/` 配下 または `*.test.ts` 同一ディレクトリ
-- モックパターン: `vi.fn()` / `vi.mock()`（Vitest）、`jest.fn()` / `jest.mock()`（Jest）
-- **Bedrock などの外部依存はインタフェース経由でモック**
-- カバレッジ目標: shared 100%、その他 80%以上
-
-## Tailwind CSS v4 設定
-- `App.css` で `@import "tailwindcss"` + `@theme {}` ブロックを定義
-- `@utility` でカスタムユーティリティ追加
-- shadcn/ui との共存（`components.json` 設定）
-
-## i18n 規約
-- `pkgs/frontend/src/i18n.ts` で言語設定・翻訳定義
-- `react-i18next` の `useTranslation` フック使用
-- 翻訳キー: `camelCase` でネスト形式
-
-## Three.js 規約
-- コンポーネントは `components/three/` または `components/character/` に配置
-- Three.js は別チャンクに分離（Vite の `build.rollupOptions.output.manualChunks`）
-- `<Suspense>` でローディング管理
-
-## ドキュメント規約（重要）
-- **アプリコードは pkgs/ 配下のみ**（aidlc-docs/ には置かない）
-- **aidlc-docs/ はドキュメントのみ**（AI-DLC成果物専用）
-- 日本語で全成果物を記述（コードコメント・変数名は英語可）
-- コミットメッセージ: 日本語 + Conventional Commits 形式
+## ドキュメント/監査
+- 原則日本語。コード識別子は英語。
+- `aidlc-docs/audit.md` は追記編集のみ。ユーザー入力を完全な生テキストでISO 8601 timestamp付き記録する。
+- AI-DLC planがある場合、完了したcheckboxは同じinteractionで即時更新する。
+- Mermaid/ASCII図を作る場合は構文、特殊文字、テキスト代替を検証する。

@@ -7,22 +7,14 @@ import {
   type ConverseStreamCommandInput,
   type ConverseStreamCommandOutput,
 } from "@aws-sdk/client-bedrock-runtime";
-import { NodeHttpHandler } from "@smithy/node-http-handler";
 import type { IBedrockClient } from "./IBedrockClient.js";
 
-/**
- * IBedrockClient の本番実装 (DP-01)
- *
- * 設定:
- * - retryMode: "adaptive" — 指数バックオフ＋ジッター付きアダプティブリトライ
- * - maxAttempts: 5 — スロットリング (ThrottlingException) への対処
- * - region: ap-northeast-1 — 東京 (クロスリージョン推論プロファイル)
- *
- * NFR 設計: DP-08 — maxTokens は呼び出し元 (TaskExtractorAgent) で管理し、
- * アダプター側は汎用的に保つ。
- *
- * U-03b 拡張: SSE ストリーミングサポートのため converseStream() を追加 (ProposeStream)
- */
+// AbortSignal timeout for Bedrock calls.
+// AbortController.abort() tells the AWS SDK to destroy the socket immediately,
+// so Lambda can exit cleanly.  Lambda timeout is 60 s; we abort at 50 s to
+// leave headroom for post-abort work (Marp render + S3 upload).
+const BEDROCK_TIMEOUT_MS = 50_000;
+
 export class BedrockClientAdapter implements IBedrockClient {
   private readonly client: BedrockRuntimeClient;
 
@@ -32,19 +24,47 @@ export class BedrockClientAdapter implements IBedrockClient {
       region,
       maxAttempts: 5,
       retryMode: "adaptive",
-      requestHandler: new NodeHttpHandler({
-        requestTimeout: 25_000, // Lambda timeout (30s) より短く設定
-      }),
     });
   }
 
   async converse(input: ConverseCommandInput): Promise<ConverseCommandOutput> {
-    return this.client.send(new ConverseCommand(input));
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      console.log(
+        `[BedrockClientAdapter] abort fired after ${BEDROCK_TIMEOUT_MS}ms model=${input.modelId}`,
+      );
+      controller.abort();
+    }, BEDROCK_TIMEOUT_MS);
+    console.log(`[BedrockClientAdapter] converse start model=${input.modelId}`);
+    try {
+      const result = await this.client.send(new ConverseCommand(input), {
+        abortSignal: controller.signal,
+      });
+      console.log(
+        `[BedrockClientAdapter] converse success model=${input.modelId}`,
+      );
+      return result;
+    } catch (err) {
+      console.log(
+        `[BedrockClientAdapter] converse error model=${input.modelId} name=${(err as Error)?.name} msg=${(err as Error)?.message?.slice(0, 120)}`,
+      );
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async converseStream(
     input: ConverseStreamCommandInput,
   ): Promise<ConverseStreamCommandOutput> {
-    return this.client.send(new ConverseStreamCommand(input));
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), BEDROCK_TIMEOUT_MS);
+    try {
+      return await this.client.send(new ConverseStreamCommand(input), {
+        abortSignal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }

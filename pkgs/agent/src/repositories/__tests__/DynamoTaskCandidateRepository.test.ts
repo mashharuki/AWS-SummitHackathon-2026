@@ -368,5 +368,25 @@ describe("DynamoTaskCandidateRepository", () => {
 
       expect(task.deadline).toBeNull();
     });
+
+    it("copies assignee from candidate to approved task", async () => {
+      mockSend.mockResolvedValueOnce({
+        Item: {
+          PK: `${DDB_PREFIX.USER}${userId}`,
+          SK: `${DDB_PREFIX.TASK_CAND}01HX000000000000000000088`,
+          ...makeCandidate({ candidateId: "01HX000000000000000000088" }),
+          assignee: "田中花子",
+        },
+      });
+      mockSend.mockResolvedValueOnce({});
+
+      const { DynamoTaskCandidateRepository } = await import(
+        "../DynamoTaskCandidateRepository.js"
+      );
+      const repo = new DynamoTaskCandidateRepository();
+      const task = await repo.approve(userId, "01HX000000000000000000088");
+
+      expect(task.assignee).toBe("田中花子");
+    });
   });
 });

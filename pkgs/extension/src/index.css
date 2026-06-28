@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/**
+ * SABOROU Chrome 拡張 デザイントークン
+ * pkgs/frontend/src/index.css のトークンを踏襲（Side Panel 400px 最適化版）
+ * Three.js / 3D 要素は Extension には含めない（MVP OUT）
+ */
+@theme {
+  /* ---------- Brand カラー（frontend と同一） ---------- */
+  --color-saboru-orange: #f97316;
+  --color-saboru-orange-dark: #ea580c;
+  --color-saboru-orange-light: #fed7aa;
+
+  --color-saboru-cream: #fffaf5;
+  --color-saboru-paper: #ffffff;
+
+  --color-saboru-ink: #1f2937;
+  --color-saboru-ink-soft: #6b7280;
+  --color-saboru-ink-muted: #9ca3af;
+
+  --color-saboru-line: #f3f4f6;
+
+  /** ネオブルータリズム枠線 */
+  --color-saboru-heavy: #2b1e16;
+
+  /* ---------- Verdict カラー ---------- */
+  --color-verdict-can: #10b981;
+  --color-verdict-can-bg: #ecfdf5;
+  --color-verdict-borderline: #f59e0b;
+  --color-verdict-must: #ef4444;
+  --color-verdict-must-bg: #fef2f2;
+
+  /* ---------- フォント ---------- */
+  --font-sans: "Nunito", "Noto Sans JP", "Hiragino Kaku Gothic ProN",
+    "Hiragino Sans", system-ui, sans-serif;
+
+  /* ---------- ハードシャドウ ---------- */
+  --shadow-hard-sm: 0 4px 0 #2b1e16;
+  --shadow-hard-md: 0 5px 0 #2b1e16;
+  --shadow-hard-orange: 0 4px 0 #ea580c;
+
+  /* ---------- 角丸 ---------- */
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+}
+
+/* ---------- ベーススタイル ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--color-saboru-cream);
+  font-family: var(--font-sans);
+  color: var(--color-saboru-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---------- カスタムユーティリティ ---------- */
+@utility card-brutal {
+  background: var(--color-saboru-paper);
+  border: 2px solid var(--color-saboru-heavy);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hard-sm);
+}
+
+@utility btn-orange {
+  background: var(--color-saboru-orange);
+  color: white;
+  border: 2px solid var(--color-saboru-orange-dark);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-hard-orange);
+  font-weight: 700;
+  transition: transform 0.1s, box-shadow 0.1s;
+  &:active {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+}
+
+/* ---------- アニメーション ---------- */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scanLine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+@keyframes saborouHeroWobble {
+  0%,
+  100% {
+    transform: rotate(-3deg) translateY(0) scale(1);
+  }
+  50% {
+    transform: rotate(3deg) translateY(-5px) scale(1.02);
+  }
+}
+
+.saborou-hero-image {
+  transform-origin: 50% 88%;
+  animation: saborouHeroWobble 1.55s ease-in-out infinite;
+}

@@ -178,7 +178,7 @@ export class SchedulePlannerAgent {
         toolChoice: { tool: { name: PLAN_SCHEDULE_TOOL_NAME } },
       },
       inferenceConfig: {
-        maxTokens: 1024,
+        maxTokens: 2048,
         temperature: 0,
       },
     });
@@ -201,13 +201,16 @@ export class SchedulePlannerAgent {
     // LLM が返す decisionAt は形式が揺れる（オフセット付き / 秒なし / 全角等）。
     // safeParse 前に canonical ISO へ正規化し、解釈不能なら decisionAt を落として
     // バリデーション失敗（=503）を防ぐ。
-    const normalizedInput = normalizeToolDecisionAt(toolUseBlock.toolUse.input);
+    // また、LLM が steps 配列を直接返した場合（ラッパーオブジェクトなし）も吸収する。
+    const wrappedInput = wrapStepsIfNeeded(toolUseBlock.toolUse.input);
+    const normalizedInput = normalizeToolDecisionAt(wrappedInput);
 
     const parsed = PlanScheduleOutputSchema.safeParse(normalizedInput);
     if (!parsed.success) {
       logError({
         action: "schedule_plan_invalid_output",
         issues: parsed.error.issues,
+        rawInput: JSON.stringify(toolUseBlock.toolUse.input).slice(0, 800),
         refId: input.refId,
       });
       throw new Error("plan_schedule output failed schema validation");
@@ -215,6 +218,29 @@ export class SchedulePlannerAgent {
 
     return parsed.data.steps;
   }
+}
+
+/**
+ * LLM が steps 配列を直接返した場合（ラッパーオブジェクトなし）を吸収する。
+ * `{ steps: [...] }` を期待しているが、`[...]` や `{ step: [...] }` が来るケースに対応。
+ */
+function wrapStepsIfNeeded(rawInput: unknown): unknown {
+  // 配列が直接返った場合: { steps: rawInput } にラップ
+  if (Array.isArray(rawInput)) {
+    return { steps: rawInput };
+  }
+  if (!rawInput || typeof rawInput !== "object") return rawInput;
+  const obj = rawInput as Record<string, unknown>;
+  if (!Array.isArray(obj.steps)) {
+    // steps がオブジェクト（dict形式）の場合: Object.values で配列に変換
+    if (obj.steps && typeof obj.steps === "object") {
+      return { ...obj, steps: Object.values(obj.steps as Record<string, unknown>) };
+    }
+    // steps が無いが他のキーに配列がある場合（例: step, items, tasks）
+    const candidate = Object.values(obj).find(Array.isArray);
+    if (candidate) return { ...obj, steps: candidate };
+  }
+  return rawInput;
 }
 
 /**

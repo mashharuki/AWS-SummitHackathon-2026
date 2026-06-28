@@ -145,3 +145,91 @@ aws cloudwatch get-metric-statistics \
 | タスク抽出完了 | 5-15s | Bedrock Tool Use + DynamoDB Write |
 
 注意: ハッカソン規模（数十ユーザー）では PAY_PER_REQUEST で十分なスループットを確保できる。
+
+---
+
+---
+
+# v3 パフォーマンステスト手順（MCP Serverization — 2026-06-18）
+
+## v3 追加 NFR パフォーマンス要件
+
+U-V3-01〜05 で定義された NFR のうち、パフォーマンスに関わる要件:
+
+| NFR ID | 要件 | 対象コンポーネント |
+|--------|------|----------------|
+| NFR-V301-P1 | MCP アダプタ p99 レイテンシ < 800ms | `/api/mcp/tools/{toolName}` |
+| NFR-V301-P2 | precheck + identity resolve < 100ms | MCP precheck ミドルウェア |
+| NFR-V305-R1 | デモ当日の全テスト通過 | 全パッケージ |
+| NFR-V305-A1 | デモ中 99% 以上の可用性 | AgentCore Gateway + Hono API |
+| NFR-V305-A2 | フォールバック切替 < 10秒 | extension フォールバック |
+
+---
+
+## v3-1. MCP アダプタ レイテンシ確認（実環境）
+
+```bash
+# MCP アダプタ呼び出し時間計測（Cognito JWT 付き）
+TOKEN="<cognito_jwt>"
+time curl -s -w "\n%{time_total}s\n" \
+  -X POST "https://<api-url>/api/mcp/tools/saborou_get_tasks" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"arguments": {}}'
+```
+
+合格基準: p99 < 800ms（ウォーム状態）
+
+---
+
+## v3-2. Precheck レイテンシ確認
+
+CloudWatch Logs Insights で identity resolve の処理時間を確認:
+
+```bash
+# CloudWatch Logs Insights クエリ
+aws logs start-query \
+  --log-group-name "/aws/apigateway/saborou-api" \
+  --start-time $(date -u -v-1H +%s) \
+  --end-time $(date -u +%s) \
+  --query-string 'fields @timestamp, duration | filter requestPath like "/mcp/tools" | stats avg(duration) as avgMs, pct(duration, 99) as p99Ms'
+```
+
+合格基準: avg < 50ms、p99 < 100ms
+
+---
+
+## v3-3. AgentCore → MCP エンドツーエンドレイテンシ確認
+
+```bash
+bash scripts/verify-agentcore.sh
+```
+
+出力に含まれる latency 計測値を確認:
+- ElevenLabs → AgentCore → MCP → DynamoDB のエンドツーエンド: < 3000ms
+
+---
+
+## v3-4. フォールバック切替速度確認（extension）
+
+extension の MCP フォールバック切替は JavaScript 同期処理のため、ユニットテストで検証済み:
+
+```bash
+pnpm --filter extension test -- --testPathPattern="mcpFallback"
+```
+
+確認ポイント: `getMcpFallbackMode()` が瞬時に（< 1ms）FallbackMode を返すこと
+
+---
+
+## v3 パフォーマンス見通し（MCP Serverization 追加後）
+
+| シナリオ | 予想パフォーマンス | 根拠 |
+|---------|----------------|------|
+| MCP アダプタ（ウォーム） | 100-400ms | precheck + DynamoDB + Identity resolve |
+| MCP アダプタ（コールド） | 2-5s | Lambda コールドスタート込み |
+| AgentCore → MCP エンドツーエンド | 500-2000ms | AgentCore routing + adapter + backend |
+| フォールバック切替（extension） | < 1ms | JavaScript 同期処理 |
+| ElevenLabs 音声 → タスク取得 | 1-3s | ElevenLabs STT + AgentCore + MCP |
+
+注意: デモ当日はウォーム状態を維持するため、DEMO_RUNBOOK.md の「デモ前ウォームアップ手順」を実施すること。

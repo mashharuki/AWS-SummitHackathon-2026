@@ -30,8 +30,11 @@ const secretsClient = new SecretsManagerClient({
 
 // userId (cognitoSub) → Bot Token のキャッシュ
 const tokenCache = new Map<string, string>();
+// userId (cognitoSub) → User Token のキャッシュ
+const userTokenCache = new Map<string, string>();
 
 const DEFAULT_SECRET_PREFIX = "saborou/slack-bot-token/";
+const DEFAULT_USER_TOKEN_SECRET_PREFIX = "saborou/slack-user-token/";
 
 /**
  * per-user の Slack Bot Token を Secrets Manager から取得する。
@@ -71,11 +74,45 @@ export async function getSlackToken(userId: string): Promise<string> {
 }
 
 /**
+ * per-user の Slack User Token (xoxp-) を Secrets Manager から取得する。
+ * User Token が存在しない場合は null を返す（Bot Token へのフォールバック用）。
+ * Lambda ウォーム呼び出し時は userId 別キャッシュ値を返す (DP-06)。
+ *
+ * @param userId Cognito sub。User Token シークレットの per-user キー。
+ */
+export async function getSlackUserToken(
+  userId: string,
+): Promise<string | null> {
+  if (!userId) return null;
+
+  const cached = userTokenCache.get(userId);
+  if (cached !== undefined) return cached;
+
+  const prefix =
+    process.env.SLACK_USER_TOKEN_SECRET_PREFIX ??
+    DEFAULT_USER_TOKEN_SECRET_PREFIX;
+  const secretName = `${prefix}${userId}`;
+
+  try {
+    const response = await secretsClient.send(
+      new GetSecretValueCommand({ SecretId: secretName }),
+    );
+    const token = response.SecretString ?? null;
+    if (token) userTokenCache.set(userId, token);
+    return token;
+  } catch {
+    // User Token 未設定（シークレット未作成）の場合は null を返す
+    return null;
+  }
+}
+
+/**
  * Reset cached tokens (test utility / forced refresh)
  * Not intended for production use.
  */
 export function resetSlackTokenCache(): void {
   tokenCache.clear();
+  userTokenCache.clear();
 }
 
 /**
@@ -87,5 +124,9 @@ export function resetSlackTokenCache(): void {
 export class ContextCollector {
   async getSlackToken(userId: string): Promise<string> {
     return getSlackToken(userId);
+  }
+
+  async getSlackUserToken(userId: string): Promise<string | null> {
+    return getSlackUserToken(userId);
   }
 }

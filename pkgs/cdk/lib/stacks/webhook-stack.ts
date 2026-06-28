@@ -149,6 +149,34 @@ export class SaborouWebhookStack extends cdk.Stack {
       },
     });
 
+    // --- EventBridge スケジューラー: 毎日 17:00 JST の進捗報告 (U-V2-07) ---
+    //
+    // 設計判断（デモ堅牢性 / MVP）: 進捗報告は「手動トリガー可能な
+    // POST /api/tasks/{id}/report」を主軸とし、フル自動の定期送信は副作用が
+    // 大きくデモ中の制御が難しい。そのためこのスケジュールは state=DISABLED で
+    // 定義のみ行い、将来 ENABLED 化＋専用ハンドラ実装で段階的に有効化する。
+    // cron(0 8 * * ? *) = UTC 08:00 = 17:00 JST。target は既存 saboriProposerFn を
+    // 流用し、input の type で進捗報告バッチを判別する（ハンドラ実装は将来拡張）。
+    new scheduler.CfnSchedule(this, "ProgressReportSchedule", {
+      name: `saborou-progress-report-${environment}`,
+      scheduleExpression: "cron(0 8 * * ? *)",
+      scheduleExpressionTimezone: "UTC",
+      flexibleTimeWindow: { mode: "OFF" },
+      // MVP: 自動送信はデモ制御性のため無効。手動 endpoint を主軸とする。
+      state: "DISABLED",
+      target: {
+        arn: props.agents.saboriProposerFn.functionArn,
+        roleArn: schedulerRole.roleArn,
+        input: JSON.stringify({
+          source: "scheduler",
+          type: "progress_report",
+        }),
+        retryPolicy: {
+          maximumRetryAttempts: 3,
+        },
+      },
+    });
+
     // --- モニタリング (対象 Lambda 全て) ---
     new MonitoringConstruct(this, "Monitoring", {
       environment,

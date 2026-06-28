@@ -233,16 +233,15 @@ describe("TaskExtractorAgent", () => {
       expect(result.candidate.assignee).toBe("自分");
     });
 
-    it("宛先が素の名前で ID 解決できない場合は誤って弾かず取り込む", async () => {
+    it("宛先が素の名前（ID 解決不能）でも他人宛てとして除外する", async () => {
+      // <@Uxxx> 形式でなくても assignee が空でない = 他人宛て → スキップ
       mockBedrock.setResponse(
         makeTaskBedrockResponse({ assignee: "佐藤さん" }),
       );
       const result = await agent.extractTask(testEvent);
 
-      expect(result.skipped).toBe(false);
-      if (result.skipped) throw new Error("type narrowing");
-      // 解決できないので Bedrock 抽出値（生の名前）をそのまま保存
-      expect(result.candidate.assignee).toBe("佐藤さん");
+      expect(result.skipped).toBe(true);
+      expect(mockRepo.created).toHaveLength(0);
     });
 
     it("stores messageTs as sourceRef (not message body)", async () => {

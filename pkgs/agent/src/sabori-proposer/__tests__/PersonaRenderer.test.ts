@@ -343,7 +343,7 @@ describe("PersonaRenderer", () => {
       await r.render({ ...CAN_SABORU_INPUT, personaId: "nonexistent" });
 
       const systemText = bedrock.lastInput?.system?.[0]?.text ?? "";
-      expect(systemText).toContain("おっとり");
+      expect(systemText).toContain("少し年上の同僚");
       expect(bedrock.lastInput?.inferenceConfig?.temperature).toBe(0.45);
     });
 
@@ -355,6 +355,142 @@ describe("PersonaRenderer", () => {
         personaId: "saboru_hacker",
       });
       expect(result.personaId).toBe("saboru_hacker");
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  // renderForVoice() — v2 TTS 用短文整形
+  // ─────────────────────────────────────────────
+
+  describe("renderForVoice() — TTS short-form (v2)", () => {
+    function makeTextResponse(text: string): ConverseCommandOutput {
+      return {
+        $metadata: {},
+        output: {
+          message: { role: "assistant", content: [{ text }] },
+        },
+        stopReason: "end_turn",
+        usage: { inputTokens: 50, outputTokens: 30, totalTokens: 80 },
+        metrics: { latencyMs: 120 },
+      };
+    }
+
+    it("returns sanitized spoken text under the default 100-char limit", async () => {
+      const bedrock = new MockBedrockClient(
+        makeTextResponse(
+          "締切まで余裕があるから、今はのんびりしていて大丈夫だよ",
+        ),
+      );
+      const r = new PersonaRenderer(bedrock);
+      const out = await r.renderForVoice({
+        sourceText: "締切まで余裕があります。今はサボっても問題ありません。",
+        personaId: "saboru_ottori",
+      });
+      expect(out.length).toBeLessThanOrEqual(100);
+      expect(out.length).toBeGreaterThan(0);
+    });
+
+    it("strips emoji, symbols and URLs from the model output", async () => {
+      const bedrock = new MockBedrockClient(
+        makeTextResponse(
+          "今日はゆっくりしていいよ😴 詳細は https://example.com/x を見てね #saboru",
+        ),
+      );
+      const r = new PersonaRenderer(bedrock);
+      const out = await r.renderForVoice({
+        sourceText: "ゆっくりしていいよ",
+        personaId: "saboru_ottori",
+      });
+      expect(out).not.toContain("😴");
+      expect(out).not.toContain("http");
+      expect(out).not.toContain("#");
+    });
+
+    it("removes newlines so the text is one continuous line", async () => {
+      const bedrock = new MockBedrockClient(
+        makeTextResponse("一行目\n二行目\n三行目"),
+      );
+      const r = new PersonaRenderer(bedrock);
+      const out = await r.renderForVoice({
+        sourceText: "x",
+        personaId: "saboru_ottori",
+      });
+      expect(out).not.toContain("\n");
+    });
+
+    it("honors a custom maxChars limit by truncating", async () => {
+      const bedrock = new MockBedrockClient(makeTextResponse("あ".repeat(200)));
+      const r = new PersonaRenderer(bedrock);
+      const out = await r.renderForVoice(
+        { sourceText: "x", personaId: "saboru_ottori" },
+        40,
+      );
+      expect(out.length).toBeLessThanOrEqual(40);
+    });
+
+    it("falls back to sanitized source text when Haiku throws", async () => {
+      const throwingBedrock: IBedrockClient = {
+        async converse(): Promise<ConverseCommandOutput> {
+          throw new Error("Haiku throttled");
+        },
+        async converseStream(): Promise<ConverseStreamCommandOutput> {
+          throw new Error("Not implemented");
+        },
+      };
+      const r = new PersonaRenderer(throwingBedrock);
+      const out = await r.renderForVoice({
+        sourceText: "締切まで余裕があるよ😴 https://example.com",
+        personaId: "saboru_ottori",
+      });
+      // フォールバックでもサニタイズされる
+      expect(out).not.toContain("😴");
+      expect(out).not.toContain("http");
+      expect(out.length).toBeGreaterThan(0);
+    });
+
+    it("falls back when Haiku throws a non-Error object", async () => {
+      const throwingBedrock: IBedrockClient = {
+        async converse(): Promise<ConverseCommandOutput> {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw "voice non-Error string";
+        },
+        async converseStream(): Promise<ConverseStreamCommandOutput> {
+          throw new Error("Not implemented");
+        },
+      };
+      const r = new PersonaRenderer(throwingBedrock);
+      const out = await r.renderForVoice({
+        sourceText: "サボってもいいよ",
+        personaId: "saboru_ottori",
+      });
+      expect(out).toBe("サボってもいいよ");
+    });
+
+    it("falls back when the model returns no text block", async () => {
+      const bedrock = new MockBedrockClient({
+        $metadata: {},
+        output: {
+          message: {
+            role: "assistant",
+            content: [
+              {
+                toolUse: {
+                  toolUseId: "t",
+                  name: "irrelevant",
+                  input: {},
+                },
+              },
+            ],
+          },
+        },
+        stopReason: "tool_use",
+      });
+      const r = new PersonaRenderer(bedrock);
+      const out = await r.renderForVoice({
+        sourceText: "サボってもいいよ",
+        personaId: "saboru_ottori",
+      });
+      expect(out).toBe("サボってもいいよ");
     });
   });
 });

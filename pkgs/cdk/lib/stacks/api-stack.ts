@@ -1,8 +1,10 @@
 import * as cdk from "aws-cdk-lib";
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayv2Authorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayv2Integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import type * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
@@ -32,6 +34,11 @@ export interface ApiStackProps extends cdk.StackProps {
 
 export interface ApiStackExports {
   readonly httpApiUrl: string;
+  /**
+   * HTTP API の API ID。AgentCore Gateway の execute-api ARN を
+   * 最小権限で構築するために使用する。
+   */
+  readonly httpApiId: string;
   readonly honoFn: lambda.Function;
   /**
    * カスタムドメイン有効時の API URL（https://saborou-api.agentic-jp.com）。
@@ -60,16 +67,98 @@ export class SaborouApiStack extends cdk.Stack {
     // --- Lambda: Hono バックエンド ---
     const honoFnLogGroup = new logs.LogGroup(this, "HonoFnLogGroup", {
       logGroupName: `/aws/lambda/saborou-api-${environment}`,
-      retention: logs.RetentionDays.TWO_WEEKS,
+      retention: logs.RetentionDays.THREE_MONTHS,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+
+    const httpApiAccessLogGroup = new logs.LogGroup(
+      this,
+      "HttpApiAccessLogGroup",
+      {
+        logGroupName: `/aws/apigateway/saborou-api-${environment}`,
+        retention: logs.RetentionDays.THREE_MONTHS,
+        removalPolicy: cdk.RemovalPolicy.DESTROY,
+      },
+    );
+
+    const accessLogFormat = apigateway.AccessLogFormat.custom(
+      JSON.stringify({
+        requestId: "$context.requestId",
+        routeKey: "$context.routeKey",
+        status: "$context.status",
+        responseLatency: "$context.responseLatency",
+        integrationStatus: "$context.integrationStatus",
+        sourceIp: "$context.identity.sourceIp",
+        userAgent: "$context.identity.userAgent",
+      }),
+    );
+
+    const mcpUnauthorizedMetric = new logs.MetricFilter(
+      this,
+      "McpUnauthorizedMetricFilter",
+      {
+        logGroup: honoFnLogGroup,
+        metricNamespace: "Saborou/Mcp",
+        metricName: "Unauthorized",
+        filterPattern: logs.FilterPattern.literal(
+          '{ $.action = "mcp_tool_call" && $.status = "unauthorized" }',
+        ),
+        metricValue: "1",
+      },
+    );
+
+    const mcpForbiddenMetric = new logs.MetricFilter(
+      this,
+      "McpForbiddenMetricFilter",
+      {
+        logGroup: honoFnLogGroup,
+        metricNamespace: "Saborou/Mcp",
+        metricName: "Forbidden",
+        filterPattern: logs.FilterPattern.literal(
+          '{ $.action = "mcp_tool_call" && $.status = "forbidden" }',
+        ),
+        metricValue: "1",
+      },
+    );
+
+    const mcpToolErrorMetric = new logs.MetricFilter(
+      this,
+      "McpToolErrorMetricFilter",
+      {
+        logGroup: honoFnLogGroup,
+        metricNamespace: "Saborou/Mcp",
+        metricName: "ToolError",
+        filterPattern: logs.FilterPattern.literal(
+          '{ $.action = "mcp_tool_call" && $.status = "tool_error" }',
+        ),
+        metricValue: "1",
+      },
+    );
+
+    for (const [id, metricFilter, threshold] of [
+      ["McpUnauthorizedAlarm", mcpUnauthorizedMetric, 5],
+      ["McpForbiddenAlarm", mcpForbiddenMetric, 5],
+      ["McpToolErrorAlarm", mcpToolErrorMetric, 3],
+    ] as const) {
+      new cloudwatch.Alarm(this, id, {
+        metric: metricFilter.metric({
+          statistic: "Sum",
+          period: cdk.Duration.minutes(5),
+        }),
+        threshold,
+        evaluationPeriods: 1,
+        comparisonOperator:
+          cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      });
+    }
 
     const honoFn = new lambda.Function(this, "HonoFn", {
       functionName: `saborou-api-${environment}`,
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
-      memorySize: 256,
-      timeout: cdk.Duration.seconds(29),
+      memorySize: 512,
+      timeout: cdk.Duration.seconds(60),
       handler: "index.handler",
       code: lambda.Code.fromAsset("../../pkgs/backend/dist"),
       logGroup: honoFnLogGroup,
@@ -109,6 +198,9 @@ export class SaborouApiStack extends cdk.Stack {
         // per-user の Slack Bot Token シークレット名プレフィックス
         // （遡及取得 API が認証ユーザーの Bot Token を取得するため）
         SLACK_BOT_TOKEN_SECRET_PREFIX: "saborou/slack-bot-token/",
+        // per-user の Slack User Token シークレット名プレフィックス
+        // （ユーザー自身のアカウントから返信するために使用）
+        SLACK_USER_TOKEN_SECRET_PREFIX: "saborou/slack-user-token/",
         // Slack OAuth コールバック成功後のフロント（CloudFront）リダイレクト先。
         // 未設定だと localhost:5173 にフォールバックしてしまう。
         ...(props.frontendDomainName
@@ -126,6 +218,26 @@ export class SaborouApiStack extends cdk.Stack {
         // --- Google Calendar Cache（U-07b）---
         DYNAMODB_TABLE_GOOGLE_CALENDAR_CACHE:
           props.data.tables.googleCalendarCache.tableName,
+        // --- Travelpayouts credentials for travel plan MCP/API ---
+        TRAVELPAYOUTS_CREDENTIALS_SECRET_ARN:
+          props.data.secrets.travelpayoutsCredentialsSecret.secretArn,
+        // --- Marp Slides S3 bucket ---
+        MARP_SLIDES_BUCKET_NAME: props.data.buckets.marpSlides.bucketName,
+        // --- Travel itinerary HTML publishing ---
+        TRAVEL_ITINERARY_BUCKET_NAME:
+          props.data.buckets.travelItineraries.bucketName,
+        TRAVEL_ITINERARY_PUBLIC_BASE_URL:
+          props.data.travelItineraryPublicBaseUrl,
+        // --- Claude 委譲メンション用 Slack メンバー ID ---
+        // cdk deploy 時に --context slackClaudeUserId=U08XXXXXXXXX で渡す
+        // 未指定時は @Claude プレーンテキストにフォールバック
+        ...(this.node.tryGetContext("slackClaudeUserId")
+          ? {
+              SLACK_CLAUDE_USER_ID: this.node.tryGetContext(
+                "slackClaudeUserId",
+              ) as string,
+            }
+          : {}),
       },
     });
 
@@ -182,6 +294,35 @@ export class SaborouApiStack extends cdk.Stack {
     // --- Google OAuth client secret の読み取り権限（差分5）---
     props.data.secrets.googleClientSecret.grantRead(honoFn);
 
+    // --- Travelpayouts credentials secret: read-only, single secret scope ---
+    props.data.secrets.travelpayoutsCredentialsSecret.grantRead(honoFn);
+
+    // --- Marp Slides S3: PutObject (upload) + GetObject (pre-signed URL) ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["s3:PutObject", "s3:GetObject"],
+        resources: [`${props.data.buckets.marpSlides.bucketArn}/*`],
+      }),
+    );
+
+    // --- Travel Itineraries S3: PutObject only under generated prefix ---
+    // Keep this in a separate inline policy so the large default Lambda policy
+    // does not drop later statements when it approaches the IAM size limit.
+    honoFn.role?.attachInlinePolicy(
+      new iam.Policy(this, "TravelItineraryPutPolicy", {
+        statements: [
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ["s3:PutObject"],
+            resources: [
+              `${props.data.buckets.travelItineraries.bucketArn}/travel-itineraries/*`,
+            ],
+          }),
+        ],
+      }),
+    );
+
     // --- per-user Slack Bot Token の読み書き権限 ---
     // 読み取り（遡及取得 API）と書き込み（OAuth コールバックでの保存）の両方が必要。
     honoFn.addToRolePolicy(
@@ -198,7 +339,22 @@ export class SaborouApiStack extends cdk.Stack {
         ],
       }),
     );
-    // CreateSecret はリソース未作成のため * 指定（OAuth 初回連携で Bot Token を新規作成）
+    // --- per-user Slack User Token の読み書き権限 ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:DescribeSecret",
+        ],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/slack-user-token/*`,
+        ],
+      }),
+    );
+    // CreateSecret はリソース未作成のため * 指定（OAuth 初回連携で Bot/User Token を新規作成）
     honoFn.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -221,6 +377,17 @@ export class SaborouApiStack extends cdk.Stack {
         ],
         resources: [
           `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/google-token/*`,
+        ],
+      }),
+    );
+
+    // --- MCP API キー読み取り権限（ElevenLabs 長期認証用） ---
+    honoFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          `arn:aws:secretsmanager:${this.region}:${this.account}:secret:saborou/mcp-api-key*`,
         ],
       }),
     );
@@ -250,13 +417,15 @@ export class SaborouApiStack extends cdk.Stack {
     // --- HTTP API ---
     const httpApi = new apigatewayv2.HttpApi(this, "HttpApi", {
       apiName: `saborou-api-${environment}`,
+      createDefaultStage: false,
+      // CORS preflight は API Gateway が処理する（OPTIONS は JWT Authorizer を通さない）。
+      // 注意: API Gateway v2 は chrome-extension:// 形式の個別オリジンを
+      // allowOrigins に受け付けない（"Invalid format for origin"）。
+      // Chrome 拡張（Side Panel）からのアクセスを許可するため allowOrigins は
+      // ワイルドカード "*" を使う。credentials を使わない（JWT は Authorization
+      // ヘッダで送るが Cookie は使わない）ため "*" + Authorization の併用が可能。
       corsPreflight: {
-        allowOrigins: [
-          "http://localhost:5173",
-          ...(props.frontendDomainName
-            ? [`https://${props.frontendDomainName}`]
-            : []),
-        ],
+        allowOrigins: ["*"],
         allowMethods: [apigatewayv2.CorsHttpMethod.ANY],
         allowHeaders: ["Authorization", "Content-Type", "X-Requested-With"],
         maxAge: cdk.Duration.hours(1),
@@ -297,6 +466,28 @@ export class SaborouApiStack extends cdk.Stack {
       ),
     });
 
+    // MCP adapter route (REST): POST /api/mcp/tools/{toolName}
+    // API Gateway authorizerなし / Lambda側でCognito JWTを検証
+    httpApi.addRoutes({
+      path: "/api/mcp/tools/{toolName}",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "McpToolsIntegration",
+        honoFn,
+      ),
+    });
+
+    // MCP JSON-RPC 2.0 route: POST /api/mcp  (ElevenLabs streamable_http 向け)
+    // API Gateway authorizerなし / Lambda内で initialize は認証不要、tools/call は Cognito JWT検証
+    httpApi.addRoutes({
+      path: "/api/mcp",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        "McpJsonRpcIntegration",
+        honoFn,
+      ),
+    });
+
     // メインルート (JWT 認証必須)
     // OPTIONS は除外: API Gateway の corsPreflight が preflight を自動処理する。
     // ANY に OPTIONS を含めると JWT Authorizer が preflight に 401 を返し CORS が壊れる。
@@ -316,6 +507,25 @@ export class SaborouApiStack extends cdk.Stack {
       ),
       authorizer,
     });
+
+    const defaultStage = new apigatewayv2.HttpStage(this, "DefaultStage", {
+      httpApi,
+      stageName: "$default",
+      autoDeploy: true,
+      accessLogSettings: {
+        destination: new apigatewayv2.LogGroupLogDestination(
+          httpApiAccessLogGroup,
+        ),
+        format: accessLogFormat,
+      },
+    });
+    // Match the logical ID that was recorded by the previous deployment.
+    // The stage was originally created implicitly (createDefaultStage: true) under
+    // HttpApiDefaultStage3EEB07D6. Overriding here turns CREATE into UPDATE so
+    // CloudFormation applies the access-log settings to the existing physical resource.
+    (defaultStage.node.defaultChild as cdk.CfnResource).overrideLogicalId(
+      "HttpApiDefaultStage3EEB07D6",
+    );
 
     // --- API Gateway カスタムドメイン（customDomain=true のときのみ） ---
     // ap-northeast-1 の証明書と DomainName L2 コンストラクトを使用する。
@@ -339,6 +549,7 @@ export class SaborouApiStack extends cdk.Stack {
       new apigatewayv2.ApiMapping(this, "ApiDomainMapping", {
         api: httpApi,
         domainName: apiDomainName,
+        stage: defaultStage,
         // mappingKey を省略することでルートパス（/）にマッピングされる
       });
 
@@ -364,11 +575,35 @@ export class SaborouApiStack extends cdk.Stack {
       });
     }
 
+    // Slack OAuth コールバック URL を Lambda 環境変数に注入する。
+    // auth.ts の SLACK_REDIRECT_URI を参照。Slack App の Redirect URLs にも同じ URL を登録すること。
+    honoFn.addEnvironment(
+      "SLACK_REDIRECT_URI",
+      `${apiUrl}/api/auth/slack/callback`,
+    );
+
     // --- CfnOutputs ---
     new cdk.CfnOutput(this, "HttpApiUrl", {
       value: httpApi.apiEndpoint,
       description: "HTTP API Gateway endpoint URL (デフォルトエンドポイント)",
       exportName: `SaborouHttpApiUrl-${environment}`,
+    });
+
+    // U-V3-04: ElevenLabs Dashboard で SABOROU をリモート MCP サーバーとして登録するための
+    // streamable_http エンドポイントベース URL。カスタムドメイン有効時はカスタム URL を使用。
+    new cdk.CfnOutput(this, "McpToolsBaseUrl", {
+      value: `${apiUrl}/api/mcp/tools`,
+      description:
+        "SABOROU MCP REST adapter base URL (Chrome 拡張・AgentCore 向け)",
+      exportName: `SaborouMcpToolsBaseUrl-${environment}`,
+    });
+
+    // MCP JSON-RPC 2.0 endpoint (ElevenLabs streamable_http 向け)
+    new cdk.CfnOutput(this, "McpJsonRpcUrl", {
+      value: `${apiUrl}/api/mcp`,
+      description:
+        "SABOROU MCP JSON-RPC 2.0 endpoint — ElevenLabs Dashboard streamable_http 登録先",
+      exportName: `SaborouMcpJsonRpcUrl-${environment}`,
     });
 
     new cdk.CfnOutput(this, "HonoFnArn", {
@@ -394,11 +629,6 @@ export class SaborouApiStack extends cdk.Stack {
           "nodejs22.x is the latest stable Node.js runtime; cdk-nag may not have updated its reference list yet",
       },
       {
-        id: "AwsSolutions-APIG1",
-        reason:
-          "HTTP API access logging is disabled for hackathon scope to reduce cost; CloudWatch Logs on Lambda covers observability",
-      },
-      {
         id: "AwsSolutions-APIG4",
         reason:
           "Health check route /health intentionally has no auth to allow load balancer/uptime monitoring",
@@ -407,6 +637,7 @@ export class SaborouApiStack extends cdk.Stack {
 
     this.exports = {
       httpApiUrl: httpApi.apiEndpoint,
+      httpApiId: httpApi.apiId,
       honoFn,
       apiUrl,
     };
